@@ -128,7 +128,7 @@ function TopFivePanel({
                   className="text-[9px] font-medium"
                   style={{ color: "var(--text-muted)" }}
                 >
-                  ПК
+                  б
                 </div>
               </div>
             </div>

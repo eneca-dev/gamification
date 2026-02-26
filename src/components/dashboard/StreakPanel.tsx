@@ -118,7 +118,7 @@ function CompactStreakRow({
               />
             </div>
             <span className="text-[10px] font-bold shrink-0" style={{ color: accent }}>
-              +{next.reward} ПК
+              +{next.reward} б
             </span>
           </>
         )}

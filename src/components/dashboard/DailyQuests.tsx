@@ -32,7 +32,7 @@ export function DailyQuests({ tasks }: DailyQuestsProps) {
               color: "white",
             }}
           >
-            +{totalReward} коинов
+            +{totalReward} баллов
           </div>
         </div>
         <div className="text-[12px] font-semibold" style={{ color: "var(--text-muted)" }}>

@@ -84,7 +84,7 @@ export function AlertsBanner({ alerts }: AlertsBannerProps) {
                   color: alert.severity === "critical" ? "#e53935" : "var(--orange-500)",
                 }}
               >
-                {alert.penalty} ПК
+                {alert.penalty} б
               </span>
             </div>
             <div className="text-[12px] font-semibold mt-0.5" style={{ color: "var(--text-primary)" }}>

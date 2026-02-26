@@ -34,7 +34,7 @@ export function CoinBalance({ amount, size = "md" }: CoinBalanceProps) {
             : "0 1px 3px rgba(76,175,80,0.3)",
         }}
       >
-        П
+        Б
       </span>
       <span style={{ color: isNegative ? "#e53935" : "var(--green-700)" }}>
         {isNegative ? "" : "+"}{formatted}
@@ -67,7 +67,7 @@ export function CoinStatic({ amount, size = "md" }: CoinBalanceProps) {
           boxShadow: "0 1px 3px rgba(76,175,80,0.3)",
         }}
       >
-        П
+        Б
       </span>
       <span style={{ color: "var(--text-primary)" }}>{formatted}</span>
     </span>

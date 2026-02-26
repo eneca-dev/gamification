@@ -58,7 +58,7 @@ function BalanceChart() {
               fontFamily: "Nunito",
               fontSize: "13px",
             }}
-            formatter={(value) => [`${Number(value).toLocaleString("ru-RU")} коинов`, "Баланс"]}
+            formatter={(value) => [`${Number(value).toLocaleString("ru-RU")} баллов`, "Баланс"]}
           />
           <Line
             type="monotone"
@@ -139,9 +139,74 @@ function IncomeSourcesChart() {
   );
 }
 
+const achievementGroups = [
+  {
+    label: "Worksection — Дисциплина",
+    color: "#1976d2",
+    bg: "rgba(33,150,243,0.08)",
+    ids: [1, 2, 3],
+  },
+  {
+    label: "Revit — Техническая эффективность",
+    color: "#e65100",
+    bg: "rgba(255,152,0,0.08)",
+    ids: [4, 5, 6],
+  },
+  {
+    label: "Корпоративная культура",
+    color: "#7b1fa2",
+    bg: "rgba(156,39,176,0.08)",
+    ids: [7, 8, 9],
+  },
+];
+
+function AchievementCard({ ach }: { ach: (typeof achievements)[0] }) {
+  return (
+    <div className={`achievement-badge ${ach.earned ? "earned" : "locked"} group relative`}>
+      <div
+        className="flex flex-col items-center p-3 rounded-xl transition-all cursor-default"
+        style={{
+          background: ach.earned
+            ? "linear-gradient(135deg, var(--green-50), rgba(76,175,80,0.05))"
+            : "var(--surface)",
+          border: ach.earned ? "1px solid var(--green-200)" : "1px solid var(--border)",
+        }}
+      >
+        <span className="text-2xl mb-1">{ach.icon}</span>
+        <span
+          className="text-[10px] font-bold text-center leading-tight"
+          style={{ color: ach.earned ? "var(--green-700)" : "var(--text-muted)" }}
+        >
+          {ach.name}
+        </span>
+        {ach.earned && ach.date && (
+          <span className="text-[9px] font-medium mt-0.5" style={{ color: "var(--text-muted)" }}>
+            {ach.date}
+          </span>
+        )}
+      </div>
+
+      {/* Tooltip */}
+      <div
+        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-[11px] font-medium w-52 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10"
+        style={{
+          background: "var(--text-primary)",
+          color: "white",
+          boxShadow: "var(--shadow-md)",
+        }}
+      >
+        {ach.description}
+        <div
+          className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 rotate-45"
+          style={{ background: "var(--text-primary)" }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function AchievementsWall() {
   const earned = achievements.filter((a) => a.earned);
-  const locked = achievements.filter((a) => !a.earned);
 
   return (
     <div
@@ -152,7 +217,7 @@ function AchievementsWall() {
         boxShadow: "var(--shadow-sm)",
       }}
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-5">
         <div className="text-[12px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
           Стена достижений
         </div>
@@ -163,54 +228,26 @@ function AchievementsWall() {
           {earned.length} / {achievements.length}
         </span>
       </div>
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-        {achievements.map((ach) => (
-          <div
-            key={ach.id}
-            className={`achievement-badge ${ach.earned ? "earned" : "locked"} group relative`}
-          >
-            <div
-              className="flex flex-col items-center p-3 rounded-xl transition-all cursor-default"
-              style={{
-                background: ach.earned
-                  ? "linear-gradient(135deg, var(--green-50), rgba(76,175,80,0.05))"
-                  : "var(--surface)",
-                border: ach.earned
-                  ? "1px solid var(--green-200)"
-                  : "1px solid var(--border)",
-              }}
-            >
-              <span className="text-2xl mb-1">{ach.icon}</span>
-              <span
-                className="text-[10px] font-bold text-center leading-tight"
-                style={{ color: ach.earned ? "var(--green-700)" : "var(--text-muted)" }}
-              >
-                {ach.name}
-              </span>
-              {ach.earned && ach.date && (
-                <span className="text-[9px] font-medium mt-0.5" style={{ color: "var(--text-muted)" }}>
-                  {ach.date}
-                </span>
-              )}
-            </div>
 
-            {/* Tooltip */}
-            <div
-              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-[11px] font-medium w-44 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10"
-              style={{
-                background: "var(--text-primary)",
-                color: "white",
-                boxShadow: "var(--shadow-md)",
-              }}
-            >
-              {ach.description}
+      <div className="space-y-5">
+        {achievementGroups.map((group) => {
+          const groupAchs = achievements.filter((a) => group.ids.includes(a.id));
+          return (
+            <div key={group.label}>
               <div
-                className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 rotate-45"
-                style={{ background: "var(--text-primary)" }}
-              />
+                className="text-[11px] font-bold uppercase tracking-wider mb-3 px-2.5 py-1 rounded-lg inline-block"
+                style={{ color: group.color, background: group.bg }}
+              >
+                {group.label}
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {groupAchs.map((ach) => (
+                  <AchievementCard key={ach.id} ach={ach} />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

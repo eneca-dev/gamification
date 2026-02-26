@@ -1,6 +1,36 @@
 // ===== ТИПЫ ИСТОЧНИКОВ =====
 export type EntitySource = "worksection" | "revit" | "social";
 
+// ===== АДМИН-ПАНЕЛЬ =====
+export type AdminEventType = "earning" | "penalty" | "purchase" | "achievement" | "streak";
+export type WsStatus = "green" | "red" | "inactive";
+
+export interface AdminEmployee {
+  id: number;
+  name: string;
+  avatar: string;
+  avatarColor: string;
+  department: string;
+  role: string;
+  balance: number;
+  earnedThisMonth: number;
+  penaltiesThisMonth: number;
+  wsStatus: WsStatus;
+  lastActive: string;
+}
+
+export interface AdminEvent {
+  id: number;
+  timestamp: string;
+  employee: string;
+  avatar: string;
+  avatarColor: string;
+  department: string;
+  type: AdminEventType;
+  description: string;
+  amount: number;
+}
+
 // ===== СТРИКИ =====
 export interface StreakMilestone {
   days: number;
@@ -78,13 +108,13 @@ export interface Transaction {
 
 // ===== СОРЕВНОВАНИЕ ОТДЕЛОВ =====
 export interface DepartmentEntry {
-  rank: number;
   name: string;
   shortName: string;
   color: string;
   employeesUsing: number;
   totalEmployees: number;
-  usagePercent: number;
+  usagePercent: number;  // % автоматизаций
+  wsPercent: number;     // % дисциплины Worksection
   isCurrentDepartment: boolean;
 }
 
@@ -394,53 +424,63 @@ export const leaderboard: LeaderboardEntry[] = [
 // ===== СОРЕВНОВАНИЕ ОТДЕЛОВ =====
 export const departmentContest: DepartmentEntry[] = [
   {
-    rank: 1,
-    name: "Архитектурный отдел",
-    shortName: "АО",
+    name: "Архитектурные решения",
+    shortName: "АР",
     color: "#e91e63",
-    employeesUsing: 11,
-    totalEmployees: 12,
-    usagePercent: 92,
+    employeesUsing: 10,
+    totalEmployees: 11,
+    usagePercent: 91,
+    wsPercent: 85,
     isCurrentDepartment: false,
   },
   {
-    rank: 2,
-    name: "Конструктивный отдел",
-    shortName: "КО",
+    name: "Водоснабжение и канализация",
+    shortName: "ВК",
     color: "#2196f3",
-    employeesUsing: 7,
-    totalEmployees: 9,
-    usagePercent: 78,
-    isCurrentDepartment: true,
+    employeesUsing: 6,
+    totalEmployees: 8,
+    usagePercent: 75,
+    wsPercent: 94,
+    isCurrentDepartment: false,
   },
   {
-    rank: 3,
-    name: "Инженерный отдел (ОВиК)",
-    shortName: "ОВиК",
+    name: "Отопление и вентиляция",
+    shortName: "ОВ",
     color: "#ff9800",
     employeesUsing: 5,
     totalEmployees: 8,
     usagePercent: 63,
+    wsPercent: 72,
     isCurrentDepartment: false,
   },
   {
-    rank: 4,
-    name: "Электротехнический отдел",
-    shortName: "ЭО",
+    name: "Конструктивный раздел (гражд.)",
+    shortName: "КР гражд",
+    color: "#4caf50",
+    employeesUsing: 7,
+    totalEmployees: 9,
+    usagePercent: 78,
+    wsPercent: 88,
+    isCurrentDepartment: true,
+  },
+  {
+    name: "Технологические решения",
+    shortName: "ТХ",
     color: "#9c27b0",
     employeesUsing: 4,
     totalEmployees: 7,
     usagePercent: 57,
+    wsPercent: 61,
     isCurrentDepartment: false,
   },
   {
-    rank: 5,
-    name: "BIM-отдел",
-    shortName: "BIM",
+    name: "Тепломеханика",
+    shortName: "ТМ",
     color: "#00bcd4",
     employeesUsing: 3,
     totalEmployees: 6,
     usagePercent: 50,
+    wsPercent: 55,
     isCurrentDepartment: false,
   },
 ];
@@ -545,18 +585,81 @@ export const incomeSourcesData = [
 ];
 
 export const achievements = [
-  { id: 1, name: "Первый коин", icon: "🌱", earned: true, date: "15 сент. 2025", description: "Заработайте первый Проект-коин" },
-  { id: 2, name: "Неделя порядка", icon: "📋", earned: true, date: "22 сент. 2025", description: "Держите Worksection зеленым 1 неделю" },
-  { id: 3, name: "Месяц дисциплины", icon: "🏅", earned: true, date: "15 окт. 2025", description: "Держите Worksection зеленым 1 месяц" },
-  { id: 4, name: "Автоматизатор", icon: "⚡", earned: true, date: "3 нояб. 2025", description: "Используйте 50 автоматизаций Revit" },
-  { id: 5, name: "Щедрая душа", icon: "💚", earned: true, date: "10 дек. 2025", description: "Отправьте 10 благодарностей" },
-  { id: 6, name: "Квартал стабильности", icon: "🏆", earned: false, date: null, description: "Держите Worksection зеленым 3 месяца подряд" },
-  { id: 7, name: "Тысячник", icon: "💰", earned: true, date: "28 окт. 2025", description: "Накопите 1 000 Проект-коинов" },
-  { id: 8, name: "Первая покупка", icon: "🛒", earned: true, date: "5 нояб. 2025", description: "Совершите первую покупку в магазине" },
-  { id: 9, name: "Магнат", icon: "👑", earned: false, date: null, description: "Накопите 10 000 Проект-коинов" },
-  { id: 10, name: "Полная автоматизация", icon: "🤖", earned: false, date: null, description: "Используйте все автоматизации Revit за неделю" },
-  { id: 11, name: "Команда мечты", icon: "🌟", earned: false, date: null, description: "Получите благодарность от 5 разных коллег" },
-  { id: 12, name: "Марафонец", icon: "🎯", earned: false, date: null, description: "Держите Worksection зеленым 6 месяцев подряд" },
+  // === Worksection: Дисциплина ведения задач ===
+  {
+    id: 1,
+    name: "Эталонная дисциплина",
+    icon: "🏆",
+    earned: false,
+    date: null,
+    description: "Ни одного «красного» дня в течение всего года. Приз: органайзер из архит. бетона + 1000 коинов",
+  },
+  {
+    id: 2,
+    name: "Эффективное управление",
+    icon: "👑",
+    earned: false,
+    date: null,
+    description: "Команда с наименьшим % «красных» дней за квартал. Бонус тимлиду: 1500 коинов + Parker",
+  },
+  {
+    id: 3,
+    name: "Образцовый отдел",
+    icon: "🎖️",
+    earned: false,
+    date: null,
+    description: "Отдел с наименьшим % «красных» дней за квартал среди всех отделов. Бонус НО: 2000 коинов",
+  },
+  // === Revit: Техническая эффективность ===
+  {
+    id: 4,
+    name: "Лидер автоматизации",
+    icon: "⚡",
+    earned: false,
+    date: null,
+    description: "Абсолютный Топ-1 по запускам плагинов за квартал согласно логам. Бонус: 2000 коинов",
+  },
+  {
+    id: 5,
+    name: "Технологичная команда",
+    icon: "🤖",
+    earned: false,
+    date: null,
+    description: "Топ-1 команда по среднему числу запусков плагинов на сотрудника за квартал. Бонус: +500 коинов каждому",
+  },
+  {
+    id: 6,
+    name: "Цифровой авангард",
+    icon: "🚀",
+    earned: false,
+    date: null,
+    description: "Топ-1 отдел по вовлечённости в автоматизации за квартал. Бонус: пицца на весь отдел",
+  },
+  // === Корпоративная культура: Благодарности Airtable ===
+  {
+    id: 7,
+    name: "Поддержка коллег",
+    icon: "🤝",
+    earned: true,
+    date: "Q4 2025",
+    description: "Топ-1 по количеству полученных благодарностей за квартал. Приз: стеклянная стела + 1000 коинов",
+  },
+  {
+    id: 8,
+    name: "Межфункциональное взаимодействие",
+    icon: "🌐",
+    earned: true,
+    date: "Q4 2025",
+    description: "Благодарности от сотрудников из 3+ разных отделов за один квартал. Бонус: 600 коинов",
+  },
+  {
+    id: 9,
+    name: "Наставничество",
+    icon: "📚",
+    earned: false,
+    date: null,
+    description: "5+ благодарностей в категории «Обучение/Менторство» за квартал. Приз: кожаный ежедневник + 1200 коинов",
+  },
 ];
 
 export const dailyQuests = [
@@ -567,17 +670,69 @@ export const dailyQuests = [
 
 export const teamActivity = [
   { id: 1, user: "Мария Сидорова", avatar: "МС", avatarColor: "#e91e63", action: "купила", target: "Пицца на отдел", emoji: "🍕", time: "5 минут назад", type: "purchase" as const },
-  { id: 2, user: "Алексей Козлов", avatar: "АК", avatarColor: "#2196f3", action: "получил ачивку", target: "Месяц дисциплины", emoji: "🏅", time: "32 минуты назад", type: "achievement" as const },
+  { id: 2, user: "Алексей Козлов", avatar: "АК", avatarColor: "#2196f3", action: "получил ачивку", target: "Межфункциональное взаимодействие", emoji: "🌐", time: "32 минуты назад", type: "achievement" as const },
   { id: 3, user: "Ольга Новикова", avatar: "ОН", avatarColor: "#9c27b0", action: "отправила благодарность", target: "Ивану Петрову", emoji: "💚", time: "1 час назад", type: "gratitude" as const },
   { id: 4, user: "Дмитрий Волков", avatar: "ДВ", avatarColor: "#ff9800", action: "заработал", target: "+20 за 7 зелёных дней подряд", emoji: "🔥", time: "1 час назад", type: "earning" as const },
   { id: 5, user: "Анна Петрова", avatar: "АП", avatarColor: "#4caf50", action: "купила", target: "Сертификат Ozon", emoji: "🎫", time: "2 часа назад", type: "purchase" as const },
   { id: 6, user: "Сергей Иванов", avatar: "СИ", avatarColor: "#607d8b", action: "достиг серии", target: "56 зелёных дней подряд", emoji: "🔥", time: "3 часа назад", type: "streak" as const },
-  { id: 7, user: "Елена Морозова", avatar: "ЕМ", avatarColor: "#00bcd4", action: "получила ачивку", target: "Щедрая душа", emoji: "💚", time: "3 часа назад", type: "achievement" as const },
+  { id: 7, user: "Елена Морозова", avatar: "ЕМ", avatarColor: "#00bcd4", action: "получила ачивку", target: "Поддержка коллег", emoji: "🤝", time: "3 часа назад", type: "achievement" as const },
   { id: 8, user: "Михаил Кузнецов", avatar: "МК", avatarColor: "#795548", action: "купил", target: "Кофе от Григория", emoji: "☕", time: "5 часов назад", type: "purchase" as const },
   { id: 9, user: "Наталья Белова", avatar: "НБ", avatarColor: "#f44336", action: "отправила благодарность", target: "Сергею Иванову", emoji: "🤝", time: "5 часов назад", type: "gratitude" as const },
   { id: 10, user: "Артём Соколов", avatar: "АС", avatarColor: "#3f51b5", action: "купил", target: "Суши-сет на команду", emoji: "🍣", time: "Вчера", type: "purchase" as const },
   { id: 11, user: "Мария Сидорова", avatar: "МС", avatarColor: "#e91e63", action: "заработала", target: "+20 за 7 зелёных дней подряд", emoji: "🟢", time: "Вчера", type: "earning" as const },
-  { id: 12, user: "Дмитрий Волков", avatar: "ДВ", avatarColor: "#ff9800", action: "получил ачивку", target: "Тысячник", emoji: "💰", time: "Вчера", type: "achievement" as const },
+  { id: 12, user: "Дмитрий Волков", avatar: "ДВ", avatarColor: "#ff9800", action: "получил ачивку", target: "Лидер автоматизации", emoji: "⚡", time: "Вчера", type: "achievement" as const },
+];
+
+// ===== АДМИН: СОТРУДНИКИ =====
+export const adminEmployees: AdminEmployee[] = [
+  { id: 1,  name: "Сергей Иванов",    avatar: "СИ", avatarColor: "#607d8b", department: "АР",       role: "Главный архитектор",      balance: 4210, earnedThisMonth: 320, penaltiesThisMonth: 0,    wsStatus: "green",    lastActive: "Сегодня" },
+  { id: 2,  name: "Иван Петров",      avatar: "ИП", avatarColor: "#4caf50", department: "КР гражд", role: "Инженер-проектировщик",   balance: 3450, earnedThisMonth: 280, penaltiesThisMonth: 100,  wsStatus: "green",    lastActive: "Сегодня" },
+  { id: 3,  name: "Мария Сидорова",   avatar: "МС", avatarColor: "#e91e63", department: "АР",       role: "Архитектор",              balance: 3180, earnedThisMonth: 310, penaltiesThisMonth: 0,    wsStatus: "green",    lastActive: "Сегодня" },
+  { id: 4,  name: "Алексей Козлов",   avatar: "АК", avatarColor: "#2196f3", department: "ВК",       role: "Инженер ВК",              balance: 2890, earnedThisMonth: 240, penaltiesThisMonth: 0,    wsStatus: "green",    lastActive: "Вчера"   },
+  { id: 5,  name: "Ольга Новикова",   avatar: "ОН", avatarColor: "#9c27b0", department: "ОВ",       role: "Инженер ОВ",              balance: 2640, earnedThisMonth: 195, penaltiesThisMonth: 100,  wsStatus: "red",      lastActive: "Сегодня" },
+  { id: 6,  name: "Дмитрий Волков",   avatar: "ДВ", avatarColor: "#ff9800", department: "КР гражд", role: "Инженер-конструктор",     balance: 2410, earnedThisMonth: 210, penaltiesThisMonth: 0,    wsStatus: "green",    lastActive: "Сегодня" },
+  { id: 7,  name: "Анна Петрова",     avatar: "АП", avatarColor: "#00bcd4", department: "АР",       role: "Архитектор",              balance: 2250, earnedThisMonth: 175, penaltiesThisMonth: 200,  wsStatus: "red",      lastActive: "26.02"   },
+  { id: 8,  name: "Елена Морозова",   avatar: "ЕМ", avatarColor: "#00bcd4", department: "ТХ",       role: "Технолог",                balance: 1980, earnedThisMonth: 160, penaltiesThisMonth: 0,    wsStatus: "green",    lastActive: "Вчера"   },
+  { id: 9,  name: "Михаил Кузнецов",  avatar: "МК", avatarColor: "#795548", department: "ТМ",       role: "Инженер ТМ",              balance: 1740, earnedThisMonth: 130, penaltiesThisMonth: 100,  wsStatus: "red",      lastActive: "25.02"   },
+  { id: 10, name: "Наталья Белова",   avatar: "НБ", avatarColor: "#f44336", department: "ВК",       role: "Инженер ВК",              balance: 1560, earnedThisMonth: 145, penaltiesThisMonth: 0,    wsStatus: "green",    lastActive: "Сегодня" },
+  { id: 11, name: "Артём Соколов",    avatar: "АС", avatarColor: "#3f51b5", department: "ОВ",       role: "Инженер-проектировщик",   balance: 1320, earnedThisMonth: 95,  penaltiesThisMonth: 200,  wsStatus: "inactive", lastActive: "24.02"   },
+  { id: 12, name: "Павел Громов",     avatar: "ПГ", avatarColor: "#8bc34a", department: "ТХ",       role: "Технолог",                balance: 980,  earnedThisMonth: 80,  penaltiesThisMonth: 100,  wsStatus: "red",      lastActive: "26.02"   },
+  { id: 13, name: "Юлия Смирнова",    avatar: "ЮС", avatarColor: "#ff5722", department: "КР гражд", role: "Инженер-конструктор",     balance: 870,  earnedThisMonth: 75,  penaltiesThisMonth: 0,    wsStatus: "green",    lastActive: "Сегодня" },
+  { id: 14, name: "Игорь Федоров",    avatar: "ИФ", avatarColor: "#009688", department: "ТМ",       role: "Инженер ТМ",              balance: 620,  earnedThisMonth: 55,  penaltiesThisMonth: 300,  wsStatus: "inactive", lastActive: "21.02"   },
+];
+
+export const adminStats = {
+  totalEmployees: 14,
+  totalBalanceInCirculation: 30100,
+  issuedThisMonth: 2470,
+  spentThisMonth: 3900,
+  activeToday: 7,
+  redDaysThisMonth: 8,
+  penaltiesThisMonth: 1100,
+};
+
+// ===== АДМИН: ЛОГ СОБЫТИЙ =====
+export const adminEventLog: AdminEvent[] = [
+  { id: 1,  timestamp: "26.02 09:14", employee: "Иван Петров",     avatar: "ИП", avatarColor: "#4caf50", department: "КР гражд", type: "earning",     description: "Зелёный день Worksection",          amount: 3   },
+  { id: 2,  timestamp: "26.02 09:02", employee: "Сергей Иванов",   avatar: "СИ", avatarColor: "#607d8b", department: "АР",       type: "earning",     description: "Зелёный день Worksection",          amount: 3   },
+  { id: 3,  timestamp: "26.02 08:55", employee: "Мария Сидорова",  avatar: "МС", avatarColor: "#e91e63", department: "АР",       type: "earning",     description: "Зелёный день Worksection",          amount: 3   },
+  { id: 4,  timestamp: "26.02 08:41", employee: "Наталья Белова",  avatar: "НБ", avatarColor: "#f44336", department: "ВК",       type: "earning",     description: "Зелёный день Worksection",          amount: 3   },
+  { id: 5,  timestamp: "26.02 08:30", employee: "Ольга Новикова",  avatar: "ОН", avatarColor: "#9c27b0", department: "ОВ",       type: "penalty",     description: "Красный день: тайм-трекинг не внесён", amount: -100 },
+  { id: 6,  timestamp: "25.02 18:45", employee: "Мария Сидорова",  avatar: "МС", avatarColor: "#e91e63", department: "АР",       type: "purchase",    description: "Покупка: Пицца на отдел",           amount: -1200 },
+  { id: 7,  timestamp: "25.02 17:20", employee: "Дмитрий Волков",  avatar: "ДВ", avatarColor: "#ff9800", department: "КР гражд", type: "streak",      description: "Бонус серии: 7 зелёных дней подряд", amount: 20  },
+  { id: 8,  timestamp: "25.02 16:05", employee: "Алексей Козлов",  avatar: "АК", avatarColor: "#2196f3", department: "ВК",       type: "achievement", description: "Достижение: Межфункциональное взаимодействие", amount: 0 },
+  { id: 9,  timestamp: "25.02 14:33", employee: "Ольга Новикова",  avatar: "ОН", avatarColor: "#9c27b0", department: "ОВ",       type: "earning",     description: "Благодарность от И. Петрова",       amount: 10  },
+  { id: 10, timestamp: "25.02 13:10", employee: "Павел Громов",    avatar: "ПГ", avatarColor: "#8bc34a", department: "ТХ",       type: "penalty",     description: "Красный день: статусы не обновлены", amount: -100 },
+  { id: 11, timestamp: "25.02 11:55", employee: "Сергей Иванов",   avatar: "СИ", avatarColor: "#607d8b", department: "АР",       type: "earning",     description: "Зелёный день Worksection",          amount: 3   },
+  { id: 12, timestamp: "25.02 11:40", employee: "Иван Петров",     avatar: "ИП", avatarColor: "#4caf50", department: "КР гражд", type: "earning",     description: "Зелёный день Worksection",          amount: 3   },
+  { id: 13, timestamp: "25.02 10:15", employee: "Анна Петрова",    avatar: "АП", avatarColor: "#00bcd4", department: "АР",       type: "penalty",     description: "Красный день: тайм-трекинг не внесён", amount: -100 },
+  { id: 14, timestamp: "25.02 09:50", employee: "Елена Морозова",  avatar: "ЕМ", avatarColor: "#00bcd4", department: "ТХ",       type: "earning",     description: "Зелёный день Worksection",          amount: 3   },
+  { id: 15, timestamp: "24.02 17:30", employee: "Артём Соколов",   avatar: "АС", avatarColor: "#3f51b5", department: "ОВ",       type: "purchase",    description: "Покупка: Суши-сет на команду",      amount: -1800 },
+  { id: 16, timestamp: "24.02 16:00", employee: "Михаил Кузнецов", avatar: "МК", avatarColor: "#795548", department: "ТМ",       type: "penalty",     description: "Красный день: тайм-трекинг не внесён", amount: -100 },
+  { id: 17, timestamp: "24.02 12:20", employee: "Наталья Белова",  avatar: "НБ", avatarColor: "#f44336", department: "ВК",       type: "earning",     description: "Зелёный день Worksection",          amount: 3   },
+  { id: 18, timestamp: "24.02 11:00", employee: "Юлия Смирнова",   avatar: "ЮС", avatarColor: "#ff5722", department: "КР гражд", type: "earning",     description: "Зелёный день Worksection",          amount: 3   },
+  { id: 19, timestamp: "23.02 10:30", employee: "Михаил Кузнецов", avatar: "МК", avatarColor: "#795548", department: "ТМ",       type: "purchase",    description: "Покупка: Кофе от Григория",         amount: -3000 },
+  { id: 20, timestamp: "23.02 09:15", employee: "Дмитрий Волков",  avatar: "ДВ", avatarColor: "#ff9800", department: "КР гражд", type: "achievement", description: "Достижение: Лидер автоматизации",   amount: 0   },
 ];
 
 export const operationsHistory = [

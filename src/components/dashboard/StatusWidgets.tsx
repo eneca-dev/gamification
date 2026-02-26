@@ -65,7 +65,7 @@ export function StatusWidgets({ goal }: StatusWidgetsProps) {
               Осталось накопить:{" "}
             </span>
             <span className="text-[13px] font-extrabold" style={{ color: "var(--green-700)" }}>
-              {remaining.toLocaleString("ru-RU")} коинов
+              {remaining.toLocaleString("ru-RU")} баллов
             </span>
           </div>
         </div>

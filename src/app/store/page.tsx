@@ -21,7 +21,7 @@ export default function StorePage() {
             Рынок достижений
           </h1>
           <p className="text-sm font-medium mt-1" style={{ color: "var(--text-secondary)" }}>
-            Обменивайте коины на реальные награды
+            Обменивайте баллы на реальные награды
           </p>
         </div>
         <div
@@ -84,7 +84,7 @@ export default function StorePage() {
                 boxShadow: "0 2px 8px rgba(255,152,0,0.3)",
               }}
             >
-              Участвовать за 300 коинов
+              Участвовать за 300 баллов
             </button>
           </div>
         </div>
@@ -210,8 +210,8 @@ export default function StorePage() {
                   }}
                 >
                   {canAfford
-                    ? `Получить за ${product.price.toLocaleString("ru-RU")} коинов`
-                    : `Ещё ${deficit.toLocaleString("ru-RU")} коинов`}
+                    ? `Получить за ${product.price.toLocaleString("ru-RU")} баллов`
+                    : `Ещё ${deficit.toLocaleString("ru-RU")} баллов`}
                 </button>
               </div>
             </div>

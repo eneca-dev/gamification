@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { user } from "@/lib/data";
+import { CoinStatic } from "@/components/CoinBalance";
 
 const navItems = [
   { href: "/", label: "Главная", icon: "🏠" },
   { href: "/store", label: "Магазин", icon: "🛍️" },
   { href: "/achievements", label: "Достижения", icon: "🏆" },
   { href: "/activity", label: "Лента команды", icon: "👥" },
+  { href: "/admin", label: "Админ-панель", icon: "⚙️", adminOnly: true },
 ];
 
 export function Sidebar() {
@@ -36,10 +38,10 @@ export function Sidebar() {
           </div>
           <div>
             <div className="font-extrabold text-[15px]" style={{ color: "var(--text-primary)" }}>
-              Проект-Коины
+              Система баллов
             </div>
             <div className="text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>
-              Система мотивации
+              Геймификация
             </div>
           </div>
         </div>
@@ -48,7 +50,7 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-3 mt-2">
         <div className="space-y-1">
-          {navItems.map((item) => {
+          {navItems.filter((item) => !item.adminOnly).map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
@@ -75,7 +77,49 @@ export function Sidebar() {
             );
           })}
         </div>
+
+        {/* Admin section */}
+        <div className="mt-4 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+          {navItems.filter((item) => item.adminOnly).map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200"
+                style={{
+                  background: isActive
+                    ? "linear-gradient(135deg, rgba(120,120,120,0.1), rgba(120,120,120,0.06))"
+                    : "transparent",
+                  color: isActive ? "var(--text-primary)" : "var(--text-muted)",
+                }}
+              >
+                <span className="text-base">{item.icon}</span>
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
+
+      {/* Coin balance */}
+      <div className="px-4 pb-3">
+        <div
+          className="p-3 rounded-xl"
+          style={{
+            background: "linear-gradient(135deg, rgba(76,175,80,0.08) 0%, rgba(102,187,106,0.04) 100%)",
+            border: "1px solid rgba(76,175,80,0.12)",
+          }}
+        >
+          <div className="text-[11px] font-semibold mb-1.5" style={{ color: "var(--text-muted)" }}>
+            На вашем счету
+          </div>
+          <CoinStatic amount={user.balance} size="md" />
+          <div className="text-[10px] font-medium mt-0.5" style={{ color: "var(--text-muted)" }}>
+            баллов
+          </div>
+        </div>
+      </div>
 
       {/* User profile at bottom */}
       <div className="px-4 pb-6">
