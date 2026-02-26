@@ -1,26 +1,246 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --green-50: #f0faf0;
+  --green-100: #dcf5dc;
+  --green-200: #b8e8b8;
+  --green-400: #66bb6a;
+  --green-500: #4CAF50;
+  --green-600: #43a047;
+  --green-700: #388e3c;
+  --orange-50: #fff8f0;
+  --orange-100: #ffe0b2;
+  --orange-400: #ffa726;
+  --orange-500: #FF9800;
+  --text-primary: #2d3436;
+  --text-secondary: #636e72;
+  --text-muted: #b2bec3;
+  --surface: #f8faf8;
+  --surface-elevated: #ffffff;
+  --border: #e8ede8;
+  --shadow-sm: 0 1px 3px rgba(76, 175, 80, 0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(76, 175, 80, 0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 32px rgba(76, 175, 80, 0.1), 0 4px 8px rgba(0,0,0,0.04);
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: #f8faf8;
+  --color-foreground: #2d3436;
+  --font-sans: 'Nunito', sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-family: 'Nunito', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--green-200);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--green-400);
+}
+
+/* Circular progress */
+.circular-progress {
+  --size: 140px;
+  --half-size: calc(var(--size) / 2);
+  --stroke-width: 12px;
+  --radius: calc((var(--size) - var(--stroke-width)) / 2);
+  --circumference: calc(2 * 3.14159 * var(--radius));
+}
+
+.circular-progress circle {
+  cx: var(--half-size);
+  cy: var(--half-size);
+  r: var(--radius);
+  stroke-width: var(--stroke-width);
+  fill: none;
+  stroke-linecap: round;
+}
+
+.circular-progress circle.bg {
+  stroke: var(--green-100);
+}
+
+.circular-progress circle.fg {
+  stroke: var(--green-500);
+  stroke-dasharray: var(--circumference);
+  transform: rotate(-90deg);
+  transform-origin: var(--half-size) var(--half-size);
+  transition: stroke-dashoffset 1s ease-out;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(76, 175, 80, 0); }
+}
+
+@keyframes coin-spin {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out both;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.4s ease-out both;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s ease-out both;
+}
+
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+
+/* Card hover effect */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Coin icon */
+.coin-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #66bb6a, #43a047);
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(76, 175, 80, 0.3);
+}
+
+/* Glass effect for special banners */
+.glass-banner {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, rgba(102, 187, 106, 0.04) 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(76, 175, 80, 0.12);
+}
+
+/* Product card image placeholder */
+.product-image-placeholder {
+  background: linear-gradient(135deg, var(--green-50), var(--surface));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+}
+
+/* Achievement badge */
+.achievement-badge {
+  transition: all 0.3s ease;
+}
+.achievement-badge.locked {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+.achievement-badge.locked:hover {
+  filter: grayscale(0.5);
+  opacity: 0.7;
+}
+.achievement-badge.earned {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Nav link active indicator */
+.nav-link-active {
+  position: relative;
+}
+.nav-link-active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--green-500);
+}
+
+/* Recharts overrides */
+.recharts-cartesian-axis-tick-value {
+  font-family: 'Nunito', sans-serif !important;
+  font-size: 12px !important;
+  fill: var(--text-secondary) !important;
+}
+.recharts-default-tooltip {
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-md) !important;
+  font-family: 'Nunito', sans-serif !important;
 }
