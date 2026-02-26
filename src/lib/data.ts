@@ -13,17 +13,20 @@ export interface RevitStreak {
   milestones: StreakMilestone[];
 }
 
-export type WorksectionDayStatus = "green" | "red" | "gray" | "frozen";
+export type WorksectionDayStatus = "green" | "red" | "gray" | "frozen" | "future" | "out";
 
 export interface WorksectionDay {
   date: string;
   status: WorksectionDayStatus;
+  automation?: boolean;
 }
 
 export interface WorksectionStreak {
   currentDays: number;
   calendarDays: WorksectionDay[];
   milestones: StreakMilestone[];
+  automationCurrentDays: number;
+  automationMilestones: StreakMilestone[];
 }
 
 // ===== АЛЕРТЫ =====
@@ -71,6 +74,18 @@ export interface Transaction {
   amount: number;
   date: string;
   icon: string;
+}
+
+// ===== СОРЕВНОВАНИЕ ОТДЕЛОВ =====
+export interface DepartmentEntry {
+  rank: number;
+  name: string;
+  shortName: string;
+  color: string;
+  employeesUsing: number;
+  totalEmployees: number;
+  usagePercent: number;
+  isCurrentDepartment: boolean;
 }
 
 // ===== ЛИДЕРБОРД =====
@@ -124,7 +139,7 @@ export const worksectionStatus = {
   percent: 100,
   status: "perfect" as const,
   label: "Идеально!",
-  description: "Ваша серия безупречной работы: 4 недели подряд",
+  description: "Серия: 28 зелёных дней подряд — тайм-трекинг и статусы ОК",
 };
 
 export const weeklyActivity = {
@@ -142,46 +157,77 @@ export const userGoal = {
 // ===== АЛЕРТЫ WORKSECTION =====
 export const wsAlerts: WorksectionAlert[] = [
   {
-    id: 1,
-    severity: "critical",
-    title: "Просрочка через 2 часа",
-    description: "Задача не закрыта, дедлайн сегодня в 18:00",
-    taskName: "Обновить модель 3-го этажа",
-    deadline: "2026-02-26",
-    penalty: -10,
-  },
-  {
     id: 2,
     severity: "warning",
-    title: "Завтра дедлайн",
-    description: "Не забудьте заполнить отчёт по задаче",
+    title: "Статус не соответствует готовности",
+    description: "Готовность задачи 100%, но статус не «Готово» — исправьте до конца дня",
     taskName: "Ревизия фасада — блок Б",
-    deadline: "2026-02-27",
-    penalty: -5,
+    deadline: "2026-02-26",
+    penalty: -100,
   },
 ];
 
 // ===== СТРИКИ =====
-function generateLast35Days(): WorksectionDay[] {
+// Q1 2026: Jan 1 – Mar 31 (90 days), padded to full Mon–Sun weeks
+// Week grid: Dec 29, 2025 (Mon) → Apr 5, 2026 (Sun) = 14 weeks × 7 = 98 cells
+function generateQuarterDays(): WorksectionDay[] {
+  const today = new Date("2026-02-26");
+  const quarterStart = "2026-01-01";
+  const quarterEnd = "2026-03-31";
+
+  // Red penalty days
+  const redDays = new Set(["2026-01-15", "2026-01-23", "2026-02-10"]);
+  // Vacation (frozen streak) period
+  const frozenStart = "2026-02-02";
+  const frozenEnd = "2026-02-06";
+
+  // Days automation was used (only past days, no frozen days)
+  const automationDays = new Set([
+    // January
+    "2026-01-06", "2026-01-08", "2026-01-09",
+    "2026-01-13", "2026-01-14",
+    "2026-01-20", "2026-01-21",
+    "2026-01-27", "2026-01-28", "2026-01-29",
+    // February (no frozen period days)
+    "2026-02-09", "2026-02-10", "2026-02-11",
+    "2026-02-16", "2026-02-18", "2026-02-20",
+    "2026-02-23", "2026-02-24", "2026-02-25", "2026-02-26",
+  ]);
+
   const days: WorksectionDay[] = [];
-  const now = new Date("2026-02-26");
-  for (let i = 34; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const dayOfWeek = d.getDay();
+  // Jan 1, 2026 is Thursday → Monday of that week = Dec 29, 2025
+  // Mar 31, 2026 is Tuesday → Sunday of that week = Apr 5, 2026
+  const start = new Date("2025-12-29");
+  const end = new Date("2026-04-05");
+
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const dateStr = d.toISOString().split("T")[0];
+    const dow = d.getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    const isOut = dateStr < quarterStart || dateStr > quarterEnd;
+    const isFuture = d > today;
 
     let status: WorksectionDayStatus;
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
+    if (isOut) {
+      status = "out";
+    } else if (isWeekend) {
       status = "gray";
-    } else if (dateStr === "2026-02-10") {
+    } else if (isFuture) {
+      status = "future";
+    } else if (redDays.has(dateStr)) {
       status = "red";
-    } else if (dateStr >= "2026-02-02" && dateStr <= "2026-02-06") {
+    } else if (dateStr >= frozenStart && dateStr <= frozenEnd) {
       status = "frozen";
     } else {
       status = "green";
     }
-    days.push({ date: dateStr, status });
+
+    days.push({
+      date: dateStr,
+      status,
+      automation:
+        !isOut && !isWeekend && !isFuture && status !== "frozen" && automationDays.has(dateStr),
+    });
   }
   return days;
 }
@@ -196,57 +242,42 @@ export const revitStreak: RevitStreak = {
 };
 
 export const worksectionStreak: WorksectionStreak = {
-  currentDays: 28,
-  calendarDays: generateLast35Days(),
+  currentDays: 11,
+  calendarDays: generateQuarterDays(),
   milestones: [
     { days: 7, reward: 20, reached: true },
     { days: 30, reward: 100, reached: false },
     { days: 90, reward: 500, reached: false },
   ],
+  automationCurrentDays: 8,
+  automationMilestones: [
+    { days: 5, reward: 15, reached: true },
+    { days: 14, reward: 50, reached: false },
+    { days: 30, reward: 200, reached: false },
+  ],
 };
 
 // ===== ЕЖЕДНЕВНЫЕ ЗАДАНИЯ =====
+// Два требования для зелёного дня (+3 ПК). Оба должны быть выполнены до 23:59.
 export const dailyTasks: DailyTask[] = [
   {
     id: 1,
     source: "worksection",
-    title: "Обновите 3 задачи в Worksection",
-    description: "Актуализируйте статусы и сроки",
-    reward: 15,
-    icon: "📋",
-    progress: 2,
-    total: 3,
+    title: "Внесите тайм-трекинг за сегодня",
+    description: "Норма при ставке 1.0: от 6 до 10 часов. Срок — до 23:59",
+    reward: 1,
+    icon: "⏱️",
+    progress: 6,
+    total: 8,
     completed: false,
-  },
-  {
-    id: 2,
-    source: "revit",
-    title: "Используйте автоматизацию Revit",
-    description: "Запустите любой скрипт автоматизации",
-    reward: 20,
-    icon: "⚡",
-    progress: 1,
-    total: 1,
-    completed: true,
   },
   {
     id: 3,
-    source: "social",
-    title: "Отправьте благодарность коллеге",
-    description: "Отметьте того, кто помог вам сегодня",
-    reward: 10,
-    icon: "🤝",
-    progress: 0,
-    total: 1,
-    completed: false,
-  },
-  {
-    id: 4,
     source: "worksection",
-    title: "Закройте задачу до дедлайна",
-    description: "Завершите задачу минимум за 1 день до срока",
-    reward: 25,
-    icon: "🎯",
+    title: "Обновите динамику задач",
+    description: "Задачи уровня 3 — прогресс раз в 7 дней, разделы — раз в 14 дней",
+    reward: 2,
+    icon: "📈",
     progress: 0,
     total: 1,
     completed: false,
@@ -259,22 +290,13 @@ export const recentTransactions: Transaction[] = [
     id: 1,
     source: "worksection",
     category: "daily_green",
-    description: "Зелёный день Worksection",
-    amount: 1,
+    description: "Зелёный день — тайм-трекинг и статусы ОК",
+    amount: 3,
     date: "Сегодня",
     icon: "🟢",
   },
   {
     id: 2,
-    source: "revit",
-    category: "daily_green",
-    description: "Зелёный день Revit — запуск плагина",
-    amount: 1,
-    date: "Сегодня",
-    icon: "⚡",
-  },
-  {
-    id: 3,
     source: "social",
     category: "gratitude_received",
     description: "Благодарность от А. Петрова",
@@ -283,30 +305,39 @@ export const recentTransactions: Transaction[] = [
     icon: "🤝",
   },
   {
+    id: 3,
+    source: "worksection",
+    category: "daily_green",
+    description: "Зелёный день — тайм-трекинг и статусы ОК",
+    amount: 3,
+    date: "Вчера",
+    icon: "🟢",
+  },
+  {
     id: 4,
-    source: "revit",
+    source: "worksection",
     category: "streak_bonus",
-    description: "Бонус: серия 7 дней Revit",
-    amount: 10,
+    description: "Бонус: серия 7 зелёных дней",
+    amount: 20,
     date: "Вчера",
     icon: "🔥",
   },
   {
     id: 5,
     source: "worksection",
-    category: "deadline_penalty",
-    description: "Штраф: просрочена задача «Отчёт BIM»",
-    amount: -5,
-    date: "23 февр.",
-    icon: "⏰",
+    category: "report_penalty",
+    description: "Красный день: тайм-трекинг не внесён, стрик сброшен",
+    amount: -100,
+    date: "10 февр.",
+    icon: "🔴",
   },
   {
     id: 6,
     source: "worksection",
     category: "streak_bonus",
-    description: "Бонус: серия 30 дней Worksection",
+    description: "Бонус: серия 30 зелёных дней",
     amount: 100,
-    date: "20 февр.",
+    date: "28 янв.",
     icon: "🏅",
   },
 ];
@@ -360,6 +391,63 @@ export const leaderboard: LeaderboardEntry[] = [
   },
 ];
 
+// ===== СОРЕВНОВАНИЕ ОТДЕЛОВ =====
+export const departmentContest: DepartmentEntry[] = [
+  {
+    rank: 1,
+    name: "Архитектурный отдел",
+    shortName: "АО",
+    color: "#e91e63",
+    employeesUsing: 11,
+    totalEmployees: 12,
+    usagePercent: 92,
+    isCurrentDepartment: false,
+  },
+  {
+    rank: 2,
+    name: "Конструктивный отдел",
+    shortName: "КО",
+    color: "#2196f3",
+    employeesUsing: 7,
+    totalEmployees: 9,
+    usagePercent: 78,
+    isCurrentDepartment: true,
+  },
+  {
+    rank: 3,
+    name: "Инженерный отдел (ОВиК)",
+    shortName: "ОВиК",
+    color: "#ff9800",
+    employeesUsing: 5,
+    totalEmployees: 8,
+    usagePercent: 63,
+    isCurrentDepartment: false,
+  },
+  {
+    rank: 4,
+    name: "Электротехнический отдел",
+    shortName: "ЭО",
+    color: "#9c27b0",
+    employeesUsing: 4,
+    totalEmployees: 7,
+    usagePercent: 57,
+    isCurrentDepartment: false,
+  },
+  {
+    rank: 5,
+    name: "BIM-отдел",
+    shortName: "BIM",
+    color: "#00bcd4",
+    employeesUsing: 3,
+    totalEmployees: 6,
+    usagePercent: 50,
+    isCurrentDepartment: false,
+  },
+];
+
+// Дней до конца месяца
+export const daysUntilMonthEnd = 2;
+
 // ===== СТАРЫЕ ДАННЫЕ (для других страниц) =====
 export const transactions = [
   {
@@ -405,6 +493,7 @@ export const transactions = [
 ];
 
 export const storeProducts = [
+  { id: 0, name: "Вторая жизнь — аннуляция нарушения и сохранение стрика", emoji: "🛡️", price: 500, category: "fun", tag: "Защита стрика" },
   { id: 1, name: "Именная табличка на дверь/стол", emoji: "🏷️", price: 500, category: "fun", tag: "Доступно" },
   { id: 2, name: "Переходящий кубок / тотем на стол", emoji: "🏆", price: 800, category: "fun", tag: "Фан" },
   { id: 3, name: "VIP-парковка на 1 месяц", emoji: "🅿️", price: 2000, category: "fun", tag: "Привилегия" },
@@ -450,7 +539,7 @@ export const balanceHistory = [
 ];
 
 export const incomeSourcesData = [
-  { name: "Дисциплина Worksection", value: 60, color: "#4CAF50" },
+  { name: "Worksection и автоматизации", value: 60, color: "#4CAF50" },
   { name: "Автоматизация Revit", value: 25, color: "#66bb6a" },
   { name: "Благодарности", value: 15, color: "#a5d6a7" },
 ];
@@ -471,36 +560,35 @@ export const achievements = [
 ];
 
 export const dailyQuests = [
-  { id: 1, title: "Обновите 3 задачи в Worksection", description: "Актуализируйте статусы и сроки", reward: 15, icon: "📋", progress: 2, total: 3, completed: false },
-  { id: 2, title: "Отправьте благодарность коллеге", description: "Отметьте того, кто помог вам сегодня", reward: 10, icon: "🤝", progress: 0, total: 1, completed: false },
-  { id: 3, title: "Используйте автоматизацию Revit", description: "Запустите любой скрипт автоматизации", reward: 20, icon: "⚡", progress: 1, total: 1, completed: true },
-  { id: 4, title: "Закройте задачу до дедлайна", description: "Завершите задачу минимум за 1 день до срока", reward: 25, icon: "🎯", progress: 0, total: 1, completed: false },
+  { id: 1, title: "Внесите тайм-трекинг за сегодня", description: "Норма при ставке 1.0: от 6 до 10 часов. Срок — до 23:59", reward: 1, icon: "⏱️", progress: 6, total: 8, completed: false },
+  { id: 2, title: "Проверьте статусы задач", description: "Статус «Готово» — только при 100%, часы не вносятся в завершённые", reward: 1, icon: "📋", progress: 1, total: 1, completed: true },
+  { id: 3, title: "Обновите динамику задач", description: "Задачи уровня 3 — прогресс раз в 7 дней, разделы — раз в 14 дней", reward: 1, icon: "📈", progress: 0, total: 1, completed: false },
 ];
 
 export const teamActivity = [
   { id: 1, user: "Мария Сидорова", avatar: "МС", avatarColor: "#e91e63", action: "купила", target: "Пицца на отдел", emoji: "🍕", time: "5 минут назад", type: "purchase" as const },
   { id: 2, user: "Алексей Козлов", avatar: "АК", avatarColor: "#2196f3", action: "получил ачивку", target: "Месяц дисциплины", emoji: "🏅", time: "32 минуты назад", type: "achievement" as const },
   { id: 3, user: "Ольга Новикова", avatar: "ОН", avatarColor: "#9c27b0", action: "отправила благодарность", target: "Ивану Петрову", emoji: "💚", time: "1 час назад", type: "gratitude" as const },
-  { id: 4, user: "Дмитрий Волков", avatar: "ДВ", avatarColor: "#ff9800", action: "заработал", target: "+120 за автоматизацию Revit", emoji: "⚡", time: "1 час назад", type: "earning" as const },
+  { id: 4, user: "Дмитрий Волков", avatar: "ДВ", avatarColor: "#ff9800", action: "заработал", target: "+20 за 7 зелёных дней подряд", emoji: "🔥", time: "1 час назад", type: "earning" as const },
   { id: 5, user: "Анна Петрова", avatar: "АП", avatarColor: "#4caf50", action: "купила", target: "Сертификат Ozon", emoji: "🎫", time: "2 часа назад", type: "purchase" as const },
-  { id: 6, user: "Сергей Иванов", avatar: "СИ", avatarColor: "#607d8b", action: "достиг серии", target: "8 зелёных недель подряд", emoji: "🔥", time: "3 часа назад", type: "streak" as const },
+  { id: 6, user: "Сергей Иванов", avatar: "СИ", avatarColor: "#607d8b", action: "достиг серии", target: "56 зелёных дней подряд", emoji: "🔥", time: "3 часа назад", type: "streak" as const },
   { id: 7, user: "Елена Морозова", avatar: "ЕМ", avatarColor: "#00bcd4", action: "получила ачивку", target: "Щедрая душа", emoji: "💚", time: "3 часа назад", type: "achievement" as const },
   { id: 8, user: "Михаил Кузнецов", avatar: "МК", avatarColor: "#795548", action: "купил", target: "Кофе от Григория", emoji: "☕", time: "5 часов назад", type: "purchase" as const },
   { id: 9, user: "Наталья Белова", avatar: "НБ", avatarColor: "#f44336", action: "отправила благодарность", target: "Сергею Иванову", emoji: "🤝", time: "5 часов назад", type: "gratitude" as const },
   { id: 10, user: "Артём Соколов", avatar: "АС", avatarColor: "#3f51b5", action: "купил", target: "Суши-сет на команду", emoji: "🍣", time: "Вчера", type: "purchase" as const },
-  { id: 11, user: "Мария Сидорова", avatar: "МС", avatarColor: "#e91e63", action: "заработала", target: "+50 за зелёную неделю", emoji: "🟢", time: "Вчера", type: "earning" as const },
+  { id: 11, user: "Мария Сидорова", avatar: "МС", avatarColor: "#e91e63", action: "заработала", target: "+20 за 7 зелёных дней подряд", emoji: "🟢", time: "Вчера", type: "earning" as const },
   { id: 12, user: "Дмитрий Волков", avatar: "ДВ", avatarColor: "#ff9800", action: "получил ачивку", target: "Тысячник", emoji: "💰", time: "Вчера", type: "achievement" as const },
 ];
 
 export const operationsHistory = [
-  { date: "25.02.2026", operation: "Зеленая неделя Worksection", amount: 50 },
-  { date: "25.02.2026", operation: "Благодарность от А. Петрова", amount: 50 },
-  { date: "24.02.2026", operation: "Автоматизация Revit — модель этажа", amount: 120 },
+  { date: "25.02.2026", operation: "Зелёный день Worksection", amount: 3 },
+  { date: "25.02.2026", operation: "Недельный бонус (7 зелёных дней)", amount: 20 },
+  { date: "25.02.2026", operation: "Благодарность от А. Петрова", amount: 10 },
+  { date: "24.02.2026", operation: "Зелёный день Worksection", amount: 3 },
   { date: "22.02.2026", operation: "Покупка: Пицца на отдел", amount: -1200 },
-  { date: "20.02.2026", operation: "Зеленая неделя Worksection", amount: 50 },
-  { date: "18.02.2026", operation: "Автоматизация Revit — фасад", amount: 80 },
-  { date: "15.02.2026", operation: "Благодарность от М. Сидоровой", amount: 50 },
-  { date: "13.02.2026", operation: "Зеленая неделя Worksection", amount: 50 },
-  { date: "10.02.2026", operation: "Автоматизация Revit — инженерные сети", amount: 150 },
-  { date: "08.02.2026", operation: "Покупка: Сертификат Ozon", amount: -500 },
+  { date: "20.02.2026", operation: "Зелёный день Worksection", amount: 3 },
+  { date: "15.02.2026", operation: "Благодарность от М. Сидоровой", amount: 10 },
+  { date: "10.02.2026", operation: "Красный день: тайм-трекинг не внесён", amount: -100 },
+  { date: "05.02.2026", operation: "Покупка: Сертификат Ozon", amount: -500 },
+  { date: "28.01.2026", operation: "Месячный бонус (30 зелёных дней)", amount: 100 },
 ];

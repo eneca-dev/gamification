@@ -7,17 +7,17 @@ import { StreakPanel } from "@/components/dashboard/StreakPanel";
 import { DailyQuests } from "@/components/dashboard/DailyQuests";
 import { TransactionFeed } from "@/components/dashboard/TransactionFeed";
 import { Leaderboard } from "@/components/dashboard/Leaderboard";
+import { DepartmentContest } from "@/components/dashboard/DepartmentContest";
 import {
   user,
   wsAlerts,
-  worksectionStatus,
-  weeklyActivity,
   userGoal,
-  revitStreak,
   worksectionStreak,
   dailyTasks,
   recentTransactions,
   leaderboard,
+  departmentContest,
+  daysUntilMonthEnd,
 } from "@/lib/data";
 
 export default function DashboardPage() {
@@ -37,37 +37,32 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Блок 3 — Сводка: дисциплина + активность + цель */}
-      <div className="grid grid-cols-3 gap-5">
-        <StatusWidgets
-          worksection={worksectionStatus}
-          activity={weeklyActivity}
-          goal={userGoal}
-          weekStreak={user.weekStreak}
-        />
+      {/* Блок 3 — Цель (1/3) + WS дисциплина-грид (2/3) */}
+      <div className="grid grid-cols-3 gap-5 animate-fade-in-up stagger-2">
+        <StatusWidgets goal={userGoal} />
+        <div className="col-span-2">
+          <StreakPanel worksectionStreak={worksectionStreak} />
+        </div>
       </div>
 
-      {/* Блок 4 — Стрики: Revit (компактный) + WS (грид) */}
-      <div className="grid grid-cols-2 gap-5 animate-fade-in-up stagger-3">
-        <StreakPanel
-          revitStreak={revitStreak}
-          worksectionStreak={worksectionStreak}
-        />
-      </div>
-
-      {/* Блок 5 — Ежедневные задания */}
-      <div className="animate-fade-in-up stagger-4">
+      {/* Блок 4 — Ежедневные задания */}
+      <div className="animate-fade-in-up stagger-3">
         <DailyQuests tasks={dailyTasks} />
       </div>
 
-      {/* Блок 6 + 7 — Транзакции и Лидерборд */}
-      <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-5">
-        <div className="col-span-3">
+      {/* Блок 5 + 6 — Транзакции и Лидерборд */}
+      <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-4">
+        <div className="col-span-2">
           <TransactionFeed transactions={recentTransactions} />
         </div>
-        <div className="col-span-2">
+        <div className="col-span-3">
           <Leaderboard entries={leaderboard} />
         </div>
+      </div>
+
+      {/* Блок 7 — Соревнование отделов */}
+      <div className="animate-fade-in-up stagger-5">
+        <DepartmentContest departments={departmentContest} daysLeft={daysUntilMonthEnd} />
       </div>
     </div>
   );

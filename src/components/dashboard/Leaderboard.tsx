@@ -1,13 +1,49 @@
 "use client";
 
-import { Crown } from "lucide-react";
+import { Crown, Zap } from "lucide-react";
 import type { LeaderboardEntry } from "@/lib/data";
 
 interface LeaderboardProps {
   entries: LeaderboardEntry[];
 }
 
-export function Leaderboard({ entries }: LeaderboardProps) {
+function RankBadge({ rank }: { rank: number }) {
+  return (
+    <div
+      className="w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-extrabold shrink-0"
+      style={{
+        background:
+          rank === 1
+            ? "linear-gradient(135deg, var(--orange-400), var(--orange-500))"
+            : rank === 2
+              ? "linear-gradient(135deg, #bdbdbd, #9e9e9e)"
+              : rank === 3
+                ? "linear-gradient(135deg, #bcaaa4, #a1887f)"
+                : "var(--surface)",
+        color: rank <= 3 ? "white" : "var(--text-muted)",
+        border: rank > 3 ? "1px solid var(--border)" : "none",
+      }}
+    >
+      {rank}
+    </div>
+  );
+}
+
+function TopFivePanel({
+  title,
+  icon,
+  entries,
+  getValue,
+  accentColor,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  entries: LeaderboardEntry[];
+  getValue: (e: LeaderboardEntry) => number;
+  accentColor: string;
+}) {
+  const sorted = [...entries].sort((a, b) => getValue(b) - getValue(a)).slice(0, 5);
+
   return (
     <div
       className="rounded-2xl p-5 h-full"
@@ -18,19 +54,24 @@ export function Leaderboard({ entries }: LeaderboardProps) {
       }}
     >
       <div className="flex items-center gap-2 mb-4">
-        <Crown size={14} style={{ color: "var(--orange-500)" }} />
-        <div className="text-[12px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
-          Топ-5 за месяц
+        {icon}
+        <div
+          className="text-[12px] font-bold uppercase tracking-wider"
+          style={{ color: "var(--text-muted)" }}
+        >
+          {title}
         </div>
       </div>
 
       <div className="space-y-2">
-        {entries.map((entry) => {
-          const isFirst = entry.rank === 1;
+        {sorted.map((entry, idx) => {
+          const rank = idx + 1;
+          const value = getValue(entry);
+          const isFirst = rank === 1;
 
           return (
             <div
-              key={entry.rank}
+              key={entry.name}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors"
               style={{
                 background: entry.isCurrentUser
@@ -45,82 +86,48 @@ export function Leaderboard({ entries }: LeaderboardProps) {
                     : "1px solid transparent",
               }}
             >
-              {/* Rank */}
-              <div
-                className="w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-extrabold flex-shrink-0"
-                style={{
-                  background: isFirst
-                    ? "linear-gradient(135deg, var(--orange-400), var(--orange-500))"
-                    : entry.rank === 2
-                      ? "linear-gradient(135deg, #bdbdbd, #9e9e9e)"
-                      : entry.rank === 3
-                        ? "linear-gradient(135deg, #bcaaa4, #a1887f)"
-                        : "var(--surface)",
-                  color: entry.rank <= 3 ? "white" : "var(--text-muted)",
-                  border: entry.rank > 3 ? "1px solid var(--border)" : "none",
-                }}
-              >
-                {entry.rank}
-              </div>
+              <RankBadge rank={rank} />
 
-              {/* Avatar */}
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px] font-bold shrink-0"
                 style={{ background: entry.avatarColor }}
               >
                 {entry.avatar}
               </div>
 
-              {/* Name */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span
-                    className="text-[13px] font-bold truncate"
+                    className="text-[12px] font-bold truncate"
                     style={{ color: "var(--text-primary)" }}
                   >
                     {entry.name}
                   </span>
                   {entry.isCurrentUser && (
                     <span
-                      className="text-[9px] font-bold px-1.5 py-0.5 rounded"
-                      style={{ background: "var(--green-100)", color: "var(--green-700)" }}
+                      className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                      style={{
+                        background: "var(--green-100)",
+                        color: "var(--green-700)",
+                      }}
                     >
                       Вы
                     </span>
                   )}
                 </div>
-                {/* Breakdown bar */}
-                <div className="flex gap-0.5 mt-1 h-1 rounded-full overflow-hidden w-full">
-                  <div
-                    className="h-full rounded-l-full"
-                    style={{
-                      width: `${(entry.breakdown.worksection / entry.totalCoins) * 100}%`,
-                      background: "#1976d2",
-                    }}
-                  />
-                  <div
-                    className="h-full"
-                    style={{
-                      width: `${(entry.breakdown.revit / entry.totalCoins) * 100}%`,
-                      background: "var(--orange-500)",
-                    }}
-                  />
-                  <div
-                    className="h-full rounded-r-full"
-                    style={{
-                      width: `${(entry.breakdown.social / entry.totalCoins) * 100}%`,
-                      background: "#7b1fa2",
-                    }}
-                  />
-                </div>
               </div>
 
-              {/* Total */}
-              <div className="text-right flex-shrink-0">
-                <div className="text-[14px] font-extrabold" style={{ color: "var(--green-700)" }}>
-                  {entry.totalCoins.toLocaleString("ru-RU")}
+              <div className="text-right shrink-0">
+                <div
+                  className="text-[14px] font-extrabold"
+                  style={{ color: accentColor }}
+                >
+                  {value.toLocaleString("ru-RU")}
                 </div>
-                <div className="text-[9px] font-medium" style={{ color: "var(--text-muted)" }}>
+                <div
+                  className="text-[9px] font-medium"
+                  style={{ color: "var(--text-muted)" }}
+                >
                   ПК
                 </div>
               </div>
@@ -128,22 +135,27 @@ export function Leaderboard({ entries }: LeaderboardProps) {
           );
         })}
       </div>
+    </div>
+  );
+}
 
-      {/* Legend */}
-      <div className="flex items-center gap-3 mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 rounded-sm" style={{ background: "#1976d2" }} />
-          <span className="text-[9px] font-medium" style={{ color: "var(--text-muted)" }}>WS</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 rounded-sm" style={{ background: "var(--orange-500)" }} />
-          <span className="text-[9px] font-medium" style={{ color: "var(--text-muted)" }}>Revit</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 rounded-sm" style={{ background: "#7b1fa2" }} />
-          <span className="text-[9px] font-medium" style={{ color: "var(--text-muted)" }}>Соц.</span>
-        </div>
-      </div>
+export function Leaderboard({ entries }: LeaderboardProps) {
+  return (
+    <div className="grid grid-cols-2 gap-5 h-full">
+      <TopFivePanel
+        title="Топ-5 Общий"
+        icon={<Crown size={14} style={{ color: "var(--orange-500)" }} />}
+        entries={entries}
+        getValue={(e) => e.totalCoins}
+        accentColor="var(--green-700)"
+      />
+      <TopFivePanel
+        title="Топ-5 Автоматизации ★"
+        icon={<Zap size={14} style={{ color: "var(--orange-500)" }} />}
+        entries={entries}
+        getValue={(e) => e.breakdown.revit}
+        accentColor="var(--orange-500)"
+      />
     </div>
   );
 }
