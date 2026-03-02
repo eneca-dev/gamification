@@ -7,5 +7,9 @@
       "WebFetch(domain:worksection.com)",
       "WebFetch(domain:supabase.com)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ],
+  "enableAllProjectMcpServers": true
 }
