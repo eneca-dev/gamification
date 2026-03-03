@@ -1,4 +1,5 @@
-import { getWorksectionTokens, refreshWorksectionToken } from '@/modules/auth'
+import { refreshWorksectionToken } from './refreshToken'
+import { getWorksectionTokens } from './queries'
 
 const REFRESH_THRESHOLD_MS = 5 * 60 * 1000 // 5 минут до истечения — рефрешим заранее
 

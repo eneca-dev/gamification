@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { createSupabaseAdminClient, createSupabaseServerClient } from '@/config/supabase'
 import { worksectionConfig } from '@/config/worksection'
-import type { WorksectionTokenRow } from '@/lib/types'
+import type { ProfileRow, WorksectionTokenRow } from '@/lib/types'
+import { wsTokenResponseSchema, wsResourceResponseSchema } from '@/modules/auth'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -40,8 +41,13 @@ export async function GET(request: NextRequest) {
     return new NextResponse('Token exchange failed', { status: 502 })
   }
 
-  const { access_token, refresh_token, account_url, expires_in } =
-    await tokenRes.json()
+  const tokenParsed = wsTokenResponseSchema.safeParse(await tokenRes.json())
+
+  if (!tokenParsed.success) {
+    return new NextResponse('Invalid token response from Worksection', { status: 502 })
+  }
+
+  const { access_token, refresh_token, account_url, expires_in } = tokenParsed.data
 
   // Данные пользователя из Worksection
   const resourceRes = await fetch(worksectionConfig.urls.resource, {
@@ -58,9 +64,15 @@ export async function GET(request: NextRequest) {
     return new NextResponse('User info fetch failed', { status: 502 })
   }
 
-  const resourceData = await resourceRes.json()
+  const resourceParsed = wsResourceResponseSchema.safeParse(await resourceRes.json())
 
-  const email = (resourceData.email as string).toLowerCase()
+  if (!resourceParsed.success) {
+    return new NextResponse('Invalid resource response from Worksection', { status: 502 })
+  }
+
+  const resourceData = resourceParsed.data
+
+  const email = resourceData.email.toLowerCase()
   const name = `${resourceData.first_name ?? ''} ${resourceData.last_name ?? ''}`.trim()
 
   const admin = createSupabaseAdminClient()
@@ -78,21 +90,17 @@ export async function GET(request: NextRequest) {
   if (created?.user) {
     userId = created.user.id
   } else if (createError) {
-    // Пользователь уже существует — ищем через listUsers
-    const { data: usersData, error: listError } =
-      await admin.auth.admin.listUsers({ perPage: 1000 })
+    // Пользователь уже существует — ищем по email через RPC
+    const { data: existingId, error: rpcError } = await admin.rpc(
+      'get_user_id_by_email',
+      { lookup_email: email }
+    )
 
-    if (listError) {
-      return new NextResponse('Failed to list users', { status: 500 })
-    }
-
-    const existing = usersData?.users.find((u) => u.email === email)
-
-    if (!existing) {
+    if (rpcError || !existingId) {
       return new NextResponse('Failed to find or create user', { status: 500 })
     }
 
-    userId = existing.id
+    userId = existingId as string
   } else {
     return new NextResponse('Failed to create user', { status: 500 })
   }
@@ -113,6 +121,46 @@ export async function GET(request: NextRequest) {
 
   if (upsertError) {
     return new NextResponse('Failed to store tokens', { status: 500 })
+  }
+
+  // Получение department и team из WS API
+  let department: string | null = null
+  let team: string | null = null
+
+  try {
+    const usersRes = await fetch(
+      `${account_url}/api/oauth2?action=get_users`,
+      { headers: { Authorization: `Bearer ${access_token}` } }
+    )
+
+    if (usersRes.ok) {
+      const usersJson = await usersRes.json()
+      const wsUser = (usersJson?.data as Array<{ email?: string; department?: string; group?: string }>)
+        ?.find((u) => u.email?.toLowerCase() === email)
+
+      if (wsUser) {
+        department = wsUser.department ?? null
+        team = wsUser.group ?? null
+      }
+    }
+  } catch {
+    // Не блокируем вход при ошибке получения доп. данных
+  }
+
+  // Upsert профиля
+  const { error: profileError } = await admin
+    .from('profiles')
+    .upsert({
+      user_id: userId,
+      first_name: resourceData.first_name ?? '',
+      last_name: resourceData.last_name ?? '',
+      department: team,
+      team: department,
+      updated_at: new Date().toISOString(),
+    } satisfies Omit<ProfileRow, 'created_at'>)
+
+  if (profileError) {
+    return new NextResponse('Failed to store profile', { status: 500 })
   }
 
   // Создание Supabase-сессии через magic link

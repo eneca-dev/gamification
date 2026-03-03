@@ -25,9 +25,19 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
   if (!user) return null
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('first_name, last_name, department, team')
+    .eq('user_id', user.id)
+    .single()
+
   return {
     id: user.id,
     email: user.email ?? '',
     fullName: user.user_metadata?.full_name ?? '',
+    firstName: profile?.first_name ?? '',
+    lastName: profile?.last_name ?? '',
+    department: profile?.department ?? null,
+    team: profile?.team ?? null,
   }
 }

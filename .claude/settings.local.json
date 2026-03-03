@@ -5,11 +5,12 @@
       "Bash(tail:*)",
       "Bash(npx next:*)",
       "WebFetch(domain:worksection.com)",
-      "WebFetch(domain:supabase.com)"
+      "WebFetch(domain:supabase.com)",
+      "WebSearch"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "supabase"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

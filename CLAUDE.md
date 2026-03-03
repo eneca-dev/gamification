@@ -96,12 +96,14 @@ src/
   hooks/         # Кастомные React-хуки
   config/        # Настройки проекта (подключения, публичные ключи, константы приложения)
   docs/          # Документация по модулям для AI
+  docs-features/ # Планы и ревью фич по Full Pipeline (см. src/docs/dev-pipeline.md)
 ```
 
 - Общие UI-компоненты — `src/components/`
 - Бизнес-логика — `src/modules/<module-name>/`
 - Утилиты, константы, типы — `src/lib/`
 - Подключения к сервисам и настройки — `src/config/`
+- Планы фич (Full Pipeline) — `src/docs-features/<module>/`
 
 ### Стили и дизайн-система
 - Только Tailwind CSS классы
@@ -274,17 +276,28 @@ function handleSubmit() {
 ### Структура модуля
 ```
 src/modules/<module-name>/
-  actions.ts      # Server Actions (мутации)
-  queries.ts      # Функции чтения данных (server-side)
-  types.ts        # TypeScript типы модуля
-  components/     # UI-компоненты, специфичные для модуля
-  hooks/          # Клиентские хуки модуля (если нужны)
-  index.ts        # Публичный API модуля (реэкспорты)
+  actions.ts        # Server Actions (мутации)
+  queries.ts        # Функции чтения данных (server-side)
+  types.ts          # TypeScript типы модуля
+  components/       # UI-компоненты, специфичные для модуля
+  hooks/            # Клиентские хуки модуля (если нужны)
+  index.ts          # Публичный API модуля — серверные потребители
+  index.client.ts   # Клиентский API модуля (если нужен) — см. ниже
 ```
 
 ### Правила модулей
 - Модули **не импортируют друг друга напрямую** — взаимодействие через `src/lib/` или props
-- Публичный API модуля — только через `index.ts`, не импортировать внутренние файлы снаружи
+- Публичный API модуля — только через `index.ts` (или `index.client.ts`), не импортировать внутренние файлы снаружи
+
+### Server/Client граница в модулях
+Нельзя смешивать серверные и клиентские экспорты в одном barrel file. Если `index.ts` реэкспортирует файл с серверными зависимостями (`next/headers`, `server-only`), весь barrel становится серверным — клиентские компоненты не смогут его импортировать.
+
+Решение: если модуль используется и на сервере, и на клиенте — создать `index.client.ts`:
+- **`index.ts`** — полный API для серверных потребителей (queries, actions, types, schemas)
+- **`index.client.ts`** — только клиентобезопасные экспорты (типы, server actions для форм)
+
+Серверные компоненты и роуты импортируют из `@/modules/<name>`.
+Клиентские компоненты (`'use client'`) импортируют из `@/modules/<name>/index.client`.
 - Каждый модуль имеет документацию в `src/docs/<module-name>.md`
 - Название модуля — существительное во множественном числе: `achievements`, `users`, `transactions`
 

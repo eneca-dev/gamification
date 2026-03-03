@@ -1,13 +1,11 @@
 'use client'
 
-import { LogOut } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { LogOut } from 'lucide-react'
 
-// Прямые импорты минуя index.ts — обязательно из-за 'use server' границы:
-// index.ts тянет queries.ts → supabase.ts → next/headers в клиентский бандл
-import { signOut } from '@/modules/auth/actions'
-import type { AuthUser } from '@/modules/auth/types'
+import { signOut } from '@/modules/auth/index.client'
+import type { AuthUser } from '@/modules/auth/index.client'
 import { user as mockUser } from '@/lib/data'
 import { CoinStatic } from '@/components/CoinBalance'
 

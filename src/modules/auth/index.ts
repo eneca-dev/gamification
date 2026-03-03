@@ -1,3 +1,6 @@
 export { getCurrentUser, getWorksectionTokens } from './queries'
-export { refreshWorksectionToken, signOut } from './actions'
+export { signOut } from './actions'
+export { refreshWorksectionToken } from './refreshToken'
 export type { AuthUser } from './types'
+export { wsTokenResponseSchema, wsResourceResponseSchema } from './types'
+export { worksectionApi } from './worksectionApi'
