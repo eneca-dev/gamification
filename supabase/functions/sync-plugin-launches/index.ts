@@ -66,7 +66,7 @@ async function fetchLaunchesForDay(date: Date): Promise<PluginLaunchRow[]> {
           },
           aggs: {
             by_user: {
-              terms: { field: 'Properties.Email.keyword', size: 500 },
+              terms: { field: 'Properties.Email.keyword', size: 10000 },
             },
           },
         },
@@ -117,7 +117,8 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   // ?days=1 — вчера (default, для ежедневного cron)
   // ?days=30 — бэкфилл за 30 дней
-  const days = Math.min(parseInt(url.searchParams.get('days') ?? '1', 10), 30);
+  const daysParam = parseInt(url.searchParams.get('days') ?? '1', 10);
+  const days = Math.max(1, Math.min(Number.isNaN(daysParam) ? 1 : daysParam, 30));
 
   const results: SyncDayResult[] = [];
 

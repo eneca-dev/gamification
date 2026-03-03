@@ -31,7 +31,7 @@ export async function getUserAutomationStreak(email: string): Promise<Automation
     const supabase = await createSupabaseServerClient()
 
     const sinceDate = new Date()
-    sinceDate.setDate(sinceDate.getDate() - STREAK_GRID_DAYS)
+    sinceDate.setUTCDate(sinceDate.getUTCDate() - STREAK_GRID_DAYS)
     const sinceDateStr = sinceDate.toISOString().split('T')[0]
 
     const { data } = await supabase
@@ -61,7 +61,7 @@ export async function getTopAutomationUsers(
     const adminClient = createSupabaseAdminClient()
 
     const sinceDate = new Date()
-    sinceDate.setDate(sinceDate.getDate() - LEADERBOARD_PERIOD_DAYS)
+    sinceDate.setUTCDate(sinceDate.getUTCDate() - LEADERBOARD_PERIOD_DAYS)
     const sinceDateStr = sinceDate.toISOString().split('T')[0]
 
     const { data: launches } = await adminClient
@@ -71,10 +71,11 @@ export async function getTopAutomationUsers(
 
     if (!launches?.length) return []
 
-    // Агрегируем запуски по email
+    // Агрегируем запуски по email (нормализуем к нижнему регистру для консистентности)
     const totals: Record<string, number> = {}
     for (const row of launches) {
-      totals[row.user_email] = (totals[row.user_email] ?? 0) + row.launch_count
+      const email = row.user_email.toLowerCase()
+      totals[email] = (totals[email] ?? 0) + row.launch_count
     }
 
     // Топ N по убыванию
