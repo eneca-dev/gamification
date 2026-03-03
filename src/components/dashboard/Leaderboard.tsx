@@ -2,10 +2,38 @@
 
 import { Crown, Zap } from "lucide-react";
 import type { LeaderboardEntry } from "@/lib/data";
+import type { AutomationLeaderboardEntry } from "@/modules/plugin-stats";
 
-interface LeaderboardProps {
-  entries: LeaderboardEntry[];
+// ─── Внутренний тип для рендеринга строки панели ──────────────────────────────
+interface PanelEntry {
+  name: string;
+  avatar: string;
+  avatarColor: string;
+  value: number;
+  isCurrentUser: boolean;
 }
+
+const AVATAR_COLORS = [
+  "#607d8b", "#2196f3", "#e91e63", "#9c27b0",
+  "#ff9800", "#4caf50", "#00bcd4", "#795548",
+];
+
+function emailToColor(email: string): string {
+  let h = 0;
+  for (let i = 0; i < email.length; i++) {
+    h = (h << 5) - h + email.charCodeAt(i);
+    h |= 0;
+  }
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+
+function getInitials(name: string): string {
+  const parts = name.split(" ").filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+// ─── Компоненты ───────────────────────────────────────────────────────────────
 
 function RankBadge({ rank }: { rank: number }) {
   return (
@@ -33,16 +61,16 @@ function TopFivePanel({
   title,
   icon,
   entries,
-  getValue,
   accentColor,
+  unit = "б",
 }: {
   title: string;
   icon: React.ReactNode;
-  entries: LeaderboardEntry[];
-  getValue: (e: LeaderboardEntry) => number;
+  entries: PanelEntry[];
   accentColor: string;
+  unit?: string;
 }) {
-  const sorted = [...entries].sort((a, b) => getValue(b) - getValue(a)).slice(0, 5);
+  const sorted = [...entries].sort((a, b) => b.value - a.value).slice(0, 5);
 
   return (
     <div
@@ -66,7 +94,6 @@ function TopFivePanel({
       <div className="space-y-2">
         {sorted.map((entry, idx) => {
           const rank = idx + 1;
-          const value = getValue(entry);
           const isFirst = rank === 1;
 
           return (
@@ -122,13 +149,13 @@ function TopFivePanel({
                   className="text-[14px] font-extrabold"
                   style={{ color: accentColor }}
                 >
-                  {value.toLocaleString("ru-RU")}
+                  {entry.value.toLocaleString("ru-RU")}
                 </div>
                 <div
                   className="text-[9px] font-medium"
                   style={{ color: "var(--text-muted)" }}
                 >
-                  б
+                  {unit}
                 </div>
               </div>
             </div>
@@ -139,21 +166,51 @@ function TopFivePanel({
   );
 }
 
-export function Leaderboard({ entries }: LeaderboardProps) {
+// ─── Публичный компонент ──────────────────────────────────────────────────────
+
+interface LeaderboardProps {
+  entries: LeaderboardEntry[];
+  automationEntries?: AutomationLeaderboardEntry[];
+}
+
+export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
+  const generalPanel: PanelEntry[] = entries.map((e) => ({
+    name: e.name,
+    avatar: e.avatar,
+    avatarColor: e.avatarColor,
+    value: e.totalCoins,
+    isCurrentUser: e.isCurrentUser,
+  }));
+
+  const automationPanel: PanelEntry[] = automationEntries
+    ? automationEntries.map((e) => ({
+        name: e.fullName || e.email,
+        avatar: getInitials(e.fullName || e.email),
+        avatarColor: emailToColor(e.email),
+        value: e.launchCount,
+        isCurrentUser: e.isCurrentUser,
+      }))
+    : entries.map((e) => ({
+        name: e.name,
+        avatar: e.avatar,
+        avatarColor: e.avatarColor,
+        value: e.breakdown.revit,
+        isCurrentUser: e.isCurrentUser,
+      }));
+
   return (
     <div className="grid grid-cols-2 gap-5 h-full">
       <TopFivePanel
         title="Топ-5 Общий"
         icon={<Crown size={14} style={{ color: "var(--orange-500)" }} />}
-        entries={entries}
-        getValue={(e) => e.totalCoins}
+        entries={generalPanel}
         accentColor="var(--green-700)"
       />
       <TopFivePanel
         title="Топ-5 Автоматизации ★"
         icon={<Zap size={14} style={{ color: "var(--orange-500)" }} />}
-        entries={entries}
-        getValue={(e) => e.breakdown.revit}
+        entries={automationPanel}
+        unit={automationEntries ? "зап." : "б"}
         accentColor="var(--orange-500)"
       />
     </div>
