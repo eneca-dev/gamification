@@ -41,7 +41,6 @@ function StatCard({
       style={{
         background: "var(--surface-elevated)",
         border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-sm)",
       }}
     >
       <div className="flex items-start justify-between mb-3">
@@ -71,9 +70,9 @@ function StatCard({
 
 function WsStatusBadge({ status }: { status: WsStatus }) {
   const map: Record<WsStatus, { label: string; bg: string; color: string }> = {
-    green:    { label: "Зелёный", bg: "var(--green-100)",           color: "var(--green-700)" },
-    red:      { label: "Красный", bg: "rgba(229,57,53,0.12)",       color: "#e53935" },
-    inactive: { label: "Нет данных", bg: "var(--surface)",          color: "var(--text-muted)" },
+    green:    { label: "Зелёный", bg: "var(--apex-success-bg)",              color: "var(--apex-success-text)" },
+    red:      { label: "Красный", bg: "rgba(var(--apex-danger-rgb), 0.12)",  color: "var(--apex-danger)" },
+    inactive: { label: "Нет данных", bg: "var(--surface)",                   color: "var(--text-muted)" },
   };
   const s = map[status];
   return (
@@ -90,11 +89,11 @@ function WsStatusBadge({ status }: { status: WsStatus }) {
 
 function EventTypeBadge({ type }: { type: AdminEvent["type"] }) {
   const map: Record<AdminEvent["type"], { label: string; icon: string; color: string; bg: string }> = {
-    earning:     { label: "Начисление",   icon: "🟢", color: "var(--green-700)",     bg: "var(--green-100)" },
-    penalty:     { label: "Штраф",        icon: "🔴", color: "#e53935",              bg: "rgba(229,57,53,0.1)" },
-    purchase:    { label: "Покупка",      icon: "🛍️", color: "#7b1fa2",              bg: "rgba(156,39,176,0.1)" },
-    achievement: { label: "Достижение",   icon: "🏆", color: "var(--orange-500)",    bg: "var(--orange-50)" },
-    streak:      { label: "Бонус серии",  icon: "🔥", color: "#f57c00",              bg: "rgba(255,152,0,0.1)" },
+    earning:     { label: "Начисление",   icon: "🟢", color: "var(--apex-success-text)",                      bg: "var(--apex-success-bg)" },
+    penalty:     { label: "Штраф",        icon: "🔴", color: "var(--apex-danger)",                            bg: "rgba(var(--apex-danger-rgb), 0.1)" },
+    purchase:    { label: "Покупка",      icon: "🛍️", color: "var(--tag-purple-text)",                        bg: "var(--tag-purple-bg)" },
+    achievement: { label: "Достижение",   icon: "🏆", color: "var(--orange-500)",                             bg: "var(--orange-50)" },
+    streak:      { label: "Бонус серии",  icon: "🔥", color: "var(--apex-warning-text)",                      bg: "rgba(var(--orange-500-rgb), 0.1)" },
   };
   const s = map[type];
   return (
@@ -143,7 +142,7 @@ function EmployeesTable() {
 
   const SortArrow = ({ k }: { k: keyof AdminEmployee }) =>
     sortKey === k ? (
-      <span style={{ color: "var(--green-600)" }}>{sortDir === "desc" ? " ↓" : " ↑"}</span>
+      <span style={{ color: "var(--apex-primary)" }}>{sortDir === "desc" ? " ↓" : " ↑"}</span>
     ) : null;
 
   return (
@@ -152,7 +151,6 @@ function EmployeesTable() {
       style={{
         background: "var(--surface-elevated)",
         border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-sm)",
       }}
     >
       <div className="flex items-center justify-between mb-4">
@@ -225,7 +223,7 @@ function EmployeesTable() {
             {filtered.map((emp) => (
               <tr
                 key={emp.id}
-                className="transition-colors hover:bg-[rgba(76,175,80,0.02)]"
+                className="transition-colors hover:bg-[rgba(var(--apex-primary-rgb),0.02)]"
                 style={{ borderTop: "1px solid var(--border)" }}
               >
                 <td className="px-4 py-3">
@@ -255,20 +253,20 @@ function EmployeesTable() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-[14px] font-extrabold" style={{ color: "var(--green-700)" }}>
+                  <span className="text-[14px] font-extrabold" style={{ color: "var(--apex-success-text)" }}>
                     {emp.balance.toLocaleString("ru-RU")}
                   </span>
                   <span className="text-[10px] font-medium ml-1" style={{ color: "var(--text-muted)" }}>б</span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-[13px] font-bold" style={{ color: "var(--green-600)" }}>
+                  <span className="text-[13px] font-bold" style={{ color: "var(--apex-primary)" }}>
                     +{emp.earnedThisMonth}
                   </span>
                   <span className="text-[10px] ml-1" style={{ color: "var(--text-muted)" }}>б</span>
                 </td>
                 <td className="px-4 py-3">
                   {emp.penaltiesThisMonth > 0 ? (
-                    <span className="text-[13px] font-bold" style={{ color: "#e53935" }}>
+                    <span className="text-[13px] font-bold" style={{ color: "var(--apex-danger)" }}>
                       −{emp.penaltiesThisMonth}
                       <span className="text-[10px] ml-0.5" style={{ color: "var(--text-muted)" }}>б</span>
                     </span>
@@ -319,7 +317,6 @@ function EventLog() {
       style={{
         background: "var(--surface-elevated)",
         border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-sm)",
       }}
     >
       <div className="flex items-center justify-between mb-4">
@@ -334,7 +331,7 @@ function EventLog() {
               className="px-3 py-1 rounded-lg text-[11px] font-bold transition-all duration-150"
               style={{
                 background: typeFilter === opt.value
-                  ? "linear-gradient(135deg, var(--green-500), var(--green-600))"
+                  ? "var(--apex-primary)"
                   : "var(--surface)",
                 color: typeFilter === opt.value ? "white" : "var(--text-secondary)",
                 border: typeFilter === opt.value ? "none" : "1px solid var(--border)",
@@ -365,7 +362,7 @@ function EventLog() {
             {filtered.map((ev) => (
               <tr
                 key={ev.id}
-                className="transition-colors hover:bg-[rgba(76,175,80,0.02)]"
+                className="transition-colors hover:bg-[rgba(var(--apex-primary-rgb),0.02)]"
                 style={{ borderTop: "1px solid var(--border)" }}
               >
                 <td className="px-4 py-2.5 text-[11px] font-medium whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
@@ -402,7 +399,7 @@ function EventLog() {
                   {ev.amount !== 0 && (
                     <span
                       className="text-[13px] font-extrabold"
-                      style={{ color: ev.amount > 0 ? "var(--green-600)" : "#e53935" }}
+                      style={{ color: ev.amount > 0 ? "var(--apex-primary)" : "var(--apex-danger)" }}
                     >
                       {ev.amount > 0 ? "+" : ""}{ev.amount.toLocaleString("ru-RU")}
                       <span className="text-[10px] font-medium ml-0.5" style={{ color: "var(--text-muted)" }}>б</span>
@@ -443,7 +440,6 @@ function DepartmentSummary() {
       style={{
         background: "var(--surface-elevated)",
         border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-sm)",
       }}
     >
       <div className="text-[12px] font-bold uppercase tracking-wider mb-4" style={{ color: "var(--text-muted)" }}>
@@ -468,10 +464,10 @@ function DepartmentSummary() {
             {deptStats.map((dept) => (
               <tr
                 key={dept.shortName}
-                className="transition-colors hover:bg-[rgba(76,175,80,0.02)]"
+                className="transition-colors hover:bg-[rgba(var(--apex-primary-rgb),0.02)]"
                 style={{
                   borderTop: "1px solid var(--border)",
-                  background: dept.isCurrentDepartment ? "linear-gradient(135deg, var(--green-50), rgba(76,175,80,0.02))" : undefined,
+                  background: dept.isCurrentDepartment ? "rgba(var(--apex-primary-rgb), 0.03)" : undefined,
                 }}
               >
                 <td className="px-4 py-3">
@@ -481,7 +477,7 @@ function DepartmentSummary() {
                       {dept.shortName}
                     </span>
                     {dept.isCurrentDepartment && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: "var(--green-100)", color: "var(--green-700)" }}>Мой</span>
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: "var(--apex-success-bg)", color: "var(--apex-success-text)" }}>Мой</span>
                     )}
                   </div>
                 </td>
@@ -489,20 +485,20 @@ function DepartmentSummary() {
                   {dept.emps}
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-[13px] font-extrabold" style={{ color: "var(--green-700)" }}>
+                  <span className="text-[13px] font-extrabold" style={{ color: "var(--apex-success-text)" }}>
                     {dept.totalBalance.toLocaleString("ru-RU")}
                   </span>
                   <span className="text-[10px] ml-1" style={{ color: "var(--text-muted)" }}>б</span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-[13px] font-bold" style={{ color: "var(--green-600)" }}>
+                  <span className="text-[13px] font-bold" style={{ color: "var(--apex-primary)" }}>
                     +{dept.earnedMonth}
                   </span>
                   <span className="text-[10px] ml-1" style={{ color: "var(--text-muted)" }}>б</span>
                 </td>
                 <td className="px-4 py-3">
                   {dept.penalties > 0 ? (
-                    <span className="text-[13px] font-bold" style={{ color: "#e53935" }}>
+                    <span className="text-[13px] font-bold" style={{ color: "var(--apex-danger)" }}>
                       −{dept.penalties}
                       <span className="text-[10px] ml-0.5" style={{ color: "var(--text-muted)" }}>б</span>
                     </span>
@@ -514,14 +510,14 @@ function DepartmentSummary() {
                   {dept.redCount > 0 ? (
                     <span
                       className="px-2 py-0.5 rounded text-[11px] font-bold"
-                      style={{ background: "rgba(229,57,53,0.1)", color: "#e53935" }}
+                      style={{ background: "rgba(var(--apex-danger-rgb), 0.1)", color: "var(--apex-danger)" }}
                     >
                       {dept.redCount} чел.
                     </span>
                   ) : (
                     <span
                       className="px-2 py-0.5 rounded text-[11px] font-bold"
-                      style={{ background: "var(--green-100)", color: "var(--green-700)" }}
+                      style={{ background: "var(--apex-success-bg)", color: "var(--apex-success-text)" }}
                     >
                       0
                     </span>
@@ -532,10 +528,10 @@ function DepartmentSummary() {
                     <div className="w-14 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
                       <div
                         className="h-full rounded-full"
-                        style={{ width: `${dept.wsPercent}%`, background: "linear-gradient(90deg, #42a5f5, #1976d2)" }}
+                        style={{ width: `${dept.wsPercent}%`, background: "var(--apex-info-text)" }}
                       />
                     </div>
-                    <span className="text-[11px] font-bold" style={{ color: "#1976d2" }}>{dept.wsPercent}%</span>
+                    <span className="text-[11px] font-bold" style={{ color: "var(--apex-info-text)" }}>{dept.wsPercent}%</span>
                   </div>
                 </td>
                 <td className="px-4 py-3">
@@ -543,10 +539,10 @@ function DepartmentSummary() {
                     <div className="w-14 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
                       <div
                         className="h-full rounded-full"
-                        style={{ width: `${dept.usagePercent}%`, background: "linear-gradient(90deg, #ffb74d, #f57c00)" }}
+                        style={{ width: `${dept.usagePercent}%`, background: "var(--apex-warning-text)" }}
                       />
                     </div>
-                    <span className="text-[11px] font-bold" style={{ color: "#f57c00" }}>{dept.usagePercent}%</span>
+                    <span className="text-[11px] font-bold" style={{ color: "var(--apex-warning-text)" }}>{dept.usagePercent}%</span>
                   </div>
                 </td>
               </tr>
@@ -573,7 +569,7 @@ export default function AdminPage() {
             <span
               className="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wider"
               style={{
-                background: "rgba(120,120,120,0.1)",
+                background: "var(--tag-gray-bg)",
                 color: "var(--text-muted)",
                 border: "1px solid var(--border)",
               }}
@@ -593,29 +589,29 @@ export default function AdminPage() {
           label="Сотрудников"
           value={adminStats.totalEmployees}
           sub={`Активных сегодня: ${adminStats.activeToday}`}
-          icon={<Users size={16} style={{ color: "#1976d2" }} />}
-          accent="#1976d2"
+          icon={<Users size={16} style={{ color: "var(--apex-info-text)" }} />}
+          accent="var(--apex-info-text)"
         />
         <StatCard
           label="Баллов в обороте"
           value={adminStats.totalBalanceInCirculation}
           sub="Суммарный баланс всех"
-          icon={<Activity size={16} style={{ color: "var(--green-600)" }} />}
-          accent="#4caf50"
+          icon={<Activity size={16} style={{ color: "var(--apex-primary)" }} />}
+          accent="var(--apex-primary)"
         />
         <StatCard
           label="Начислено в феврале"
           value={adminStats.issuedThisMonth}
           sub={`Потрачено: ${adminStats.spentThisMonth.toLocaleString("ru-RU")} б`}
           icon={<TrendingUp size={16} style={{ color: "var(--orange-500)" }} />}
-          accent="#ff9800"
+          accent="var(--orange-500)"
         />
         <StatCard
           label="Штрафов в феврале"
           value={adminStats.penaltiesThisMonth}
           sub={`Красных дней: ${adminStats.redDaysThisMonth}`}
-          icon={<TrendingDown size={16} style={{ color: "#e53935" }} />}
-          accent="#e53935"
+          icon={<TrendingDown size={16} style={{ color: "var(--apex-danger)" }} />}
+          accent="var(--apex-danger)"
         />
       </div>
 

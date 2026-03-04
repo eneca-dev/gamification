@@ -2,35 +2,106 @@
 @import "tailwindcss";
 
 :root {
-  --green-50: #f0faf0;
-  --green-100: #dcf5dc;
-  --green-200: #b8e8b8;
-  --green-400: #66bb6a;
-  --green-500: #4CAF50;
-  --green-600: #43a047;
-  --green-700: #388e3c;
-  --orange-50: #fff8f0;
-  --orange-100: #ffe0b2;
-  --orange-400: #ffa726;
-  --orange-500: #FF9800;
-  --text-primary: #2d3436;
-  --text-secondary: #636e72;
-  --text-muted: #b2bec3;
-  --surface: #f8faf8;
-  --surface-elevated: #ffffff;
-  --border: #e8ede8;
-  --shadow-sm: 0 1px 3px rgba(76, 175, 80, 0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 16px rgba(76, 175, 80, 0.08), 0 2px 4px rgba(0,0,0,0.04);
-  --shadow-lg: 0 8px 32px rgba(76, 175, 80, 0.1), 0 4px 8px rgba(0,0,0,0.04);
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 24px;
+  /* ── Apex Core ──────────────────────────────────────────── */
+  --apex-primary:          #1B6B58;
+  --apex-primary-hover:    #155547;
+  --apex-primary-rgb:      27, 107, 88;
+  --apex-focus:            #4361EE;
+  --apex-bg:               #EEF2F2;
+  --apex-surface:          #FFFFFF;
+  --apex-border:           #DDE3E3;
+  --apex-text:             #1C2437;
+  --apex-text-secondary:   #6B7280;
+  --apex-text-muted:       #9CA3AF;
+  --apex-disabled-bg:      #F3F4F6;
+  --apex-disabled-text:    #B0B7BE;
+  --apex-danger:           #DC2626;
+  --apex-danger-hover:     #B91C1C;
+  --apex-danger-rgb:       220, 38, 38;
+
+  /* ── Semantic colors ────────────────────────────────────── */
+  --apex-success-bg:       #E6F4F1;
+  --apex-success-text:     #1B6B58;
+  --apex-info-bg:          #EFF6FF;
+  --apex-info-text:        #2563EB;
+  --apex-info-rgb:         37, 99, 235;
+  --apex-warning-bg:       #FFFBEB;
+  --apex-warning-muted:    #FEF3C7;
+  --apex-warning-text:     #D97706;
+  --apex-warning-dark:     #92400E;
+  --apex-warning-rgb:      217, 119, 6;
+  --apex-error-bg:         #FEF2F2;
+  --apex-error-text:       #DC2626;
+
+  /* ── Tag palette ────────────────────────────────────────── */
+  --tag-teal-bg:           #E6F4F1;
+  --tag-teal-text:         #1B6B58;
+  --tag-green-bg:          #DCFCE7;
+  --tag-green-text:        #166534;
+  --tag-blue-bg:           #DBEAFE;
+  --tag-blue-text:         #1D4ED8;
+  --tag-red-bg:            #FEE2E2;
+  --tag-red-text:          #991B1B;
+  --tag-orange-bg:         #FFEDD5;
+  --tag-orange-text:       #9A3412;
+  --tag-yellow-bg:         #FEF9C3;
+  --tag-yellow-text:       #854D0E;
+  --tag-purple-bg:         #EDE9FE;
+  --tag-purple-text:       #5B21B6;
+  --tag-gray-bg:           #F3F4F6;
+  --tag-gray-text:         #374151;
+
+  /* ── Gamification orange accent ─────────────────────────── */
+  --orange-50:             #FFEDD5;
+  --orange-100:            #FED7AA;
+  --orange-400:            #FB923C;
+  --orange-500:            #F97316;
+  --orange-500-rgb:        249, 115, 22;
+
+  /* ── Teal shades ────────────────────────────────────────── */
+  --teal-50:               #E6F4F1;
+  --teal-100:              #C8E8E3;
+  --teal-200:              #9DD4CB;
+  --teal-400:              #2E8C72;
+  --teal-500:              #1B6B58;
+
+  /* ── Rank badge colors ──────────────────────────────────── */
+  --rank-gold:             #F97316;
+  --rank-silver:           #9E9E9E;
+  --rank-bronze:           #A1887F;
+
+  /* ── Semantic aliases (keep for compatibility) ──────────── */
+  --surface:               #EEF2F2;
+  --surface-elevated:      #FFFFFF;
+  --border:                #DDE3E3;
+  --text-primary:          #1C2437;
+  --text-secondary:        #6B7280;
+  --text-muted:            #9CA3AF;
+
+  /* ── Green → Teal aliases (backwards compat) ────────────── */
+  --green-50:              #E6F4F1;
+  --green-100:             #C8E8E3;
+  --green-200:             #9DD4CB;
+  --green-400:             #2E8C72;
+  --green-500:             #1B6B58;
+  --green-600:             #1B6B58;
+  --green-700:             #155547;
+
+  /* ── Shadows (minimal, border-first approach) ───────────── */
+  --shadow-sm:  0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md:  0 2px 8px rgba(0,0,0,0.07);
+  --shadow-lg:  0 4px 16px rgba(0,0,0,0.09);
+
+  /* ── Radius ─────────────────────────────────────────────── */
+  --radius-sm:  8px;
+  --radius-md:  10px;
+  --radius-lg:  16px;
+  --radius-xl:  24px;
 }
 
 @theme inline {
-  --color-background: #f8faf8;
-  --color-foreground: #2d3436;
+  --color-background: #EEF2F2;
+  --color-foreground: #1C2437;
   --font-sans: 'Nunito', sans-serif;
 }
 
@@ -39,29 +110,23 @@
 }
 
 body {
-  background: var(--surface);
-  color: var(--text-primary);
+  background: var(--apex-bg);
+  color: var(--apex-text);
   font-family: 'Nunito', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* ── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: var(--green-200);
+  background: var(--apex-border);
   border-radius: 3px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: var(--green-400);
-}
+::-webkit-scrollbar-thumb:hover { background: var(--teal-400); }
 
-/* Circular progress */
+/* ── Circular progress ──────────────────────────────────────── */
 .circular-progress {
   --size: 140px;
   --half-size: calc(var(--size) / 2);
@@ -69,7 +134,6 @@ body {
   --radius: calc((var(--size) - var(--stroke-width)) / 2);
   --circumference: calc(2 * 3.14159 * var(--radius));
 }
-
 .circular-progress circle {
   cx: var(--half-size);
   cy: var(--half-size);
@@ -78,79 +142,44 @@ body {
   fill: none;
   stroke-linecap: round;
 }
-
-.circular-progress circle.bg {
-  stroke: var(--green-100);
-}
-
+.circular-progress circle.bg { stroke: var(--teal-100); }
 .circular-progress circle.fg {
-  stroke: var(--green-500);
+  stroke: var(--apex-primary);
   stroke-dasharray: var(--circumference);
   transform: rotate(-90deg);
   transform-origin: var(--half-size) var(--half-size);
   transition: stroke-dashoffset 1s ease-out;
 }
 
-/* Animations */
+/* ── Animations ─────────────────────────────────────────────── */
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
-
 @keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
 }
-
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
+  0%   { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
-
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.3); }
-  50% { box-shadow: 0 0 0 8px rgba(76, 175, 80, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--apex-primary-rgb), 0.3); }
+  50%       { box-shadow: 0 0 0 8px rgba(var(--apex-primary-rgb), 0); }
 }
-
 @keyframes coin-spin {
-  0% { transform: rotateY(0deg); }
+  0%   { transform: rotateY(0deg); }
   100% { transform: rotateY(360deg); }
 }
 
-.animate-fade-in-up {
-  animation: fadeInUp 0.5s ease-out both;
-}
-
-.animate-slide-in-right {
-  animation: slideInRight 0.4s ease-out both;
-}
-
-.animate-scale-in {
-  animation: scaleIn 0.4s ease-out both;
-}
+.animate-fade-in-up    { animation: fadeInUp 0.5s ease-out both; }
+.animate-slide-in-right { animation: slideInRight 0.4s ease-out both; }
+.animate-scale-in      { animation: scaleIn 0.4s ease-out both; }
 
 .stagger-1 { animation-delay: 0.05s; }
 .stagger-2 { animation-delay: 0.1s; }
@@ -159,16 +188,11 @@ body {
 .stagger-5 { animation-delay: 0.25s; }
 .stagger-6 { animation-delay: 0.3s; }
 
-/* Card hover effect */
-.card-hover {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
+/* ── Card hover — Apex: border colour only, no lift ─────────── */
+.card-hover { transition: border-color 0.15s ease; }
+.card-hover:hover { border-color: var(--apex-primary) !important; }
 
-/* Coin icon */
+/* ── Coin icon ──────────────────────────────────────────────── */
 .coin-icon {
   display: inline-flex;
   align-items: center;
@@ -176,50 +200,37 @@ body {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #66bb6a, #43a047);
+  background: var(--apex-primary);
   color: white;
   font-size: 11px;
   font-weight: 800;
   flex-shrink: 0;
-  box-shadow: 0 1px 3px rgba(76, 175, 80, 0.3);
 }
 
-/* Glass effect for special banners */
+/* ── Glass banner ───────────────────────────────────────────── */
 .glass-banner {
-  background: linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, rgba(102, 187, 106, 0.04) 100%);
+  background: rgba(var(--apex-primary-rgb), 0.05);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(76, 175, 80, 0.12);
+  border: 1px solid rgba(var(--apex-primary-rgb), 0.12);
 }
 
-/* Product card image placeholder */
+/* ── Product image placeholder ──────────────────────────────── */
 .product-image-placeholder {
-  background: linear-gradient(135deg, var(--green-50), var(--surface));
+  background: var(--apex-success-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 3rem;
 }
 
-/* Achievement badge */
-.achievement-badge {
-  transition: all 0.3s ease;
-}
-.achievement-badge.locked {
-  filter: grayscale(1);
-  opacity: 0.45;
-}
-.achievement-badge.locked:hover {
-  filter: grayscale(0.5);
-  opacity: 0.7;
-}
-.achievement-badge.earned {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
+/* ── Achievement badge ──────────────────────────────────────── */
+.achievement-badge { transition: all 0.3s ease; }
+.achievement-badge.locked { filter: grayscale(1); opacity: 0.45; }
+.achievement-badge.locked:hover { filter: grayscale(0.5); opacity: 0.7; }
+.achievement-badge.earned { animation: pulse-glow 2s ease-in-out infinite; }
 
-/* Nav link active indicator */
-.nav-link-active {
-  position: relative;
-}
+/* ── Nav active indicator ───────────────────────────────────── */
+.nav-link-active { position: relative; }
 .nav-link-active::after {
   content: '';
   position: absolute;
@@ -229,18 +240,22 @@ body {
   width: 20px;
   height: 3px;
   border-radius: 2px;
-  background: var(--green-500);
+  background: var(--apex-primary);
 }
 
-/* Recharts overrides */
+/* ── All buttons pill-shaped ────────────────────────────────── */
+button, a[role="button"] { border-radius: 9999px; }
+
+/* ── Recharts overrides ─────────────────────────────────────── */
 .recharts-cartesian-axis-tick-value {
   font-family: 'Nunito', sans-serif !important;
   font-size: 12px !important;
-  fill: var(--text-secondary) !important;
+  fill: var(--apex-text-muted) !important;
 }
 .recharts-default-tooltip {
   border-radius: var(--radius-md) !important;
-  border: 1px solid var(--border) !important;
-  box-shadow: var(--shadow-md) !important;
+  border: 1px solid var(--apex-border) !important;
+  box-shadow: var(--shadow-sm) !important;
   font-family: 'Nunito', sans-serif !important;
+  background: var(--apex-surface) !important;
 }
