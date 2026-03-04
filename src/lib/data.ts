@@ -136,18 +136,18 @@ export interface LeaderboardEntry {
 // ===== ЦВЕТОВАЯ МАРКИРОВКА ИСТОЧНИКОВ =====
 export const sourceColors: Record<EntitySource, { bg: string; text: string; label: string }> = {
   worksection: {
-    bg: "rgba(33, 150, 243, 0.1)",
-    text: "#1976d2",
+    bg: "var(--tag-blue-bg)",
+    text: "var(--tag-blue-text)",
     label: "WS",
   },
   revit: {
-    bg: "var(--orange-50)",
-    text: "var(--orange-500)",
+    bg: "var(--tag-orange-bg)",
+    text: "var(--tag-orange-text)",
     label: "Revit",
   },
   social: {
-    bg: "rgba(156, 39, 176, 0.1)",
-    text: "#7b1fa2",
+    bg: "var(--tag-purple-bg)",
+    text: "var(--tag-purple-text)",
     label: "Социальное",
   },
 };
@@ -579,9 +579,9 @@ export const balanceHistory = [
 ];
 
 export const incomeSourcesData = [
-  { name: "Worksection и автоматизации", value: 60, color: "#4CAF50" },
-  { name: "Автоматизация Revit", value: 25, color: "#66bb6a" },
-  { name: "Благодарности", value: 15, color: "#a5d6a7" },
+  { name: "Worksection и автоматизации", value: 60, color: "#1B6B58" },
+  { name: "Автоматизация Revit", value: 25, color: "#F97316" },
+  { name: "Благодарности", value: 15, color: "#9DD4CB" },
 ];
 
 export const achievements = [

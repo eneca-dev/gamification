@@ -27,8 +27,8 @@ export default function StorePage() {
         <div
           className="px-5 py-2.5 rounded-xl"
           style={{
-            background: "linear-gradient(135deg, rgba(76,175,80,0.08), rgba(102,187,106,0.04))",
-            border: "1px solid rgba(76,175,80,0.12)",
+            background: "var(--apex-success-bg)",
+            border: "1px solid rgba(var(--apex-primary-rgb), 0.12)",
           }}
         >
           <div className="text-[11px] font-semibold" style={{ color: "var(--text-muted)" }}>
@@ -43,14 +43,14 @@ export default function StorePage() {
         <div
           className="rounded-2xl p-5 glass-banner relative overflow-hidden"
           style={{
-            background: "linear-gradient(135deg, rgba(76,175,80,0.1) 0%, rgba(255,152,0,0.06) 100%)",
-            border: "1px solid rgba(76,175,80,0.15)",
+            background: "var(--apex-success-bg)",
+            border: "1px solid rgba(var(--apex-primary-rgb), 0.15)",
           }}
         >
           <div
             className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-10"
             style={{
-              background: "radial-gradient(circle, var(--orange-400), transparent)",
+              background: "radial-gradient(circle, var(--orange-500), transparent)",
               transform: "translate(30%, -30%)",
             }}
           />
@@ -59,8 +59,8 @@ export default function StorePage() {
               <div
                 className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl"
                 style={{
-                  background: "linear-gradient(135deg, rgba(255,152,0,0.15), rgba(255,167,38,0.08))",
-                  border: "1px solid rgba(255,152,0,0.15)",
+                  background: "var(--apex-warning-bg)",
+                  border: "1px solid rgba(var(--orange-500-rgb), 0.15)",
                 }}
               >
                 🎧
@@ -80,8 +80,7 @@ export default function StorePage() {
             <button
               className="px-5 py-2.5 rounded-xl text-[13px] font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
               style={{
-                background: "linear-gradient(135deg, var(--orange-500), var(--orange-400))",
-                boxShadow: "0 2px 8px rgba(255,152,0,0.3)",
+                background: "var(--orange-500)",
               }}
             >
               Участвовать за 300 баллов
@@ -101,11 +100,10 @@ export default function StorePage() {
               className="px-4 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"
               style={{
                 background: isActive
-                  ? "linear-gradient(135deg, var(--green-500), var(--green-600))"
+                  ? "var(--apex-primary)"
                   : "var(--surface-elevated)",
                 color: isActive ? "white" : "var(--text-secondary)",
                 border: isActive ? "none" : "1px solid var(--border)",
-                boxShadow: isActive ? "0 2px 8px rgba(76,175,80,0.25)" : "var(--shadow-sm)",
               }}
             >
               {tab.label}
@@ -119,8 +117,8 @@ export default function StorePage() {
         <div
           className="animate-fade-in-up rounded-xl px-4 py-3 flex items-center gap-3 text-[12px] font-medium"
           style={{
-            background: "var(--green-50)",
-            border: "1px solid rgba(76,175,80,0.12)",
+            background: "var(--apex-success-bg)",
+            border: "1px solid rgba(var(--apex-primary-rgb), 0.12)",
             color: "var(--text-secondary)",
           }}
         >
@@ -132,8 +130,8 @@ export default function StorePage() {
         <div
           className="animate-fade-in-up rounded-xl px-4 py-3 flex items-center gap-3 text-[12px] font-medium"
           style={{
-            background: "var(--green-50)",
-            border: "1px solid rgba(76,175,80,0.12)",
+            background: "var(--apex-success-bg)",
+            border: "1px solid rgba(var(--apex-primary-rgb), 0.12)",
             color: "var(--text-secondary)",
           }}
         >
@@ -155,7 +153,6 @@ export default function StorePage() {
               style={{
                 background: "var(--surface-elevated)",
                 border: "1px solid var(--border)",
-                boxShadow: "var(--shadow-sm)",
                 animationDelay: `${i * 0.06}s`,
               }}
             >
@@ -169,12 +166,11 @@ export default function StorePage() {
                     className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
                     style={{
                       background: product.tag === "Премиум"
-                        ? "linear-gradient(135deg, var(--orange-500), var(--orange-400))"
+                        ? "var(--orange-500)"
                         : product.tag === "Эксклюзив"
-                        ? "linear-gradient(135deg, #7c4dff, #651fff)"
-                        : "linear-gradient(135deg, var(--green-500), var(--green-400))",
+                        ? "var(--tag-purple-text)"
+                        : "var(--apex-primary)",
                       color: "white",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
                     }}
                   >
                     {product.tag}
@@ -200,11 +196,10 @@ export default function StorePage() {
                   disabled={!canAfford}
                   style={{
                     background: canAfford
-                      ? "linear-gradient(135deg, var(--green-500), var(--green-600))"
+                      ? "var(--apex-primary)"
                       : "var(--surface)",
                     color: canAfford ? "white" : "var(--text-muted)",
                     border: canAfford ? "none" : "1px solid var(--border)",
-                    boxShadow: canAfford ? "0 2px 8px rgba(76,175,80,0.2)" : "none",
                     cursor: canAfford ? "pointer" : "default",
                     opacity: canAfford ? 1 : 0.7,
                   }}

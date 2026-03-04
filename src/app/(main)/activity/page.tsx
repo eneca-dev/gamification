@@ -3,11 +3,11 @@
 import { teamActivity } from "@/lib/data";
 
 const typeColors: Record<string, { bg: string; border: string }> = {
-  purchase: { bg: "var(--orange-50)", border: "rgba(255,152,0,0.15)" },
-  achievement: { bg: "var(--green-50)", border: "rgba(76,175,80,0.15)" },
-  gratitude: { bg: "#fce4ec", border: "rgba(233,30,99,0.1)" },
-  earning: { bg: "#e8f5e9", border: "rgba(76,175,80,0.12)" },
-  streak: { bg: "#fff3e0", border: "rgba(255,152,0,0.12)" },
+  purchase: { bg: "var(--orange-50)", border: "rgba(var(--orange-500-rgb), 0.15)" },
+  achievement: { bg: "var(--apex-success-bg)", border: "rgba(var(--apex-primary-rgb), 0.15)" },
+  gratitude: { bg: "var(--tag-red-bg)", border: "rgba(var(--apex-danger-rgb), 0.1)" },
+  earning: { bg: "var(--apex-success-bg)", border: "rgba(var(--apex-primary-rgb), 0.12)" },
+  streak: { bg: "var(--apex-warning-bg)", border: "rgba(var(--orange-500-rgb), 0.12)" },
 };
 
 const typeLabels: Record<string, string> = {
@@ -45,13 +45,12 @@ export default function ActivityPage() {
             style={{
               background: "var(--surface-elevated)",
               border: "1px solid var(--border)",
-              boxShadow: "var(--shadow-sm)",
             }}
           >
             <div className="flex items-center gap-3">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-                style={{ background: "var(--green-50)" }}
+                style={{ background: "var(--apex-success-bg)" }}
               >
                 {stat.icon}
               </div>
@@ -74,7 +73,6 @@ export default function ActivityPage() {
         style={{
           background: "var(--surface-elevated)",
           border: "1px solid var(--border)",
-          boxShadow: "var(--shadow-sm)",
         }}
       >
         <div className="text-[12px] font-bold uppercase tracking-wider mb-5" style={{ color: "var(--text-muted)" }}>
@@ -94,7 +92,7 @@ export default function ActivityPage() {
               return (
                 <div
                   key={event.id}
-                  className="relative flex items-start gap-4 py-3 pl-1 rounded-xl transition-colors hover:bg-[rgba(76,175,80,0.02)]"
+                  className="relative flex items-start gap-4 py-3 pl-1 rounded-xl transition-colors hover:bg-[rgba(var(--apex-primary-rgb),0.02)]"
                   style={{ animationDelay: `${i * 0.04}s` }}
                 >
                   {/* Avatar on timeline */}
@@ -102,8 +100,7 @@ export default function ActivityPage() {
                     <div
                       className="w-11 h-11 rounded-full flex items-center justify-center text-white text-[11px] font-bold"
                       style={{
-                        background: `linear-gradient(135deg, ${event.avatarColor}, ${event.avatarColor}dd)`,
-                        boxShadow: `0 2px 8px ${event.avatarColor}40`,
+                        background: event.avatarColor,
                       }}
                     >
                       {event.avatar}

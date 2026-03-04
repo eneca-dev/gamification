@@ -25,7 +25,6 @@ function BalanceChart() {
       style={{
         background: "var(--surface-elevated)",
         border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-sm)",
       }}
     >
       <div className="text-[12px] font-bold uppercase tracking-wider mb-4" style={{ color: "var(--text-muted)" }}>
@@ -33,28 +32,21 @@ function BalanceChart() {
       </div>
       <ResponsiveContainer width="100%" height={220}>
         <LineChart data={balanceHistory} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-          <defs>
-            <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#4CAF50" stopOpacity={0.15} />
-              <stop offset="100%" stopColor="#4CAF50" stopOpacity={0} />
-            </linearGradient>
-          </defs>
           <XAxis
             dataKey="month"
             axisLine={false}
             tickLine={false}
-            tick={{ fontSize: 12, fill: "#b2bec3", fontFamily: "Nunito" }}
+            tick={{ fontSize: 12, fill: "var(--apex-text-muted)", fontFamily: "Nunito" }}
           />
           <YAxis
             axisLine={false}
             tickLine={false}
-            tick={{ fontSize: 12, fill: "#b2bec3", fontFamily: "Nunito" }}
+            tick={{ fontSize: 12, fill: "var(--apex-text-muted)", fontFamily: "Nunito" }}
           />
           <Tooltip
             contentStyle={{
               borderRadius: "12px",
-              border: "1px solid #e8ede8",
-              boxShadow: "0 4px 16px rgba(76,175,80,0.08)",
+              border: "1px solid var(--apex-border)",
               fontFamily: "Nunito",
               fontSize: "13px",
             }}
@@ -63,17 +55,17 @@ function BalanceChart() {
           <Line
             type="monotone"
             dataKey="value"
-            stroke="#4CAF50"
+            stroke="#1B6B58"
             strokeWidth={3}
             dot={{
               r: 5,
-              fill: "#4CAF50",
+              fill: "#1B6B58",
               stroke: "#fff",
               strokeWidth: 2,
             }}
             activeDot={{
               r: 7,
-              fill: "#4CAF50",
+              fill: "#1B6B58",
               stroke: "#fff",
               strokeWidth: 3,
             }}
@@ -91,7 +83,6 @@ function IncomeSourcesChart() {
       style={{
         background: "var(--surface-elevated)",
         border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-sm)",
       }}
     >
       <div className="text-[12px] font-bold uppercase tracking-wider mb-4" style={{ color: "var(--text-muted)" }}>
@@ -128,7 +119,7 @@ function IncomeSourcesChart() {
                   {source.name}
                 </div>
               </div>
-              <span className="text-[13px] font-extrabold" style={{ color: "var(--green-700)" }}>
+              <span className="text-[13px] font-extrabold" style={{ color: "var(--apex-success-text)" }}>
                 {source.value}%
               </span>
             </div>
@@ -142,20 +133,20 @@ function IncomeSourcesChart() {
 const achievementGroups = [
   {
     label: "Worksection — Дисциплина",
-    color: "#1976d2",
-    bg: "rgba(33,150,243,0.08)",
+    color: "var(--apex-info-text)",
+    bg: "rgba(var(--apex-info-rgb), 0.08)",
     ids: [1, 2, 3],
   },
   {
     label: "Revit — Техническая эффективность",
-    color: "#e65100",
-    bg: "rgba(255,152,0,0.08)",
+    color: "var(--apex-warning-text)",
+    bg: "rgba(var(--orange-500-rgb), 0.08)",
     ids: [4, 5, 6],
   },
   {
     label: "Корпоративная культура",
-    color: "#7b1fa2",
-    bg: "rgba(156,39,176,0.08)",
+    color: "var(--tag-purple-text)",
+    bg: "var(--tag-purple-bg)",
     ids: [7, 8, 9],
   },
 ];
@@ -167,15 +158,15 @@ function AchievementCard({ ach }: { ach: (typeof achievements)[0] }) {
         className="flex flex-col items-center p-3 rounded-xl transition-all cursor-default"
         style={{
           background: ach.earned
-            ? "linear-gradient(135deg, var(--green-50), rgba(76,175,80,0.05))"
+            ? "var(--apex-success-bg)"
             : "var(--surface)",
-          border: ach.earned ? "1px solid var(--green-200)" : "1px solid var(--border)",
+          border: ach.earned ? "1px solid var(--teal-100)" : "1px solid var(--border)",
         }}
       >
         <span className="text-2xl mb-1">{ach.icon}</span>
         <span
           className="text-[10px] font-bold text-center leading-tight"
-          style={{ color: ach.earned ? "var(--green-700)" : "var(--text-muted)" }}
+          style={{ color: ach.earned ? "var(--apex-success-text)" : "var(--text-muted)" }}
         >
           {ach.name}
         </span>
@@ -192,7 +183,6 @@ function AchievementCard({ ach }: { ach: (typeof achievements)[0] }) {
         style={{
           background: "var(--text-primary)",
           color: "white",
-          boxShadow: "var(--shadow-md)",
         }}
       >
         {ach.description}
@@ -214,7 +204,6 @@ function AchievementsWall() {
       style={{
         background: "var(--surface-elevated)",
         border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-sm)",
       }}
     >
       <div className="flex items-center justify-between mb-5">
@@ -223,7 +212,7 @@ function AchievementsWall() {
         </div>
         <span
           className="text-[12px] font-bold px-2.5 py-0.5 rounded-full"
-          style={{ background: "var(--green-100)", color: "var(--green-700)" }}
+          style={{ background: "var(--apex-success-bg)", color: "var(--apex-success-text)" }}
         >
           {earned.length} / {achievements.length}
         </span>
@@ -260,7 +249,6 @@ function OperationsTable() {
       style={{
         background: "var(--surface-elevated)",
         border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-sm)",
       }}
     >
       <div className="text-[12px] font-bold uppercase tracking-wider mb-4" style={{ color: "var(--text-muted)" }}>
@@ -294,7 +282,7 @@ function OperationsTable() {
             {operationsHistory.map((op, i) => (
               <tr
                 key={i}
-                className="transition-colors hover:bg-[rgba(76,175,80,0.02)]"
+                className="transition-colors hover:bg-[rgba(var(--apex-primary-rgb),0.02)]"
                 style={{ borderTop: "1px solid var(--border)" }}
               >
                 <td className="px-4 py-3 text-[12px] font-medium" style={{ color: "var(--text-secondary)" }}>
@@ -307,7 +295,7 @@ function OperationsTable() {
                   <span
                     className="text-[13px] font-extrabold"
                     style={{
-                      color: op.amount > 0 ? "var(--green-600)" : "#e53935",
+                      color: op.amount > 0 ? "var(--apex-success-text)" : "var(--apex-danger)",
                     }}
                   >
                     {op.amount > 0 ? "+" : ""}

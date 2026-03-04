@@ -11,91 +11,71 @@ export function AlertsBanner({ alerts }: AlertsBannerProps) {
   if (alerts.length === 0) return null;
 
   const criticalCount = alerts.filter((a) => a.severity === "critical").length;
+  const isCritical = criticalCount > 0;
+
+  const bannerBg = isCritical ? "var(--apex-error-bg)" : "var(--apex-warning-bg)";
+  const bannerBorder = isCritical
+    ? `1px solid rgba(var(--apex-danger-rgb), 0.2)`
+    : `1px solid rgba(var(--apex-warning-rgb), 0.2)`;
+  const headerColor = isCritical ? "var(--apex-error-text)" : "var(--apex-warning-text)";
 
   return (
     <div
       className="rounded-2xl p-4 space-y-3"
-      style={{
-        background: criticalCount > 0
-          ? "linear-gradient(135deg, rgba(229,57,53,0.06) 0%, rgba(255,152,0,0.03) 100%)"
-          : "linear-gradient(135deg, rgba(255,152,0,0.06) 0%, rgba(255,167,38,0.03) 100%)",
-        border: criticalCount > 0
-          ? "1px solid rgba(229,57,53,0.15)"
-          : "1px solid rgba(255,152,0,0.15)",
-      }}
+      style={{ background: bannerBg, border: bannerBorder }}
     >
       <div className="flex items-center gap-2">
-        <AlertTriangle
-          size={16}
-          style={{ color: criticalCount > 0 ? "#e53935" : "var(--orange-500)" }}
-        />
-        <span
-          className="text-[12px] font-bold uppercase tracking-wider"
-          style={{ color: criticalCount > 0 ? "#e53935" : "var(--orange-500)" }}
-        >
+        <AlertTriangle size={15} style={{ color: headerColor }} />
+        <span className="text-[12px] font-semibold" style={{ color: headerColor }}>
           Внимание — {alerts.length} {alerts.length === 1 ? "задача требует" : "задачи требуют"} действий
         </span>
       </div>
 
-      {alerts.map((alert) => (
-        <div
-          key={alert.id}
-          className="flex items-start gap-3 p-3 rounded-xl"
-          style={{
-            background: alert.severity === "critical"
-              ? "rgba(229,57,53,0.05)"
-              : "rgba(255,152,0,0.05)",
-            border: alert.severity === "critical"
-              ? "1px solid rgba(229,57,53,0.1)"
-              : "1px solid rgba(255,152,0,0.1)",
-          }}
-        >
+      {alerts.map((alert) => {
+        const isAlertCritical = alert.severity === "critical";
+        const itemBorder = isAlertCritical
+          ? `1px solid rgba(var(--apex-danger-rgb), 0.15)`
+          : `1px solid rgba(var(--apex-warning-rgb), 0.15)`;
+        const iconBg = isAlertCritical ? "var(--apex-error-bg)" : "var(--apex-warning-bg)";
+        const iconColor = isAlertCritical ? "var(--apex-error-text)" : "var(--apex-warning-text)";
+        const titleColor = isAlertCritical ? "var(--apex-error-text)" : "var(--apex-warning-dark)";
+        const badgeBg = isAlertCritical ? "var(--tag-red-bg)" : "var(--apex-warning-muted)";
+        const badgeColor = isAlertCritical ? "var(--tag-red-text)" : "var(--apex-warning-text)";
+
+        return (
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-            style={{
-              background: alert.severity === "critical"
-                ? "rgba(229,57,53,0.1)"
-                : "rgba(255,152,0,0.1)",
-            }}
+            key={alert.id}
+            className="flex items-start gap-3 p-3 rounded-xl"
+            style={{ background: "var(--apex-surface)", border: itemBorder }}
           >
-            <Clock
-              size={16}
-              style={{
-                color: alert.severity === "critical" ? "#e53935" : "var(--orange-500)",
-              }}
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span
-                className="text-[13px] font-bold"
-                style={{
-                  color: alert.severity === "critical" ? "#e53935" : "#e65100",
-                }}
-              >
-                {alert.title}
-              </span>
-              <span
-                className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase"
-                style={{
-                  background: alert.severity === "critical"
-                    ? "rgba(229,57,53,0.12)"
-                    : "rgba(255,152,0,0.12)",
-                  color: alert.severity === "critical" ? "#e53935" : "var(--orange-500)",
-                }}
-              >
-                {alert.penalty} б
-              </span>
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: iconBg }}
+            >
+              <Clock size={15} style={{ color: iconColor }} />
             </div>
-            <div className="text-[12px] font-semibold mt-0.5" style={{ color: "var(--text-primary)" }}>
-              {alert.taskName}
-            </div>
-            <div className="text-[11px] font-medium mt-0.5" style={{ color: "var(--text-muted)" }}>
-              {alert.description}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-semibold" style={{ color: titleColor }}>
+                  {alert.title}
+                </span>
+                <span
+                  className="px-2 py-0.5 rounded-full text-[9px] font-semibold flex-shrink-0"
+                  style={{ background: badgeBg, color: badgeColor }}
+                >
+                  {alert.penalty} б
+                </span>
+              </div>
+              <div className="text-[12px] font-medium mt-0.5" style={{ color: "var(--apex-text)" }}>
+                {alert.taskName}
+              </div>
+              <div className="text-[11px] mt-0.5" style={{ color: "var(--apex-text-muted)" }}>
+                {alert.description}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

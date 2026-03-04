@@ -4,42 +4,39 @@ import { Fragment } from "react";
 import { Trophy } from "lucide-react";
 import type { WorksectionStreak, StreakMilestone, WorksectionDayStatus } from "@/lib/data";
 
-// ─── Layout constants ────────────────────────────────────────────────────────
-const CELL = 18;        // px — cell width & height (square)
-const CELL_GAP = 4;     // px — gap between cells within a month group
-const MONTH_SEP = 12;   // px — total width of the separator between months
-const DAY_LABEL_W = 14; // px — day-of-week label column width
-const DAY_LABEL_MR = 6; // px — margin-right after day labels
+// ─── Layout constants ─────────────────────────────────────────────────────────
+const CELL = 18;
+const CELL_GAP = 4;
+const MONTH_SEP = 12;
+const DAY_LABEL_W = 14;
+const DAY_LABEL_MR = 6;
 
-// Width of a group of N week-columns (in px)
 const groupW = (n: number) => n * CELL + (n - 1) * CELL_GAP;
 
-// ─── Status colours ───────────────────────────────────────────────────────────
+// ─── Status colours (semantic, not arbitrary) ──────────────────────────────────
 const statusColors: Record<WorksectionDayStatus, string> = {
-  green: "var(--green-500)",
-  red: "#e53935",
-  gray: "#e0e0e0",
-  frozen: "#90caf9",
+  green:  "var(--apex-primary)",
+  red:    "var(--apex-danger)",
+  gray:   "var(--apex-border)",
+  frozen: "var(--apex-info-text)",
   future: "transparent",
-  out: "transparent",
+  out:    "transparent",
 };
 
 const statusLabels: Record<WorksectionDayStatus, string> = {
-  green: "Зелёный",
-  red: "Штраф",
-  gray: "Выходной",
+  green:  "Зелёный",
+  red:    "Штраф",
+  gray:   "Выходной",
   frozen: "Отпуск",
   future: "Ещё не наступил",
-  out: "",
+  out:    "",
 };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 type Day = WorksectionStreak["calendarDays"][0];
 
 interface MonthGroup {
-  key: string;       // e.g. "2026-01"
-  name: string;      // e.g. "Январь"
+  key: string;
+  name: string;
   weekStart: number;
   weekCount: number;
 }
@@ -79,12 +76,12 @@ function CompactStreakRow({
   label,
   currentDays,
   milestones,
-  variant = "blue",
+  variant = "teal",
 }: {
   label: string;
   currentDays: number;
   milestones: StreakMilestone[];
-  variant?: "orange" | "blue";
+  variant?: "teal" | "orange";
 }) {
   const next = milestones.find((m) => !m.reached);
   const prev = [...milestones].reverse().find((m) => m.reached);
@@ -92,22 +89,27 @@ function CompactStreakRow({
   const to = next ? next.days : milestones[milestones.length - 1].days;
   const pct = next ? Math.min(((currentDays - from) / (to - from)) * 100, 100) : 100;
 
-  const isBlue = variant === "blue";
-  const accent = isBlue ? "#1976d2" : "#f57c00";
-  const trackBg = isBlue ? "rgba(33,150,243,0.12)" : "rgba(255,152,0,0.1)";
-  const fill = isBlue
-    ? "linear-gradient(90deg, #42a5f5, #1976d2)"
-    : "linear-gradient(90deg, #ffb74d, #f57c00)";
+  const isTeal = variant === "teal";
+  const accent = isTeal ? "var(--apex-primary)" : "var(--orange-500)";
+  const trackBg = isTeal ? "var(--teal-100)" : "var(--orange-50)";
+  const fill = isTeal ? "var(--apex-primary)" : "var(--orange-500)";
+  const reachedBg = isTeal ? "var(--apex-success-bg)" : "var(--orange-50)";
+  const reachedBorder = isTeal
+    ? `rgba(var(--apex-primary-rgb), 0.2)`
+    : `rgba(var(--orange-500-rgb), 0.2)`;
 
   return (
     <div>
-      <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-muted)" }}>
+      <div
+        className="text-[10px] font-semibold uppercase tracking-wider mb-1.5"
+        style={{ color: "var(--apex-text-muted)" }}
+      >
         {label}
       </div>
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-[20px] font-extrabold leading-none shrink-0" style={{ color: "var(--text-primary)" }}>
+        <span className="text-[20px] font-bold leading-none shrink-0" style={{ color: "var(--apex-text)" }}>
           {currentDays}
-          <span className="text-[11px] font-semibold ml-0.5" style={{ color: "var(--text-secondary)" }}>д</span>
+          <span className="text-[11px] font-medium ml-0.5" style={{ color: "var(--apex-text-secondary)" }}>д</span>
         </span>
         {next && (
           <>
@@ -117,26 +119,27 @@ function CompactStreakRow({
                 style={{ width: `${pct}%`, background: fill }}
               />
             </div>
-            <span className="text-[10px] font-bold shrink-0" style={{ color: accent }}>
+            <span className="text-[10px] font-semibold shrink-0" style={{ color: accent }}>
               +{next.reward} б
             </span>
           </>
         )}
       </div>
-      <div className="flex gap-1">
+      <div className="flex gap-1 flex-wrap">
         {milestones.map((m) => (
           <div
             key={m.days}
-            className="flex items-center px-1.5 py-0.5 rounded-md"
+            className="flex items-center px-1.5 py-0.5 rounded-full"
             style={{
-              background: m.reached
-                ? isBlue ? "rgba(33,150,243,0.15)" : "rgba(255,152,0,0.13)"
-                : isBlue ? "rgba(33,150,243,0.05)" : "rgba(255,152,0,0.05)",
-              border: `1px solid ${isBlue ? "rgba(33,150,243,0.18)" : "rgba(255,152,0,0.15)"}`,
+              background: m.reached ? reachedBg : "var(--apex-bg)",
+              border: `1px solid ${reachedBorder}`,
               opacity: m.reached ? 1 : 0.55,
             }}
           >
-            <span className="text-[9px] font-bold" style={{ color: m.reached ? accent : "var(--text-muted)" }}>
+            <span
+              className="text-[9px] font-semibold"
+              style={{ color: m.reached ? accent : "var(--apex-text-muted)" }}
+            >
               {m.reached ? "✓ " : ""}{m.days}д
             </span>
           </div>
@@ -149,7 +152,6 @@ function CompactStreakRow({
 // ─── Main grid card ───────────────────────────────────────────────────────────
 
 function WSContributionGrid({ streak }: { streak: WorksectionStreak }) {
-  // Split flat 98-day array into 14 week-columns (Mon–Sun)
   const weeks: Day[][] = [];
   for (let i = 0; i < streak.calendarDays.length; i += 7) {
     weeks.push(streak.calendarDays.slice(i, i + 7));
@@ -163,47 +165,47 @@ function WSContributionGrid({ streak }: { streak: WorksectionStreak }) {
     <div
       className="rounded-2xl p-5 card-hover"
       style={{
-        background: "var(--surface-elevated)",
-        border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-sm)",
+        background: "var(--apex-surface)",
+        border: "1px solid var(--apex-border)",
       }}
     >
-      {/* ── Card header ── */}
+      {/* Header */}
       <div className="flex items-center gap-2 mb-4">
         <div
           className="w-6 h-6 rounded-lg flex items-center justify-center"
-          style={{ background: "rgba(33,150,243,0.1)" }}
+          style={{ background: "var(--apex-success-bg)" }}
         >
-          <Trophy size={14} style={{ color: "#1976d2" }} />
+          <Trophy size={14} style={{ color: "var(--apex-primary)" }} />
         </div>
-        <span className="text-[12px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+        <span
+          className="text-[12px] font-semibold uppercase tracking-wider"
+          style={{ color: "var(--apex-text-muted)" }}
+        >
           Worksection и автоматизации
         </span>
       </div>
 
-      {/* ── Streak counter + quarter grid ── */}
+      {/* Streak counter + quarter grid */}
       <div className="flex items-start gap-5 mb-4">
-        {/* Counter */}
         <div className="shrink-0">
-          <div className="text-3xl font-extrabold" style={{ color: "var(--text-primary)" }}>
+          <div className="text-3xl font-bold" style={{ color: "var(--apex-text)" }}>
             {streak.currentDays}
           </div>
-          <div className="text-[12px] font-semibold" style={{ color: "var(--text-secondary)" }}>
+          <div className="text-[12px] font-medium" style={{ color: "var(--apex-text-secondary)" }}>
             дней подряд
           </div>
         </div>
 
-        {/* Quarter grid */}
         <div className="overflow-x-auto">
-          {/* Month name row — offset by day-label column width */}
+          {/* Month labels */}
           <div className="flex mb-1" style={{ paddingLeft: headerOffset }}>
             {monthGroups.map((group, gIdx) => (
               <Fragment key={group.key}>
                 {gIdx > 0 && <div style={{ width: MONTH_SEP }} />}
                 <div style={{ width: groupW(group.weekCount) }}>
                   <span
-                    className="text-[9px] font-bold uppercase tracking-wider"
-                    style={{ color: "var(--text-muted)" }}
+                    className="text-[9px] font-semibold uppercase tracking-wider"
+                    style={{ color: "var(--apex-text-muted)" }}
                   >
                     {group.name}
                   </span>
@@ -214,7 +216,6 @@ function WSContributionGrid({ streak }: { streak: WorksectionStreak }) {
 
           {/* Grid body */}
           <div className="flex items-start">
-            {/* Day-of-week labels */}
             <div
               className="flex flex-col shrink-0"
               style={{ width: DAY_LABEL_W, marginRight: DAY_LABEL_MR, gap: CELL_GAP }}
@@ -222,32 +223,23 @@ function WSContributionGrid({ streak }: { streak: WorksectionStreak }) {
               {DAY_LABELS.map((label) => (
                 <div
                   key={label}
-                  className="flex items-center text-[9px] font-semibold"
-                  style={{ height: CELL, color: "var(--text-muted)" }}
+                  className="flex items-center text-[9px] font-medium"
+                  style={{ height: CELL, color: "var(--apex-text-muted)" }}
                 >
                   {label}
                 </div>
               ))}
             </div>
 
-            {/* Month groups with separators */}
             {monthGroups.map((group, gIdx) => (
               <Fragment key={group.key}>
-                {/* Vertical separator between months */}
                 {gIdx > 0 && (
                   <div style={{ width: MONTH_SEP, display: "flex", justifyContent: "center" }}>
                     <div
-                      style={{
-                        width: 1,
-                        alignSelf: "stretch",
-                        background: "var(--border)",
-                        opacity: 0.7,
-                      }}
+                      style={{ width: 1, alignSelf: "stretch", background: "var(--apex-border)", opacity: 0.7 }}
                     />
                   </div>
                 )}
-
-                {/* Week columns for this month */}
                 <div className="flex" style={{ gap: CELL_GAP }}>
                   {weeks
                     .slice(group.weekStart, group.weekStart + group.weekCount)
@@ -267,13 +259,9 @@ function WSContributionGrid({ streak }: { streak: WorksectionStreak }) {
                                 width: CELL,
                                 height: CELL,
                                 flexShrink: 0,
-                                background: isFuture || isOut
-                                  ? "transparent"
-                                  : statusColors[day.status],
+                                background: isFuture || isOut ? "transparent" : statusColors[day.status],
                                 opacity: isOut ? 0 : isGray ? 0.3 : 1,
-                                border: isFuture
-                                  ? "1.5px dashed rgba(160,160,160,0.4)"
-                                  : undefined,
+                                border: isFuture ? `1.5px dashed rgba(var(--apex-primary-rgb), 0.25)` : undefined,
                                 boxSizing: "border-box",
                               }}
                               title={
@@ -285,7 +273,7 @@ function WSContributionGrid({ streak }: { streak: WorksectionStreak }) {
                               {showStar && (
                                 <span
                                   className="absolute inset-0 flex items-center justify-center font-bold leading-none"
-                                  style={{ color: "rgba(255,255,255,0.95)", fontSize: 10 }}
+                                  style={{ color: "white", fontSize: 10, opacity: 0.9 }}
                                 >
                                   ★
                                 </span>
@@ -302,7 +290,7 @@ function WSContributionGrid({ streak }: { streak: WorksectionStreak }) {
         </div>
       </div>
 
-      {/* ── Legend ── */}
+      {/* Legend */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         {(["green", "red", "frozen", "gray"] as WorksectionDayStatus[]).map((s) => (
           <div key={s} className="flex items-center gap-1">
@@ -310,42 +298,34 @@ function WSContributionGrid({ streak }: { streak: WorksectionStreak }) {
               className="w-2.5 h-2.5 rounded-xs"
               style={{ background: statusColors[s], opacity: s === "gray" ? 0.3 : 1 }}
             />
-            <span className="text-[10px] font-medium" style={{ color: "var(--text-muted)" }}>
-              {statusLabels[s]}
-            </span>
+            <span className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>{statusLabels[s]}</span>
           </div>
         ))}
-        {/* Future */}
         <div className="flex items-center gap-1">
           <div
             className="w-2.5 h-2.5 rounded-xs"
-            style={{ border: "1.5px dashed rgba(160,160,160,0.5)", boxSizing: "border-box" }}
+            style={{ border: `1.5px dashed rgba(var(--apex-primary-rgb), 0.35)`, boxSizing: "border-box" }}
           />
-          <span className="text-[10px] font-medium" style={{ color: "var(--text-muted)" }}>
-            Будущий
-          </span>
+          <span className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>Будущий</span>
         </div>
-        {/* Automation star */}
         <div className="flex items-center gap-1">
           <div
             className="w-2.5 h-2.5 rounded-xs flex items-center justify-center"
-            style={{ background: "var(--green-500)" }}
+            style={{ background: "var(--apex-primary)" }}
           >
             <span style={{ color: "white", fontSize: 7, lineHeight: 1, fontWeight: "bold" }}>★</span>
           </div>
-          <span className="text-[10px] font-medium" style={{ color: "var(--text-muted)" }}>
-            Автоматизация
-          </span>
+          <span className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>Автоматизация</span>
         </div>
       </div>
 
-      {/* ── Two compact streak rows side by side ── */}
-      <div className="grid grid-cols-2 gap-4 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
+      {/* Two compact streak rows */}
+      <div className="grid grid-cols-2 gap-4 pt-4" style={{ borderTop: "1px solid var(--apex-border)" }}>
         <CompactStreakRow
           label="Дисциплина WS"
           currentDays={streak.currentDays}
           milestones={streak.milestones}
-          variant="blue"
+          variant="teal"
         />
         <CompactStreakRow
           label="Автоматизации ★"
@@ -358,7 +338,7 @@ function WSContributionGrid({ streak }: { streak: WorksectionStreak }) {
   );
 }
 
-// ─── Exported panel ───────────────────────────────────────────────────────────
+// ─── Export ───────────────────────────────────────────────────────────────────
 
 interface StreakPanelProps {
   worksectionStreak: WorksectionStreak;
