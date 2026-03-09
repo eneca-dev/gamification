@@ -9,6 +9,7 @@ export interface WorksectionTokenRow {
 
 export interface ProfileRow {
   user_id: string
+  email: string
   first_name: string
   last_name: string
   department: string | null

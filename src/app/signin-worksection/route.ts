@@ -152,6 +152,7 @@ export async function GET(request: NextRequest) {
     .from('profiles')
     .upsert({
       user_id: userId,
+      email,
       first_name: resourceData.first_name ?? '',
       last_name: resourceData.last_name ?? '',
       department: team,
