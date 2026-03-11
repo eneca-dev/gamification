@@ -29,7 +29,7 @@
 
 ## Зависимости
 
-- **Supabase** — `auth.users` (пользователи), таблица `public.worksection_tokens` (токены), таблица `public.profiles` (профили: имя, фамилия, отдел, команда), RPC `get_user_id_by_email`
+- **Supabase** — `auth.users` (пользователи), таблица `public.worksection_tokens` (токены), таблица `public.profiles` (профили: имя, фамилия, отдел, команда), таблица `public.ws_users` (справочник сотрудников геймификации), RPC `get_user_id_by_email`
 - **Worksection OAuth2 API** — `authorize`, `token`, `resource`, `refresh` эндпоинты
 - **Worksection REST API** — `get_users` (department, group) — вызывается при каждом входе для актуализации профиля
 - `src/config/supabase.ts` — три клиента: браузерный, серверный, admin
@@ -59,6 +59,19 @@
 
 - `refreshWorksectionToken(userId)` (`refreshToken.ts`) — обновляет `access_token` и `refresh_token` в БД, возвращает новый `access_token`. Бросает исключение при ошибке. Не Server Action — внутренняя серверная утилита
 - `worksectionApi(userId, path, options?)` (`worksectionApi.ts`) — HTTP-клиент к Worksection API. Перед запросом проверяет `expires_at`: если до истечения менее 5 минут — вызывает `refreshWorksectionToken`. Строит URL как `account_url + "/api/oauth2" + path`, добавляет `Authorization: Bearer`
+
+## Связь с геймификацией
+
+При каждом успешном входе callback должен обновлять `ws_users.user_id` — связывать запись сотрудника с Supabase Auth аккаунтом:
+
+```sql
+UPDATE public.ws_users
+SET user_id = <auth.uid()>
+WHERE email = lower(<email из JWT>)
+  AND user_id IS NULL;
+```
+
+Это необходимо чтобы `my_ws_user_id()` RLS-функция корректно резолвила текущего пользователя. Без этого шага пользователь видит данные геймификации, но RPC функции (`cancel_transaction`, `add_manual_adjustment`) не смогут определить его `employee_id`. Обновление делается только если `user_id IS NULL` — при повторных входах не трогает уже связанную запись.
 
 ## Ограничения
 
