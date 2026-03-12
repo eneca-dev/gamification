@@ -129,18 +129,18 @@ Deno.serve(async (req) => {
     };
   });
 
-  // 3. Upsert в gratitudes батчами по 500
+  // 3. Upsert в at_gratitudes батчами по 500
   const CHUNK = 500;
   for (let i = 0; i < rows.length; i += CHUNK) {
     const { error } = await supabase
-      .from('gratitudes')
+      .from('at_gratitudes')
       .upsert(rows.slice(i, i + CHUNK), { onConflict: 'id' });
     if (error) throw new Error(`Gratitudes upsert: ${error.message}`);
   }
 
   // 4. Soft-delete: записи исчезли из Airtable в этом месяце
   const { data: existing, error: existingErr } = await supabase
-    .from('gratitudes')
+    .from('at_gratitudes')
     .select('id')
     .eq('deleted_in_airtable', false);
 
@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
   let markedDeleted = 0;
   if (deletedIds.length > 0) {
     const { error } = await supabase
-      .from('gratitudes')
+      .from('at_gratitudes')
       .update({ deleted_in_airtable: true, synced_at: now })
       .in('id', deletedIds);
     if (error) throw new Error(`Soft delete: ${error.message}`);

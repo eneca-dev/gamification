@@ -155,14 +155,14 @@ Deno.serve(async (req) => {
       };
     });
 
-    // 7. Upsert в planning_freshness
+    // 7. Upsert в work_planning_freshness
     const { error: upsertError } = await supabase
-      .from('planning_freshness')
+      .from('work_planning_freshness')
       .upsert(rows, { onConflict: 'team_id' });
 
-    if (upsertError) throw new Error(`planning_freshness upsert: ${upsertError.message}`);
+    if (upsertError) throw new Error(`work_planning_freshness upsert: ${upsertError.message}`);
 
-    // 8. Снапшот в planning_freshness_daily (если ?snapshot=true)
+    // 8. Снапшот в work_planning_freshness_daily (если ?snapshot=true)
     let snapshotCount = 0;
     if (isSnapshot) {
       // Дата по минскому времени — снапшот всегда за текущий минский день
@@ -183,10 +183,10 @@ Deno.serve(async (req) => {
       }));
 
       const { error: snapshotError } = await supabase
-        .from('planning_freshness_daily')
+        .from('work_planning_freshness_daily')
         .upsert(dailyRows, { onConflict: 'team_id,snapshot_date' });
 
-      if (snapshotError) throw new Error(`planning_freshness_daily upsert: ${snapshotError.message}`);
+      if (snapshotError) throw new Error(`work_planning_freshness_daily upsert: ${snapshotError.message}`);
       snapshotCount = dailyRows.length;
     }
 

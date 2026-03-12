@@ -35,7 +35,7 @@ export async function getUserAutomationStreak(email: string): Promise<Automation
     const sinceDateStr = sinceDate.toISOString().split('T')[0]
 
     const { data } = await supabase
-      .from('plugin_launches')
+      .from('elk_plugin_launches')
       .select('work_date')
       .eq('user_email', email.toLowerCase())
       .gte('work_date', sinceDateStr)
@@ -65,7 +65,7 @@ export async function getTopAutomationUsers(
     const sinceDateStr = sinceDate.toISOString().split('T')[0]
 
     const { data: launches } = await adminClient
-      .from('plugin_launches')
+      .from('elk_plugin_launches')
       .select('user_email, launch_count')
       .gte('work_date', sinceDateStr)
 

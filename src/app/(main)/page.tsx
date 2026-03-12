@@ -21,7 +21,7 @@ import { getUserAutomationStreak, getTopAutomationUsers } from "@/modules/plugin
 export default async function DashboardPage() {
   const currentUser = await getCurrentUser();
 
-  // Реальные данные автоматизаций из Supabase (plugin_launches)
+  // Реальные данные автоматизаций из Supabase (elk_plugin_launches)
   const [automationStreak, topAutomationUsers] = await Promise.all([
     currentUser?.email
       ? getUserAutomationStreak(currentUser.email)

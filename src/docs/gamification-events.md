@@ -8,7 +8,7 @@
 
 1. Все начисления — через `INSERT INTO coin_transactions` с `idempotency_key` и `ON CONFLICT (idempotency_key) DO NOTHING`. Дубль игнорируется без ошибки.
 2. Резолвить email → `employee_id` через `SELECT id FROM ws_users WHERE email = lower(?) AND is_active = true`. Если не найден — пропустить, не выбрасывать ошибку.
-3. Суммы всегда читать из `gamification_settings` — не хардкодить.
+3. Суммы всегда читать из `event_coin_config` — не хардкодить.
 4. Стрики обновляются в том же триггере сразу после вставки транзакции.
 
 ---
@@ -18,20 +18,20 @@
 Начисления происходят **мгновенно через PostgreSQL-триггеры**, а не по крону:
 
 ```
-sync-gratitudes (edge fn, по расписанию)
-  → INSERT/UPDATE gratitudes
+sync-at_gratitudes (edge fn, по расписанию)
+  → INSERT/UPDATE at_gratitudes
     → trg_award_gratitude_points (триггер)
       → fn_award_gratitude_points()
         → INSERT coin_transactions
 
 sync-planning-freshness (edge fn, по расписанию)
-  → INSERT/UPDATE planning_freshness
+  → INSERT/UPDATE work_planning_freshness
     → trg_award_planning_points (триггер)
       → fn_award_planning_points()
         → INSERT coin_transactions
 
 sync-plugin-launches (edge fn, по расписанию)
-  → INSERT/UPDATE plugin_launches
+  → INSERT/UPDATE elk_plugin_launches
     → trg_award_revit_points (триггер)
       → fn_award_revit_points()
         → INSERT coin_transactions + UPDATE streaks
@@ -47,22 +47,22 @@ sync-ws-daily-status (edge fn, WS-часть — коллега)
 
 ## 1. Revit — использование плагинов
 
-**Триггер:** `trg_award_revit_points` на `plugin_launches` (`AFTER INSERT OR UPDATE`)
+**Триггер:** `trg_award_revit_points` на `elk_plugin_launches` (`AFTER INSERT OR UPDATE`)
 **Функция:** `fn_award_revit_points()` (`SECURITY DEFINER`)
 
 ### Зелёный день
 
-**Условие:** любая запись в `plugin_launches` с новым `(user_email, work_date)`
+**Условие:** любая запись в `elk_plugin_launches` с новым `(user_email, work_date)`
 **Получатель:** сотрудник
 **Сумма:** `revit_green_day_points` → **+5**
 
 ```
 idempotency_key: revit_green_{email}_{work_date}
 event_type:      revit_green_day
-source_type:     plugin_launches
+source_type:     elk_plugin_launches
 ```
 
-Один сотрудник за день может запустить несколько плагинов — несколько строк в `plugin_launches`. Зелёный день засчитывается один раз: `ON CONFLICT DO NOTHING` на idempotency_key.
+Один сотрудник за день может запустить несколько плагинов — несколько строк в `elk_plugin_launches`. Зелёный день засчитывается один раз: `ON CONFLICT DO NOTHING` на idempotency_key.
 
 ### Стрик Revit
 
@@ -86,7 +86,7 @@ source_type:     plugin_launches
 
 ## 2. Благодарности (Airtable)
 
-**Триггер:** `trg_award_gratitude_points` на `gratitudes` (`AFTER INSERT OR UPDATE`)
+**Триггер:** `trg_award_gratitude_points` на `at_gratitudes` (`AFTER INSERT OR UPDATE`)
 **Функция:** `fn_award_gratitude_points()` (`SECURITY DEFINER`)
 
 **Условие срабатывания:**
@@ -101,7 +101,7 @@ source_type:     plugin_launches
 ```
 idempotency_key: gratitude_recipient_{airtable_record_id}
 event_type:      gratitude_received
-source_type:     gratitudes
+source_type:     at_gratitudes
 ```
 
 ### Отправитель
@@ -112,7 +112,7 @@ source_type:     gratitudes
 ```
 idempotency_key: gratitude_sender_{airtable_record_id}
 event_type:      gratitude_sent
-source_type:     gratitudes
+source_type:     at_gratitudes
 ```
 
 Проверка лимита в функции:
@@ -136,7 +136,7 @@ WHERE employee_id = v_sender_id
 
 ## 3. Планирование eneca.work
 
-**Триггер:** `trg_award_planning_points` на `planning_freshness` (`AFTER INSERT OR UPDATE`)
+**Триггер:** `trg_award_planning_points` на `work_planning_freshness` (`AFTER INSERT OR UPDATE`)
 **Функция:** `fn_award_planning_points()` (`SECURITY DEFINER`)
 
 Получатели: `team_lead_email` и `department_head_email` (если разные люди — оба получают).
@@ -150,7 +150,7 @@ WHERE employee_id = v_sender_id
 idempotency_key (тимлид):    planning_bonus_lead_{team_id}_{last_update::date}
 idempotency_key (нач.отдела): planning_bonus_head_{department_id}_{last_update::date}
 event_type:                  planning_bonus
-source_type:                 planning_freshness
+source_type:                 work_planning_freshness
 ```
 
 Ключ привязан к дате `last_update` — один бонус за каждое реальное обновление планирования. Повторный синк не создаёт дублей.
@@ -165,7 +165,7 @@ source_type:                 planning_freshness
 idempotency_key (тимлид):    planning_penalty_lead_{team_id}_{3day_period}
 idempotency_key (нач.отдела): planning_penalty_head_{department_id}_{3day_period}
 event_type:                  planning_penalty
-source_type:                 planning_freshness
+source_type:                 work_planning_freshness
 ```
 
 Где `3day_period = floor(extract(epoch from current_date) / (3 * 86400))::bigint`.
@@ -335,7 +335,7 @@ parent_id:       original_transaction_id
 ## Ограничения
 
 - Если email из source-таблицы не найден в `ws_users` — событие молча пропускается. Начисление произойдёт при следующем срабатывании триггера если сотрудник появится в `ws_users`.
-- `gratitudes` с `deleted_in_airtable = true` — уже начисленные баллы не отзываются автоматически. Только через admin `cancel_transaction`.
+- `at_gratitudes` с `deleted_in_airtable = true` — уже начисленные баллы не отзываются автоматически. Только через admin `cancel_transaction`.
 - Отрицательный баланс допустим (штрафы, clawback). Запрещён только при покупке — проверяется в `create_purchase()`.
 - Триггеры срабатывают на `UPDATE` тоже — idempotency_key защищает от повторных начислений при повторных синках.
 - WS-часть (зелёные дни, бюджеты, «Мастер планирования») создаётся коллегой по тому же паттерну что `fn_award_revit_points`.
