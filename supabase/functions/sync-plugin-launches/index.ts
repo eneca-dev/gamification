@@ -134,7 +134,7 @@ async function syncDay(minskyDateStr: string): Promise<number> {
   if (rows.length === 0) return 0;
 
   const { error } = await supabase
-    .from('plugin_launches')
+    .from('elk_plugin_launches')
     .upsert(rows, { onConflict: 'user_email,work_date,plugin_name' });
 
   if (error) throw new Error(`Supabase upsert: ${error.message}`);
