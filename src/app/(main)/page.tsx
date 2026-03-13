@@ -1,5 +1,3 @@
-"use client";
-
 import { AlertsBanner } from "@/components/dashboard/AlertsBanner";
 import { StatusWidgets } from "@/components/dashboard/StatusWidgets";
 import { StreakPanel } from "@/components/dashboard/StreakPanel";
@@ -17,8 +15,31 @@ import {
   departmentContest,
   daysUntilMonthEnd,
 } from "@/lib/data";
+import { getCurrentUser } from "@/modules/auth/queries";
+import { getUserAutomationStreak, getTopAutomationUsers } from "@/modules/plugin-stats";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const currentUser = await getCurrentUser();
+
+  // Реальные данные автоматизаций из Supabase (elk_plugin_launches)
+  const [automationStreak, topAutomationUsers] = await Promise.all([
+    currentUser?.email
+      ? getUserAutomationStreak(currentUser.email)
+      : Promise.resolve({ currentDays: 0, activeDates: [] }),
+    getTopAutomationUsers(10, currentUser?.email),
+  ]);
+
+  // Мержим реальные даты автоматизаций в объект стрика WS
+  const activeDateSet = new Set(automationStreak.activeDates);
+  const wsStreak = {
+    ...worksectionStreak,
+    automationCurrentDays: automationStreak.currentDays,
+    calendarDays: worksectionStreak.calendarDays.map((day) => ({
+      ...day,
+      automation: activeDateSet.has(day.date),
+    })),
+  };
+
   const hasAlerts = wsAlerts.length > 0;
 
   return (
@@ -34,7 +55,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-3 gap-5 animate-fade-in-up stagger-1">
         <StatusWidgets goal={userGoal} />
         <div className="col-span-2">
-          <StreakPanel worksectionStreak={worksectionStreak} />
+          <StreakPanel worksectionStreak={wsStreak} />
         </div>
       </div>
 
@@ -49,7 +70,10 @@ export default function DashboardPage() {
           <TransactionFeed transactions={recentTransactions} />
         </div>
         <div className="col-span-3">
-          <Leaderboard entries={leaderboard} />
+          <Leaderboard
+            entries={leaderboard}
+            automationEntries={topAutomationUsers.length > 0 ? topAutomationUsers : undefined}
+          />
         </div>
       </div>
 
