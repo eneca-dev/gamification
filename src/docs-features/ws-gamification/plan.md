@@ -183,29 +183,48 @@ Edge Function: `sync-ws-absences`. Старые записи не перезап
 
 Проверка вех: `if current_streak in (7, 30, 90)` → создаём событие `ws_streak_7` / `ws_streak_30` / `ws_streak_90`.
 
-### 8. `view_daily_statuses` — VIEW: зелёный / красный / отсутствует по дням
+### 8. ✅ `view_daily_statuses` — VIEW: зелёный / красный / отсутствует по дням
 
-Не таблица, а view. Вычисляется из `gamification_events` и `ws_user_absences`:
+Не таблица, а view. Вычисляется из `ws_daily_reports`, `ws_user_absences`, `gamification_event_logs`, `ws_users`.
 
-- absent: есть строка в `ws_user_absences` на эту дату
-- red: есть хотя бы одно событие с негативным типом (red_day, task_dynamics_violation и т.д.)
-- green: нет absent и нет red-событий
+| Колонка      | Тип       | Описание                                                     |
+| ------------ | --------- | ------------------------------------------------------------ |
+| user_id      | uuid      | FK → ws_users.id                                             |
+| user_email   | text      |                                                              |
+| date         | date      | День                                                         |
+| status       | text      | `'green'` / `'red'` / `'absent'`                            |
+| absence_type | text NULL | `'vacation'` / `'sick_leave'` / `'sick_day'` (только absent) |
+| red_reasons  | text[] NULL | Массив event_type, вызвавших красный день                  |
 
-Причины красного дня подтягиваются из событий (array_agg).
+Логика приоритетов (absent всегда перекрывает red):
 
-### 9. `gamification_events` — универсальный лог событий (вычисляется)
+1. Есть запись в `ws_user_absences` на эту дату → **absent** (независимо от остального)
+2. Нет записи в `ws_daily_reports` → **red** (не внёс время), red_reasons = `['red_day']`
+3. Есть негативные события в `gamification_event_logs` (`task_dynamics_violation`, `section_red`) → **red**, red_reasons = array_agg(event_type)
+4. Иначе → **green**
 
-| Колонка        | Тип                       | Описание                                   |
-| -------------- | ------------------------- | ------------------------------------------ |
-| id             | uuid PK                   |                                            |
-| user_id        | uuid NOT NULL             | FK → ws_users.id                           |
-| user_email     | text NOT NULL             | На кого влияет событие                     |
-| event_type     | text NOT NULL             | FK → gamification_event_types.key          |
-| ref_task_id    | text NULL                 | ws_task_id, если событие связано с задачей |
-| ref_project_id | text NULL                 | ws_project_id, если релевантно             |
-| event_date     | date NOT NULL             | Когда произошло событие                    |
-| details        | jsonb NULL                | Доп. контекст                              |
-| created_at     | timestamptz DEFAULT now() |                                            |
+### 9. ✅ `gamification_event_logs` — универсальный лог событий (все источники)
+
+| Колонка    | Тип                       | Описание                                                    |
+| ---------- | ------------------------- | ----------------------------------------------------------- |
+| id         | uuid PK                   |                                                             |
+| user_id    | uuid NOT NULL             | FK → profiles.user_id (на кого влияет)                      |
+| user_email | text NOT NULL             | Email пользователя (денормализация для быстрых запросов)    |
+| event_type | text NOT NULL             | FK → gamification_event_types.key                           |
+| source     | text NOT NULL             | Источник: `ws`, `revit`, `airtable`, `planning`, `shop`    |
+| event_date | date NOT NULL             | Когда произошло событие                                     |
+| details    | jsonb NULL                | Контекст события (discriminated union по source, см. ниже)  |
+| created_at | timestamptz DEFAULT now() |                                                             |
+
+Формат `details` зависит от `source` (типизируется в коде как discriminated union):
+
+| source | Поля details | Пример |
+| --- | --- | --- |
+| `ws` | ws_task_id, ws_task_name, ws_project_id, ws_l2_id, ws_l1_id, checkpoint, budget_percent, percent, max_time, actual_time, streak_was, violator_email, violation_type | `{ "ws_task_id": "123", "ws_task_name": "Чертежи фасадов", "ws_project_id": "456", "ws_l2_id": "789", "ws_l1_id": "012", "checkpoint": 20, "budget_percent": 22 }` |
+| `revit` | plugin_name, launch_count | `{ "plugin_name": "WallPlugin", "launch_count": 5 }` |
+| `airtable` | gratitude_id, sender_email | `{ "gratitude_id": "rec123", "sender_email": "ivan@co.ua" }` |
+| `planning` | team, days_overdue | `{ "team": "AR-1", "days_overdue": 10 }` |
+| `shop` | item_name | `{ "item_name": "Вторая жизнь" }` |
 
 ### 10. ✅ `gamification_event_types` — справочник типов событий и их стоимости
 
@@ -220,32 +239,67 @@ Edge Function: `sync-ws-absences`. Старые записи не перезап
 
 Справочник управляется вручную (админка или миграции). `compute-gamification` читает стоимость из этой таблицы при создании транзакций.
 
-### 11. `gamification_transactions` — история начислений/списаний баллов
+### 11. ✅ `gamification_transactions` — история начислений/списаний коинов
 
 | Колонка    | Тип                       | Описание                                   |
 | ---------- | ------------------------- | ------------------------------------------ |
 | id         | uuid PK                   |                                            |
-| user_id    | uuid NOT NULL             | FK → ws_users.id                           |
+| user_id    | uuid NOT NULL             | FK → profiles.user_id                      |
 | user_email | text NOT NULL             | На кого начислено/списано                  |
-| event_id   | uuid NOT NULL             | FK → gamification_events.id                |
-| points     | integer NOT NULL          | Количество баллов (+ или −)                |
+| event_id   | uuid NOT NULL             | FK → gamification_event_logs.id            |
+| coins      | integer NOT NULL          | Количество коинов (+ или −)               |
 | created_at | timestamptz DEFAULT now() |                                            |
 
-Каждая транзакция привязана к конкретному событию. Баланс пользователя = SUM(points) из транзакций. Стоимость берётся из `gamification_event_types` на момент создания транзакции.
+Каждая транзакция привязана к конкретному событию. Стоимость берётся из `gamification_event_types` на момент создания транзакции.
 
-### 12. `budget_pending` — задачи, ожидающие 30-дневной проверки бюджета
+Процесс создания транзакции (в `compute-gamification`):
 
-| Колонка        | Тип                             | Описание                           |
-| -------------- | ------------------------------- | ---------------------------------- |
-| id             | uuid PK                         |                                    |
-| ws_task_id     | text UNIQUE NOT NULL            |                                    |
-| level          | text NOT NULL                   | 'L2' / 'L3'                        |
-| assignee_id    | uuid NOT NULL                   | FK → ws_users.id                   |
-| assignee_email | text NOT NULL                   | Ответственный на момент закрытия   |
-| closed_at      | timestamptz NOT NULL            | Когда задача была закрыта          |
-| eligible_date  | date NOT NULL                   | closed_at + 30 дней                |
-| status         | text NOT NULL DEFAULT 'pending' | 'pending' / 'approved' / 'revoked' |
-| checked_at     | timestamptz NULL                | Когда была выполнена проверка      |
+Все шаги выполняются в одной SQL-транзакции (BEGIN/COMMIT) — либо всё записалось, либо ничего:
+
+1. INSERT событие в `gamification_event_logs`
+2. Читаем `coins` из `gamification_event_types` по `event_type`
+3. INSERT в `gamification_transactions` (event_id, coins)
+4. UPDATE `gamification_balances` SET `total_coins += coins`
+
+### 12. ✅ `gamification_balances` — материализованный баланс коинов
+
+| Колонка     | Тип                                | Описание         |
+| ----------- | ---------------------------------- | ---------------- |
+| user_id     | uuid PK, FK → profiles.user_id    |                  |
+| total_coins | integer NOT NULL DEFAULT 0         | Текущий баланс   |
+| updated_at  | timestamptz NOT NULL DEFAULT now() |                  |
+
+Источник правды — `gamification_transactions`. Баланс = `SUM(coins)` из транзакций. Таблица `gamification_balances` — кэш для быстрого чтения (профиль, лидерборд, проверка покупок в магазине).
+
+Обновление: атомарно вместе с INSERT в `gamification_transactions` (в одной SQL-транзакции). Если баланс рассинхронизировался — можно пересчитать:
+
+```sql
+UPDATE gamification_balances b
+SET total_coins = (SELECT COALESCE(SUM(coins), 0) FROM gamification_transactions t WHERE t.user_id = b.user_id),
+    updated_at = now();
+```
+
+Используется для:
+- UI профиля — показать текущий баланс без агрегации
+- Лидерборд — ORDER BY total_coins DESC (индексируемый)
+- Магазин артефактов — проверка `total_coins >= item_cost` перед покупкой
+
+### 13. ✅ `budget_pending` — задачи, ожидающие 30-дневной проверки бюджета
+
+| Колонка        | Тип                             | Описание                                             |
+| -------------- | ------------------------------- | ---------------------------------------------------- |
+| id             | uuid PK                         |                                                      |
+| ws_task_l2_id  | text NULL                       | FK → ws_tasks_l2.ws_task_id (заполнен для L2)        |
+| ws_task_l3_id  | text NULL                       | FK → ws_tasks_l3.ws_task_id (заполнен для L3)        |
+| assignee_id    | uuid NOT NULL                   | FK → ws_users.id                                     |
+| assignee_email | text NOT NULL                   | Ответственный на момент закрытия                     |
+| closed_at      | timestamptz NOT NULL            | Когда задача была закрыта                            |
+| eligible_date  | date NOT NULL                   | closed_at + 30 дней                                  |
+| status         | text NOT NULL DEFAULT 'pending' | 'pending' / 'approved' / 'revoked'                   |
+| checked_at     | timestamptz NULL                | Когда была выполнена проверка                        |
+
+CHECK: ровно один из `ws_task_l2_id` / `ws_task_l3_id` NOT NULL.
+UNIQUE: на каждый заполненный FK (чтобы задача не дублировалась в pending).
 
 Процесс:
 
@@ -254,8 +308,89 @@ Edge Function: `sync-ws-absences`. Старые записи не перезап
 3. Наступает eligible_date → считаем бюджет: SUM(hours) из ws_task_actual_hours <= max_time?
    - Да → status='approved', создаём событие budget_ok
    - Нет → status='revoked', создаём событие budget_exceeded
-4. Задача переоткрывается ПОСЛЕ approved → перепроверяем при следующем закрытии
-5. Проект в архиве → игнорируем все pending-строки этого проекта
+4. Задача переоткрывается ПОСЛЕ approved → перепроверяем при следующем закрытии (eligible_date пересчитывается с нуля)
+5. Проект в архиве пока pending → сразу approved, коины начисляются
+6. Ежедневная проверка approved-строк (часы могут быть дописаны в закрытую задачу):
+   - Для каждой строки с status='approved' пересчитываем actual_hours из ws_task_actual_hours
+   - Если actual_hours > max_time → status='revoked', создаём событие budget_revoked_l3/l2, отзываем коины у ответственного L3 и бонусные коины у ответственного L2
+
+### 14. `view_user_transactions` — VIEW: полная история начислений/списаний
+
+Джойн `gamification_transactions` + `gamification_event_logs` + `gamification_event_types`. Показывает юзеру "где мои баллы".
+
+| Колонка     | Тип       | Описание                                          |
+| ----------- | --------- | ------------------------------------------------- |
+| user_id     | uuid      |                                                   |
+| user_email  | text      |                                                   |
+| event_date  | date      | Когда произошло событие                           |
+| event_type  | text      | `budget_ok_l3`, `ws_streak_7`...                  |
+| source      | text      | `ws`, `revit`, `airtable`...                      |
+| coins       | integer   | +25 / -30                                         |
+| description | text      | Из event_types ("Бонус за стрик 7 дней")          |
+| details     | jsonb     | Контекст (название задачи, id проекта и т.д.)     |
+| created_at  | timestamptz |                                                 |
+
+### 15. `view_budget_pending_status` — VIEW: ожидающие и завершённые проверки бюджета
+
+Джойн `budget_pending` + `ws_tasks_l2` / `ws_tasks_l3` + `ws_projects` + `ws_task_actual_hours` + `gamification_event_types`. Показывает юзеру "что мне скоро придёт" и "что уже начислено/отклонено".
+
+| Колонка        | Тип       | Описание                                                  |
+| -------------- | --------- | --------------------------------------------------------- |
+| user_id        | uuid      | Ответственный                                             |
+| user_email     | text      |                                                           |
+| status         | text      | `'pending'` / `'approved'` / `'revoked'`                 |
+| level          | text      | `'L2'` / `'L3'`                                          |
+| ws_task_l2_id  | text      | ID задачи L2                                              |
+| ws_task_l3_id  | text      | ID задачи L3 (NULL для L2)                                |
+| ws_project_id  | text      | ID проекта                                                |
+| ws_l1_id       | text      | ID задачи L1 (для ссылки в WS)                            |
+| task_name      | text      | Название задачи                                           |
+| project_name   | text      | Название проекта                                          |
+| max_time       | numeric   | Плановый бюджет (часы)                                    |
+| actual_hours   | numeric   | Фактические часы (живой расчёт из ws_task_actual_hours)   |
+| within_budget  | boolean   | `actual_hours <= max_time` (текущий прогноз)              |
+| closed_at      | timestamptz | Когда задача была закрыта                               |
+| eligible_date  | date      | Когда будет проверка                                      |
+| days_remaining | integer   | `eligible_date - CURRENT_DATE` (NULL для завершённых)     |
+| expected_coins | integer   | Ожидаемые коины из event_types (budget_ok_l3 / budget_ok_l2) |
+| checked_at     | timestamptz | Когда была выполнена проверка (NULL для pending)        |
+
+UI-подсказки для view_budget_pending_status:
+- `days_remaining < 0` и `status = 'pending'` → "Коины уже в пути!"
+- `within_budget = false` и `status = 'pending'` → "Вы могли получить X коинов, но бюджет задачи превышен на Y часов("
+
+### Граничные случаи (budget_pending)
+
+- `max_time IS NULL` или `max_time = 0` → пропускаем, запись в pending не создаётся
+- `ws_task_actual_hours` нет для задачи → коины не начисляются
+- `assignee = NULL` (noone) → пропускаем, некому начислять
+- Многократное переоткрытие → eligible_date пересчитывается с нуля каждый раз, абьюз не критичен
+- L2 не может быть закрыт, пока открыты L3 внутри (ограничение WS)
+- Проект архивирован пока pending → сразу approved, коины начисляются, юзер уведомляется
+- Часы дописаны после approval → если бюджет превышен, коины отзываются: у ответственного L3 (budget_revoked_l3) и у ответственного L2 (за бонус дочерней L3)
+- Задача удалена из синка → budget_pending сохраняет данные, начисление и отображение работают по сохранённым данным
+- Смена ответственного → коины получает последний assignee на момент закрытия (вариант A)
+
+### Потенциальное улучшение: пропорциональное распределение коинов при смене ответственного
+
+Сейчас коины получает только последний ответственный. В будущем можно распределять пропорционально вкладу в % готовности задачи.
+
+Потребуется таблица `ws_task_assignment_history`:
+
+| Колонка       | Тип            | Описание                              |
+| ------------- | -------------- | ------------------------------------- |
+| id            | uuid PK        |                                       |
+| ws_task_id    | text NOT NULL  | FK → ws_tasks_l3.ws_task_id           |
+| user_id       | uuid NOT NULL  | FK → ws_users.id                      |
+| user_email    | text NOT NULL  |                                       |
+| percent_start | smallint NOT NULL | % задачи при назначении            |
+| percent_end   | smallint NULL  | % задачи при смене (NULL = текущий)   |
+| assigned_at   | timestamptz NOT NULL |                                  |
+| unassigned_at | timestamptz NULL | NULL = текущий ответственный        |
+
+Логика: `sync-ws-tasks` при обнаружении смены assignee закрывает старую запись (percent_end, unassigned_at) и открывает новую. При закрытии задачи коины распределяются: `base_coins * (percent_end - percent_start) / 100` для каждого участника.
+
+Нерешённые вопросы: округление дробных коинов, минимальная выплата, assignee с нулевым вкладом (% не менялся).
 
 ---
 
@@ -306,7 +441,7 @@ Edge Function: `sync-ws-absences`. Старые записи не перезап
 
 Последовательность:
 
-1. **Дневные статусы (правило 1)**: за вчера для каждого активного пользователя — проверяем `ws_daily_reports` и `ws_user_absences` → создаём событие `green_day` или `red_day` в `gamification_events`. Дневной статус вычисляется через `view_daily_statuses` (view)
+1. **Дневные статусы (правило 1)**: за вчера для каждого активного пользователя — проверяем `ws_daily_reports` и `ws_user_absences` → создаём событие `green_day` или `red_day` в `gamification_event_logs`. Дневной статус вычисляется через `view_daily_statuses` (view)
 2. **Отслеживание стриков (правило 5)**: обновляем `ws_user_streaks` (green → +1, red → 0, absent → skip), проверяем вехи (7/30/90), создаём события ws_streak_7/30/90
 3. **Динамика задач (правило 2)**: для каждой активной L3 считаем % съеденного бюджета. Если пересечена контрольная точка (20/40/60/80/100%) и метка % не менялась с прошлой точки → создаём нарушение, обнуляем стрик ответственного
 4. **Дисциплина разделов (правило 3)**: для каждого L2 проверяем, было ли у любого ответственного за L3 нарушение сегодня → если да, создаём section_red, обнуляем стрик тимлида
@@ -316,7 +451,7 @@ Edge Function: `sync-ws-absences`. Старые записи не перезап
    - Подошёл срок: проверяем бюджет, создаём события
    - Архивные проекты: пропускаем
 6. **Мастер планирования (правило 5)**: по каждому пользователю считаем последовательные budget_ok_l3 события
-7. **Транзакции**: для каждого нового события в `gamification_events` → берём стоимость из `gamification_event_types` → insert в `gamification_transactions`
+7. **Транзакции**: для каждого нового события в `gamification_event_logs` → берём стоимость из `gamification_event_types` → insert в `gamification_transactions`
 
 ---
 
