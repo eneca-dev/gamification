@@ -1,55 +1,59 @@
-import { createSupabaseServerClient, createSupabaseAdminClient } from '@/config/supabase'
+import { createSupabaseServerClient } from '@/config/supabase'
 
 import type { AutomationStreakData, AutomationLeaderboardEntry } from './types'
 
 const STREAK_GRID_DAYS = 98   // покрывает квартальный грид (14 недель)
 const LEADERBOARD_PERIOD_DAYS = 30
 
-// Считает серию последовательных рабочих дней (пн–пт) с запусками плагинов,
-// идя назад от вчерашнего дня. Выходные пропускаются и не прерывают серию.
-function computeStreak(activeDatesSet: Set<string>): number {
-  let count = 0
-  const d = new Date()
-  d.setUTCHours(12, 0, 0, 0)
-  d.setUTCDate(d.getUTCDate() - 1) // начинаем со вчера (сегодняшние данные ещё не синхронизированы)
-
-  for (let i = 0; i < 90; i++) {
-    const dow = d.getUTCDay()
-    if (dow !== 0 && dow !== 6) {
-      const dateStr = d.toISOString().split('T')[0]
-      if (!activeDatesSet.has(dateStr)) break
-      count++
-    }
-    d.setUTCDate(d.getUTCDate() - 1)
-  }
-
-  return count
-}
-
 export async function getUserAutomationStreak(email: string): Promise<AutomationStreakData> {
   try {
     const supabase = await createSupabaseServerClient()
+    const normalizedEmail = email.toLowerCase()
 
     const sinceDate = new Date()
     sinceDate.setUTCDate(sinceDate.getUTCDate() - STREAK_GRID_DAYS)
     const sinceDateStr = sinceDate.toISOString().split('T')[0]
 
+    // Резолвим email → employee_id через ws_users
+    const { data: user } = await supabase
+      .from('ws_users')
+      .select('id')
+      .eq('email', normalizedEmail)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    // Стрик из таблицы revit_user_streaks (вычисляется триггером fn_award_revit_points)
+    let currentDays = 0
+    let bestDays = 0
+    let lastGreenDate: string | null = null
+
+    if (user?.id) {
+      const { data: streakRow } = await supabase
+        .from('revit_user_streaks')
+        .select('current_streak, best_streak, last_green_date')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (streakRow) {
+        currentDays = streakRow.current_streak ?? 0
+        bestDays = streakRow.best_streak ?? 0
+        lastGreenDate = streakRow.last_green_date ?? null
+      }
+    }
+
+    // Активные даты из elk_plugin_launches (для календаря)
     const { data } = await supabase
       .from('elk_plugin_launches')
       .select('work_date')
-      .eq('user_email', email.toLowerCase())
+      .eq('user_email', normalizedEmail)
       .gte('work_date', sinceDateStr)
 
-    const activeDates = (data ?? []).map((r) => r.work_date as string)
-    const activeDatesSet = new Set(activeDates)
+    const activeDates = [...new Set((data ?? []).map((r) => r.work_date as string))]
 
-    return {
-      currentDays: computeStreak(activeDatesSet),
-      activeDates,
-    }
+    return { currentDays, bestDays, lastGreenDate, activeDates }
   } catch (error) {
     console.error('[plugin-stats] getUserAutomationStreak failed:', error)
-    return { currentDays: 0, activeDates: [] }
+    return { currentDays: 0, bestDays: 0, lastGreenDate: null, activeDates: [] }
   }
 }
 
@@ -58,24 +62,24 @@ export async function getTopAutomationUsers(
   currentUserEmail?: string
 ): Promise<AutomationLeaderboardEntry[]> {
   try {
-    const adminClient = createSupabaseAdminClient()
+    const supabase = await createSupabaseServerClient()
 
     const sinceDate = new Date()
     sinceDate.setUTCDate(sinceDate.getUTCDate() - LEADERBOARD_PERIOD_DAYS)
     const sinceDateStr = sinceDate.toISOString().split('T')[0]
 
-    const { data: launches } = await adminClient
+    const { data: launches } = await supabase
       .from('elk_plugin_launches')
       .select('user_email, launch_count')
       .gte('work_date', sinceDateStr)
 
     if (!launches?.length) return []
 
-    // Агрегируем запуски по email (нормализуем к нижнему регистру для консистентности)
+    // Агрегируем запуски по email
     const totals: Record<string, number> = {}
     for (const row of launches) {
-      const email = row.user_email.toLowerCase()
-      totals[email] = (totals[email] ?? 0) + row.launch_count
+      const rowEmail = row.user_email.toLowerCase()
+      totals[rowEmail] = (totals[rowEmail] ?? 0) + row.launch_count
     }
 
     // Топ N по убыванию
@@ -83,22 +87,25 @@ export async function getTopAutomationUsers(
       .sort((a, b) => b[1] - a[1])
       .slice(0, limit)
 
-    // Имена пользователей из auth
-    const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 500 })
+    // Имена из ws_users
+    const emailList = topEmails.map(([e]) => e)
+    const { data: users } = await supabase
+      .from('ws_users')
+      .select('email, first_name, last_name')
+      .in('email', emailList)
+
     const emailToName: Record<string, string> = {}
-    for (const u of authData?.users ?? []) {
-      if (u.email) {
-        emailToName[u.email.toLowerCase()] = u.user_metadata?.full_name || u.email
-      }
+    for (const u of users ?? []) {
+      emailToName[u.email] = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email
     }
 
     const normalizedCurrentEmail = currentUserEmail?.toLowerCase()
 
-    return topEmails.map(([email, launchCount]) => ({
-      email,
-      fullName: emailToName[email] || email,
+    return topEmails.map(([topEmail, launchCount]) => ({
+      email: topEmail,
+      fullName: emailToName[topEmail] || topEmail,
       launchCount,
-      isCurrentUser: !!normalizedCurrentEmail && email === normalizedCurrentEmail,
+      isCurrentUser: !!normalizedCurrentEmail && topEmail === normalizedCurrentEmail,
     }))
   } catch (error) {
     console.error('[plugin-stats] getTopAutomationUsers failed:', error)
