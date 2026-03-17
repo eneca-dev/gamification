@@ -25,7 +25,7 @@ export default async function DashboardPage() {
   const [automationStreak, topAutomationUsers] = await Promise.all([
     currentUser?.email
       ? getUserAutomationStreak(currentUser.email)
-      : Promise.resolve({ currentDays: 0, activeDates: [] }),
+      : Promise.resolve({ currentDays: 0, bestDays: 0, lastGreenDate: null, activeDates: [] }),
     getTopAutomationUsers(10, currentUser?.email),
   ]);
 
