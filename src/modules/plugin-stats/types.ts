@@ -1,5 +1,7 @@
 export interface AutomationStreakData {
   currentDays: number
+  bestDays: number
+  lastGreenDate: string | null
   activeDates: string[] // 'YYYY-MM-DD'
 }
 

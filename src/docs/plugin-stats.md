@@ -19,7 +19,7 @@
 ## Типы
 
 - `AutomationStreakData` — `{ currentDays, bestDays, lastGreenDate, activeDates[] }`
-- `AutomationLeaderboardEntry` (`src/lib/types.ts`) — `{ email, fullName, launchCount, departmentCode, isCurrentUser }`
+- `AutomationLeaderboardEntry` — `{ email, fullName, launchCount, isCurrentUser }`
 
 ## Queries
 

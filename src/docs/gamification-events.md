@@ -6,11 +6,11 @@
 
 ## Общие правила
 
-1. Все события записываются в `gamification_event_logs` с `idempotency_key`. Дубли игнорируются (UNIQUE constraint).
-2. Каждое событие порождает ровно одну транзакцию в `gamification_transactions` (1:1 через `event_id` UNIQUE).
-3. Баланс обновляется атомарно через RPC `increment_balance(user_id, coins)`.
+1. Все события записываются в `gamification_event_logs` с `idempotency_key`. Дубли игнорируются (`ON CONFLICT DO NOTHING`).
+2. Каждое событие с ненулевыми коинами порождает ровно одну транзакцию в `gamification_transactions` (1:1 через `event_id` UNIQUE).
+3. Баланс обновляется атомарно через inline UPSERT в `gamification_balances` (триггеры не используют RPC `increment_balance`).
 4. Суммы коинов читаются из `gamification_event_types` — не хардкодятся.
-5. Резолвинг email → `ws_users.id`: если сотрудник не найден — событие пропускается без ошибки.
+5. Резолвинг email → `ws_users.id`: `SELECT id FROM ws_users WHERE email = lower(?) AND is_active = true`. Если не найден — событие пропускается без ошибки.
 
 ---
 
@@ -26,7 +26,7 @@ sync-plugin-launches (pg_cron, 01:00 UTC)
     → trg_award_revit_points
       → fn_award_revit_points()
         → INSERT gamification_event_logs + gamification_transactions
-        → increment_balance()
+        → UPSERT gamification_balances (inline)
         → UPDATE revit_user_streaks
 
 sync-gratitudes (pg_cron, каждые 4 часа)
@@ -34,7 +34,7 @@ sync-gratitudes (pg_cron, каждые 4 часа)
     → trg_award_gratitude_points
       → fn_award_gratitude_points()
         → INSERT gamification_event_logs + gamification_transactions
-        → increment_balance()
+        → UPSERT gamification_balances (inline)
 
 == Поток 2: VPS-скрипт compute-gamification (после синка WS-данных) ==
 
@@ -62,6 +62,7 @@ orchestrator.ts → compute-gamification.ts:
 ```
 event_type:      revit_using_plugins
 source:          revit
+details:         { plugin_name, launch_count }
 idempotency_key: revit_green_{email}_{work_date}
 ```
 
@@ -69,14 +70,16 @@ idempotency_key: revit_green_{email}_{work_date}
 
 ### Стрик Revit
 
-Обновляется в `revit_user_streaks` сразу после начисления.
+Обновляется в `fn_award_revit_points()` в `revit_user_streaks` сразу после успешного INSERT (проверяется через `GET DIAGNOSTICS v_row_count = ROW_COUNT`).
+
+Непрерывность стрика проверяется с учётом **выходных и отсутствий**: считаются рабочие дни-пропуски между `last_green_date` и `work_date` через `generate_series`, пропуская Сб/Вс (`dow IN (0,6)`) и записи из `ws_user_absences`. Если пропусков нет → стрик продолжается.
 
 | Условие | Действие |
 |---|---|
-| `last_green_date = work_date - 1` | `current_streak + 1` |
-| `last_green_date = work_date` | уже засчитан — пропуск |
-| иначе | `current_streak = 1` (стрик прерван) |
+| `last_green_date = work_date` | уже засчитан — пропустить |
 | `is_frozen = true` | не трогать |
+| между `last_green_date` и `work_date` нет рабочих пропусков | `current_streak + 1` |
+| есть рабочие дни без запусков | `current_streak = 1` (стрик прерван) |
 
 **Бонусы за milestones:**
 
@@ -94,23 +97,26 @@ idempotency_key: revit_green_{email}_{work_date}
 ### Получатель
 
 **Коины:** `gratitude_recipient_points` → **+20**
-**Ограничений нет** — начисляется за каждую благодарность.
+**Лимит:** 1 начисление от одного `sender_email` за `week_start`. Если от этого отправителя уже есть запись в `gamification_event_logs` с `event_type = 'gratitude_recipient_points'` за ту же `week_start` — начисление пропускается.
 
 ```
 event_type:      gratitude_recipient_points
-source:          gratitude
+source:          airtable
+details:         { gratitude_id, sender_email }
 idempotency_key: gratitude_recipient_{airtable_record_id}
 ```
 
-### Отправитель
+### Условия срабатывания триггера
 
-На данный момент начисление отправителю **не реализовано** в новой системе `gamification_event_logs`. В старой системе (`coin_transactions`) было +10 с лимитом 3/неделю.
+Триггер срабатывает на INSERT и UPDATE. На UPDATE — только если изменились `deleted_in_airtable` или `airtable_status`. Это предотвращает повторные начисления при обычных re-sync.
 
 ### Edge cases
 
-- `sender_email` или `recipient_email` не найден в `ws_users` — начисление пропускается
-- `deleted_in_airtable = true` — пропускается целиком
+- `sender_email` или `recipient_email` = NULL → начисление пропускается
+- `sender_email` или `recipient_email` не найден в `ws_users` (is_active=true) → начисление пропускается
+- `deleted_in_airtable = true` → пропускается целиком
 - Уже начисленные баллы за удалённые благодарности не отзываются автоматически
+- Email в `ws_users` хранятся в нижнем регистре. Airtable может присылать любой регистр — `lower()` в JOIN обязателен
 
 ---
 
@@ -202,7 +208,7 @@ idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 | `budget_ok_l3` | +50 | ws | compute-gamification |
 | `revit_streak_7_bonus` | +25 | revit | PG-триггер |
 | `ws_streak_7` | +25 | ws | compute-gamification |
-| `gratitude_recipient_points` | +20 | gratitude | PG-триггер |
+| `gratitude_recipient_points` | +20 | airtable | PG-триггер |
 | `revit_using_plugins` | +5 | revit | PG-триггер |
 | `budget_revoked_l3` | -50 | ws | compute-gamification |
 | `budget_revoked_l2` | -200 | ws | compute-gamification |
@@ -289,3 +295,5 @@ idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 - `at_gratitudes` с `deleted_in_airtable = true` — начисленные баллы не отзываются автоматически
 - Отрицательный баланс допустим (штрафы, clawback). Запрет только при покупке (будущий этап)
 - Информационные события (green_day, red_day, violations, resets) имеют coins=0 в `gamification_event_types` — записываются в `gamification_event_logs`, но не создают транзакций в `gamification_transactions`
+- Триггеры срабатывают на UPDATE тоже — idempotency_key защищает от повторных начислений при повторных синках
+- Благодарности: лимит 1 начисление от одного отправителя за `week_start` — проверяется в триггере через JOIN `gamification_event_logs` + `at_gratitudes`

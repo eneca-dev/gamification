@@ -12,7 +12,7 @@
 
 **Поток 1 — PG-триггеры (Revit + благодарности):**
 1. Edge functions синкают данные в `elk_plugin_launches` и `at_gratitudes`
-2. Триггеры `trg_award_revit_points` / `trg_award_gratitude_points` мгновенно создают записи в `gamification_event_logs` → `gamification_transactions`, обновляют `gamification_balances` через RPC `increment_balance`, обновляют `revit_user_streaks`
+2. Триггеры `trg_award_revit_points` / `trg_award_gratitude_points` мгновенно создают записи в `gamification_event_logs` → `gamification_transactions`, обновляют `gamification_balances` через inline UPSERT, обновляют `revit_user_streaks`
 
 **Поток 2 — VPS-скрипты (Worksection):**
 1. Оркестратор запускает 7 скриптов последовательно: sync-ws-users → sync-ws-projects → sync-ws-tasks → sync-ws-costs → snapshot-task-percent → sync-ws-absences → compute-gamification
@@ -37,7 +37,7 @@
 | `0 1 * * *` (01:00 UTC ежедневно) | `sync-plugin-launches` | Синк запусков Revit-плагинов из Elasticsearch |
 | `0 */4 * * *` (каждые 4 часа) | `sync-gratitudes` | Синк благодарностей из Airtable |
 
-WS-синки (`sync-ws-*`, `snapshot-task-percent`, `sync-ws-absences`, `compute-gamification`) запускаются **VPS-оркестратором**, не через pg_cron.
+WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-costs`, `snapshot-task-percent`, `sync-ws-absences`, `compute-gamification`) запускаются **VPS-оркестратором**, не через pg_cron.
 
 ---
 
@@ -47,8 +47,8 @@ WS-синки (`sync-ws-*`, `snapshot-task-percent`, `sync-ws-absences`, `comput
 |---|---|
 | `my_email()` | Email текущего пользователя из JWT, нижний регистр |
 | `my_ws_user_id()` | UUID из `ws_users` по email из JWT |
-| `is_admin()` | Проверяет наличие `auth.uid()` в `admin_users` |
-| `increment_balance(p_user_id, p_coins)` | Атомарный UPSERT баланса в `gamification_balances` |
+| `get_user_id_by_email(email)` | UUID из `auth.users` по email |
+| `increment_balance(p_user_id, p_coins)` | Атомарный UPSERT баланса в `gamification_balances`. Существует, но не используется триггерами — триггеры делают inline UPSERT |
 | `link_ws_user_on_profile_insert()` | Триггер: при создании `profiles` связывает с `ws_users.user_id` |
 
 ---
@@ -76,12 +76,6 @@ WS-синки (`sync-ws-*`, `snapshot-task-percent`, `sync-ws-absences`, `comput
 | `synced_at` | timestamptz | |
 
 **Частота обновления:** ежедневно (VPS-оркестратор). Обновляет существующие записи, деактивирует удалённых, реактивирует вернувшихся. Никогда не удаляет строки — только `is_active = false`. Поля `user_id` и `department_code` не трогаются синком.
-
-**Пример данных:**
-```
-email: olga.volchek@..., first_name: Ольга, last_name: Волчек
-department: ЭНЭКА, team: Отдел предпроектных работ (ПП), is_active: true
-```
 
 #### `profiles` (2 строки)
 
@@ -136,8 +130,6 @@ OAuth-токены Worksection для пользователей.
 
 **Частота обновления:** ежедневно. Скрипт `sync-ws-projects` добавляет новые, обновляет имена, архивирует удалённые. Строки не удаляются.
 
-**Пример:** `name: "1-P-08/25-S Sklada Kronospan Mogilev", tag: "eneca.work sync"`
-
 #### `ws_tasks_l2` (4517 строк)
 
 Задачи 2-го уровня (разделы внутри проекта).
@@ -178,8 +170,6 @@ OAuth-токены Worksection для пользователей.
 
 **Частота обновления:** ежедневно. Upsert по `ws_task_id`. Процент парсится из тегов задач.
 
-**Пример:** `name: "{Курирование} ПОС 54/25-ОБЩ / ФИО", percent: 0, max_time: null`
-
 #### `ws_task_actual_hours` (5604 строки)
 
 Фактические трудозатраты по задачам L3.
@@ -213,8 +203,6 @@ OAuth-токены Worksection для пользователей.
 | `synced_at` | timestamptz | |
 
 **Частота обновления:** ежедневно. Скрипт `sync-ws-costs` агрегирует часы по сотрудникам за каждый рабочий день. Upsert по (user_email, report_date). Наличие записи = сотрудник вёл таймтрекинг в этот день (зелёный день WS).
-
-**Пример:** `user_email: evgeniy.shilo@..., report_date: 2026-03-11, total_hours: 8`
 
 #### `ws_task_percent_snapshots` (11 083 строки)
 
@@ -258,15 +246,13 @@ OAuth-токены Worksection для пользователей.
 
 **Частота обновления:** ежедневно. Скрипт `sync-ws-absences` синкает из двух источников: расписание отпусков/больничных (WS API `get_users_schedule`) и задача "Сикдеи" (task ID 4905680). Upsert по (user_email, absence_date). Используется для заморозки стриков и пропуска нарушений.
 
-**Пример:** `user_email: veronika.korolchuk@..., absence_type: sick_leave, absence_date: 2026-03-11`
-
 ---
 
 ### Группа C: Source-таблицы из внешних систем
 
 #### `elk_plugin_launches` (4103 строки)
 
-Запуски Revit-плагинов. Синкается из Elasticsearch/Kibana.
+Запуски Revit-плагинов. Синкается из Elasticsearch/Kibana. Одна строка на (user_email, work_date, plugin_name).
 
 | Колонка | Тип | Описание |
 |---|---|---|
@@ -279,9 +265,7 @@ OAuth-токены Worksection для пользователей.
 
 **Частота обновления:** ежедневно в 01:00 UTC (pg_cron → edge function `sync-plugin-launches`). Одна строка = один пользователь + один плагин + один день. Upsert по (user_email, work_date, plugin_name). Старые данные не стираются.
 
-**Триггер:** `trg_award_revit_points` → `fn_award_revit_points()` — начисляет `revit_using_plugins` (+5) и обновляет `revit_user_streaks`.
-
-**Пример:** `user_email: aleksandr.knyazev@..., work_date: 2026-03-16, plugin_name: ShareModel, launch_count: 5`
+**Триггер:** `trg_award_revit_points` → `fn_award_revit_points()` — начисляет `revit_using_plugins` (+5), обновляет `revit_user_streaks`, бонус при 7/30.
 
 #### `at_gratitudes` (16 строк)
 
@@ -302,9 +286,7 @@ OAuth-токены Worksection для пользователей.
 
 **Частота обновления:** каждые 4 часа (pg_cron → edge function `sync-gratitudes`). Синкает только текущий месяц. Upsert по Airtable ID. Удалённые записи помечаются `deleted_in_airtable = true`, не удаляются физически.
 
-**Триггер:** `trg_award_gratitude_points` → `fn_award_gratitude_points()` — начисляет `gratitude_recipient_points` (+20) получателю.
-
-**Пример:** `sender_email: andrei.khamitsevich@..., recipient_name: Пипко Никита, message: "Умение переключаться между объектами..."`
+**Триггер:** `trg_award_gratitude_points` → `fn_award_gratitude_points()` — начисляет `gratitude_recipient_points` (+20) получателю. Лимит: 1 начисление от одного отправителя за `week_start`. Срабатывает на INSERT и на UPDATE (только при изменении `deleted_in_airtable` или `airtable_status`).
 
 ---
 
@@ -362,15 +344,21 @@ OAuth-токены Worksection для пользователей.
 | `user_id` | uuid → ws_users | |
 | `user_email` | text | Денормализовано для удобства |
 | `event_type` | text → gamification_event_types.key | |
-| `source` | text | Источник: `revit`, `gratitude`, `ws` |
+| `source` | text | Источник: `revit`, `airtable`, `ws`, `shop` |
 | `event_date` | date | Дата события |
 | `details` | jsonb NULL | Детали (plugin_name, launch_count, gratitude_id...) |
 | `idempotency_key` | text UNIQUE NULL | Защита от дублей |
 | `created_at` | timestamptz | |
 
-**Частота обновления:** при каждом синке. Append-only — строки не удаляются и не обновляются. Idempotency key гарантирует отсутствие дублей.
+**Формат `details` по source:**
 
-**Пример:** `event_type: revit_using_plugins, source: revit, event_date: 2026-03-16, details: {plugin_name: "ShareModel", launch_count: 5}`
+| source | Поля details |
+|---|---|
+| `revit` | `plugin_name`, `launch_count` |
+| `airtable` | `gratitude_id`, `sender_email` |
+| `ws` | `ws_task_id`, `ws_task_name`, `ws_project_id`, ... |
+
+**Частота обновления:** при каждом синке. Append-only — строки не удаляются и не обновляются. Idempotency key гарантирует отсутствие дублей.
 
 #### `gamification_transactions` (2890 строк)
 
@@ -387,8 +375,6 @@ OAuth-токены Worksection для пользователей.
 
 **Частота обновления:** при каждом синке вместе с `gamification_event_logs`. Append-only. Одна транзакция = одно событие (UNIQUE на `event_id`).
 
-**Пример:** `user_email: aleksandr.knyazev@..., coins: 5, event_id → revit_using_plugins`
-
 #### `gamification_balances` (271 строка)
 
 Текущий баланс коинов каждого сотрудника.
@@ -399,17 +385,22 @@ OAuth-токены Worksection для пользователей.
 | `total_coins` | integer DEFAULT 0 | |
 | `updated_at` | timestamptz | |
 
-**Частота обновления:** атомарно при каждом начислении через RPC `increment_balance`. Upsert — создаётся при первом начислении, далее инкрементируется.
+**Частота обновления:** атомарно при каждом начислении через inline UPSERT в триггерах. Upsert — создаётся при первом начислении, далее инкрементируется.
 
-**Топ-5 балансов:** 305, 290, 285, 200, 175
+Если баланс рассинхронизировался — пересчитать:
+```sql
+UPDATE gamification_balances b
+SET total_coins = (SELECT COALESCE(SUM(coins), 0) FROM gamification_transactions t WHERE t.user_id = b.user_id),
+    updated_at = now();
+```
 
 #### `revit_user_streaks` (267 строк)
 
-Стрики по использованию Revit-плагинов.
+Стрики по использованию Revit-плагинов. Обновляется триггером `fn_award_revit_points()` мгновенно.
 
 | Колонка | Тип | Описание |
 |---|---|---|
-| `user_id` | uuid PK → ws_users | |
+| `user_id` | uuid PK → ws_users ON DELETE CASCADE | |
 | `current_streak` | integer DEFAULT 0 | Текущая серия зелёных дней |
 | `best_streak` | integer DEFAULT 0 | Максимальная серия за всё время |
 | `last_green_date` | date NULL | Дата последнего зелёного дня |
@@ -418,11 +409,11 @@ OAuth-токены Worksection для пользователей.
 | `frozen_at` | timestamptz NULL | |
 | `updated_at` | timestamptz | |
 
-**Частота обновления:** при каждом синке `elk_plugin_launches` через триггер. Логика: если `last_green_date = вчера` → `current_streak + 1`; если пропущен день → `current_streak = 1`; если `is_frozen` → не трогать. При milestone (7/30) создаётся бонусное событие.
+**Частота обновления:** при каждом синке `elk_plugin_launches` через триггер. Непрерывность стрика проверяется с учётом выходных и отсутствий: считаются рабочие дни-пропуски между `last_green_date` и `work_date` через `generate_series`, пропуская Сб/Вс (`dow IN (0,6)`) и записи из `ws_user_absences`. Если пропусков нет → `current_streak + 1`; если есть → `current_streak = 1`. При milestone (7/30) создаётся бонусное событие.
 
 #### `ws_user_streaks` (0 строк)
 
-Стрики по таймтрекингу в Worksection. Структура аналогична `revit_user_streaks` (без `is_frozen`).
+Стрики по таймтрекингу в Worksection.
 
 | Колонка | Тип | Описание |
 |---|---|---|
@@ -469,7 +460,7 @@ JOIN `gamification_transactions` + `gamification_event_logs` + `gamification_eve
 
 #### `v_gratitudes_feed`
 
-Лента благодарностей: JOIN `at_gratitudes` + `ws_users` (имя отправителя) + `gamification_event_logs/transactions` (начисленные коины).
+Лента благодарностей: JOIN `at_gratitudes` + `ws_users` (имя отправителя) + `gamification_event_logs/transactions` (начисленные коины). Исключает `deleted_in_airtable = true`.
 
 ---
 
@@ -477,22 +468,28 @@ JOIN `gamification_transactions` + `gamification_event_logs` + `gamification_eve
 
 | Триггер | Таблица | Функция | Что делает |
 |---|---|---|---|
-| `trg_award_revit_points` | `elk_plugin_launches` | `fn_award_revit_points()` | +5 за плагин, обновляет `revit_user_streaks`, бонус при 7/30 |
-| `trg_award_gratitude_points` | `at_gratitudes` | `fn_award_gratitude_points()` | +20 получателю благодарности |
+| `trg_award_revit_points` | `elk_plugin_launches` | `fn_award_revit_points()` | +5 за плагин, inline UPSERT баланса, обновляет `revit_user_streaks`, бонус при 7/30 |
+| `trg_award_gratitude_points` | `at_gratitudes` | `fn_award_gratitude_points()` | +20 получателю благодарности, лимит 1/отправитель/неделю, inline UPSERT баланса |
 | `trg_link_ws_user_on_profile_insert` | `profiles` | `link_ws_user_on_profile_insert()` | При создании профиля связывает `ws_users.user_id` |
 
 Идемпотентность: триггеры используют `idempotency_key` с `ON CONFLICT DO NOTHING`.
+
+Процесс записи в триггерах (атомарно):
+1. `INSERT gamification_event_logs` с `idempotency_key` → ON CONFLICT DO NOTHING
+2. `INSERT gamification_transactions` (event_id, coins)
+3. `UPSERT gamification_balances` (total_coins += coins) — inline, без вызова `increment_balance()`
 
 ---
 
 ## Edge Functions (Supabase)
 
-Только функции, не имеющие VPS-аналогов. WS-функции (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-costs`, `snapshot-task-percent`, `sync-ws-absences`) удалены — их полностью заменили VPS-скрипты. `snapshot-tasks` и `sync-plugin` удалены как legacy.
+WS-функции удалены — их полностью заменили VPS-скрипты. `sync-plugin` — legacy-версия `sync-plugin-launches` (не используется, подлежит удалению).
 
 | Функция | Что делает | Расписание |
 |---|---|---|
 | `sync-plugin-launches` | Синк запусков Revit-плагинов из Elasticsearch | pg_cron: `0 1 * * *` |
 | `sync-gratitudes` | Синк благодарностей из Airtable | pg_cron: `0 */4 * * *` |
+| `sync-plugin` | Legacy. Не используется | — |
 
 ---
 
@@ -514,7 +511,7 @@ JOIN `gamification_transactions` + `gamification_event_logs` + `gamification_eve
 | `sync-ws-costs.ts` | `ws_daily_reports`, `ws_task_actual_hours`, `ws_task_actual_hours_l2` | Синк таймтрекинга: дневные отчёты + фактические часы |
 | `snapshot-task-percent.ts` | `ws_task_percent_snapshots` | Снапшот текущего % задач L3 |
 | `sync-ws-absences.ts` | `ws_user_absences` | Синк отсутствий из расписания + задачи сикдеев |
-| `compute-gamification.ts` | `gamification_event_logs`, `gamification_transactions`, `gamification_balances`, `revit_user_streaks`, `ws_user_streaks`, `budget_pending`, `ws_task_budget_checkpoints` | Основной движок геймификации: нарушения, статусы дней, стрики, бюджеты, транзакции |
+| `compute-gamification.ts` | `gamification_event_logs`, `gamification_transactions`, `gamification_balances`, `ws_user_streaks`, `budget_pending`, `ws_task_budget_checkpoints` | Основной движок WS-геймификации: нарушения, статусы дней, стрики, бюджеты, транзакции |
 
 ### Библиотеки (`lib/`)
 
@@ -536,9 +533,9 @@ Express-сервер на порту 3000, endpoint `GET /health` → "Working 2
 ## Ограничения
 
 - `gamification_transactions` — append-only, строки не удаляются и не обновляются
-- Email в `ws_users` — всегда нижний регистр (CHECK constraint)
+- Email в `ws_users` — всегда нижний регистр (CHECK constraint). Source-таблицы хранят email как есть — сравнение в триггерах через `lower()`
 - Отрицательный баланс допустим (штрафы). Запрет только при покупке (будущий этап)
 - WS-скрипты запускаются VPS-оркестратором, не pg_cron — из-за ограничений Edge Functions на время выполнения
 - `ws_users` — строки не удаляются физически, только деактивация
 - Все source-таблицы работают через upsert — данные обновляются, не стираются
-- `ws_task_percent_snapshots` — единственная таблица, которая только добавляет строки (append), не обновляет существующие
+- `ws_task_percent_snapshots` — append-only (UNIQUE по ws_task_id + snapshot_date), не обновляет существующие
