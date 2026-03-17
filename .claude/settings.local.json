@@ -15,7 +15,10 @@
       "mcp__supabase__get_advisors",
       "mcp__supabase__deploy_edge_function",
       "WebFetch(domain:eneca.worksection.com)",
-      "mcp__supabase__get_logs"
+      "mcp__supabase__get_logs",
+      "Bash(ls:*)",
+      "mcp__supabase__list_migrations",
+      "Bash(cd:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

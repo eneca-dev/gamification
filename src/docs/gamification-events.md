@@ -6,336 +6,286 @@
 
 ## Общие правила
 
-1. Все начисления — через `INSERT INTO coin_transactions` с `idempotency_key` и `ON CONFLICT (idempotency_key) DO NOTHING`. Дубль игнорируется без ошибки.
-2. Резолвить email → `employee_id` через `SELECT id FROM ws_users WHERE email = lower(?) AND is_active = true`. Если не найден — пропустить, не выбрасывать ошибку.
-3. Суммы всегда читать из `event_coin_config` — не хардкодить.
-4. Стрики обновляются в том же триггере сразу после вставки транзакции.
+1. Все события записываются в `gamification_event_logs` с `idempotency_key`. Дубли игнорируются (UNIQUE constraint).
+2. Каждое событие порождает ровно одну транзакцию в `gamification_transactions` (1:1 через `event_id` UNIQUE).
+3. Баланс обновляется атомарно через RPC `increment_balance(user_id, coins)`.
+4. Суммы коинов читаются из `gamification_event_types` — не хардкодятся.
+5. Резолвинг email → `ws_users.id`: если сотрудник не найден — событие пропускается без ошибки.
 
 ---
 
 ## Архитектура начислений
 
-Начисления происходят **мгновенно через PostgreSQL-триггеры**, а не по крону:
+Два параллельных механизма:
 
 ```
-sync-at_gratitudes (edge fn, по расписанию)
-  → INSERT/UPDATE at_gratitudes
-    → trg_award_gratitude_points (триггер)
-      → fn_award_gratitude_points()
-        → INSERT coin_transactions
+== Поток 1: PG-триггеры (мгновенно при синке) ==
 
-sync-planning-freshness (edge fn, по расписанию)
-  → INSERT/UPDATE work_planning_freshness
-    → trg_award_planning_points (триггер)
-      → fn_award_planning_points()
-        → INSERT coin_transactions
-
-sync-plugin-launches (edge fn, по расписанию)
-  → INSERT/UPDATE elk_plugin_launches
-    → trg_award_revit_points (триггер)
+sync-plugin-launches (pg_cron, 01:00 UTC)
+  → UPSERT elk_plugin_launches
+    → trg_award_revit_points
       → fn_award_revit_points()
-        → INSERT coin_transactions + UPDATE streaks
+        → INSERT gamification_event_logs + gamification_transactions
+        → increment_balance()
+        → UPDATE revit_user_streaks
 
-sync-ws-daily-status (edge fn, WS-часть — коллега)
-  → INSERT/UPDATE ws_daily_status
-    → trg_award_ws_points (триггер — коллега создаёт)
-      → fn_award_ws_points()
-        → INSERT coin_transactions + UPDATE streaks
+sync-gratitudes (pg_cron, каждые 4 часа)
+  → UPSERT at_gratitudes
+    → trg_award_gratitude_points
+      → fn_award_gratitude_points()
+        → INSERT gamification_event_logs + gamification_transactions
+        → increment_balance()
+
+== Поток 2: VPS-скрипт compute-gamification (после синка WS-данных) ==
+
+orchestrator.ts → compute-gamification.ts:
+  Step 1: Violations (timetracking, task dynamics, section discipline)
+  Step 2: Day status (green/red/absent)
+  Step 3: Streaks (ws_user_streaks: current/longest, milestones 7/30/90)
+  Step 4: Budget (budget_pending: pending→approved/revoked)
+  Step 5: Master planner (10 consecutive budget_ok_l3)
+  Step 6: Transactions → gamification_event_logs + gamification_transactions + gamification_balances
 ```
 
 ---
 
 ## 1. Revit — использование плагинов
 
-**Триггер:** `trg_award_revit_points` на `elk_plugin_launches` (`AFTER INSERT OR UPDATE`)
-**Функция:** `fn_award_revit_points()` (`SECURITY DEFINER`)
+**Механизм:** PG-триггер `trg_award_revit_points` на `elk_plugin_launches`
 
-### Зелёный день
+### Зелёный день Revit
 
-**Условие:** любая запись в `elk_plugin_launches` с новым `(user_email, work_date)`
+**Условие:** запись в `elk_plugin_launches` с (user_email, work_date)
 **Получатель:** сотрудник
-**Сумма:** `revit_green_day_points` → **+5**
+**Коины:** `revit_using_plugins` → **+5**
 
 ```
+event_type:      revit_using_plugins
+source:          revit
 idempotency_key: revit_green_{email}_{work_date}
-event_type:      revit_green_day
-source_type:     elk_plugin_launches
 ```
 
-Один сотрудник за день может запустить несколько плагинов — несколько строк в `elk_plugin_launches`. Зелёный день засчитывается один раз: `ON CONFLICT DO NOTHING` на idempotency_key.
+Один сотрудник может запустить несколько плагинов за день (несколько строк). Зелёный день засчитывается один раз — дубли блокируются idempotency_key.
 
 ### Стрик Revit
 
-Обновляется в `fn_award_revit_points()` сразу после успешного INSERT (проверяется через `GET DIAGNOSTICS v_row_count = ROW_COUNT`).
+Обновляется в `revit_user_streaks` сразу после начисления.
 
 | Условие | Действие |
 |---|---|
 | `last_green_date = work_date - 1` | `current_streak + 1` |
-| `last_green_date = work_date` | уже засчитан — пропустить |
+| `last_green_date = work_date` | уже засчитан — пропуск |
 | иначе | `current_streak = 1` (стрик прерван) |
 | `is_frozen = true` | не трогать |
 
-**Бонус за milestone:**
+**Бонусы за milestones:**
 
-| current_streak | event_type | Сумма | idempotency_key |
+| current_streak | event_type | Коины | idempotency_key |
 |---|---|---|---|
-| 7 | `revit_streak_bonus` | +25 | `revit_streak_7_{email}_{date}` |
-| 30 | `revit_streak_bonus` | +100 | `revit_streak_30_{email}_{date}` |
+| 7 | `revit_streak_7_bonus` | +25 | `revit_streak_7_{email}_{date}` |
+| 30 | `revit_streak_30_bonus` | +100 | `revit_streak_30_{email}_{date}` |
 
 ---
 
 ## 2. Благодарности (Airtable)
 
-**Триггер:** `trg_award_gratitude_points` на `at_gratitudes` (`AFTER INSERT OR UPDATE`)
-**Функция:** `fn_award_gratitude_points()` (`SECURITY DEFINER`)
-
-**Условие срабатывания:**
-- При INSERT — всегда (если `deleted_in_airtable = false`)
-- При UPDATE — только если изменился `deleted_in_airtable` или `airtable_status`. Простое обновление `synced_at` пропускается.
+**Механизм:** PG-триггер `trg_award_gratitude_points` на `at_gratitudes`
 
 ### Получатель
 
-**Сумма:** `gratitude_recipient_points` → **+20**
+**Коины:** `gratitude_recipient_points` → **+20**
 **Ограничений нет** — начисляется за каждую благодарность.
 
 ```
+event_type:      gratitude_recipient_points
+source:          gratitude
 idempotency_key: gratitude_recipient_{airtable_record_id}
-event_type:      gratitude_received
-source_type:     at_gratitudes
 ```
 
 ### Отправитель
 
-**Сумма:** `gratitude_sender_points` → **+10**
-**Лимит:** `gratitude_weekly_sender_cap` → **3 раза в неделю**
+На данный момент начисление отправителю **не реализовано** в новой системе `gamification_event_logs`. В старой системе (`coin_transactions`) было +10 с лимитом 3/неделю.
 
-```
-idempotency_key: gratitude_sender_{airtable_record_id}
-event_type:      gratitude_sent
-source_type:     at_gratitudes
-```
+### Edge cases
 
-Проверка лимита в функции:
-```sql
-SELECT COUNT(*) FROM coin_transactions
-WHERE employee_id = v_sender_id
-  AND event_type = 'gratitude_sent'
-  AND is_cancelled = false
-  AND created_at >= NEW.week_start::timestamptz
-  AND created_at < (NEW.week_start::date + interval '7 days')::timestamptz
-```
-
-Если `count >= cap` — INSERT пропускается. Получатель при этом баллы получает всегда.
-
-**Edge cases:**
-- Если `sender_email` или `recipient_email` не найден в `ws_users` — соответствующее начисление пропускается, другое остаётся.
-- `deleted_in_airtable = true` — пропустить целиком. Уже начисленные баллы не отзываются автоматически.
-- Email в `ws_users` хранятся в нижнем регистре. Airtable может присылать любой регистр — `lower()` в JOIN обязателен.
+- `sender_email` или `recipient_email` не найден в `ws_users` — начисление пропускается
+- `deleted_in_airtable = true` — пропускается целиком
+- Уже начисленные баллы за удалённые благодарности не отзываются автоматически
 
 ---
 
-## 3. Планирование eneca.work
+## 3. Worksection — таймтрекинг
 
-**Триггер:** `trg_award_planning_points` на `work_planning_freshness` (`AFTER INSERT OR UPDATE`)
-**Функция:** `fn_award_planning_points()` (`SECURITY DEFINER`)
+**Механизм:** VPS-скрипт `compute-gamification`, step 1-2
 
-Получатели: `team_lead_email` и `department_head_email` (если разные люди — оба получают).
+### Зелёный/красный день WS
 
-### Бонус за актуализацию
+Определяется по наличию записи в `ws_daily_reports` за дату:
+- **Есть отчёт** → `green` (зелёный день)
+- **Нет отчёта** → `red` (красный день, событие `red_day`)
+- **Есть запись в `ws_user_absences`** → `absent` (пропуск, стрик не ломается)
 
-**Условие:** `days_since_update <= 3` и `last_update IS NOT NULL`
-**Сумма:** `planning_update_bonus` → **+30**
+View `view_daily_statuses` агрегирует эту логику.
 
-```
-idempotency_key (тимлид):    planning_bonus_lead_{team_id}_{last_update::date}
-idempotency_key (нач.отдела): planning_bonus_head_{department_id}_{last_update::date}
-event_type:                  planning_bonus
-source_type:                 work_planning_freshness
-```
+### Нарушения (violations)
 
-Ключ привязан к дате `last_update` — один бонус за каждое реальное обновление планирования. Повторный синк не создаёт дублей.
+**Task dynamics violation** (`task_dynamics_violation`):
+- Бюджет задачи расходуется (actual_hours прошёл чекпоинт 20/40/60/80/100%), но процент задачи не изменился
+- Проверяется через `ws_task_budget_checkpoints` и `ws_task_percent_snapshots`
 
-### Штраф за просрочку
-
-**Условие:** `days_since_update > 7`
-**Сумма:** `-planning_overdue_penalty` → **-30**
-**Периодичность:** раз в 3 дня (ключ привязан к 3-дневному периоду)
-
-```
-idempotency_key (тимлид):    planning_penalty_lead_{team_id}_{3day_period}
-idempotency_key (нач.отдела): planning_penalty_head_{department_id}_{3day_period}
-event_type:                  planning_penalty
-source_type:                 work_planning_freshness
-```
-
-Где `3day_period = floor(extract(epoch from current_date) / (3 * 86400))::bigint`.
-
-**Edge cases:**
-- Бонус и штраф взаимоисключают друг друга: `days_since_update <= 3` → бонус, `> 7` → штраф, `4..7` — ничего.
-- Команды без `team_lead_email` или `department_head_email` — пропускаются.
-- Один человек может быть тимлидом нескольких команд → получит бонус за каждую.
-
----
-
-## 4. Worksection — ежедневный отчёт *(WS-часть — коллега)*
-
-**Триггер:** `trg_award_ws_points` на `ws_daily_status` (создаётся коллегой)
-**Функция:** `fn_award_ws_points()` (создаётся по образцу `fn_award_revit_points`)
-
-### Зелёный день WS
-
-**Условие:** `status = 'green'`
-**Сумма:** `ws_green_day_points` → **+10**
-
-```
-idempotency_key: ws_green_{employee_id}_{status_date}
-event_type:      ws_green_day
-```
+**Section discipline** (`section_red`):
+- Руководитель раздела получает красный день, если у любого L3-исполнителя его раздела есть task dynamics violation
 
 ### Стрик WS
 
-| Условие | Действие |
-|---|---|
-| `status = 'green'` | `current_streak + 1` |
-| `status = 'red'` | `current_streak = 0`, `best_streak` сохраняется |
-| `status = 'frozen'` | не трогать (`is_frozen = true`) |
+Обновляется в `ws_user_streaks` скриптом `compute-gamification`, step 3.
 
-Бонусы аналогичны Revit, но пороги: 7 / 30 / 90 дней, суммы: +50 / +200 / +500.
+**Бонусы за milestones:**
+
+| current_streak | event_type | Коины | idempotency_key |
+|---|---|---|---|
+| 7 | `ws_streak_7` | +25 | `ws_streak_7_{user_id}_{date}` |
+| 30 | `ws_streak_30` | +100 | `ws_streak_30_{user_id}_{date}` |
+| 90 | `ws_streak_90` | +300 | `ws_streak_90_{user_id}_{date}` |
+
+---
+
+## 4. Worksection — бюджет задач
+
+**Механизм:** VPS-скрипт `compute-gamification`, steps 4-5
+
+### Соблюдение бюджета (30-дневная задержка)
+
+При закрытии задачи L3/L2 создаётся запись в `budget_pending` со статусом `pending` и `eligible_date = closed_at + 30 дней`.
+
+По наступлению `eligible_date`:
+- Если `actual_hours <= max_time` → `status = 'approved'`, начисление коинов
+- Если задача переоткрыта или бюджет превышен → `status = 'revoked'`
+
+### Мастер планирования
+
+10 последовательных задач L3, закрытых в бюджете → бонусное событие `master_planner`.
+
+---
+
+## 5. Командное соревнование по Revit (не реализовано)
+
+Ежемесячно. Отдел с наибольшим % сотрудников, использующих плагины → **+200** каждому.
 
 ```
-idempotency_key: ws_streak_7_{employee_id}_{date}
-idempotency_key: ws_streak_30_{employee_id}_{date}
-idempotency_key: ws_streak_90_{employee_id}_{date}
-event_type:      ws_streak_bonus
+event_type:      team_contest_top1_bonus
+idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 ```
 
 ---
 
-## 5. Worksection — бюджет задач *(WS-часть — коллега)*
+## 6. Магазин (не реализован)
 
-Логика начисления за соблюдение бюджета L3/L2 задач с 30-дневной задержкой. Реализуется через `ws_task_events` и `budget_awards_queue` — создаёт коллега.
-
-Краткая схема:
-
-```
-ws_task_events (event_type='closed', budget_ok=true)
-  → INSERT budget_awards_queue (pay_after = closed_at + 30 days)
-    → compute-budget-awards (cron, ежедневно)
-      → проверяет: не переоткрыта?, не архивирована?
-        → INSERT coin_transactions (ws_executor_budget_bonus +50, ws_teamlead_l3_budget_bonus +10)
-
-При переоткрытии после выплаты и превышении бюджета:
-  → INSERT coin_transactions (clawback: -50, -10)
-  → списывается с оригинального получателя (snapshot в budget_awards_queue)
-```
-
-Idempotency keys:
-```
-ws_budget_l3_{ws_task_id}_{employee_id}
-ws_budget_l3_tl_{ws_task_id}_{employee_id}
-ws_budget_l2_{ws_task_id}_{employee_id}
-ws_budget_clawback_{ws_task_id}_{employee_id}_reopen_{N}
-ws_planning_master_{employee_id}_{ws_task_id}
-```
+Покупка артефактов за коины. `second_life_cost = -500` — сброс красного дня.
 
 ---
 
-## 6. Командное соревнование по Revit *(не реализовано)*
+## Полный справочник event_type
 
-Запускается 1-го числа месяца. Победитель — отдел с наибольшим % сотрудников, запускавших плагины.
+Все типы зарегистрированы в `gamification_event_types` (24 строки).
 
-```
-idempotency_key: dept_top1_revit_{employee_id}_{YYYY-MM}
-event_type:      team_contest_bonus
-Сумма:           team_contest_top1_bonus → +200 каждому сотруднику отдела
-```
+**С начислением/списанием коинов:**
 
----
+| event_type | Коины | Источник | Механизм |
+|---|---|---|---|
+| `master_planner` | +450 | ws | compute-gamification |
+| `ws_streak_90` | +300 | ws | compute-gamification |
+| `budget_ok_l2` | +200 | ws | compute-gamification |
+| `team_contest_top1_bonus` | +200 | contest | не реализовано |
+| `revit_streak_30_bonus` | +100 | revit | PG-триггер |
+| `ws_streak_30` | +100 | ws | compute-gamification |
+| `budget_ok_l3` | +50 | ws | compute-gamification |
+| `revit_streak_7_bonus` | +25 | revit | PG-триггер |
+| `ws_streak_7` | +25 | ws | compute-gamification |
+| `gratitude_recipient_points` | +20 | gratitude | PG-триггер |
+| `revit_using_plugins` | +5 | revit | PG-триггер |
+| `budget_revoked_l3` | -50 | ws | compute-gamification |
+| `budget_revoked_l2` | -200 | ws | compute-gamification |
+| `second_life_cost` | -500 | shop | не реализовано |
 
-## 7. Магазин *(этап 4 — не реализован)*
+**Информационные (0 коинов, фиксируют факт события):**
 
-### Покупка
-
-Только через RPC `create_purchase(product_id)`. Атомарная проверка баланса + списание.
-
-```
-idempotency_key: purchase_{store_purchase_id}
-event_type:      store_purchase
-amount:          -price_paid
-```
-
-### Вторая жизнь
-
-RPC `activate_second_life(purchase_id, violation_date)`. Условия:
-- Активация в течение 24 часов после нарушения
-- Не более 1 раза в месяц (UNIQUE constraint в `second_life_activations`)
-
----
-
-## 8. Ручные корректировки (admin)
-
-**RPC:** `add_manual_adjustment(employee_id, amount, reason)`
-
-```
-idempotency_key: manual_{employee_id}_{epoch_timestamp}
-event_type:      manual_adjustment
-source_type:     admin
-```
-
-Пишет в `audit_log`. Только `is_admin() = true`.
+| event_type | Источник | Механизм |
+|---|---|---|
+| `green_day` | ws | compute-gamification |
+| `red_day` | ws | compute-gamification |
+| `task_dynamics_violation` | ws | compute-gamification |
+| `section_red` | ws | compute-gamification |
+| `budget_exceeded_l3` | ws | compute-gamification |
+| `budget_exceeded_l2` | ws | compute-gamification |
+| `streak_reset_timetracking` | ws | compute-gamification |
+| `streak_reset_dynamics` | ws | compute-gamification |
+| `streak_reset_section` | ws | compute-gamification |
+| `master_planner_reset` | ws | compute-gamification |
 
 ---
 
-## 9. Отмена транзакции (admin)
+## Idempotency key — справочник
 
-**RPC:** `cancel_transaction(transaction_id, reason)`
-
-Выставляет `is_cancelled = true` на оригинальной транзакции, создаёт сторнирующую:
-
-```
-idempotency_key: cancel_{original_transaction_id}
-event_type:      cancel_adjustment
-amount:          -original_amount
-parent_id:       original_transaction_id
-```
-
-Пишет в `audit_log`. Только `is_admin() = true`.
-
----
-
-## Idempotency key — полный справочник
+**Revit (PG-триггеры):**
 
 | Событие | Формат ключа |
 |---|---|
 | Revit зелёный день | `revit_green_{email}_{date}` |
-| Revit стрик 7 дней | `revit_streak_7_{email}_{date}` |
-| Revit стрик 30 дней | `revit_streak_30_{email}_{date}` |
+| Revit стрик 7 | `revit_streak_7_{email}_{date}` |
+| Revit стрик 30 | `revit_streak_30_{email}_{date}` |
+
+**Благодарности (PG-триггеры):**
+
+| Событие | Формат ключа |
+|---|---|
 | Благодарность получена | `gratitude_recipient_{airtable_id}` |
-| Благодарность отправлена | `gratitude_sender_{airtable_id}` |
-| Бонус планирования (тимлид) | `planning_bonus_lead_{team_id}_{last_update_date}` |
-| Бонус планирования (нач.отдела) | `planning_bonus_head_{dept_id}_{last_update_date}` |
-| Штраф планирования (тимлид) | `planning_penalty_lead_{team_id}_{3day_period}` |
-| Штраф планирования (нач.отдела) | `planning_penalty_head_{dept_id}_{3day_period}` |
-| WS зелёный день | `ws_green_{employee_id}_{date}` |
-| WS стрик 7 дней | `ws_streak_7_{employee_id}_{date}` |
-| WS стрик 30 дней | `ws_streak_30_{employee_id}_{date}` |
-| WS стрик 90 дней | `ws_streak_90_{employee_id}_{date}` |
-| Бюджет L3 — исполнитель | `ws_budget_l3_{ws_task_id}_{employee_id}` |
-| Бюджет L3 — тимлид | `ws_budget_l3_tl_{ws_task_id}_{employee_id}` |
-| Бюджет L2 — тимлид | `ws_budget_l2_{ws_task_id}_{employee_id}` |
-| Clawback | `ws_budget_clawback_{ws_task_id}_{employee_id}_reopen_{N}` |
-| Мастер планирования | `ws_planning_master_{employee_id}_{ws_task_id}` |
-| Топ-1 отдел | `dept_top1_revit_{employee_id}_{YYYY-MM}` |
-| Покупка | `purchase_{store_purchase_id}` |
-| Отмена транзакции | `cancel_{original_tx_id}` |
-| Ручная корректировка | `manual_{employee_id}_{epoch}` |
+
+**WS — дневные статусы (compute-gamification):**
+
+| Событие | Формат ключа |
+|---|---|
+| Зелёный день | `ws_green_day_{user_id}_{date}` |
+| Красный день | `ws_red_day_{user_id}_{date}` |
+| Нарушение динамики | `ws_dynamics_{ws_task_id}_{checkpoint}` |
+| Дисциплина раздела | `ws_section_red_{ws_l2_id}_{date}` |
+| Сброс стрика (таймтрекинг) | `ws_streak_reset_tt_{user_id}_{date}` |
+| Сброс стрика (динамика) | `ws_streak_reset_dyn_{user_id}_{date}` |
+| Сброс стрика (раздел) | `ws_streak_reset_sec_{user_id}_{date}` |
+
+**WS — стрики (compute-gamification):**
+
+| Событие | Формат ключа |
+|---|---|
+| WS стрик 7 | `ws_streak_7_{user_id}_{date}` |
+| WS стрик 30 | `ws_streak_30_{user_id}_{date}` |
+| WS стрик 90 | `ws_streak_90_{user_id}_{date}` |
+
+**WS — бюджет (compute-gamification):**
+
+| Событие | Формат ключа |
+|---|---|
+| Бюджет L3 ОК | `budget_ok_l3_{ws_task_id}_{user_id}` |
+| Бюджет L2 ОК | `budget_ok_l2_{ws_task_id}_{user_id}` |
+| Бюджет L3 превышен | `budget_exceeded_l3_{ws_task_id}_{user_id}` |
+| Бюджет L2 превышен | `budget_exceeded_l2_{ws_task_id}_{user_id}` |
+| Отзыв L3 | `budget_revoked_l3_{ws_task_id}_{user_id}` |
+| Отзыв L2 | `budget_revoked_l2_{ws_task_id}_{user_id}` |
+| Мастер планирования | `master_planner_{user_id}_{ws_task_id}` |
+| Сброс мастера | `master_planner_reset_{user_id}_{ws_task_id}` |
+
+**Другое:**
+
+| Событие | Формат ключа |
+|---|---|
+| Топ-1 отдел | `dept_top1_revit_{user_id}_{YYYY-MM}` |
 
 ---
 
 ## Ограничения
 
-- Если email из source-таблицы не найден в `ws_users` — событие молча пропускается. Начисление произойдёт при следующем срабатывании триггера если сотрудник появится в `ws_users`.
-- `at_gratitudes` с `deleted_in_airtable = true` — уже начисленные баллы не отзываются автоматически. Только через admin `cancel_transaction`.
-- Отрицательный баланс допустим (штрафы, clawback). Запрещён только при покупке — проверяется в `create_purchase()`.
-- Триггеры срабатывают на `UPDATE` тоже — idempotency_key защищает от повторных начислений при повторных синках.
-- WS-часть (зелёные дни, бюджеты, «Мастер планирования») создаётся коллегой по тому же паттерну что `fn_award_revit_points`.
+- `gamification_event_logs` + `gamification_transactions` — append-only, строки не удаляются
+- Если email не найден в `ws_users` — событие молча пропускается
+- `at_gratitudes` с `deleted_in_airtable = true` — начисленные баллы не отзываются автоматически
+- Отрицательный баланс допустим (штрафы, clawback). Запрет только при покупке (будущий этап)
+- Информационные события (green_day, red_day, violations, resets) имеют coins=0 в `gamification_event_types` — записываются в `gamification_event_logs`, но не создают транзакций в `gamification_transactions`
