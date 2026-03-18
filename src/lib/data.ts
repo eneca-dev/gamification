@@ -281,38 +281,15 @@ export const worksectionStreak: WorksectionStreak = {
   ],
   automationCurrentDays: 8,
   automationMilestones: [
-    { days: 5, reward: 15, reached: true },
-    { days: 14, reward: 50, reached: false },
+    { days: 1, reward: 5, reached: false },
+    { days: 7, reward: 50, reached: false },
     { days: 30, reward: 200, reached: false },
   ],
 };
 
 // ===== ЕЖЕДНЕВНЫЕ ЗАДАНИЯ =====
-// Два требования для зелёного дня (+3 ПК). Оба должны быть выполнены до 23:59.
-export const dailyTasks: DailyTask[] = [
-  {
-    id: 1,
-    source: "worksection",
-    title: "Внесите тайм-трекинг за сегодня",
-    description: "Норма при ставке 1.0: от 6 до 10 часов. Срок — до 23:59",
-    reward: 1,
-    icon: "⏱️",
-    progress: 6,
-    total: 8,
-    completed: false,
-  },
-  {
-    id: 3,
-    source: "worksection",
-    title: "Обновите динамику задач",
-    description: "Задачи уровня 3 — прогресс раз в 7 дней, разделы — раз в 14 дней",
-    reward: 2,
-    icon: "📈",
-    progress: 0,
-    total: 1,
-    completed: false,
-  },
-];
+// WS-задания будут подключены из реальных данных позже
+export const dailyTasks: DailyTask[] = [];
 
 // ===== ТРАНЗАКЦИИ (единая лента) =====
 export const recentTransactions: Transaction[] = [

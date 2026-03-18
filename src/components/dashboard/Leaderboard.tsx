@@ -2,7 +2,7 @@
 
 import { Crown, Zap } from "lucide-react";
 import type { LeaderboardEntry } from "@/lib/data";
-import type { AutomationLeaderboardEntry } from "@/modules/plugin-stats";
+import type { AutomationLeaderboardEntry } from "@/modules/revit";
 
 // ─── Внутренний тип для рендеринга строки панели ──────────────────────────────
 interface PanelEntry {

@@ -126,6 +126,9 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--teal-400); }
 
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* ── Circular progress ──────────────────────────────────────── */
 .circular-progress {
   --size: 140px;

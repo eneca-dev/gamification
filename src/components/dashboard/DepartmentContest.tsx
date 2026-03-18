@@ -5,6 +5,7 @@ import type { DepartmentEntry } from "@/lib/data";
 
 interface DepartmentContestProps {
   departments: DepartmentEntry[];
+  automationDepartments?: DepartmentEntry[];
   daysLeft: number;
 }
 
@@ -64,8 +65,8 @@ function DisciplineColumn({
         <span className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>{metricLabel}</span>
       </div>
 
-      {/* Department rows */}
-      <div className="space-y-1.5">
+      {/* Department rows — scrollable */}
+      <div className="space-y-1.5 max-h-[340px] overflow-y-auto scrollbar-hide">
         {sorted.map((dept) => {
           const isFirst = dept.rank === 1;
           const isCurrent = dept.isCurrentDepartment;
@@ -82,7 +83,7 @@ function DisciplineColumn({
 
           return (
             <div
-              key={dept.name}
+              key={dept.shortName}
               className="rounded-xl px-2.5 py-2"
               style={{
                 background: isCurrent
@@ -189,12 +190,13 @@ function DisciplineColumn({
   );
 }
 
-export function DepartmentContest({ departments, daysLeft }: DepartmentContestProps) {
+export function DepartmentContest({ departments, automationDepartments, daysLeft }: DepartmentContestProps) {
   const sortedWs = [...departments]
     .sort((a, b) => b.wsPercent - a.wsPercent)
     .map((d, i) => ({ ...d, rank: i + 1 }));
 
-  const sortedAuto = [...departments]
+  const autoSource = automationDepartments ?? departments;
+  const sortedAuto = [...autoSource]
     .sort((a, b) => b.usagePercent - a.usagePercent)
     .map((d, i) => ({ ...d, rank: i + 1 }));
 
