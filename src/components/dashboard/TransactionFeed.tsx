@@ -1,7 +1,6 @@
 "use client";
 
 import type { Transaction } from "@/lib/data";
-import { sourceColors } from "@/lib/data";
 
 interface TransactionFeedProps {
   transactions: Transaction[];
@@ -27,7 +26,6 @@ export function TransactionFeed({ transactions }: TransactionFeedProps) {
 
       <div className="space-y-1.5">
         {transactions.map((tx) => {
-          const srcColor = sourceColors[tx.source];
           const isPenalty = tx.category.includes("penalty");
           const isPurchase = tx.category === "purchase";
 
@@ -53,14 +51,8 @@ export function TransactionFeed({ transactions }: TransactionFeedProps) {
                 {tx.icon}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className="px-2 py-0.5 rounded-full text-[9px] font-semibold flex-shrink-0"
-                    style={{ background: srcColor.bg, color: srcColor.text }}
-                  >
-                    {srcColor.label}
-                  </span>
-                  <span className="text-[13px] font-semibold truncate" style={{ color: "var(--apex-text)" }}>
+                <div>
+                  <span className="text-[13px] font-semibold truncate block" style={{ color: "var(--apex-text)" }}>
                     {tx.description}
                   </span>
                 </div>

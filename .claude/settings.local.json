@@ -15,7 +15,8 @@
       "mcp__supabase__get_advisors",
       "mcp__supabase__deploy_edge_function",
       "WebFetch(domain:eneca.worksection.com)",
-      "mcp__supabase__get_logs"
+      "mcp__supabase__get_logs",
+      "mcp__Sequential_Thinking__sequentialthinking"
     ]
   },
   "enableAllProjectMcpServers": true,
