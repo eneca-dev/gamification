@@ -18,7 +18,9 @@
       "mcp__supabase__get_logs",
       "Bash(ls:*)",
       "mcp__supabase__list_migrations",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(ls -la \"D:/1work/gamification/gamification/src/app/\\(main\\)/store/\")",
+      "Bash(ls -la \"D:/1work/gamification/gamification/src/app/\\(main\\)/admin/\")"
     ]
   },
   "enableAllProjectMcpServers": true,
