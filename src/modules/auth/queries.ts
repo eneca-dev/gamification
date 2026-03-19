@@ -1,7 +1,13 @@
+import { cookies } from 'next/headers'
+
 import { createSupabaseServerClient } from '@/config/supabase'
+import { getDevUserByEmail } from '@/modules/dev-tools/queries'
 import type { WorksectionTokenRow } from '@/lib/types'
 
 import type { AuthUser } from './types'
+
+const IS_DEV = process.env.NODE_ENV === 'development'
+const IMPERSONATE_COOKIE = 'dev_impersonate'
 
 export async function getWorksectionTokens(
   userId: string
@@ -24,6 +30,27 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   } = await supabase.auth.getUser()
 
   if (!user) return null
+
+  // Dev-режим: подмена пользователя через cookie
+  if (IS_DEV) {
+    const cookieStore = await cookies()
+    const impersonateEmail = cookieStore.get(IMPERSONATE_COOKIE)?.value
+    if (impersonateEmail) {
+      const devUser = await getDevUserByEmail(impersonateEmail)
+      if (devUser) {
+        return {
+          id: `dev_${impersonateEmail}`,
+          email: devUser.email,
+          fullName: devUser.fullName,
+          firstName: devUser.firstName,
+          lastName: devUser.lastName,
+          department: devUser.department,
+          team: devUser.team,
+          isImpersonating: true,
+        }
+      }
+    }
+  }
 
   const { data: profile } = await supabase
     .from('profiles')

@@ -149,7 +149,7 @@ export default async function DashboardPage() {
 
   const allTransactions = txItems
     .sort((a, b) => b.sortKey - a.sortKey)
-    .slice(0, 10)
+    .slice(0, 5)
     .map((item) => item.tx);
 
   // Соревнование отделов — автоматизация из реальных данных

@@ -23,4 +23,5 @@ export interface AuthUser {
   lastName: string
   department: string | null
   team: string | null
+  isImpersonating?: boolean
 }
