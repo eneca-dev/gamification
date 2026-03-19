@@ -36,6 +36,7 @@
 |---|---|---|
 | `0 1 * * *` (01:00 UTC ежедневно) | `sync-plugin-launches` | Синк запусков Revit-плагинов из Elasticsearch |
 | `0 */4 * * *` (каждые 4 часа) | `sync-gratitudes` | Синк благодарностей из Airtable |
+| `0 2 1 * *` (1 число месяца, 02:00 UTC) | `fn_award_department_contest()` | Начисление бонуса отделу-победителю по ревит-баллам за прошлый месяц |
 
 WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-costs`, `snapshot-task-percent`, `sync-ws-absences`, `compute-gamification`) запускаются **VPS-оркестратором**, не через pg_cron.
 
@@ -50,6 +51,7 @@ WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-co
 | `get_user_id_by_email(email)` | UUID из `auth.users` по email |
 | `increment_balance(p_user_id, p_coins)` | Атомарный UPSERT баланса в `gamification_balances`. Существует, но не используется триггерами — триггеры делают inline UPSERT |
 | `link_ws_user_on_profile_insert()` | Триггер: при создании `profiles` связывает с `ws_users.user_id` |
+| `fn_award_department_contest()` | Ежемесячное начисление бонуса отделу-победителю по ревит-баллам |
 
 ---
 
@@ -461,6 +463,10 @@ JOIN `gamification_transactions` + `gamification_event_logs` + `gamification_eve
 #### `v_gratitudes_feed`
 
 Лента благодарностей: JOIN `at_gratitudes` + `ws_users` (имя отправителя) + `gamification_event_logs/transactions` (начисленные коины). Исключает `deleted_in_airtable = true`.
+
+#### `view_department_revit_contest`
+
+Сумма ревит-баллов по отделам за текущий месяц. Используется в `getDepartmentAutomationStats()` для рейтинга соревнования. Колонки: `department_code`, `users_earning`, `total_employees`, `total_coins`. Отделы без баллов показываются с `total_coins = 0`.
 
 ---
 

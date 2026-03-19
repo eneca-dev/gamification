@@ -4,7 +4,7 @@ RETURNS TRIGGER AS $$
 BEGIN
   UPDATE ws_users
   SET user_id = NEW.user_id
-  WHERE email = NEW.email
+  WHERE lower(email) = lower(NEW.email)
     AND user_id IS NULL;
   RETURN NEW;
 END;

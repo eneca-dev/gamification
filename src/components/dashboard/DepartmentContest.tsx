@@ -17,6 +17,8 @@ interface DisciplineColumnProps {
   sorted: (DepartmentEntry & { rank: number })[];
   getMetric: (d: DepartmentEntry) => number;
   getUsing: (d: DepartmentEntry) => number;
+  maxMetric: number;
+  metricSuffix: string;
   accentColor: string;
 }
 
@@ -28,6 +30,8 @@ function DisciplineColumn({
   sorted,
   getMetric,
   getUsing,
+  maxMetric,
+  metricSuffix,
   accentColor,
 }: DisciplineColumnProps) {
   const leader = sorted[0];
@@ -130,7 +134,7 @@ function DisciplineColumn({
                     color: isFirst ? "var(--orange-500)" : isCurrent ? "var(--apex-primary)" : "var(--apex-text)",
                   }}
                 >
-                  {metric}%
+                  {metric}{metricSuffix}
                 </span>
               </div>
 
@@ -139,7 +143,7 @@ function DisciplineColumn({
                   <div
                     className="h-full rounded-full"
                     style={{
-                      width: `${metric}%`,
+                      width: `${maxMetric > 0 ? Math.round((metric / maxMetric) * 100) : 0}%`,
                       background: isFirst ? "var(--orange-500)" : isCurrent ? "var(--apex-primary)" : dept.color,
                       opacity: isCurrent || isFirst ? 1 : 0.65,
                     }}
@@ -171,7 +175,7 @@ function DisciplineColumn({
               border: `1px solid rgba(var(--orange-500-rgb), 0.2)`,
             }}
           >
-            −{getMetric(leader) - getMetric(currentDept)}%
+            −{getMetric(leader) - getMetric(currentDept)}{metricSuffix}
           </div>
         </div>
       )}
@@ -197,7 +201,7 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
 
   const autoSource = automationDepartments ?? departments;
   const sortedAuto = [...autoSource]
-    .sort((a, b) => b.usagePercent - a.usagePercent)
+    .sort((a, b) => b.totalCoins - a.totalCoins)
     .map((d, i) => ({ ...d, rank: i + 1 }));
 
   return (
@@ -239,16 +243,20 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
           sorted={sortedWs}
           getMetric={(d) => d.wsPercent}
           getUsing={(d) => Math.round((d.wsPercent / 100) * d.totalEmployees)}
+          maxMetric={100}
+          metricSuffix="%"
           accentColor="var(--apex-primary)"
         />
         <DisciplineColumn
           title="Автоматизации"
           icon="⚡"
           prize={200}
-          metricLabel="% использующих плагины"
+          metricLabel="Баллы за плагины (месяц)"
           sorted={sortedAuto}
-          getMetric={(d) => d.usagePercent}
+          getMetric={(d) => d.totalCoins}
           getUsing={(d) => d.employeesUsing}
+          maxMetric={sortedAuto[0]?.totalCoins ?? 1}
+          metricSuffix=" ПК"
           accentColor="var(--orange-500)"
         />
       </div>
