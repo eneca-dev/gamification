@@ -5,13 +5,12 @@ import { Leaderboard } from "@/components/dashboard/Leaderboard";
 import { DepartmentContest } from "@/components/dashboard/DepartmentContest";
 import {
   wsAlerts,
-  worksectionStreak,
   dailyTasks,
   leaderboard,
   departmentContest,
   daysUntilMonthEnd,
 } from "@/lib/data";
-import type { Transaction, DailyTask, DepartmentEntry, WorksectionDay } from "@/lib/data";
+import type { Transaction, DailyTask, DepartmentEntry } from "@/lib/data";
 import { getCurrentUser } from "@/modules/auth/queries";
 import {
   getRevitWidgetData,
@@ -19,7 +18,15 @@ import {
   getRevitTransactions,
   getDepartmentAutomationStats,
 } from "@/modules/revit";
+import {
+  getStreakDayStatuses,
+  getAutomationDays,
+  getWsStreakData,
+  getRevitStreakData,
+} from "@/modules/streak-panel";
 import { getUserGratitudes } from "@/modules/gratitudes";
+
+import type { CalendarDay, CalendarDayStatus, StreakPanelData } from "@/modules/streak-panel";
 
 const DEPT_COLORS = [
   "#e91e63", "#2196f3", "#ff9800", "#4caf50", "#9c27b0",
@@ -27,69 +34,203 @@ const DEPT_COLORS = [
   "#8bc34a", "#ff5722", "#009688", "#673ab7", "#ffc107",
 ];
 
-// Генерация календарных дней за последние 5 месяцев (текущий + 4 предыдущих)
-function generateLast5MonthsDays(automationDates: Set<string>): WorksectionDay[] {
+// Понедельник недели, в которую попадает дата
+function getMonday(dateStr: string): Date {
+  const d = new Date(dateStr + "T00:00:00");
+  const dow = (d.getDay() + 6) % 7; // Пн=0
+  d.setDate(d.getDate() - dow);
+  return d;
+}
+
+// Воскресенье недели, в которую попадает дата
+function getSunday(dateStr: string): Date {
+  const d = new Date(dateStr + "T00:00:00");
+  const dow = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() + (6 - dow));
+  return d;
+}
+
+function toIsoDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return toIsoDate(d);
+}
+
+// Сборка календарных дней для грида
+function buildCalendarDays(
+  gridStartIso: string,
+  gridEndIso: string,
+  cycleStartIso: string | null,
+  cycleEndIso: string,
+  statusMap: Map<string, { status: string; absence_type: string | null; red_reasons: string[] | null }>,
+  automationDates: Set<string>,
+): CalendarDay[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Начало: 1-е число (текущий месяц - 4)
-  const startMonth = new Date(today.getFullYear(), today.getMonth() - 4, 1);
-  // Конец: последний день текущего месяца
-  const endMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const days: CalendarDay[] = [];
+  const start = new Date(gridStartIso + "T00:00:00");
+  const end = new Date(gridEndIso + "T00:00:00");
 
-  const days: WorksectionDay[] = [];
-  for (let d = new Date(startMonth); d <= endMonth; d.setDate(d.getDate() + 1)) {
-    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dateStr = toIsoDate(d);
     const dow = d.getDay();
     const isWeekend = dow === 0 || dow === 6;
-    const isFuture = d > today;
 
-    let status: WorksectionDay["status"];
+    // За пределами цикла (padding)
+    const beforeCycle = cycleStartIso ? dateStr < cycleStartIso : false;
+    const afterCycle = dateStr > cycleEndIso;
+
+    if (beforeCycle || afterCycle) {
+      days.push({ date: dateStr, status: "out", automation: false });
+      continue;
+    }
+
     if (isWeekend) {
-      status = "gray";
-    } else if (isFuture) {
-      status = "future";
+      days.push({
+        date: dateStr,
+        status: "gray",
+        automation: false,
+      });
+      continue;
+    }
+
+    const isFuture = d > today;
+    if (isFuture) {
+      days.push({ date: dateStr, status: "future", automation: false });
+      continue;
+    }
+
+    const row = statusMap.get(dateStr);
+    if (!row) {
+      // Рабочий день в прошлом, нет записи
+      days.push({ date: dateStr, status: "no_data", automation: false });
+      continue;
+    }
+
+    let uiStatus: CalendarDayStatus;
+    let absenceType: string | null = null;
+    let redReasons: string[] | null = null;
+
+    if (row.status === "green") {
+      uiStatus = "green";
+    } else if (row.status === "red") {
+      uiStatus = "red";
+      redReasons = row.red_reasons;
+    } else if (row.status === "absent") {
+      uiStatus = "frozen";
+      absenceType = row.absence_type;
     } else {
-      status = "green";
+      uiStatus = "no_data";
     }
 
     days.push({
       date: dateStr,
-      status,
-      automation: !isWeekend && !isFuture && automationDates.has(dateStr),
+      status: uiStatus,
+      automation: automationDates.has(dateStr) && uiStatus !== "frozen",
+      absenceType,
+      redReasons,
     });
   }
+
   return days;
 }
 
 export default async function DashboardPage() {
   const currentUser = await getCurrentUser();
   const userEmail = currentUser?.email ?? "";
+  const userId = currentUser?.id ?? "";
 
-  const [revitData, topAutomationUsers, myGratitudes, revitTransactions, automationDepts] = await Promise.all([
-    userEmail
-      ? getRevitWidgetData(userEmail)
-      : Promise.resolve({ streak: null, activeDates: [], yesterdaySummary: { pluginCount: 0, coinsEarned: 0 } }),
-    getTopAutomationUsers(10, currentUser?.email),
-    userEmail ? getUserGratitudes(userEmail, 20) : Promise.resolve([]),
-    userEmail ? getRevitTransactions(userEmail, 10) : Promise.resolve([]),
-    getDepartmentAutomationStats(currentUser?.email),
+  // Получаем ws_user_id из ws_users по email
+  let wsUserId: string | null = null;
+  if (userEmail) {
+    const { createSupabaseServerClient } = await import("@/config/supabase");
+    const supabase = await createSupabaseServerClient();
+    const { data: wsUser } = await supabase
+      .from("ws_users")
+      .select("id")
+      .eq("email", userEmail.toLowerCase())
+      .eq("is_active", true)
+      .maybeSingle();
+    wsUserId = wsUser?.id ?? null;
+  }
+
+  // Параллельно: данные стриков + ревит + благодарности + транзакции + отделы
+  const [wsStreak, revitStreak, revitData, topAutomationUsers, myGratitudes, revitTransactions, automationDepts] =
+    await Promise.all([
+      wsUserId ? getWsStreakData(wsUserId) : Promise.resolve({
+        currentStreak: 0, longestStreak: 0, streakStartDate: null, completedCycles: 0,
+        milestones: [
+          { days: 7, reward: 25, reached: false },
+          { days: 30, reward: 100, reached: false },
+          { days: 90, reward: 300, reached: false },
+        ],
+      }),
+      wsUserId ? getRevitStreakData(wsUserId) : Promise.resolve({
+        currentStreak: 0,
+        milestones: [
+          { days: 7, reward: 25, reached: false },
+          { days: 30, reward: 100, reached: false },
+        ],
+      }),
+      userEmail
+        ? getRevitWidgetData(userEmail)
+        : Promise.resolve({ streak: null, activeDates: [], yesterdaySummary: { pluginCount: 0, coinsEarned: 0 } }),
+      getTopAutomationUsers(10, currentUser?.email),
+      userEmail ? getUserGratitudes(userEmail, 20) : Promise.resolve([]),
+      userEmail ? getRevitTransactions(userEmail, 10) : Promise.resolve([]),
+      getDepartmentAutomationStats(currentUser?.email),
+    ]);
+
+  // Вычисляем границы 90-дневного цикла
+  const todayIso = toIsoDate(new Date());
+  let cycleStartIso: string | null = wsStreak.streakStartDate;
+  let cycleEndIso: string;
+  let gridStartIso: string;
+  let gridEndIso: string;
+
+  if (cycleStartIso) {
+    cycleEndIso = addDays(cycleStartIso, 89);
+    gridStartIso = toIsoDate(getMonday(cycleStartIso));
+    gridEndIso = toIsoDate(getSunday(cycleEndIso));
+  } else {
+    // Стрик = 0, нет зелёного дня — показываем от текущей недели
+    gridStartIso = toIsoDate(getMonday(todayIso));
+    cycleEndIso = addDays(gridStartIso, 89);
+    gridEndIso = toIsoDate(getSunday(cycleEndIso));
+  }
+
+  // Параллельно: статусы дней + автоматизация
+  const [dayStatuses, automationDates] = await Promise.all([
+    wsUserId ? getStreakDayStatuses(wsUserId, gridStartIso, gridEndIso) : Promise.resolve([]),
+    userEmail ? getAutomationDays(userEmail, gridStartIso, gridEndIso) : Promise.resolve(new Set<string>()),
   ]);
 
-  // Генерируем календарь за 5 последних месяцев с реальными датами автоматизации
-  const activeDateSet = new Set(revitData.activeDates);
-  const calendarDays = generateLast5MonthsDays(activeDateSet);
+  // Собираем Map статусов для быстрого доступа
+  const statusMap = new Map<string, { status: string; absence_type: string | null; red_reasons: string[] | null }>();
+  for (const row of dayStatuses) {
+    statusMap.set(row.date, { status: row.status, absence_type: row.absence_type, red_reasons: row.red_reasons });
+  }
 
-  const automationDays = revitData.streak?.current_streak ?? 0;
-  const wsStreak = {
-    ...worksectionStreak,
-    automationCurrentDays: automationDays,
+  const calendarDays = buildCalendarDays(
+    gridStartIso,
+    gridEndIso,
+    cycleStartIso,
+    cycleEndIso,
+    statusMap,
+    automationDates,
+  );
+
+  const streakPanelData: StreakPanelData = {
     calendarDays,
-    automationMilestones: [
-      { days: 1, reward: 5, reached: automationDays >= 1 },
-      { days: 7, reward: 50, reached: automationDays >= 7 },
-      { days: 30, reward: 200, reached: automationDays >= 30 },
-    ],
+    cycleEnd: cycleEndIso,
+    completedCycles: wsStreak.completedCycles,
+    ws: wsStreak,
+    revit: revitStreak,
   };
 
   // Ежедневное задание по автоматизации
@@ -175,7 +316,7 @@ export default async function DashboardPage() {
       )}
 
       <div className="animate-fade-in-up stagger-1">
-        <StreakPanel worksectionStreak={wsStreak} tasks={allDailyTasks} />
+        <StreakPanel streakData={streakPanelData} tasks={allDailyTasks} />
       </div>
 
       <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-3">

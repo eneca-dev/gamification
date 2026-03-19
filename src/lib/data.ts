@@ -31,33 +31,7 @@ export interface AdminEvent {
   amount: number;
 }
 
-// ===== СТРИКИ =====
-export interface StreakMilestone {
-  days: number;
-  reward: number;
-  reached: boolean;
-}
-
-export interface RevitStreak {
-  currentDays: number;
-  milestones: StreakMilestone[];
-}
-
-export type WorksectionDayStatus = "green" | "red" | "gray" | "frozen" | "future" | "out";
-
-export interface WorksectionDay {
-  date: string;
-  status: WorksectionDayStatus;
-  automation?: boolean;
-}
-
-export interface WorksectionStreak {
-  currentDays: number;
-  calendarDays: WorksectionDay[];
-  milestones: StreakMilestone[];
-  automationCurrentDays: number;
-  automationMilestones: StreakMilestone[];
-}
+// ===== СТРИКИ (типы перенесены в @/modules/streak-panel/types.ts) =====
 
 // ===== АЛЕРТЫ =====
 export type AlertSeverity = "warning" | "critical";
@@ -197,95 +171,7 @@ export const wsAlerts: WorksectionAlert[] = [
   },
 ];
 
-// ===== СТРИКИ =====
-// Q1 2026: Jan 1 – Mar 31 (90 days), padded to full Mon–Sun weeks
-// Week grid: Dec 29, 2025 (Mon) → Apr 5, 2026 (Sun) = 14 weeks × 7 = 98 cells
-function generateQuarterDays(): WorksectionDay[] {
-  const today = new Date("2026-02-26");
-  const quarterStart = "2026-01-01";
-  const quarterEnd = "2026-03-31";
-
-  // Red penalty days
-  const redDays = new Set(["2026-01-15", "2026-01-23", "2026-02-10"]);
-  // Vacation (frozen streak) period
-  const frozenStart = "2026-02-02";
-  const frozenEnd = "2026-02-06";
-
-  // Days automation was used (only past days, no frozen days)
-  const automationDays = new Set([
-    // January
-    "2026-01-06", "2026-01-08", "2026-01-09",
-    "2026-01-13", "2026-01-14",
-    "2026-01-20", "2026-01-21",
-    "2026-01-27", "2026-01-28", "2026-01-29",
-    // February (no frozen period days)
-    "2026-02-09", "2026-02-10", "2026-02-11",
-    "2026-02-16", "2026-02-18", "2026-02-20",
-    "2026-02-23", "2026-02-24", "2026-02-25", "2026-02-26",
-  ]);
-
-  const days: WorksectionDay[] = [];
-  // Jan 1, 2026 is Thursday → Monday of that week = Dec 29, 2025
-  // Mar 31, 2026 is Tuesday → Sunday of that week = Apr 5, 2026
-  const start = new Date("2025-12-29");
-  const end = new Date("2026-04-05");
-
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const dateStr = d.toISOString().split("T")[0];
-    const dow = d.getDay();
-    const isWeekend = dow === 0 || dow === 6;
-    const isOut = dateStr < quarterStart || dateStr > quarterEnd;
-    const isFuture = d > today;
-
-    let status: WorksectionDayStatus;
-    if (isOut) {
-      status = "out";
-    } else if (isWeekend) {
-      status = "gray";
-    } else if (isFuture) {
-      status = "future";
-    } else if (redDays.has(dateStr)) {
-      status = "red";
-    } else if (dateStr >= frozenStart && dateStr <= frozenEnd) {
-      status = "frozen";
-    } else {
-      status = "green";
-    }
-
-    days.push({
-      date: dateStr,
-      status,
-      automation:
-        !isOut && !isWeekend && !isFuture && status !== "frozen" && automationDays.has(dateStr),
-    });
-  }
-  return days;
-}
-
-export const revitStreak: RevitStreak = {
-  currentDays: 12,
-  milestones: [
-    { days: 7, reward: 10, reached: true },
-    { days: 30, reward: 50, reached: false },
-    { days: 90, reward: 500, reached: false },
-  ],
-};
-
-export const worksectionStreak: WorksectionStreak = {
-  currentDays: 11,
-  calendarDays: generateQuarterDays(),
-  milestones: [
-    { days: 7, reward: 20, reached: true },
-    { days: 30, reward: 100, reached: false },
-    { days: 90, reward: 500, reached: false },
-  ],
-  automationCurrentDays: 8,
-  automationMilestones: [
-    { days: 1, reward: 5, reached: false },
-    { days: 7, reward: 50, reached: false },
-    { days: 30, reward: 200, reached: false },
-  ],
-};
+// Моковые данные стриков удалены — реальные данные из @/modules/streak-panel
 
 // ===== ЕЖЕДНЕВНЫЕ ЗАДАНИЯ =====
 // WS-задания будут подключены из реальных данных позже
