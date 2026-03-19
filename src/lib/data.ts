@@ -113,7 +113,8 @@ export interface DepartmentEntry {
   color: string;
   employeesUsing: number;
   totalEmployees: number;
-  usagePercent: number;  // % автоматизаций
+  usagePercent: number;  // % автоматизаций (WS дисциплина)
+  totalCoins: number;    // сумма баллов за ревит (автоматизация)
   wsPercent: number;     // % дисциплины Worksection
   isCurrentDepartment: boolean;
 }
@@ -407,6 +408,7 @@ export const departmentContest: DepartmentEntry[] = [
     employeesUsing: 10,
     totalEmployees: 11,
     usagePercent: 91,
+    totalCoins: 450,
     wsPercent: 85,
     isCurrentDepartment: false,
   },
@@ -417,6 +419,7 @@ export const departmentContest: DepartmentEntry[] = [
     employeesUsing: 6,
     totalEmployees: 8,
     usagePercent: 75,
+    totalCoins: 320,
     wsPercent: 94,
     isCurrentDepartment: false,
   },
@@ -427,6 +430,7 @@ export const departmentContest: DepartmentEntry[] = [
     employeesUsing: 5,
     totalEmployees: 8,
     usagePercent: 63,
+    totalCoins: 280,
     wsPercent: 72,
     isCurrentDepartment: false,
   },
@@ -437,6 +441,7 @@ export const departmentContest: DepartmentEntry[] = [
     employeesUsing: 7,
     totalEmployees: 9,
     usagePercent: 78,
+    totalCoins: 390,
     wsPercent: 88,
     isCurrentDepartment: true,
   },
@@ -447,6 +452,7 @@ export const departmentContest: DepartmentEntry[] = [
     employeesUsing: 4,
     totalEmployees: 7,
     usagePercent: 57,
+    totalCoins: 210,
     wsPercent: 61,
     isCurrentDepartment: false,
   },
@@ -457,6 +463,7 @@ export const departmentContest: DepartmentEntry[] = [
     employeesUsing: 3,
     totalEmployees: 6,
     usagePercent: 50,
+    totalCoins: 150,
     wsPercent: 55,
     isCurrentDepartment: false,
   },

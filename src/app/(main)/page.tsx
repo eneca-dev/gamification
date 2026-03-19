@@ -157,9 +157,10 @@ export default async function DashboardPage() {
     name: d.departmentCode,
     shortName: d.departmentCode,
     color: DEPT_COLORS[i % DEPT_COLORS.length],
-    employeesUsing: d.employeesUsing,
+    employeesUsing: d.usersEarning,
     totalEmployees: d.totalEmployees,
-    usagePercent: d.usagePercent,
+    usagePercent: 0,
+    totalCoins: d.totalCoins,
     wsPercent: 0,
     isCurrentDepartment: d.isCurrentDepartment,
   }));
