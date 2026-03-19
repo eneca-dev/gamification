@@ -1,5 +1,8 @@
 import { Sidebar } from '@/components/Sidebar'
 import { getCurrentUser } from '@/modules/auth'
+import { DevBanner } from '@/modules/dev-tools/components/DevBanner'
+
+const IS_DEV = process.env.NODE_ENV === 'development'
 
 export default async function MainLayout({
   children,
@@ -10,8 +13,17 @@ export default async function MainLayout({
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar user={user} />
-      <main className="flex-1 ml-[260px] p-8 max-w-[1200px]">{children}</main>
+      {user?.isImpersonating && (
+        <DevBanner
+          userName={user.fullName}
+          userEmail={user.email}
+          department={user.department}
+        />
+      )}
+      <Sidebar user={user} showDevSwitcher={IS_DEV} />
+      <main className={`flex-1 ml-[260px] p-8 max-w-[1200px] ${user?.isImpersonating ? 'pt-14' : ''}`}>
+        {children}
+      </main>
     </div>
   )
 }

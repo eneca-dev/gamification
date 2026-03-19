@@ -34,9 +34,9 @@ export interface RevitTransaction {
 // Данные по отделу для соревнования автоматизации
 export interface DepartmentAutomationEntry {
   departmentCode: string
-  employeesUsing: number
+  usersEarning: number
   totalEmployees: number
-  usagePercent: number
+  totalCoins: number
   isCurrentDepartment: boolean
 }
 

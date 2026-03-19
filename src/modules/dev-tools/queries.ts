@@ -1,0 +1,77 @@
+import { createSupabaseAdminClient } from '@/config/supabase'
+
+import type { DevUser } from './types'
+
+const IS_DEV = process.env.NODE_ENV === 'development'
+
+/**
+ * Поиск пользователей в ws_users для dev-переключателя.
+ * Возвращает до `limit` активных пользователей, отфильтрованных по поисковому запросу.
+ */
+export async function searchDevUsers(
+  search: string,
+  limit = 30
+): Promise<DevUser[]> {
+  if (!IS_DEV) return []
+
+  const supabase = createSupabaseAdminClient()
+
+  let query = supabase
+    .from('ws_users')
+    .select('email, first_name, last_name, department, department_code, team')
+    .eq('is_active', true)
+    .order('last_name', { ascending: true })
+    .limit(limit)
+
+  if (search.trim()) {
+    // Поиск по имени, фамилии или email
+    const term = `%${search.trim()}%`
+    query = query.or(
+      `first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term}`
+    )
+  }
+
+  const { data, error } = await query
+
+  if (error || !data) return []
+
+  return data.map((u) => ({
+    email: u.email,
+    firstName: u.first_name,
+    lastName: u.last_name,
+    fullName: `${u.first_name} ${u.last_name}`.trim(),
+    department: u.department ?? null,
+    departmentCode: u.department_code ?? null,
+    team: u.team ?? null,
+  }))
+}
+
+/**
+ * Получить данные одного пользователя из ws_users по email.
+ * Используется в getCurrentUser() при impersonation.
+ */
+export async function getDevUserByEmail(
+  email: string
+): Promise<DevUser | null> {
+  if (!IS_DEV) return null
+
+  const supabase = createSupabaseAdminClient()
+  const { data, error } = await supabase
+    .from('ws_users')
+    .select('email, first_name, last_name, department, department_code, team')
+    .eq('email', email.toLowerCase())
+    .eq('is_active', true)
+    .single()
+
+  if (error || !data) return null
+
+  return {
+    email: data.email,
+    firstName: data.first_name,
+    lastName: data.last_name,
+    fullName: `${data.first_name} ${data.last_name}`.trim(),
+    department: data.department ?? null,
+    departmentCode: data.department_code ?? null,
+    team: data.team ?? null,
+  }
+}
