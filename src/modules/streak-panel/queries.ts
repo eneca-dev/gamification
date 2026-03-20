@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from '@/config/supabase'
 
 import type { DayStatusRow, StreakMilestone, WsStreakData, RevitStreakData } from './types'
 
-// Статусы дней из view_daily_statuses за период
+// Статусы дней из ws_daily_statuses за период
 export async function getStreakDayStatuses(
   userId: string,
   gridStart: string,
@@ -11,7 +11,7 @@ export async function getStreakDayStatuses(
   const supabase = await createSupabaseServerClient()
 
   const { data, error } = await supabase
-    .from('view_daily_statuses')
+    .from('ws_daily_statuses')
     .select('date, status, absence_type, red_reasons')
     .eq('user_id', userId)
     .gte('date', gridStart)

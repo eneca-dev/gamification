@@ -314,18 +314,13 @@ function InlineDailyQuests({ tasks }: { tasks: DailyTask[] }) {
 
 // ─── Main grid card ──────────────────────────────────────────────────────────
 
-function formatCycleEnd(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" });
-}
-
 interface StreakPanelProps {
   streakData: StreakPanelData;
   tasks?: DailyTask[];
 }
 
 export function StreakPanel({ streakData, tasks = [] }: StreakPanelProps) {
-  const { calendarDays, cycleEnd, completedCycles, ws, revit } = streakData;
+  const { calendarDays, completedCycles, ws, revit } = streakData;
   const { weeks, groups } = buildWeeksAndMonths(calendarDays);
   const DAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
   const headerOffset = DAY_LABEL_W + DAY_LABEL_MR;
@@ -372,9 +367,6 @@ export function StreakPanel({ streakData, tasks = [] }: StreakPanelProps) {
           </div>
           <div className="text-[11px]" style={{ color: "var(--apex-text-secondary)" }}>
             дней подряд
-          </div>
-          <div className="text-[10px] mt-0.5" style={{ color: "var(--apex-text-muted)" }}>
-            до {formatCycleEnd(cycleEnd)}
           </div>
         </div>
       </div>

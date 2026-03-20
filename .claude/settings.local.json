@@ -22,7 +22,9 @@
       "Bash(xargs grep:*)",
       "Bash(grep -r \"revit.*streak\\\\|streak.*revit\" /d/1work/gamification/gamification/ --include=*.sql --include=*.ts --include=*.tsx --include=*.md)",
       "Bash(find /d/1work/gamification/gamification/src/docs* -type f -name *.md)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(grep:*)",
+      "Bash(node:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -34,38 +34,24 @@ const DEPT_COLORS = [
   "#8bc34a", "#ff5722", "#009688", "#673ab7", "#ffc107",
 ];
 
-// Понедельник недели, в которую попадает дата
-function getMonday(dateStr: string): Date {
-  const d = new Date(dateStr + "T00:00:00");
-  const dow = (d.getDay() + 6) % 7; // Пн=0
-  d.setDate(d.getDate() - dow);
-  return d;
-}
-
-// Воскресенье недели, в которую попадает дата
-function getSunday(dateStr: string): Date {
-  const d = new Date(dateStr + "T00:00:00");
-  const dow = (d.getDay() + 6) % 7;
-  d.setDate(d.getDate() + (6 - dow));
-  return d;
-}
-
 function toIsoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr + "T00:00:00");
-  d.setDate(d.getDate() + days);
-  return toIsoDate(d);
+// Границы грида: 4 месяца по двухмесячным блокам
+// Янв-Фев → Дек-Мар, Мар-Апр → Фев-Май, Май-Июн → Апр-Июл, и т.д.
+function getGridRange(): { rangeStart: string; rangeEnd: string } {
+  const now = new Date();
+  const startMonth = Math.floor((now.getMonth()) / 2) * 2; // 0-indexed, округлён к паре
+  const rangeStart = new Date(now.getFullYear(), startMonth - 1, 1);
+  const rangeEnd = new Date(now.getFullYear(), startMonth + 3, 0); // последний день startMonth+2
+  return { rangeStart: toIsoDate(rangeStart), rangeEnd: toIsoDate(rangeEnd) };
 }
 
-// Сборка календарных дней для грида
+// Сборка календарных дней для грида (4 месяца)
 function buildCalendarDays(
-  gridStartIso: string,
-  gridEndIso: string,
-  cycleStartIso: string | null,
-  cycleEndIso: string,
+  rangeStart: string,
+  rangeEnd: string,
   statusMap: Map<string, { status: string; absence_type: string | null; red_reasons: string[] | null }>,
   automationDates: Set<string>,
 ): CalendarDay[] {
@@ -73,29 +59,16 @@ function buildCalendarDays(
   today.setHours(0, 0, 0, 0);
 
   const days: CalendarDay[] = [];
-  const start = new Date(gridStartIso + "T00:00:00");
-  const end = new Date(gridEndIso + "T00:00:00");
+  const start = new Date(rangeStart + "T00:00:00");
+  const end = new Date(rangeEnd + "T00:00:00");
 
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const dateStr = toIsoDate(d);
     const dow = d.getDay();
     const isWeekend = dow === 0 || dow === 6;
 
-    // За пределами цикла (padding)
-    const beforeCycle = cycleStartIso ? dateStr < cycleStartIso : false;
-    const afterCycle = dateStr > cycleEndIso;
-
-    if (beforeCycle || afterCycle) {
-      days.push({ date: dateStr, status: "out", automation: false });
-      continue;
-    }
-
     if (isWeekend) {
-      days.push({
-        date: dateStr,
-        status: "gray",
-        automation: false,
-      });
+      days.push({ date: dateStr, status: "gray", automation: false });
       continue;
     }
 
@@ -107,7 +80,6 @@ function buildCalendarDays(
 
     const row = statusMap.get(dateStr);
     if (!row) {
-      // Рабочий день в прошлом, нет записи
       days.push({ date: dateStr, status: "no_data", automation: false });
       continue;
     }
@@ -186,28 +158,13 @@ export default async function DashboardPage() {
       getDepartmentAutomationStats(currentUser?.email),
     ]);
 
-  // Вычисляем границы 90-дневного цикла
-  const todayIso = toIsoDate(new Date());
-  let cycleStartIso: string | null = wsStreak.streakStartDate;
-  let cycleEndIso: string;
-  let gridStartIso: string;
-  let gridEndIso: string;
-
-  if (cycleStartIso) {
-    cycleEndIso = addDays(cycleStartIso, 89);
-    gridStartIso = toIsoDate(getMonday(cycleStartIso));
-    gridEndIso = toIsoDate(getSunday(cycleEndIso));
-  } else {
-    // Стрик = 0, нет зелёного дня — показываем от текущей недели
-    gridStartIso = toIsoDate(getMonday(todayIso));
-    cycleEndIso = addDays(gridStartIso, 89);
-    gridEndIso = toIsoDate(getSunday(cycleEndIso));
-  }
+  // Грид: 4 месяца (1 назад + текущий + 2 вперёд)
+  const { rangeStart, rangeEnd } = getGridRange();
 
   // Параллельно: статусы дней + автоматизация
   const [dayStatuses, automationDates] = await Promise.all([
-    wsUserId ? getStreakDayStatuses(wsUserId, gridStartIso, gridEndIso) : Promise.resolve([]),
-    userEmail ? getAutomationDays(userEmail, gridStartIso, gridEndIso) : Promise.resolve(new Set<string>()),
+    wsUserId ? getStreakDayStatuses(wsUserId, rangeStart, rangeEnd) : Promise.resolve([]),
+    userEmail ? getAutomationDays(userEmail, rangeStart, rangeEnd) : Promise.resolve(new Set<string>()),
   ]);
 
   // Собираем Map статусов для быстрого доступа
@@ -216,18 +173,10 @@ export default async function DashboardPage() {
     statusMap.set(row.date, { status: row.status, absence_type: row.absence_type, red_reasons: row.red_reasons });
   }
 
-  const calendarDays = buildCalendarDays(
-    gridStartIso,
-    gridEndIso,
-    cycleStartIso,
-    cycleEndIso,
-    statusMap,
-    automationDates,
-  );
+  const calendarDays = buildCalendarDays(rangeStart, rangeEnd, statusMap, automationDates);
 
   const streakPanelData: StreakPanelData = {
     calendarDays,
-    cycleEnd: cycleEndIso,
     completedCycles: wsStreak.completedCycles,
     ws: wsStreak,
     revit: revitStreak,

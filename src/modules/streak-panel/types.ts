@@ -1,4 +1,4 @@
-// Строка из view_daily_statuses
+// Строка из ws_daily_statuses
 export interface DayStatusRow {
   date: string
   status: 'green' | 'red' | 'absent'
@@ -50,7 +50,6 @@ export interface RevitStreakData {
 // Все данные для StreakPanel
 export interface StreakPanelData {
   calendarDays: CalendarDay[]
-  cycleEnd: string
   completedCycles: number
   ws: WsStreakData
   revit: RevitStreakData
