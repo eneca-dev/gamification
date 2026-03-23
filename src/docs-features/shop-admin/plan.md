@@ -560,20 +560,32 @@ src/app/(main)/admin/
 
 ### Этап 1: Роли и защита админки
 - [x] Миграция: `ALTER TABLE ws_users ADD COLUMN is_admin boolean DEFAULT false`
-- [x] Миграция: Custom Access Token Hook — pg-функция `custom_access_token_hook`, добавляет `is_admin` и `ws_user_id` в JWT claims
-- [ ] Регистрация hook'а в Supabase Dashboard → Authentication → Hooks (ручной шаг)
+- [x] Миграция: Custom Access Token Hook — pg-функция `custom_access_token_hook` (SECURITY DEFINER), добавляет `is_admin` и `ws_user_id` в JWT claims
+- [x] Регистрация hook'а в Supabase Dashboard → Authentication → Hooks
 - [x] ~~Миграция: удалить `second_life_cost`~~ — уже удалён из БД, очищены docs
 - [x] Обновить `src/docs/gamification-db.md` и `src/docs/gamification-events.md` — убрать `second_life_cost`
-- [x] Расширить `AuthUser` полями `isAdmin` (из JWT claim `is_admin`) и `wsUserId` (из JWT claim `ws_user_id`)
-- [x] Middleware: защита `/admin/*` — проверка `is_admin` из JWT (0 DB-запросов), редирект для не-админов
-- [ ] `checkIsAdmin()` — утилита для Server Actions (будет создана вместе с первыми админскими actions)
-- [ ] Server Actions: проверка `is_admin` из JWT перед мутациями (будет в этапах 2-6)
+- [x] Расширить `AuthUser` полями `isAdmin` и `wsUserId` (декодирование JWT access_token)
+- [x] Middleware: защита `/admin/*` — декодирование JWT, проверка `is_admin` (0 DB-запросов), редирект для не-админов
+- [x] UI: кнопка «Админ-панель» в сайдбаре скрыта для не-админов
+- [x] Страница-заглушка `/admin`
+- [x] `checkIsAdmin()` — утилита для Server Actions (создана в модуле admin, этап 2)
+- [x] Server Actions: проверка `is_admin` из JWT перед мутациями (реализовано в этапе 2 через `checkIsAdmin()` + `supabaseAdmin`)
 
 ### Этап 2: Управление событиями
-- Миграция: RLS-политики на `gamification_event_types` (SELECT для всех, UPDATE для админов)
-- `getEventTypes()` query
-- `updateEventTypeCoins()` action
-- UI: таблица событий с inline-редактированием стоимости
+- [x] Миграция: RLS-политика UPDATE на `gamification_event_types` для админов
+- [x] Миграция: колонка `name` в `gamification_event_types` с человекочитаемыми названиями
+- [x] Модуль `admin`: types.ts, queries.ts, actions.ts, checkIsAdmin.ts, index.ts, index.client.ts
+- [x] `checkIsAdmin()` — утилита декодирования JWT для Server Actions
+- [x] `getEventTypes()` query
+- [x] `updateEventType()` action — обновление name, description, coins, is_active (supabaseAdmin + checkIsAdmin)
+- [x] Admin layout с навигацией (Apex Menu Item стиль) между разделами
+- [x] UI: `/admin/events` — таблица событий с inline-редактированием всех полей, toggle switch для статуса
+- [x] Optimistic updates с откатом при ошибке
+- [x] Скелетоны загрузки для всех admin-роутов
+- [x] Страницы-заглушки: `/admin/users`, `/admin/products`, `/admin/orders`
+- [x] Дизайн по Apex UI Kit
+- [x] `src/docs/admin.md` — документация модуля
+- [x] Принцип: админские actions через `supabaseAdmin` (service role) + `checkIsAdmin()` в коде
 
 ### Этап 3: Просмотр пользователей
 - `getUsers()`, `getUserDetail()` queries

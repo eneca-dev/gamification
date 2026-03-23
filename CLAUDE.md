@@ -106,6 +106,7 @@ src/
 - Планы фич (Full Pipeline) — `src/docs-features/<module>/`
 
 ### Стили и дизайн-система
+- **Весь дизайн — по Apex UI Kit** (`src/docs/apex-ui-kit.md`). Перед созданием любого UI-компонента — свериться с этим документом
 - Только Tailwind CSS классы
 - Сложные повторяющиеся наборы классов выносить в переменные или `cn()` утилиту
 - Не смешивать Tailwind с inline-стилями (`style={{}}`)
@@ -113,13 +114,18 @@ src/
 
 **Цвета — никакого хардкода:**
 - Запрещено использовать произвольные HEX, RGB, HSL значения напрямую (`text-[#ff0000]`, `bg-[#1a2b3c]`)
-- Все цвета — только через CSS-переменные или токены из дизайн-системы: `text-primary`, `bg-surface`, `border-muted` и т.д.
+- Все цвета — только через CSS-переменные `--apex-*` из дизайн-системы
 - Новые цвета добавляются в `globals.css` через CSS-переменные и затем используются через Tailwind
 
 **Переиспользование компонентов:**
 - Перед созданием нового компонента — проверить `src/components/` на наличие подходящего
 - Кнопки, карточки, бейджи, инпуты, иконки — всегда из дизайн-системы проекта, не создавать дубли
 - Если существующий компонент почти подходит — расширить его через props, не создавать копию
+
+**Скелетоны загрузки:**
+- Каждая страница с асинхронными данными **обязательно** имеет `loading.tsx` со скелетоном
+- Скелетон должен повторять форму реального контента (таблица → строки-заглушки, карточки → прямоугольники)
+- Цвет скелетона: `#E5E7EB`, анимация: `animate-pulse`
 
 ### Именование
 | Сущность | Стиль | Пример |
@@ -217,15 +223,21 @@ export async function createAchievement(data: CreateAchievementInput) {
 - Для вызова Server Actions на клиенте использовать `useActionState` или `useTransition`
 - Показывать состояние загрузки через `isPending` из `useTransition`
 - Ошибки сервера отображать пользователю, не глотать молча
+- **Optimistic updates обязательны** — при любой мутации UI обновляется мгновенно до ответа сервера. При ошибке — откатывать к предыдущему состоянию. Использовать `useOptimistic` из React или локальный стейт с откатом
 
 ```tsx
-// Правильный паттерн мутации
-const [isPending, startTransition] = useTransition()
+// Правильный паттерн мутации с optimistic update
+const [items, setItems] = useState(initialItems)
 
-function handleSubmit() {
+function handleUpdate(id: string, newValue: number) {
+  const prev = items
+  setItems(items.map(i => i.id === id ? { ...i, value: newValue } : i)) // optimistic
   startTransition(async () => {
-    const result = await createAchievement(data)
-    if (!result.success) showError(result.error)
+    const result = await updateItem({ id, value: newValue })
+    if (!result.success) {
+      setItems(prev) // откат при ошибке
+      showError(result.error)
+    }
   })
 }
 ```

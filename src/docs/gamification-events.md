@@ -219,6 +219,8 @@ idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 | `ws_streak_7` | +25 | ws | compute-gamification |
 | `gratitude_recipient_points` | +20 | airtable | PG-триггер |
 | `revit_using_plugins` | +5 | revit | PG-триггер |
+| `budget_ok_l3_lead_bonus` | +5 | ws | compute-gamification |
+| `budget_revoked_l3_lead` | -5 | ws | compute-gamification |
 | `budget_revoked_l3` | -50 | ws | compute-gamification |
 | `budget_revoked_l2` | -200 | ws | compute-gamification |
 
