@@ -1,13 +1,8 @@
-import { Users } from 'lucide-react'
+import { getUsers } from '@/modules/admin'
+import { AdminUsersClient } from '@/modules/admin/components/AdminUsersClient'
 
-import { AdminPlaceholder } from '@/modules/admin/components/AdminPlaceholder'
+export default async function AdminUsersPage() {
+  const users = await getUsers()
 
-export default function AdminUsersPage() {
-  return (
-    <AdminPlaceholder
-      icon={Users}
-      title="Пользователи"
-      description="Раздел будет доступен в следующем обновлении"
-    />
-  )
+  return <AdminUsersClient users={users} />
 }

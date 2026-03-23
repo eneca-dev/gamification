@@ -1,2 +1,2 @@
-export { updateEventType } from './actions'
-export type { EventTypeRow, UpdateEventTypeInput } from './types'
+export { updateEventType, toggleAdmin } from './actions'
+export type { EventTypeRow, UpdateEventTypeInput, AdminUserRow, UserDetail, UserTransaction } from './types'

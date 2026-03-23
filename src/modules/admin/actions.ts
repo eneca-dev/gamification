@@ -42,3 +42,33 @@ export async function updateEventType(
   revalidatePath('/admin/events')
   return { success: true }
 }
+
+export async function toggleAdmin(
+  userId: string
+): Promise<{ success: true; isAdmin: boolean } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const supabase = createSupabaseAdminClient()
+
+  // Читаем текущее значение
+  const { data: user, error: readError } = await supabase
+    .from('ws_users')
+    .select('is_admin')
+    .eq('id', userId)
+    .single()
+
+  if (readError || !user) return { success: false, error: 'Пользователь не найден' }
+
+  const newValue = !user.is_admin
+
+  const { error } = await supabase
+    .from('ws_users')
+    .update({ is_admin: newValue })
+    .eq('id', userId)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/admin/users')
+  return { success: true, isAdmin: newValue }
+}

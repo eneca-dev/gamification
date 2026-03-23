@@ -22,10 +22,13 @@
 ## Actions
 
 - `updateEventType({ key, name?, coins?, description?, is_active? })` — обновляет поля события (любую комбинацию). Проверяет isAdmin. Revalidate: `/admin/events`
+- `toggleAdmin(userId)` — переключает is_admin у пользователя. Проверяет isAdmin. Revalidate: `/admin/users`
 
 ## Queries
 
 - `getEventTypes()` — все event types, сортировка по coins DESC
+- `getUsers()` — все активные сотрудники с балансом (ws_users LEFT JOIN gamification_balances)
+- `getUserDetail(userId)` — пользователь + последние 50 транзакций из view_user_transactions
 
 ## Утилиты
 

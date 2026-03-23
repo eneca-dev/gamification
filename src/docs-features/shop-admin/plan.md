@@ -588,10 +588,14 @@ src/app/(main)/admin/
 - [x] Принцип: админские actions через `supabaseAdmin` (service role) + `checkIsAdmin()` в коде
 
 ### Этап 3: Просмотр пользователей
-- `getUsers()`, `getUserDetail()` queries
-- UI: таблица сотрудников (баланс, отдел, статус)
-- UI: детальный просмотр (баланс, транзакции, заказы)
-- `toggleAdmin()` action — назначение/снятие админа
+- [x] `getUsers()` query — ws_users LEFT JOIN gamification_balances (supabaseAdmin)
+- [x] `getUserDetail()` query — пользователь + транзакции из view_user_transactions
+- [x] `toggleAdmin()` action — переключение is_admin (supabaseAdmin + checkIsAdmin, optimistic update)
+- [x] API route `/api/admin/user-detail` — для клиентского запроса деталей
+- [x] UI: `/admin/users` — таблица с поиском по имени/email, фильтрация по отделу
+- [x] UI: боковая панель деталей (баланс, email, отдел, роль, транзакции)
+- [x] Кнопка toggle роли Админ/Юзер с optimistic update
+- [ ] История заказов — будет после создания shop_orders (этап 4)
 
 ### Этап 4: Магазин — БД и бэкенд
 - Миграции: `shop_categories`, `shop_products`, `shop_orders`
