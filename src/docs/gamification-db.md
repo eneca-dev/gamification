@@ -254,6 +254,42 @@ OAuth-токены Worksection для пользователей.
 
 ---
 
+### Группа B2: Производственный календарь
+
+#### `calendar_holidays` (0 строк)
+
+Праздники и нерабочие дни. Управляется админами (`ws_users.is_admin`).
+
+| Колонка      | Тип                    | Описание                              |
+| ------------ | ---------------------- | ------------------------------------- |
+| `id`         | bigint PK (identity)   |                                       |
+| `date`       | date UNIQUE            | Дата праздника                        |
+| `name`       | text                   | Название ("День Победы", "Новый год") |
+| `created_by` | uuid NULL → auth.users | Кто добавил                           |
+| `created_at` | timestamptz            |                                       |
+
+**Эффект:** VPS-скрипт `compute-gamification` пропускает этот день (не обрабатывает). Фронтенд показывает как серый (выходной).
+
+**RLS:** чтение — все authenticated, управление — только админы.
+
+#### `calendar_workdays` (0 строк)
+
+Рабочие переносы (когда выходной становится рабочим). Управляется админами.
+
+| Колонка      | Тип                    | Описание                            |
+| ------------ | ---------------------- | ----------------------------------- |
+| `id`         | bigint PK (identity)   |                                     |
+| `date`       | date UNIQUE            | Дата переноса (суббота/воскресенье) |
+| `name`       | text                   | Причина ("Перенос с 31 декабря")    |
+| `created_by` | uuid NULL → auth.users | Кто добавил                         |
+| `created_at` | timestamptz            |                                     |
+
+**Эффект:** VPS-скрипт обрабатывает этот день как рабочий (несмотря на Сб/Вс). Фронтенд показывает как рабочий день (не серый).
+
+**RLS:** чтение — все authenticated, управление — только админы.
+
+---
+
 ### Группа C: Source-таблицы из внешних систем
 
 #### `elk_plugin_launches` (4103 строки)
@@ -417,18 +453,20 @@ SET total_coins = (SELECT COALESCE(SUM(coins), 0) FROM gamification_transactions
 
 **Частота обновления:** при каждом синке `elk_plugin_launches` через триггер. Непрерывность стрика проверяется с учётом выходных и отсутствий: считаются рабочие дни-пропуски между `last_green_date` и `work_date` через `generate_series`, пропуская Сб/Вс (`dow IN (0,6)`) и записи из `ws_user_absences`. Если пропусков нет → `current_streak + 1`; если есть → `current_streak = 1`. При milestone (7/30) создаётся бонусное событие.
 
-#### `ws_user_streaks` (0 строк)
+#### `ws_user_streaks` (558 строк)
 
 Стрики по таймтрекингу в Worksection.
 
-| Колонка          | Тип                | Описание |
-| ---------------- | ------------------ | -------- |
-| `user_id`        | uuid PK → ws_users |          |
-| `current_streak` | integer DEFAULT 0  |          |
-| `longest_streak` | integer DEFAULT 0  |          |
-| `updated_at`     | timestamptz        |          |
+| Колонка             | Тип                | Описание                                                       |
+| ------------------- | ------------------ | -------------------------------------------------------------- |
+| `user_id`           | uuid PK → ws_users |                                                                |
+| `current_streak`    | integer DEFAULT 0  | Календарных дней от streak_start_date                          |
+| `longest_streak`    | integer DEFAULT 0  |                                                                |
+| `streak_start_date` | date NULL          | Дата первого зелёного дня текущего стрика. NULL при стрике = 0 |
+| `completed_cycles`  | integer DEFAULT 0  | Счётчик завершённых 90-дневных стриков                         |
+| `updated_at`        | timestamptz        |                                                                |
 
-**Частота обновления:** обновляется `compute-gamification` (VPS). Пока пустая — WS-геймификация в процессе наладки.
+**Частота обновления:** обновляется `compute-gamification` (VPS). При зелёном дне — `current_streak = diffCalendarDays(streak_start_date, date) + 1`. При красном — сброс в 0. При отсутствии — заморозка (ничего не меняется).
 
 #### `budget_pending` (0 строк)
 
@@ -518,15 +556,15 @@ WS-функции удалены — их полностью заменили VP
 
 ### Скрипты (`scripts/`)
 
-| Скрипт                     | Целевые таблицы                                                                                                                                    | Что делает                                                                            |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `sync-ws-users.ts`         | `ws_users`                                                                                                                                         | Синк сотрудников из WS API. Insert/update/deactivate/reactivate                       |
-| `sync-ws-projects.ts`      | `ws_projects`                                                                                                                                      | Синк проектов с тегом "eneca.work sync". Insert/update/archive                        |
-| `sync-ws-tasks.ts`         | `ws_tasks_l2`, `ws_tasks_l3`                                                                                                                       | Парсинг дерева задач L1→L2→L3 из всех проектов                                        |
-| `sync-ws-costs.ts`         | `ws_daily_reports`, `ws_task_actual_hours`, `ws_task_actual_hours_l2`                                                                              | Синк таймтрекинга: дневные отчёты + фактические часы                                  |
-| `snapshot-task-percent.ts` | `ws_task_percent_snapshots`                                                                                                                        | Снапшот текущего % задач L3                                                           |
-| `sync-ws-absences.ts`      | `ws_user_absences`                                                                                                                                 | Синк отсутствий из расписания + задачи сикдеев                                        |
-| `compute-gamification.ts`  | `gamification_event_logs`, `gamification_transactions`, `gamification_balances`, `ws_user_streaks`, `budget_pending`, `ws_task_budget_checkpoints` | Основной движок WS-геймификации: нарушения, статусы дней, стрики, бюджеты, транзакции |
+| Скрипт                     | Целевые таблицы                                                                                                                                                         | Что делает                                                                                                                                                            |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sync-ws-users.ts`         | `ws_users`                                                                                                                                                              | Синк сотрудников из WS API. Insert/update/deactivate/reactivate                                                                                                       |
+| `sync-ws-projects.ts`      | `ws_projects`                                                                                                                                                           | Синк проектов с тегом "eneca.work sync". Insert/update/archive                                                                                                        |
+| `sync-ws-tasks.ts`         | `ws_tasks_l2`, `ws_tasks_l3`                                                                                                                                            | Парсинг дерева задач L1→L2→L3 из всех проектов                                                                                                                        |
+| `sync-ws-costs.ts`         | `ws_daily_reports`, `ws_task_actual_hours`, `ws_task_actual_hours_l2`                                                                                                   | Синк таймтрекинга: дневные отчёты + фактические часы                                                                                                                  |
+| `snapshot-task-percent.ts` | `ws_task_percent_snapshots`                                                                                                                                             | Снапшот текущего % задач L3                                                                                                                                           |
+| `sync-ws-absences.ts`      | `ws_user_absences`                                                                                                                                                      | Синк отсутствий из расписания + задачи сикдеев                                                                                                                        |
+| `compute-gamification.ts`  | `gamification_event_logs`, `gamification_transactions`, `gamification_balances`, `ws_user_streaks`, `ws_daily_statuses`, `budget_pending`, `ws_task_budget_checkpoints` | Основной движок WS-геймификации: нарушения, статусы дней, стрики, бюджеты, транзакции. Пропускает Сб/Вс (кроме `calendar_workdays`) и праздники (`calendar_holidays`) |
 
 ### Библиотеки (`lib/`)
 

@@ -21,6 +21,8 @@ import {
 import {
   getStreakDayStatuses,
   getAutomationDays,
+  getHolidays,
+  getWorkdays,
   getWsStreakData,
   getRevitStreakData,
 } from "@/modules/streak-panel";
@@ -54,6 +56,8 @@ function buildCalendarDays(
   rangeEnd: string,
   statusMap: Map<string, { status: string; absence_type: string | null; red_reasons: string[] | null }>,
   automationDates: Set<string>,
+  holidays: Set<string>,
+  workdays: Set<string>,
 ): CalendarDay[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -67,7 +71,8 @@ function buildCalendarDays(
     const dow = d.getDay();
     const isWeekend = dow === 0 || dow === 6;
 
-    if (isWeekend) {
+    const isDayOff = (isWeekend && !workdays.has(dateStr)) || (!isWeekend && holidays.has(dateStr));
+    if (isDayOff) {
       days.push({ date: dateStr, status: "gray", automation: false });
       continue;
     }
@@ -80,7 +85,7 @@ function buildCalendarDays(
 
     const row = statusMap.get(dateStr);
     if (!row) {
-      days.push({ date: dateStr, status: "no_data", automation: false });
+      days.push({ date: dateStr, status: "no_data", automation: automationDates.has(dateStr) });
       continue;
     }
 
@@ -161,10 +166,12 @@ export default async function DashboardPage() {
   // Грид: 4 месяца (1 назад + текущий + 2 вперёд)
   const { rangeStart, rangeEnd } = getGridRange();
 
-  // Параллельно: статусы дней + автоматизация
-  const [dayStatuses, automationDates] = await Promise.all([
+  // Параллельно: статусы дней + автоматизация + праздники
+  const [dayStatuses, automationDates, holidays, workdays] = await Promise.all([
     wsUserId ? getStreakDayStatuses(wsUserId, rangeStart, rangeEnd) : Promise.resolve([]),
     userEmail ? getAutomationDays(userEmail, rangeStart, rangeEnd) : Promise.resolve(new Set<string>()),
+    getHolidays(rangeStart, rangeEnd),
+    getWorkdays(rangeStart, rangeEnd),
   ]);
 
   // Собираем Map статусов для быстрого доступа
@@ -173,7 +180,7 @@ export default async function DashboardPage() {
     statusMap.set(row.date, { status: row.status, absence_type: row.absence_type, red_reasons: row.red_reasons });
   }
 
-  const calendarDays = buildCalendarDays(rangeStart, rangeEnd, statusMap, automationDates);
+  const calendarDays = buildCalendarDays(rangeStart, rangeEnd, statusMap, automationDates, holidays, workdays);
 
   const streakPanelData: StreakPanelData = {
     calendarDays,

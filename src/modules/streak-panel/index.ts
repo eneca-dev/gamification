@@ -1,6 +1,8 @@
 export {
   getStreakDayStatuses,
   getAutomationDays,
+  getHolidays,
+  getWorkdays,
   getWsStreakData,
   getRevitStreakData,
 } from './queries'

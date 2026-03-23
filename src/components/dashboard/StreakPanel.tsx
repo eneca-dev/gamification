@@ -462,7 +462,12 @@ export function StreakPanel({ streakData, tasks = [] }: StreakPanelProps) {
                               {showStar && (
                                 <span
                                   className="absolute inset-0 flex items-center justify-center font-bold leading-none"
-                                  style={{ color: "white", fontSize: 10, opacity: 0.9 }}
+                                  style={{
+                                    color: "white",
+                                    fontSize: 10,
+                                    opacity: 0.9,
+                                    WebkitTextStroke: isNoData ? "0.5px black" : undefined,
+                                  }}
                                 >
                                   ★
                                 </span>
