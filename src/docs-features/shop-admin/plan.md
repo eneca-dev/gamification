@@ -12,7 +12,7 @@
 - Модулей `shop`, `admin` в `src/modules/` нет
 - Таблиц для магазина в БД нет
 - Системы ролей нет
-- `second_life_cost` удалён из `gamification_event_types` (0 транзакций, legacy)
+- `second_life_cost` **нужно удалить** из `gamification_event_types` (0 транзакций, legacy) + обновить `gamification-db.md` и `gamification-events.md`
 
 ---
 
@@ -25,7 +25,7 @@
 Обоснование:
 - `ws_users` — центральная таблица, на неё завязана вся геймификация
 - Нужна ровно одна роль — «админ»
-- RLS-политики проще: `EXISTS (SELECT 1 FROM ws_users WHERE user_id = auth.uid() AND is_admin = true)`
+- RLS-политики проще: `COALESCE((auth.jwt() -> 'is_admin')::boolean, false)`
 - Если потребуются новые роли — несложно мигрировать на отдельную таблицу
 
 Первый админ назначается вручную в БД:
@@ -36,11 +36,35 @@ UPDATE ws_users SET is_admin = true WHERE email = 'admin@example.com';
 Админы могут назначать новых админов через UI.
 
 **Защита админки:**
-- Middleware проверяет `is_admin` для роутов `/admin/*`
-- Server Actions админ-модуля проверяют `is_admin` перед каждой мутацией
-- RLS-политики на таблицах магазина: INSERT/UPDATE/DELETE — только для `is_admin = true`
+- Middleware проверяет `is_admin` **из JWT** для роутов `/admin/*` (0 DB-запросов, UX-редирект)
+- Server Actions админ-модуля проверяют `is_admin` **из JWT** перед каждой мутацией
+- RLS-политики на таблицах магазина: INSERT/UPDATE/DELETE — только для `is_admin = true` (через `auth.jwt() -> 'is_admin'`)
 
-**✅ Решение:** `is_admin` в `ws_users` достаточно.
+**`is_admin` в JWT — Custom Access Token Hook:**
+
+Supabase Auth Hook (pg-функция), которая добавляет `is_admin` и `ws_user_id` в JWT claims при каждом выпуске/рефреше токена:
+```sql
+CREATE OR REPLACE FUNCTION custom_access_token_hook(event jsonb)
+RETURNS jsonb LANGUAGE plpgsql AS $$
+DECLARE
+  _ws_user_id uuid;
+  _is_admin boolean;
+BEGIN
+  SELECT id, is_admin INTO _ws_user_id, _is_admin
+  FROM ws_users WHERE user_id = (event->>'user_id')::uuid;
+
+  event := jsonb_set(event, '{claims,is_admin}', COALESCE(to_jsonb(_is_admin), 'false'::jsonb));
+  event := jsonb_set(event, '{claims,ws_user_id}', COALESCE(to_jsonb(_ws_user_id), 'null'::jsonb));
+  RETURN event;
+END;
+$$;
+```
+
+- **Middleware** и **Server Actions** читают `is_admin` из JWT — быстро, без DB hit
+- **Задержка**: до ~1 часа после `toggleAdmin` (пока JWT обновится). Приемлемо для корпоративного приложения — админов назначают крайне редко
+- **UX**: в UI `toggleAdmin` показывать уведомление «Новому админу нужно перелогиниться, чтобы увидеть админ-панель»
+
+**✅ Решение:** `is_admin` в `ws_users` + JWT Custom Access Token Hook (`is_admin`, `ws_user_id`) для всего приложения (middleware, Server Actions, AuthUser).
 
 ---
 
@@ -79,6 +103,12 @@ UPDATE ws_users SET is_admin = true WHERE email = 'admin@example.com';
 - Редактировать существующую категорию
 - Деактивировать категорию (`is_active = false`) — не удалять, чтобы не ломать FK товаров
 
+**Деактивация категории с pending заказами:**
+- При деактивации UI показывает кол-во `pending`/`processing` заказов в этой категории
+- Деактивация не блокируется — админ может деактивировать даже с активными заказами
+- Существующие заказы (`pending`, `processing`) остаются доступными для обработки в админке
+- Новые покупки товаров этой категории заблокированы (фильтр `c.is_active = true` в магазине)
+
 #### `shop_products` — каталог товаров
 
 | Колонка | Тип | Описание |
@@ -95,7 +125,7 @@ UPDATE ws_users SET is_admin = true WHERE email = 'admin@example.com';
 | `sort_order` | integer DEFAULT 0 | Порядок сортировки |
 | `created_by` | uuid → ws_users | Кто из админов создал |
 | `created_at` | timestamptz | |
-| `updated_at` | timestamptz | |
+| `updated_at` | timestamptz | Обновлять явно в `updateProduct` action: `updated_at = now()` |
 
 **Правила `stock`:**
 - Категория `is_physical = true` → `stock` обязателен (NOT NULL на уровне Server Action, не БД — чтобы не усложнять constraint кросс-таблицей)
@@ -128,7 +158,7 @@ UPDATE ws_users SET is_admin = true WHERE email = 'admin@example.com';
 - `fulfilled` — выполнено (автоматически для нефизических при покупке)
 - `cancelled` — отменено админом (коины возвращены)
 
-**✅ Решение:** статусов достаточно. Типизация: CHECK в БД, `OrderStatus` union type + `z.enum()` в TypeScript.
+**✅ Решение:** статусов достаточно. Типизация: CHECK в БД, `OrderStatus` union type + `z.enum()` в TypeScript. Переходы между статусами не ограничиваются — админ может выставить любой допустимый статус (кроме `cancelled` — через `cancelOrder` с возвратом).
 
 **Возврат при отмене — да, с `shop_refund`:**
 - При отмене заказа коины возвращаются пользователю
@@ -141,7 +171,7 @@ UPDATE ws_users SET is_admin = true WHERE email = 'admin@example.com';
 **`ws_users`** — добавить колонку:
 | Колонка | Тип | Описание |
 |---|---|---|
-| `is_admin` | boolean DEFAULT false | Флаг администратора |
+| `is_admin` | boolean DEFAULT false | Флаг администратора. **Не трогается VPS-синком** `sync-ws-users` (добавить в список исключений наряду с `user_id` и `department_code`) |
 
 **`gamification_event_types`** — добавить колонку и записи:
 
@@ -162,36 +192,70 @@ UPDATE ws_users SET is_admin = true WHERE email = 'admin@example.com';
 
 Существующие триггеры и скрипты не затронуты — они работают только с `is_dynamic_coins = false` событиями и читают `coins` как раньше.
 
+#### RLS-политики на таблицах магазина
+
+**`shop_categories`:**
+- SELECT: все аутентифицированные (`auth.role() = 'authenticated'`)
+- INSERT/UPDATE: только админы (`COALESCE((auth.jwt() -> 'is_admin')::boolean, false)`)
+- DELETE: запрещён (деактивация вместо удаления)
+
+**`shop_products`:**
+- SELECT: все аутентифицированные
+- INSERT/UPDATE: только админы
+- DELETE: запрещён
+
+**`shop_orders`:**
+- SELECT: пользователь видит **только свои** (`user_id = my_ws_user_id()`), админ видит **все**
+- INSERT: только service_role (через SQL-функцию `purchase_product`)
+- UPDATE: service_role (через SQL-функцию `cancel_order`) + админы (через `updateOrderStatus` Server Action с обычным supabase-клиентом)
+- DELETE: запрещён
+
+**Существующие таблицы** (`gamification_event_logs`, `gamification_transactions`, `gamification_balances`):
+- Без изменений — остаётся `service_role` only. Запись через SQL-функции, вызываемые из Server Actions через `supabaseAdmin`
+
 ---
 
 ### 3. Механика покупки
+
+**Паттерн вызова:** Server Action → `supabaseAdmin.rpc('purchase_product', params)`.
+SQL-функция `SECURITY INVOKER`, вызывается через service_role (обходит RLS штатно). `user_id` передаётся параметром из JWT (Server Action — доверенный серверный код).
 
 ```
 Юзер нажимает «Купить»
   │
   ▼
-Server Action purchaseProduct(productId) — атомарно (SQL-функция с FOR UPDATE):
-  0. Генерируем order_id = gen_random_uuid() заранее
+Server Action purchaseProduct(productId):
+  A. getCurrentUser() из JWT → получаем wsUserId (ws_users.id)
+     → если не найден → ошибка «Пользователь не найден в системе»
+  B. supabaseAdmin.rpc('purchase_product', { p_product_id, p_user_id: wsUserId })
+  C. revalidatePath / revalidateTag
+
+SQL-функция purchase_product(p_product_id, p_user_id) — SECURITY INVOKER, атомарная:
+  0. SELECT email INTO v_user_email FROM ws_users WHERE id = p_user_id
+     → если не найден → ошибка
   1. SELECT p.price, p.is_active, p.stock, p.name, c.is_physical
      FROM shop_products p JOIN shop_categories c ON p.category_id = c.id
-     WHERE p.id = ?
+     WHERE p.id = p_product_id
+     FOR UPDATE OF p  -- блокируем строку товара от конкурентных покупок
      → если !is_active OR !c.is_active → ошибка «Товар недоступен»
      → если is_physical AND stock = 0 → ошибка «Нет в наличии»
-  2. SELECT total_coins FROM gamification_balances WHERE user_id = ? FOR UPDATE
+  2. SELECT total_coins FROM gamification_balances WHERE user_id = p_user_id FOR UPDATE
      → блокирует строку баланса до конца транзакции (защита от race condition)
      → если total_coins < price → ошибка «Недостаточно коинов»
-  3. INSERT gamification_event_logs
-     (event_type = 'shop_purchase', source = 'shop',
+  3. Генерируем order_id = gen_random_uuid()
+  4. INSERT gamification_event_logs
+     (user_id = p_user_id, user_email = v_user_email,
+      event_type = 'shop_purchase', source = 'shop',
+      event_date = CURRENT_DATE,
       details = { product_id, product_name, order_id },
       idempotency_key = 'shop_purchase_{order_id}')
-  4. INSERT gamification_transactions (coins = -price)
-  5. UPSERT gamification_balances (total_coins -= price)
-  6. INSERT shop_orders WITH id = order_id
-     (user_id, product_id,
+  5. INSERT gamification_transactions (user_id = p_user_id, user_email = v_user_email, event_id, coins = -price)
+  6. UPSERT gamification_balances (total_coins -= price)
+  7. INSERT shop_orders WITH id = order_id
+     (user_id = p_user_id, product_id,
       status = 'fulfilled' если !is_physical, иначе 'pending',
-      transaction_id = id из шага 4)
-  7. Если is_physical: UPDATE shop_products SET stock = stock - 1
-  8. revalidatePath / revalidateTag
+      transaction_id = id из шага 5)
+  8. Если is_physical: UPDATE shop_products SET stock = stock - 1
 ```
 
 **Нефизические товары** (is_physical = false) — автоматически `fulfilled`, безлимитные.
@@ -220,62 +284,75 @@ shop_orders
 Оба поля — UNIQUE FK на `gamification_transactions.id`. `refund_transaction_id` заполняется только при отмене, иначе NULL.
 
 **Полный flow:**
+
+**Паттерн вызова:** Server Action → `supabaseAdmin.rpc('cancel_order', params)`.
+SQL-функция `SECURITY INVOKER`, вызывается через service_role. Проверка `is_admin` из JWT в Server Action.
+
 ```
 Админ нажимает «Отменить заказ»
   │
   ▼
-Server Action cancelOrder(orderId, note?) — атомарно:
+Server Action cancelOrder(orderId, note?):
+  A. getCurrentUser() из JWT → проверяем isAdmin, получаем wsUserId
+     → если !isAdmin → ошибка «Forbidden»
+  B. supabaseAdmin.rpc('cancel_order', { p_order_id, p_admin_id: wsUserId, p_note })
+  C. revalidatePath / revalidateTag
 
-  1. Читаем заказ + сумму покупки + физичность:
+SQL-функция cancel_order(p_order_id, p_admin_id, p_note) — SECURITY INVOKER, атомарная:
+
+  0. Читаем заказ + блокируем строку + данные для возврата + email покупателя:
      SELECT o.id, o.user_id, o.product_id, o.status,
+            o.refund_transaction_id,
             ABS(t.coins) AS refund_amount,
-            c.is_physical
+            c.is_physical,
+            w.email AS user_email
      FROM shop_orders o
      JOIN gamification_transactions t ON o.transaction_id = t.id
      JOIN shop_products p ON o.product_id = p.id
      JOIN shop_categories c ON p.category_id = c.id
-     WHERE o.id = ?
+     JOIN ws_users w ON o.user_id = w.id
+     WHERE o.id = p_order_id
+     FOR UPDATE OF o  -- блокируем строку заказа от конкурентных отмен
 
-  2. Валидация:
-     → o.status = 'cancelled' → ошибка «Заказ уже отменён»
+  1. Валидация:
      → не найден → ошибка «Заказ не найден»
+     → o.status = 'cancelled' → ошибка «Заказ уже отменён»
+     → o.refund_transaction_id IS NOT NULL → ошибка «Возврат уже выполнен»
 
-  3. Записываем событие возврата:
+  2. Записываем событие возврата:
      INSERT gamification_event_logs (
        user_id      = o.user_id,
-       user_email   = <из ws_users>,
+       user_email   = user_email,
        event_type   = 'shop_refund',
        source       = 'shop',
-       event_date   = today,
-       details      = { order_id, product_id, reason: note },
-       idempotency_key = 'shop_refund_{order_id}'
+       event_date   = CURRENT_DATE,
+       details      = { order_id, product_id, reason: p_note },
+       idempotency_key = 'shop_refund_{p_order_id}'
      )
 
-  4. Записываем транзакцию возврата:
+  3. Записываем транзакцию возврата:
      INSERT gamification_transactions (
        user_id    = o.user_id,
-       user_email = <из ws_users>,
-       event_id   = id из шага 3,
+       user_email = user_email,
+       event_id   = id из шага 2,
        coins      = +refund_amount
      )
 
-  5. Обновляем баланс:
+  4. Обновляем баланс:
      UPSERT gamification_balances
        SET total_coins = total_coins + refund_amount
 
-  6. Обновляем заказ:
+  5. Обновляем заказ:
      UPDATE shop_orders SET
        status = 'cancelled',
-       refund_transaction_id = id из шага 4,
-       note = ?,
-       status_changed_by = <admin ws_users.id>,
+       refund_transaction_id = id из шага 3,
+       note = p_note,
+       status_changed_by = p_admin_id,
        status_changed_at = now()
 
-  7. Возвращаем stock (только физические):
+  6. Возвращаем stock (только физические):
      Если is_physical:
        UPDATE shop_products SET stock = stock + 1 WHERE id = o.product_id
-
-  8. revalidatePath / revalidateTag
 ```
 
 **Idempotency:** ключ `shop_refund_{order_id}` — один заказ можно отменить только один раз. Повторный вызов `cancelOrder` с тем же `orderId` ничего не сделает (шаг 2 отсечёт по статусу `cancelled`).
@@ -321,7 +398,7 @@ Server Action cancelOrder(orderId, note?) — атомарно:
 Админ может:
 - Видеть список всех заказов из `shop_orders` (JOIN с `ws_users` + `shop_products`)
 - Фильтровать по статусу (`pending` / `processing` / `fulfilled` / `cancelled`)
-- Менять статус заказа (pending → processing → fulfilled)
+- Менять статус заказа (любой допустимый, кроме `cancelled` — для отмены есть `cancelOrder`)
 - Отменять заказ (с возвратом коинов)
 - Оставлять комментарий (`note`)
 
@@ -343,23 +420,56 @@ Server Action cancelOrder(orderId, note?) — атомарно:
 - Редактировать существующий товар
 - Деактивировать товар (`is_active = false`) — не удалять, чтобы не ломать FK в заказах
 
+**Деактивация товара с pending заказами:**
+- При деактивации UI показывает кол-во `pending`/`processing` заказов на этот товар
+- Деактивация не блокируется — существующие заказы обрабатываемы, новые покупки заблокированы
+- Аналогично деактивации категории
+
 **Картинки товаров — загрузка через Supabase Storage:**
 
 Supabase Storage — S3-совместимое хранилище файлов, встроенное в Supabase.
 
 **Bucket:** `product-images` (public — картинки товаров не секретные, доступны по прямому URL без токена).
 
-**Flow загрузки:**
+**Путь файла в Storage:** `${productId}/${timestamp}_${filename}` — timestamp исключает коллизии имён при замене.
+
+**Flow добавления картинки (создание/редактирование товара):**
 ```
 Админ выбирает файл в форме товара
   │
   ▼
 1. Client Component отправляет файл через supabase.storage
      .from('product-images')
-     .upload(`${productId}/${filename}`, file)
+     .upload(`${productId}/${timestamp}_${filename}`, file)
 2. Получает публичный URL:
      supabase.storage.from('product-images').getPublicUrl(path)
 3. URL сохраняется в shop_products.image_url через Server Action
+```
+
+**Flow замены картинки:**
+```
+Админ выбирает новый файл в форме редактирования товара
+  │
+  ▼
+1. Из текущего image_url извлекается путь старого файла в Storage
+2. Загружается новый файл (аналогично flow добавления, шаги 1-2)
+3. Server Action:
+   a. Обновляет shop_products.image_url на новый URL
+   b. Удаляет старый файл: supabase.storage.from('product-images').remove([oldPath])
+   Порядок важен: сначала сохраняем новый URL, потом удаляем старый файл —
+   если удаление не сработает, мусор в Storage некритичен,
+   а если сначала удалить старый — при ошибке обновления товар останется без картинки.
+```
+
+**Flow удаления картинки (без замены):**
+```
+Админ нажимает "Удалить картинку" в форме редактирования товара
+  │
+  ▼
+1. Server Action:
+   a. Обнуляет shop_products.image_url (SET image_url = NULL)
+   b. Удаляет файл из Storage: supabase.storage.from('product-images').remove([path])
+   UI переключается на отображение emoji или placeholder.
 ```
 
 **Политики Storage:**
@@ -385,7 +495,7 @@ Supabase Storage — S3-совместимое хранилище файлов, 
 src/modules/shop/
   types.ts          — ShopProduct, ShopCategory, ShopOrder, CreateProductInput, UpdateProductInput, CreateCategoryInput, UpdateCategoryInput, PurchaseInput, OrderStatus
   queries.ts        — getProducts, getProductById, getCategories, getUserOrders
-  actions.ts        — purchaseProduct, createProduct, updateProduct, createCategory, updateCategory
+  actions.ts        — purchaseProduct (без проверки isAdmin — доступна всем), createProduct, updateProduct, createCategory, updateCategory (все 4 проверяют isAdmin из JWT)
   components/       — ProductCard, ProductGrid, PurchaseButton, OrderHistory
   index.ts          — серверный API
   index.client.ts   — клиентский API
@@ -397,7 +507,7 @@ src/modules/shop/
 ```
 src/modules/admin/
   types.ts          — AdminUser, UpdateEventTypeInput, UpdateOrderStatusInput
-  queries.ts        — getUsers, getUserDetail, getOrders, getEventTypes, getAdminStats, checkIsAdmin
+  queries.ts        — getUsers, getUserDetail, getOrders, getEventTypes, getAdminStats
   actions.ts        — updateEventTypeCoins, updateOrderStatus, cancelOrder, toggleAdmin
   components/       — UsersTable, UserDetailModal, OrdersTable, EventTypesTable
   index.ts          — серверный API
@@ -407,7 +517,9 @@ src/modules/admin/
 ### Изменения в существующих модулях
 
 #### `auth`
-- `getCurrentUser` — добавить поле `isAdmin` в `AuthUser` (подтягивать из `ws_users.is_admin`)
+- `getCurrentUser` — добавить в `AuthUser`:
+  - `isAdmin: boolean` — из JWT claim `is_admin`
+  - `wsUserId: string | null` — из JWT claim `ws_user_id` (ws_users.id, нужен для покупок, заказов). 0 DB-запросов
 
 ---
 
@@ -448,10 +560,14 @@ src/app/(main)/admin/
 
 ### Этап 1: Роли и защита админки
 - Миграция: `ALTER TABLE ws_users ADD COLUMN is_admin boolean DEFAULT false`
-- `checkIsAdmin()` query в модуле `admin`
-- Расширить `AuthUser` полем `isAdmin`
-- Middleware: защита `/admin/*` — редирект для не-админов
-- Server Actions: проверка `is_admin` перед мутациями
+- Миграция: Custom Access Token Hook — pg-функция `custom_access_token_hook`, добавляет `is_admin` и `ws_user_id` в JWT claims
+- Регистрация hook'а в Supabase Dashboard → Authentication → Hooks (без этого функция существует, но не вызывается)
+- Миграция: удалить `second_life_cost` из `gamification_event_types` (0 транзакций, legacy)
+- Обновить `src/docs/gamification-db.md` и `src/docs/gamification-events.md` — убрать `second_life_cost`
+- `checkIsAdmin()` — утилита, читает `is_admin` из JWT (используется в Server Actions и middleware)
+- Расширить `AuthUser` полями `isAdmin` (из JWT claim `is_admin`) и `wsUserId` (из JWT claim `ws_user_id`)
+- Middleware: защита `/admin/*` — проверка `is_admin` из JWT (0 DB-запросов), редирект для не-админов
+- Server Actions: проверка `is_admin` из JWT перед мутациями
 
 ### Этап 2: Управление событиями
 - Миграция: RLS-политики на `gamification_event_types` (SELECT для всех, UPDATE для админов)
@@ -468,10 +584,11 @@ src/app/(main)/admin/
 ### Этап 4: Магазин — БД и бэкенд
 - Миграции: `shop_categories`, `shop_products`, `shop_orders`
 - Миграция: `is_dynamic_coins` в `gamification_event_types` + новые записи (`shop_purchase`, `shop_refund`)
+- Миграция: SQL-функции `purchase_product` и `cancel_order` (`SECURITY INVOKER`, вызываются через `supabaseAdmin`)
 - Seed начальных категорий (artifact, merch, upgrade, raffle)
 - Supabase Storage: bucket `product-images` (public) + политики доступа
 - RLS-политики на таблицах магазина
-- `purchaseProduct()` action
+- `purchaseProduct()` action (Server Action → `supabaseAdmin.rpc('purchase_product')`)
 - `getProducts()`, `getUserOrders()` queries
 
 ### Этап 5: Магазин — UI
@@ -492,7 +609,7 @@ src/app/(main)/admin/
 
 ## Открытые вопросы
 
-1. ~~**Роли:** `is_admin` в `ws_users` — подходит?~~ ✅ Да, `is_admin` в `ws_users`. Проверка в middleware (UX) + в каждом admin Server Action (безопасность).
+1. ~~**Роли:** `is_admin` в `ws_users` — подходит?~~ ✅ Да, `is_admin` в `ws_users` + JWT Custom Access Token Hook. Единый источник — JWT claim. Проверка в middleware и Server Actions.
 2. ~~**Физичность категории**~~ ✅ Да, `is_physical` на `shop_categories`. Определяет: статус заказа при покупке (`pending` vs `fulfilled`), доступность поля `stock`, безлимитность.
 3. ~~**Остаток товара (stock)**~~ ✅ Да, `stock` есть. Физические — обязателен, уменьшается при покупке. Нефизические — `NULL` (безлимит), поле скрыто в UI.
 4. ~~**Статусы заказов**~~ ✅ `pending → processing → fulfilled / cancelled` достаточно. CHECK constraint в БД + TypeScript union + Zod enum.
@@ -508,11 +625,11 @@ src/app/(main)/admin/
 
 ### Race condition при покупке
 Два одновременных запроса могут пройти проверку баланса и оба списать коины. `CHECK (stock >= 0)` защищает stock на уровне БД, но для баланса такого ограничения нет (отрицательный баланс допустим для штрафов).
-**Решение:** обернуть `purchaseProduct` в SQL-функцию с `SELECT ... FOR UPDATE` на строку `gamification_balances` — блокирует конкурентные покупки одного юзера до завершения транзакции.
+**Решение:** обернуть `purchaseProduct` в SQL-функцию с `SELECT ... FOR UPDATE` на строку `gamification_balances` (блокирует конкурентные покупки одного юзера) и `FOR UPDATE OF p` на строку `shop_products` (блокирует конкурентные покупки одного товара разными юзерами).
 
 ### Деактивация категории
 При `shop_categories.is_active = false` товары этой категории должны быть скрыты из магазина.
-**Решение:** все запросы к магазину фильтруют `WHERE p.is_active = true AND c.is_active = true`.
+**Решение:** все запросы к магазину фильтруют `WHERE p.is_active = true AND c.is_active = true`. Существующие заказы (`pending`, `processing`) остаются доступными для обработки в админке. При деактивации UI показывает кол-во незавершённых заказов.
 
 ### `status_changed_by` — только последняя смена
 Если заказ прошёл `pending → processing → fulfilled`, записан только последний админ. История переходов не хранится. Для MVP достаточно.
