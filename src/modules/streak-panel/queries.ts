@@ -25,6 +25,48 @@ export async function getStreakDayStatuses(
   return (data ?? []) as DayStatusRow[]
 }
 
+// Праздники / нерабочие дни за период
+export async function getHolidays(
+  gridStart: string,
+  gridEnd: string,
+): Promise<Set<string>> {
+  const supabase = await createSupabaseServerClient()
+
+  const { data, error } = await supabase
+    .from('calendar_holidays')
+    .select('date')
+    .gte('date', gridStart)
+    .lte('date', gridEnd)
+
+  if (error) {
+    console.error('[streak-panel] getHolidays failed:', error)
+    return new Set()
+  }
+
+  return new Set((data ?? []).map((r) => r.date as string))
+}
+
+// Рабочие переносы (выходной → рабочий) за период
+export async function getWorkdays(
+  gridStart: string,
+  gridEnd: string,
+): Promise<Set<string>> {
+  const supabase = await createSupabaseServerClient()
+
+  const { data, error } = await supabase
+    .from('calendar_workdays')
+    .select('date')
+    .gte('date', gridStart)
+    .lte('date', gridEnd)
+
+  if (error) {
+    console.error('[streak-panel] getWorkdays failed:', error)
+    return new Set()
+  }
+
+  return new Set((data ?? []).map((r) => r.date as string))
+}
+
 // Даты с автоматизацией из elk_plugin_launches
 export async function getAutomationDays(
   userEmail: string,
