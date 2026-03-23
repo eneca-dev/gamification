@@ -92,8 +92,8 @@ export function Sidebar({ user, showDevSwitcher }: SidebarProps) {
           })}
         </div>
 
-        {/* Admin section */}
-        <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--apex-border)' }}>
+        {/* Admin section — только для админов */}
+        {user?.isAdmin && <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--apex-border)' }}>
           {navItems.filter((item) => item.adminOnly).map((item) => {
             const isActive = pathname === item.href
             const Icon = item.icon
@@ -114,7 +114,7 @@ export function Sidebar({ user, showDevSwitcher }: SidebarProps) {
             )
           })}
           {showDevSwitcher && <DevUserSwitcher />}
-        </div>
+        </div>}
       </nav>
 
       {/* Coin balance */}

@@ -11,7 +11,7 @@
 
 **Middleware (`src/middleware.ts`):**
 
-Выполняется на каждый запрос. Использует `createSupabaseMiddlewareClient(request)` из `src/config/supabase.ts` — возвращает `{ supabase, response }`, где `response` мутируется внутри `setAll` для передачи сессионных cookie (в middleware недоступен `next/headers`). Вызывает `getUser()` для валидации сессии. Публичные пути: `/login`, `/api/auth/*`, `/signin-worksection`. Без сессии на непубличном пути → редирект на `/login`. С сессией на `/login` → редирект на `/`. Для путей `/admin/*` проверяет `is_admin` из `user.app_metadata` — не-админы редиректятся на `/`.
+Выполняется на каждый запрос. Использует `createSupabaseMiddlewareClient(request)` из `src/config/supabase.ts` — возвращает `{ supabase, response }`, где `response` мутируется внутри `setAll` для передачи сессионных cookie (в middleware недоступен `next/headers`). Вызывает `getUser()` для валидации сессии. Публичные пути: `/login`, `/api/auth/*`, `/signin-worksection`. Без сессии на непубличном пути → редирект на `/login`. С сессией на `/login` → редирект на `/`. Для путей `/admin/*` декодирует JWT access_token и проверяет `is_admin` — не-админы редиректятся на `/`. Кнопка «Админ-панель» в сайдбаре скрыта для не-админов (`user.isAdmin`).
 
 **Модуль `src/modules/auth/`:**
 
@@ -42,13 +42,13 @@
 
 `ProfileRow` (`src/lib/types.ts`) — строка таблицы `profiles`: `user_id`, `first_name`, `last_name`, `department` (nullable), `team` (nullable), `created_at`, `updated_at`.
 
-`AuthUser` (`src/modules/auth/types.ts`) — публичное представление текущего пользователя: `id`, `email`, `fullName`, `firstName`, `lastName`, `department` (nullable), `team` (nullable), `isAdmin`, `wsUserId` (nullable). Данные профиля подтягиваются из таблицы `profiles`. `isAdmin` и `wsUserId` читаются из JWT claims (`user.app_metadata`), добавляемых pg-функцией `custom_access_token_hook` — 0 дополнительных DB-запросов.
+`AuthUser` (`src/modules/auth/types.ts`) — публичное представление текущего пользователя: `id`, `email`, `fullName`, `firstName`, `lastName`, `department` (nullable), `team` (nullable), `isAdmin`, `wsUserId` (nullable). Данные профиля подтягиваются из таблицы `profiles`. `isAdmin` и `wsUserId` читаются декодированием JWT access_token (custom claims от `custom_access_token_hook`). Ни `getUser()`, ни `getSession().user.app_metadata` не содержат custom hook claims — только прямое декодирование JWT.
 
 `wsTokenResponseSchema`, `wsResourceResponseSchema` (`src/modules/auth/types.ts`) — Zod-схемы валидации ответов от Worksection OAuth эндпоинтов.
 
 ## Queries
 
-- `getCurrentUser()` — текущий пользователь из Supabase-сессии + данные из `profiles` или `null`. Если строка в `profiles` отсутствует — firstName/lastName будут пустыми строками, department/team будут null. `isAdmin` и `wsUserId` читаются из `user.app_metadata` (JWT claims)
+- `getCurrentUser()` — текущий пользователь из Supabase-сессии + данные из `profiles` или `null`. Если строка в `profiles` отсутствует — firstName/lastName будут пустыми строками, department/team будут null. `isAdmin` и `wsUserId` читаются декодированием JWT access_token
 - `getWorksectionTokens(userId)` — токены WS для пользователя или `null`; использует серверный клиент с RLS
 
 ## Actions
@@ -95,3 +95,4 @@ await admin
 - Client Components импортируют из `@/modules/auth/index.client` (не из `index.ts` — тот тянет `next/headers` в клиентский бандл)
 - Middleware использует `createSupabaseMiddlewareClient` из `src/config/supabase.ts` — не `createSupabaseServerClient`, потому что в middleware недоступен `next/headers`
 - Поиск существующего пользователя — через Supabase RPC `get_user_id_by_email`, не через `listUsers`
+- Custom claims из Auth Hook (`is_admin`, `ws_user_id`) доступны **только** через декодирование JWT access_token. `getUser().app_metadata` возвращает данные из БД auth, `getSession().user.app_metadata` — объект из cookie. Ни то, ни другое не содержит custom hook claims

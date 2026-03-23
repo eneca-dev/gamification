@@ -34,8 +34,18 @@ export async function middleware(request: NextRequest) {
   }
 
   // Защита админки: is_admin добавляется в JWT через custom_access_token_hook
+  // Ни getUser(), ни getSession().user не содержат custom claims — декодируем JWT напрямую
   if (user && isAdminPath(pathname)) {
-    const isAdmin = user.app_metadata?.is_admin === true
+    const { data: { session } } = await supabase.auth.getSession()
+    let isAdmin = false
+    if (session?.access_token) {
+      try {
+        const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+        isAdmin = payload.is_admin === true || payload.app_metadata?.is_admin === true
+      } catch {
+        // невалидный JWT — не админ
+      }
+    }
     if (!isAdmin) {
       return NextResponse.redirect(new URL('/', request.url))
     }

@@ -46,6 +46,8 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
           lastName: devUser.lastName,
           department: devUser.department,
           team: devUser.team,
+          isAdmin: false,
+          wsUserId: null,
           isImpersonating: true,
         }
       }
@@ -59,7 +61,21 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     .single()
 
   // is_admin и ws_user_id добавляются в JWT через custom_access_token_hook
-  const claims = user.app_metadata ?? {}
+  // Ни getUser(), ни getSession().user не содержат custom claims — декодируем JWT
+  const { data: { session } } = await supabase.auth.getSession()
+  let isAdmin = false
+  let wsUserId: string | null = null
+  if (session?.access_token) {
+    try {
+      const payload = JSON.parse(
+        Buffer.from(session.access_token.split('.')[1], 'base64').toString()
+      )
+      isAdmin = payload.is_admin === true || payload.app_metadata?.is_admin === true
+      wsUserId = payload.ws_user_id ?? payload.app_metadata?.ws_user_id ?? null
+    } catch {
+      // невалидный JWT
+    }
+  }
 
   return {
     id: user.id,
@@ -69,7 +85,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     lastName: profile?.last_name ?? '',
     department: profile?.department ?? null,
     team: profile?.team ?? null,
-    isAdmin: claims.is_admin === true,
-    wsUserId: typeof claims.ws_user_id === 'string' ? claims.ws_user_id : null,
+    isAdmin,
+    wsUserId,
   }
 }
