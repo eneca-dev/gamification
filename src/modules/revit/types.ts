@@ -10,6 +10,7 @@ export interface RevitStreak {
 export interface AutomationLeaderboardEntry {
   email: string
   fullName: string
+  totalCoins: number
   launchCount: number
   isCurrentUser: boolean
 }
@@ -34,9 +35,10 @@ export interface RevitTransaction {
 // Данные по отделу для соревнования автоматизации
 export interface DepartmentAutomationEntry {
   departmentCode: string
-  employeesUsing: number
+  usersEarning: number
   totalEmployees: number
-  usagePercent: number
+  totalCoins: number
+  contestScore: number
   isCurrentDepartment: boolean
 }
 

@@ -6,11 +6,13 @@ import { Home, ShoppingBag, Trophy, Users, Settings, LogOut } from 'lucide-react
 
 import { signOut } from '@/modules/auth/index.client'
 import type { AuthUser } from '@/modules/auth/index.client'
+import { DevUserSwitcher } from '@/modules/dev-tools/components/DevUserSwitcher'
 import { user as mockUser } from '@/lib/data'
 import { CoinStatic } from '@/components/CoinBalance'
 
 interface SidebarProps {
   user: AuthUser | null
+  showDevSwitcher?: boolean
 }
 
 const navItems = [
@@ -30,7 +32,7 @@ function getInitials(fullName: string): string {
     .toUpperCase()
 }
 
-export function Sidebar({ user }: SidebarProps) {
+export function Sidebar({ user, showDevSwitcher }: SidebarProps) {
   const pathname = usePathname()
 
   return (
@@ -111,6 +113,7 @@ export function Sidebar({ user }: SidebarProps) {
               </Link>
             )
           })}
+          {showDevSwitcher && <DevUserSwitcher />}
         </div>
       </nav>
 

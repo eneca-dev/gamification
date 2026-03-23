@@ -25,4 +25,5 @@ export interface AuthUser {
   team: string | null
   isAdmin: boolean
   wsUserId: string | null
+  isImpersonating?: boolean
 }

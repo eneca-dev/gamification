@@ -164,6 +164,13 @@ export async function GET(request: NextRequest) {
     return new NextResponse('Failed to store profile', { status: 500 })
   }
 
+  // Связь ws_users с auth-пользователем (при каждом входе)
+  await admin
+    .from('ws_users')
+    .update({ user_id: userId })
+    .eq('email', email)
+    .is('user_id', null)
+
   // Создание Supabase-сессии через magic link
   const { data: linkData, error: linkError } =
     await admin.auth.admin.generateLink({ type: 'magiclink', email })

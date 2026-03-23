@@ -169,7 +169,7 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         name: e.fullName || e.email,
         avatar: getInitials(e.fullName || e.email),
         avatarColor: emailToColor(e.email),
-        value: e.launchCount,
+        value: e.totalCoins,
         isCurrentUser: e.isCurrentUser,
       }))
     : entries.map((e) => ({
@@ -192,7 +192,7 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         title="Топ-5 Автоматизации ★"
         icon={<Zap size={14} style={{ color: "var(--orange-500)" }} />}
         entries={automationPanel}
-        unit={automationEntries ? "зап." : "б"}
+        unit={automationEntries ? "ПК" : "б"}
         accentColor="var(--orange-500)"
       />
     </div>

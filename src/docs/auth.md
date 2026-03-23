@@ -62,16 +62,27 @@
 
 ## Связь с геймификацией
 
-При каждом успешном входе callback должен обновлять `ws_users.user_id` — связывать запись сотрудника с Supabase Auth аккаунтом:
+Два механизма связывают auth-аккаунт с записью сотрудника в `ws_users`:
 
-```sql
-UPDATE public.ws_users
-SET user_id = <auth.uid()>
-WHERE email = lower(<email из JWT>)
-  AND user_id IS NULL;
+**1. Callback (основной)** — `signin-worksection/route.ts`, выполняется при каждом входе после upsert `profiles`:
+
+```ts
+await admin
+  .from('ws_users')
+  .update({ user_id: userId })
+  .eq('email', email)
+  .is('user_id', null)
 ```
 
-Это необходимо чтобы `my_ws_user_id()` RLS-функция корректно резолвила текущего пользователя. Без этого шага пользователь видит данные геймификации, но RPC функции (`cancel_transaction`, `add_manual_adjustment`) не смогут определить его `employee_id`. Обновление делается только если `user_id IS NULL` — при повторных входах не трогает уже связанную запись.
+Как работает:
+- Сотрудник входит через Worksection OAuth → callback получает email и создаёт/находит auth-аккаунт (`userId`)
+- После сохранения профиля callback ищет в `ws_users` строку с таким email, где `user_id` ещё пустой
+- Если нашёл — записывает `userId` из auth в `ws_users.user_id`, связь установлена
+- Если `ws_users` ещё не синхронизированы (нет строки с таким email) — UPDATE обновит 0 строк без ошибки. При следующем входе попробует снова
+- Если `user_id` уже заполнен — условие `IS NULL` не даёт перезаписать, пропускает
+- Срабатывает при каждом входе (и первом, и повторном), поэтому не зависит от порядка синхронизации ws_users
+
+**2. Триггер (страховка)** — `trg_link_ws_user_on_profile_insert`, срабатывает при INSERT в `profiles` (только первый вход). Делает то же самое — ищет в `ws_users` по `lower(email)` и пишет `user_id`. Двойное срабатывание с callback безопасно — оба проверяют `user_id IS NULL`.
 
 ## Ограничения
 

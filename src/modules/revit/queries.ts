@@ -68,28 +68,30 @@ export async function getRevitStreak(email: string): Promise<RevitStreak | null>
   }
 }
 
-// Топ N пользователей по запускам плагинов за 30 дней
+// Топ N пользователей по заработанным коинам за плагины (текущий месяц)
 export async function getTopAutomationUsers(
   limit: number,
   currentUserEmail?: string
 ): Promise<AutomationLeaderboardEntry[]> {
   try {
-    const supabase = await createSupabaseServerClient()
-    const sinceDate = new Date()
-    sinceDate.setUTCDate(sinceDate.getUTCDate() - LEADERBOARD_PERIOD_DAYS)
-    const sinceDateStr = sinceDate.toISOString().split('T')[0]
+    const supabase = createSupabaseAdminClient()
+    const monthStart = new Date()
+    monthStart.setUTCDate(1)
+    const monthStartStr = monthStart.toISOString().split('T')[0]
 
-    const { data: launches } = await supabase
-      .from('elk_plugin_launches')
-      .select('user_email, launch_count')
-      .gte('work_date', sinceDateStr)
+    // Коины из gamification_transactions по revit-событиям за текущий месяц
+    const { data: rows } = await supabase
+      .from('view_user_transactions')
+      .select('user_email, coins')
+      .eq('source', 'revit')
+      .gte('event_date', monthStartStr)
 
-    if (!launches?.length) return []
+    if (!rows?.length) return []
 
     const totals: Record<string, number> = {}
-    for (const row of launches) {
-      const rowEmail = row.user_email.toLowerCase()
-      totals[rowEmail] = (totals[rowEmail] ?? 0) + row.launch_count
+    for (const row of rows) {
+      const email = (row.user_email as string).toLowerCase()
+      totals[email] = (totals[email] ?? 0) + (row.coins as number)
     }
 
     const topEmails = Object.entries(totals)
@@ -109,10 +111,11 @@ export async function getTopAutomationUsers(
 
     const normalizedCurrentEmail = currentUserEmail?.toLowerCase()
 
-    return topEmails.map(([topEmail, launchCount]) => ({
+    return topEmails.map(([topEmail, totalCoins]) => ({
       email: topEmail,
       fullName: emailToName[topEmail] || topEmail,
-      launchCount,
+      totalCoins,
+      launchCount: 0,
       isCurrentUser: !!normalizedCurrentEmail && topEmail === normalizedCurrentEmail,
     }))
   } catch (error) {
@@ -191,59 +194,42 @@ export async function getRevitTransactions(email: string, limit = 10): Promise<R
   }
 }
 
-// Статистика автоматизации по отделам для соревнования
+// Статистика автоматизации по отделам для соревнования (из VIEW)
 export async function getDepartmentAutomationStats(
   currentUserEmail?: string
 ): Promise<DepartmentAutomationEntry[]> {
   try {
-    const supabase = await createSupabaseServerClient()
-    const sinceDate = new Date()
-    sinceDate.setUTCDate(sinceDate.getUTCDate() - LEADERBOARD_PERIOD_DAYS)
-    const sinceDateStr = sinceDate.toISOString().split('T')[0]
+    const supabase = createSupabaseAdminClient()
 
-    const { data: allUsers } = await supabase
-      .from('ws_users')
-      .select('email, department_code')
-      .eq('is_active', true)
-      .not('department_code', 'is', null)
+    const { data, error } = await supabase
+      .from('view_department_revit_contest')
+      .select('department_code, users_earning, total_employees, total_coins, contest_score')
 
-    if (!allUsers?.length) return []
+    if (error) throw error
+    if (!data?.length) return []
 
-    const { data: launches } = await supabase
-      .from('elk_plugin_launches')
-      .select('user_email')
-      .gte('work_date', sinceDateStr)
-
-    const usersWithLaunches = new Set(
-      (launches ?? []).map((r) => r.user_email.toLowerCase())
-    )
-
-    const normalizedCurrentEmail = currentUserEmail?.toLowerCase()
     let currentDeptCode: string | null = null
-    if (normalizedCurrentEmail) {
-      const currentUser = allUsers.find((u) => u.email === normalizedCurrentEmail)
-      currentDeptCode = currentUser?.department_code ?? null
+    if (currentUserEmail) {
+      const { data: user } = await supabase
+        .from('ws_users')
+        .select('department_code')
+        .eq('email', currentUserEmail.toLowerCase())
+        .eq('is_active', true)
+        .maybeSingle()
+
+      currentDeptCode = user?.department_code ?? null
     }
 
-    const deptMap: Record<string, { total: number; using: number }> = {}
-    for (const u of allUsers) {
-      const dept = u.department_code!
-      if (!deptMap[dept]) deptMap[dept] = { total: 0, using: 0 }
-      deptMap[dept].total++
-      if (usersWithLaunches.has(u.email.toLowerCase())) {
-        deptMap[dept].using++
-      }
-    }
-
-    return Object.entries(deptMap)
-      .map(([code, { total, using }]) => ({
-        departmentCode: code,
-        employeesUsing: using,
-        totalEmployees: total,
-        usagePercent: total > 0 ? Math.round((using / total) * 100) : 0,
-        isCurrentDepartment: code === currentDeptCode,
+    return data
+      .map((row) => ({
+        departmentCode: row.department_code as string,
+        usersEarning: row.users_earning as number,
+        totalEmployees: row.total_employees as number,
+        totalCoins: row.total_coins as number,
+        contestScore: Number(row.contest_score ?? 0),
+        isCurrentDepartment: row.department_code === currentDeptCode,
       }))
-      .sort((a, b) => b.usagePercent - a.usagePercent)
+      .sort((a, b) => b.contestScore - a.contestScore)
   } catch (error) {
     console.error('[revit] getDepartmentAutomationStats failed:', error)
     return []

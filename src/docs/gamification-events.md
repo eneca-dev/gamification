@@ -174,14 +174,23 @@ View `view_daily_statuses` агрегирует эту логику.
 
 ---
 
-## 5. Командное соревнование по Revit (не реализовано)
+## 5. Командное соревнование по Revit
 
-Ежемесячно. Отдел с наибольшим % сотрудников, использующих плагины → **+200** каждому.
+**Механизм:** PG-функция `fn_award_department_contest()`, запускается pg_cron 1 числа каждого месяца в 02:00 UTC.
+
+**Метрика:** сумма ревит-баллов (`source = 'revit'`) по отделу за прошлый календарный месяц. Отдел с максимальной суммой = победитель.
+
+**Получатель:** каждый активный сотрудник отдела-победителя.
+**Коины:** `team_contest_top1_bonus` → **+200**
 
 ```
 event_type:      team_contest_top1_bonus
+source:          contest
+details:         { department, contest_month, department_coins }
 idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 ```
+
+**VIEW для UI:** `view_department_revit_contest` — сумма ревит-баллов по отделам за текущий месяц. Используется в `getDepartmentAutomationStats()` для отображения рейтинга на дашборде.
 
 ---
 
@@ -202,7 +211,7 @@ idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 | `master_planner` | +450 | ws | compute-gamification |
 | `ws_streak_90` | +300 | ws | compute-gamification |
 | `budget_ok_l2` | +200 | ws | compute-gamification |
-| `team_contest_top1_bonus` | +200 | contest | не реализовано |
+| `team_contest_top1_bonus` | +200 | contest | PG-функция + pg_cron (1 число месяца) |
 | `revit_streak_30_bonus` | +100 | revit | PG-триггер |
 | `ws_streak_30` | +100 | ws | compute-gamification |
 | `budget_ok_l3` | +50 | ws | compute-gamification |

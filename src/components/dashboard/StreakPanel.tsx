@@ -3,7 +3,8 @@
 import { Fragment } from "react";
 import { Trophy, CheckCircle2 } from "lucide-react";
 import { sourceColors } from "@/lib/data";
-import type { WorksectionStreak, StreakMilestone, WorksectionDayStatus, DailyTask } from "@/lib/data";
+import type { DailyTask } from "@/lib/data";
+import type { CalendarDayStatus, CalendarDay, StreakMilestone, StreakPanelData } from "@/modules/streak-panel";
 
 // ─── Layout constants ────────────────────────────────────────────────────────
 const CELL = 18;
@@ -15,25 +16,31 @@ const DAY_LABEL_MR = 6;
 const groupW = (n: number) => n * CELL + (n - 1) * CELL_GAP;
 
 // ─── Status colours ──────────────────────────────────────────────────────────
-const statusColors: Record<WorksectionDayStatus, string> = {
-  green:  "var(--apex-primary)",
-  red:    "var(--apex-danger)",
-  gray:   "#C5CCCC",
-  frozen: "var(--apex-info-text)",
-  future: "transparent",
-  out:    "transparent",
+const statusColors: Record<CalendarDayStatus, string> = {
+  green:   "var(--apex-primary)",
+  red:     "var(--apex-danger)",
+  gray:    "#C5CCCC",
+  frozen:  "var(--apex-info-text)",
+  future:  "transparent",
+  out:     "transparent",
+  no_data: "#C5CCCC",
 };
 
-const statusLabels: Record<WorksectionDayStatus, string> = {
-  green:  "Зелёный",
-  red:    "Штраф",
-  gray:   "Выходной",
-  frozen: "Отпуск",
-  future: "Ещё не наступил",
-  out:    "",
+const statusLabels: Record<CalendarDayStatus, string> = {
+  green:   "Зелёный",
+  red:     "Штраф",
+  gray:    "Выходной",
+  frozen:  "Отпуск",
+  future:  "Ещё не наступил",
+  out:     "",
+  no_data: "Нет данных",
 };
 
-type Day = WorksectionStreak["calendarDays"][0];
+const absenceLabels: Record<string, string> = {
+  vacation:   "Отпуск",
+  sick_leave: "Больничный",
+  sick_day:   "Оплачиваемый больничный",
+};
 
 interface MonthGroup {
   key: string;
@@ -43,16 +50,16 @@ interface MonthGroup {
 }
 
 // Разбиваем дни на недели (Пн=0), потом группируем недели по месяцам
-function buildWeeksAndMonths(calendarDays: Day[]) {
+function buildWeeksAndMonths(calendarDays: CalendarDay[]) {
   const firstDate = new Date(calendarDays[0].date + "T00:00:00");
-  const firstDow = (firstDate.getDay() + 6) % 7; // Пн=0
+  const firstDow = (firstDate.getDay() + 6) % 7;
 
-  const padded: (Day | null)[] = [];
+  const padded: (CalendarDay | null)[] = [];
   for (let i = 0; i < firstDow; i++) padded.push(null);
   for (const day of calendarDays) padded.push(day);
   while (padded.length % 7 !== 0) padded.push(null);
 
-  const weeks: (Day | null)[][] = [];
+  const weeks: (CalendarDay | null)[][] = [];
   for (let i = 0; i < padded.length; i += 7) {
     weeks.push(padded.slice(i, i + 7));
   }
@@ -84,6 +91,27 @@ function buildWeeksAndMonths(calendarDays: Day[]) {
   });
 
   return { weeks, groups };
+}
+
+// Тултип для ячейки
+function getDayTooltip(day: CalendarDay): string | undefined {
+  if (day.status === "out") return undefined;
+
+  let text = `${day.date}: ${statusLabels[day.status]}`;
+
+  if (day.status === "frozen" && day.absenceType) {
+    text = `${day.date}: ${absenceLabels[day.absenceType] ?? day.absenceType}`;
+  }
+
+  if (day.status === "red" && day.redReasons?.length) {
+    text += ` (${day.redReasons.join(", ")})`;
+  }
+
+  if (day.automation && day.status !== "frozen") {
+    text += " · Автоматизация ★";
+  }
+
+  return text;
 }
 
 // ─── Compact streak row ──────────────────────────────────────────────────────
@@ -287,12 +315,13 @@ function InlineDailyQuests({ tasks }: { tasks: DailyTask[] }) {
 // ─── Main grid card ──────────────────────────────────────────────────────────
 
 interface StreakPanelProps {
-  worksectionStreak: WorksectionStreak;
+  streakData: StreakPanelData;
   tasks?: DailyTask[];
 }
 
-export function StreakPanel({ worksectionStreak: streak, tasks = [] }: StreakPanelProps) {
-  const { weeks, groups } = buildWeeksAndMonths(streak.calendarDays);
+export function StreakPanel({ streakData, tasks = [] }: StreakPanelProps) {
+  const { calendarDays, completedCycles, ws, revit } = streakData;
+  const { weeks, groups } = buildWeeksAndMonths(calendarDays);
   const DAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
   const headerOffset = DAY_LABEL_W + DAY_LABEL_MR;
 
@@ -319,10 +348,22 @@ export function StreakPanel({ worksectionStreak: streak, tasks = [] }: StreakPan
           >
             Worksection и автоматизации
           </span>
+          {completedCycles > 0 && (
+            <span
+              className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+              style={{
+                background: "var(--apex-success-bg)",
+                color: "var(--apex-primary)",
+                border: "1px solid rgba(var(--apex-primary-rgb), 0.2)",
+              }}
+            >
+              {completedCycles}x 90д
+            </span>
+          )}
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold leading-none" style={{ color: "var(--apex-text)" }}>
-            {streak.currentDays}
+            {ws.currentStreak}
           </div>
           <div className="text-[11px]" style={{ color: "var(--apex-text-secondary)" }}>
             дней подряд
@@ -396,6 +437,7 @@ export function StreakPanel({ worksectionStreak: streak, tasks = [] }: StreakPan
 
                           const isOut = day.status === "out";
                           const isFuture = day.status === "future";
+                          const isNoData = day.status === "no_data";
                           const showStar = day.automation && day.status !== "frozen";
 
                           return (
@@ -407,15 +449,15 @@ export function StreakPanel({ worksectionStreak: streak, tasks = [] }: StreakPan
                                 height: CELL,
                                 flexShrink: 0,
                                 background: isFuture || isOut ? "transparent" : statusColors[day.status],
-                                opacity: isOut ? 0 : 1,
-                                border: isFuture ? "1.5px dashed rgba(var(--apex-primary-rgb), 0.25)" : undefined,
+                                opacity: isOut ? 0 : isNoData ? 0.5 : 1,
+                                border: isFuture
+                                  ? "1.5px dashed rgba(var(--apex-primary-rgb), 0.25)"
+                                  : isNoData
+                                    ? "1.5px dashed var(--apex-text-muted)"
+                                    : undefined,
                                 boxSizing: "border-box",
                               }}
-                              title={
-                                isOut
-                                  ? undefined
-                                  : `${day.date}: ${statusLabels[day.status]}${showStar ? " · Автоматизация ★" : ""}`
-                              }
+                              title={getDayTooltip(day)}
                             >
                               {showStar && (
                                 <span
@@ -437,7 +479,7 @@ export function StreakPanel({ worksectionStreak: streak, tasks = [] }: StreakPan
 
           {/* Legend */}
           <div className="flex items-center gap-3 mt-3 mb-4 flex-wrap">
-            {(["green", "red", "frozen", "gray"] as WorksectionDayStatus[]).map((s) => (
+            {(["green", "red", "frozen", "gray"] as CalendarDayStatus[]).map((s) => (
               <div key={s} className="flex items-center gap-1">
                 <div
                   className="w-2.5 h-2.5 rounded-xs"
@@ -446,6 +488,13 @@ export function StreakPanel({ worksectionStreak: streak, tasks = [] }: StreakPan
                 <span className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>{statusLabels[s]}</span>
               </div>
             ))}
+            <div className="flex items-center gap-1">
+              <div
+                className="w-2.5 h-2.5 rounded-xs"
+                style={{ background: "#C5CCCC", border: "1.5px dashed var(--apex-text-muted)", boxSizing: "border-box", opacity: 0.5 }}
+              />
+              <span className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>Нет данных</span>
+            </div>
             <div className="flex items-center gap-1">
               <div
                 className="w-2.5 h-2.5 rounded-xs"
@@ -467,15 +516,15 @@ export function StreakPanel({ worksectionStreak: streak, tasks = [] }: StreakPan
           {/* Streaks stacked vertically */}
           <div className="flex flex-col gap-3 pt-3" style={{ borderTop: "1px solid var(--apex-border)" }}>
             <CompactStreakRow
-              label="Дисциплина WS"
-              currentDays={streak.currentDays}
-              milestones={streak.milestones}
+              label="Worksection"
+              currentDays={ws.currentStreak}
+              milestones={ws.milestones}
               variant="teal"
             />
             <CompactStreakRow
               label="Автоматизации ★"
-              currentDays={streak.automationCurrentDays}
-              milestones={streak.automationMilestones}
+              currentDays={revit.currentStreak}
+              milestones={revit.milestones}
               variant="orange"
             />
           </div>
