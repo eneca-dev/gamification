@@ -201,7 +201,7 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
 
   const autoSource = automationDepartments ?? departments;
   const sortedAuto = [...autoSource]
-    .sort((a, b) => b.totalCoins - a.totalCoins)
+    .sort((a, b) => b.contestScore - a.contestScore)
     .map((d, i) => ({ ...d, rank: i + 1 }));
 
   return (
@@ -251,12 +251,12 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
           title="Автоматизации"
           icon="⚡"
           prize={200}
-          metricLabel="Баллы за плагины (месяц)"
+          metricLabel="Баллы с учётом вовлечённости"
           sorted={sortedAuto}
-          getMetric={(d) => d.totalCoins}
+          getMetric={(d) => Math.round(d.contestScore)}
           getUsing={(d) => d.employeesUsing}
-          maxMetric={sortedAuto[0]?.totalCoins ?? 1}
-          metricSuffix=" ПК"
+          maxMetric={Math.round(sortedAuto[0]?.contestScore ?? 1)}
+          metricSuffix=""
           accentColor="var(--orange-500)"
         />
       </div>
