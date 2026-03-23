@@ -31,6 +31,9 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     .eq('user_id', user.id)
     .single()
 
+  // is_admin и ws_user_id добавляются в JWT через custom_access_token_hook
+  const claims = user.app_metadata ?? {}
+
   return {
     id: user.id,
     email: user.email ?? '',
@@ -39,5 +42,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     lastName: profile?.last_name ?? '',
     department: profile?.department ?? null,
     team: profile?.team ?? null,
+    isAdmin: claims.is_admin === true,
+    wsUserId: typeof claims.ws_user_id === 'string' ? claims.ws_user_id : null,
   }
 }

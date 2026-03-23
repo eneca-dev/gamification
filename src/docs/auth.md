@@ -11,7 +11,7 @@
 
 **Middleware (`src/middleware.ts`):**
 
-Выполняется на каждый запрос. Использует `createSupabaseMiddlewareClient(request)` из `src/config/supabase.ts` — возвращает `{ supabase, response }`, где `response` мутируется внутри `setAll` для передачи сессионных cookie (в middleware недоступен `next/headers`). Вызывает `getUser()` для валидации сессии. Публичные пути: `/login`, `/api/auth/*`, `/signin-worksection`. Без сессии на непубличном пути → редирект на `/login`. С сессией на `/login` → редирект на `/`.
+Выполняется на каждый запрос. Использует `createSupabaseMiddlewareClient(request)` из `src/config/supabase.ts` — возвращает `{ supabase, response }`, где `response` мутируется внутри `setAll` для передачи сессионных cookie (в middleware недоступен `next/headers`). Вызывает `getUser()` для валидации сессии. Публичные пути: `/login`, `/api/auth/*`, `/signin-worksection`. Без сессии на непубличном пути → редирект на `/login`. С сессией на `/login` → редирект на `/`. Для путей `/admin/*` проверяет `is_admin` из `user.app_metadata` — не-админы редиректятся на `/`.
 
 **Модуль `src/modules/auth/`:**
 
@@ -42,13 +42,13 @@
 
 `ProfileRow` (`src/lib/types.ts`) — строка таблицы `profiles`: `user_id`, `first_name`, `last_name`, `department` (nullable), `team` (nullable), `created_at`, `updated_at`.
 
-`AuthUser` (`src/modules/auth/types.ts`) — публичное представление текущего пользователя: `id`, `email`, `fullName`, `firstName`, `lastName`, `department` (nullable), `team` (nullable). Данные профиля подтягиваются из таблицы `profiles`.
+`AuthUser` (`src/modules/auth/types.ts`) — публичное представление текущего пользователя: `id`, `email`, `fullName`, `firstName`, `lastName`, `department` (nullable), `team` (nullable), `isAdmin`, `wsUserId` (nullable). Данные профиля подтягиваются из таблицы `profiles`. `isAdmin` и `wsUserId` читаются из JWT claims (`user.app_metadata`), добавляемых pg-функцией `custom_access_token_hook` — 0 дополнительных DB-запросов.
 
 `wsTokenResponseSchema`, `wsResourceResponseSchema` (`src/modules/auth/types.ts`) — Zod-схемы валидации ответов от Worksection OAuth эндпоинтов.
 
 ## Queries
 
-- `getCurrentUser()` — текущий пользователь из Supabase-сессии + данные из `profiles` или `null`. Если строка в `profiles` отсутствует — firstName/lastName будут пустыми строками, department/team будут null
+- `getCurrentUser()` — текущий пользователь из Supabase-сессии + данные из `profiles` или `null`. Если строка в `profiles` отсутствует — firstName/lastName будут пустыми строками, department/team будут null. `isAdmin` и `wsUserId` читаются из `user.app_metadata` (JWT claims)
 - `getWorksectionTokens(userId)` — токены WS для пользователя или `null`; использует серверный клиент с RLS
 
 ## Actions

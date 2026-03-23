@@ -23,4 +23,6 @@ export interface AuthUser {
   lastName: string
   department: string | null
   team: string | null
+  isAdmin: boolean
+  wsUserId: string | null
 }

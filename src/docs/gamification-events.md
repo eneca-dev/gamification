@@ -187,13 +187,13 @@ idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 
 ## 6. Магазин (не реализован)
 
-Покупка артефактов за коины. `second_life_cost = -500` — сброс красного дня.
+Покупка товаров за коины. Реализуется отдельно — модуль `shop` + event types `shop_purchase` / `shop_refund`.
 
 ---
 
 ## Полный справочник event_type
 
-Все типы зарегистрированы в `gamification_event_types` (24 строки).
+Все типы зарегистрированы в `gamification_event_types` (34 строки).
 
 **С начислением/списанием коинов:**
 
@@ -212,7 +212,6 @@ idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 | `revit_using_plugins` | +5 | revit | PG-триггер |
 | `budget_revoked_l3` | -50 | ws | compute-gamification |
 | `budget_revoked_l2` | -200 | ws | compute-gamification |
-| `second_life_cost` | -500 | shop | не реализовано |
 
 **Информационные (0 коинов, фиксируют факт события):**
 

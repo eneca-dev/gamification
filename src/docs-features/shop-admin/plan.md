@@ -559,15 +559,15 @@ src/app/(main)/admin/
 ## Этапы реализации
 
 ### Этап 1: Роли и защита админки
-- Миграция: `ALTER TABLE ws_users ADD COLUMN is_admin boolean DEFAULT false`
-- Миграция: Custom Access Token Hook — pg-функция `custom_access_token_hook`, добавляет `is_admin` и `ws_user_id` в JWT claims
-- Регистрация hook'а в Supabase Dashboard → Authentication → Hooks (без этого функция существует, но не вызывается)
-- Миграция: удалить `second_life_cost` из `gamification_event_types` (0 транзакций, legacy)
-- Обновить `src/docs/gamification-db.md` и `src/docs/gamification-events.md` — убрать `second_life_cost`
-- `checkIsAdmin()` — утилита, читает `is_admin` из JWT (используется в Server Actions и middleware)
-- Расширить `AuthUser` полями `isAdmin` (из JWT claim `is_admin`) и `wsUserId` (из JWT claim `ws_user_id`)
-- Middleware: защита `/admin/*` — проверка `is_admin` из JWT (0 DB-запросов), редирект для не-админов
-- Server Actions: проверка `is_admin` из JWT перед мутациями
+- [x] Миграция: `ALTER TABLE ws_users ADD COLUMN is_admin boolean DEFAULT false`
+- [x] Миграция: Custom Access Token Hook — pg-функция `custom_access_token_hook`, добавляет `is_admin` и `ws_user_id` в JWT claims
+- [ ] Регистрация hook'а в Supabase Dashboard → Authentication → Hooks (ручной шаг)
+- [x] ~~Миграция: удалить `second_life_cost`~~ — уже удалён из БД, очищены docs
+- [x] Обновить `src/docs/gamification-db.md` и `src/docs/gamification-events.md` — убрать `second_life_cost`
+- [x] Расширить `AuthUser` полями `isAdmin` (из JWT claim `is_admin`) и `wsUserId` (из JWT claim `ws_user_id`)
+- [x] Middleware: защита `/admin/*` — проверка `is_admin` из JWT (0 DB-запросов), редирект для не-админов
+- [ ] `checkIsAdmin()` — утилита для Server Actions (будет создана вместе с первыми админскими actions)
+- [ ] Server Actions: проверка `is_admin` из JWT перед мутациями (будет в этапах 2-6)
 
 ### Этап 2: Управление событиями
 - Миграция: RLS-политики на `gamification_event_types` (SELECT для всех, UPDATE для админов)

@@ -50,6 +50,7 @@ WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-co
 | `get_user_id_by_email(email)` | UUID из `auth.users` по email |
 | `increment_balance(p_user_id, p_coins)` | Атомарный UPSERT баланса в `gamification_balances`. Существует, но не используется триггерами — триггеры делают inline UPSERT |
 | `link_ws_user_on_profile_insert()` | Триггер: при создании `profiles` связывает с `ws_users.user_id` |
+| `custom_access_token_hook(event)` | Auth Hook: добавляет `is_admin` и `ws_user_id` из `ws_users` в JWT claims при каждом выпуске/рефреше токена |
 
 ---
 
@@ -72,10 +73,11 @@ WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-co
 | `department_code` | text NULL | Код отдела: КР, ОВ, ЭС, АР, ТМ... |
 | `team` | text NULL | Команда внутри отдела |
 | `user_id` | uuid NULL → auth.users | Заполняется при OAuth-входе |
+| `is_admin` | boolean DEFAULT false | Флаг администратора. Попадает в JWT через `custom_access_token_hook` |
 | `is_active` | boolean | Деактивация при отсутствии в WS API |
 | `synced_at` | timestamptz | |
 
-**Частота обновления:** ежедневно (VPS-оркестратор). Обновляет существующие записи, деактивирует удалённых, реактивирует вернувшихся. Никогда не удаляет строки — только `is_active = false`. Поля `user_id` и `department_code` не трогаются синком.
+**Частота обновления:** ежедневно (VPS-оркестратор). Обновляет существующие записи, деактивирует удалённых, реактивирует вернувшихся. Никогда не удаляет строки — только `is_active = false`. Поля `user_id`, `department_code` и `is_admin` не трогаются синком.
 
 #### `profiles` (2 строки)
 
@@ -315,7 +317,6 @@ OAuth-токены Worksection для пользователей.
 | `revit_using_plugins` | +5 | Баллы за использование плагина |
 | `budget_revoked_l3` | -50 | Отзыв коинов: бюджет L3 превышен после approval |
 | `budget_revoked_l2` | -200 | Отзыв коинов: бюджет L2 превышен после approval |
-| `second_life_cost` | -500 | Стоимость артефакта «Вторая жизнь» |
 
 **Информационные (0 коинов, фиксируют факт события):**
 

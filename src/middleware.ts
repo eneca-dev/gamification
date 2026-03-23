@@ -12,6 +12,10 @@ function isPublicPath(pathname: string): boolean {
   )
 }
 
+function isAdminPath(pathname: string): boolean {
+  return pathname === '/admin' || pathname.startsWith('/admin/')
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const { supabase, response } = createSupabaseMiddlewareClient(request)
@@ -27,6 +31,14 @@ export async function middleware(request: NextRequest) {
 
   if (user && pathname === '/login') {
     return NextResponse.redirect(new URL('/', request.url))
+  }
+
+  // Защита админки: is_admin добавляется в JWT через custom_access_token_hook
+  if (user && isAdminPath(pathname)) {
+    const isAdmin = user.app_metadata?.is_admin === true
+    if (!isAdmin) {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
   }
 
   return response
