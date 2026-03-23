@@ -251,6 +251,7 @@ export default async function DashboardPage() {
     totalEmployees: d.totalEmployees,
     usagePercent: 0,
     totalCoins: d.totalCoins,
+    contestScore: d.contestScore,
     wsPercent: 0,
     isCurrentDepartment: d.isCurrentDepartment,
   }));
