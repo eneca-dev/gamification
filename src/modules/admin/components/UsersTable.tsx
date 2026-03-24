@@ -241,11 +241,12 @@ export function UsersTable({ users, onSelectUser }: UsersTableProps) {
       )}
 
       {/* Grouped content */}
-      <div className="p-4 space-y-3">
-        {groups.map((dept) => (
+      <div>
+        {groups.map((dept, deptIdx) => (
           <DeptSection
             key={dept.label}
             dept={dept}
+            isLast={deptIdx === groups.length - 1}
             onSelectUser={onSelectUser}
             onToggleAdmin={handleToggleAdmin}
             isPending={isPending}
@@ -277,6 +278,7 @@ export function UsersTable({ users, onSelectUser }: UsersTableProps) {
 
 function DeptSection({
   dept,
+  isLast,
   onSelectUser,
   onToggleAdmin,
   isPending,
@@ -284,6 +286,7 @@ function DeptSection({
   expandKey,
 }: {
   dept: DeptGroup
+  isLast: boolean
   onSelectUser: (id: string) => void
   onToggleAdmin: (id: string, current: boolean) => void
   isPending: boolean
@@ -298,56 +301,51 @@ function DeptSection({
   const hasMultipleTeams = dept.teams.length > 1 || (dept.teams.length === 1 && dept.teams[0].label !== 'Без команды')
 
   return (
-    <div
-      className="rounded-xl overflow-hidden"
-      style={{ border: '1px solid var(--apex-border)' }}
-    >
-      {/* Заголовок отдела */}
+    <div style={{ borderBottom: isLast ? 'none' : '1px solid var(--apex-border)' }}>
+      {/* Заголовок отдела — левая полоска + фон */}
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors"
+        className="w-full flex items-center gap-2.5 px-5 py-3 text-left transition-colors"
         style={{
-          background: 'var(--apex-success-bg)',
-          color: 'var(--apex-primary)',
+          background: 'var(--apex-bg)',
+          borderLeft: '4px solid var(--apex-primary)',
           borderRadius: 0,
         }}
         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--apex-disabled-bg)' }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--apex-success-bg)' }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--apex-bg)' }}
       >
         {open ? (
           <ChevronDown size={14} style={{ color: 'var(--apex-primary)' }} />
         ) : (
           <ChevronRight size={14} style={{ color: 'var(--apex-primary)' }} />
         )}
-        <span className="text-[13px] font-bold">
+        <span
+          className="text-[13px] font-bold flex-1"
+          style={{ color: 'var(--apex-text)' }}
+        >
           {dept.label}
         </span>
         <span
-          className="text-[11px] font-semibold px-2 py-0.5"
+          className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
           style={{
-            background: 'var(--apex-primary)',
-            color: 'white',
-            borderRadius: 0,
+            background: 'var(--apex-success-bg)',
+            color: 'var(--apex-primary)',
           }}
         >
           {count}
         </span>
       </button>
 
-      {open && (
-        <div className="p-3 space-y-2" style={{ background: 'var(--apex-bg)' }}>
-          {dept.teams.map((team) => (
-            <TeamSection
-              key={team.label}
-              team={team}
-              showHeader={hasMultipleTeams}
-              onSelectUser={onSelectUser}
-              onToggleAdmin={onToggleAdmin}
-              isPending={isPending}
-            />
-          ))}
-        </div>
-      )}
+      {open && dept.teams.map((team) => (
+        <TeamSection
+          key={team.label}
+          team={team}
+          showHeader={hasMultipleTeams}
+          onSelectUser={onSelectUser}
+          onToggleAdmin={onToggleAdmin}
+          isPending={isPending}
+        />
+      ))}
     </div>
   )
 }
@@ -370,55 +368,44 @@ function TeamSection({
   const [open, setOpen] = useState(true)
 
   return (
-    <div
-      className="rounded-lg overflow-hidden"
-      style={{
-        border: showHeader ? '1px solid var(--apex-border)' : 'none',
-        background: 'var(--apex-surface)',
-      }}
-    >
+    <div>
       {showHeader && (
         <button
           onClick={() => setOpen(!open)}
-          className="w-full flex items-center gap-2 px-4 py-2 text-left transition-colors"
+          className="w-full flex items-center gap-2 pl-9 pr-5 py-2 text-left transition-colors"
           style={{
-            background: 'var(--apex-success-bg)',
-            borderBottom: open ? '1px solid var(--apex-border)' : 'none',
+            background: 'var(--apex-surface)',
+            borderTop: '1px solid var(--apex-border)',
+            borderLeft: '4px solid rgba(var(--apex-primary-rgb), 0.3)',
             borderRadius: 0,
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--apex-disabled-bg)' }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--apex-success-bg)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--apex-bg)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--apex-surface)' }}
         >
           {open ? (
-            <ChevronDown size={12} style={{ color: 'var(--apex-primary)' }} />
+            <ChevronDown size={12} style={{ color: 'var(--apex-text-muted)' }} />
           ) : (
-            <ChevronRight size={12} style={{ color: 'var(--apex-primary)' }} />
+            <ChevronRight size={12} style={{ color: 'var(--apex-text-muted)' }} />
           )}
           <span
-            className="text-[12px] font-semibold"
+            className="text-[13px] font-bold flex-1"
             style={{ color: 'var(--apex-text)' }}
           >
             {team.label}
           </span>
           <span
-            className="text-[10px] font-semibold px-1.5 py-0.5"
-            style={{
-              background: 'var(--apex-surface)',
-              color: 'var(--apex-text-muted)',
-              border: '1px solid var(--apex-border)',
-              borderRadius: 0,
-            }}
+            className="text-[10px] font-medium"
+            style={{ color: 'var(--apex-text-muted)' }}
           >
             {team.users.length}
           </span>
         </button>
       )}
 
-      {(showHeader ? open : true) && team.users.map((user, i) => (
+      {(showHeader ? open : true) && team.users.map((user) => (
         <UserRow
           key={user.id}
           user={user}
-          isLast={i === team.users.length - 1}
           onSelect={() => onSelectUser(user.id)}
           onToggleAdmin={() => onToggleAdmin(user.id, user.is_admin)}
           isPending={isPending}
@@ -432,13 +419,11 @@ function TeamSection({
 
 function UserRow({
   user,
-  isLast,
   onSelect,
   onToggleAdmin,
   isPending,
 }: {
   user: AdminUserRow
-  isLast?: boolean
   onSelect: () => void
   onToggleAdmin: () => void
   isPending: boolean
@@ -446,7 +431,10 @@ function UserRow({
   return (
     <div
       className="group flex items-center cursor-pointer transition-colors"
-      style={{ paddingLeft: '1rem', borderBottom: isLast ? 'none' : '1px solid var(--apex-border)' }}
+      style={{
+        paddingLeft: '2.5rem',
+        borderTop: '1px solid var(--apex-border)',
+      }}
       onClick={onSelect}
       onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--apex-bg)' }}
       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
