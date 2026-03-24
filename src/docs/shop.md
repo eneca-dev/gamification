@@ -1,0 +1,57 @@
+# shop
+
+Магазин геймификации: товары, категории, покупки, заказы.
+
+## Логика работы
+
+Сотрудники тратят коины на товары. Покупка — атомарная SQL-функция `purchase_product` (списание баланса, создание event_log, транзакции, заказа). Нефизические товары (`is_physical = false`) — сразу `fulfilled`, безлимитные. Физические — `pending`, ждут обработки админом, `stock` уменьшается.
+
+Отмена заказа — SQL-функция `cancel_order` (возврат коинов, запись refund-транзакции, возврат stock). Доступна только админам.
+
+Обе функции `SECURITY INVOKER`, вызываются через `supabaseAdmin` (service_role).
+
+## Зависимости
+
+- Таблицы: `shop_categories`, `shop_products`, `shop_orders`
+- Связь с: `gamification_event_logs`, `gamification_transactions`, `gamification_balances`, `ws_users`
+- Event types: `shop_purchase` (is_dynamic_coins), `shop_refund` (is_dynamic_coins)
+- Storage: bucket `product-images` (public)
+- Модули: `auth` (getCurrentUser, wsUserId), `admin` (checkIsAdmin)
+
+## Типы
+
+- `OrderStatus` — `'pending' | 'processing' | 'fulfilled' | 'cancelled'`
+- `ShopProductWithCategory` — товар + вложенная категория (name, slug, is_physical, is_active)
+- `ShopOrderWithDetails` — заказ + название товара + coins_spent (через JOIN на transaction)
+
+## Actions
+
+- `purchaseProduct(productId)` — покупка, доступна всем. RPC `purchase_product`. Revalidate: `/store`, `/profile`
+- `createCategory(input)` — создание категории. Только админ. Revalidate: `/admin/products`, `/store`
+- `updateCategory(input)` — обновление категории (включая is_active). Только админ
+- `createProduct(input)` — создание товара. Только админ. Записывает `created_by`
+- `updateProduct(input)` — обновление товара (включая is_active). Только админ
+
+## Queries
+
+- `getCategories()` — активные категории, отсортированные по sort_order. Серверный клиент
+- `getAllCategories()` — все категории (для админки). supabaseAdmin
+- `getProducts(categorySlug?)` — активные товары с активными категориями. Фильтр по slug
+- `getProductById(id)` — один товар с категорией
+- `getUserOrders(wsUserId)` — заказы пользователя с названием товара и суммой. supabaseAdmin
+- `getUserBalance(wsUserId)` — баланс пользователя из gamification_balances. supabaseAdmin
+
+## Компоненты
+
+- `StoreClient` — клиентский контейнер: фильтрация по категориям, optimistic update баланса при покупке, уведомления
+- `ProductCard` — карточка товара: image_url / emoji / placeholder, тег stock, категория, цена, кнопка покупки
+- `PurchaseButton` — кнопка покупки: проверка баланса и stock, состояние загрузки
+- `OrdersClient` — клиентский контейнер страницы «Мои заказы»: фильтрация по статусу, отображение истории с датами, суммами и статус-бейджами
+
+## Ограничения
+
+- `stock` обязателен для физических категорий (валидация в Server Action, не в БД)
+- `stock = NULL` для нефизических — безлимит, поле скрыто в UI
+- Отмена доступна для любого статуса кроме `cancelled`. Idempotency через `shop_refund_{order_id}`
+- Race condition при покупке: защита через `FOR UPDATE` на balance и product
+- `cancelOrder` — в модуле `admin`, не здесь (админская операция)

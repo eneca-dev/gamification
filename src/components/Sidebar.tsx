@@ -7,11 +7,11 @@ import { Home, ShoppingBag, Trophy, Users, Settings, LogOut } from 'lucide-react
 import { signOut } from '@/modules/auth/index.client'
 import type { AuthUser } from '@/modules/auth/index.client'
 import { DevUserSwitcher } from '@/modules/dev-tools/components/DevUserSwitcher'
-import { user as mockUser } from '@/lib/data'
 import { CoinStatic } from '@/components/CoinBalance'
 
 interface SidebarProps {
   user: AuthUser | null
+  balance: number
   showDevSwitcher?: boolean
 }
 
@@ -32,7 +32,7 @@ function getInitials(fullName: string): string {
     .toUpperCase()
 }
 
-export function Sidebar({ user, showDevSwitcher }: SidebarProps) {
+export function Sidebar({ user, balance, showDevSwitcher }: SidebarProps) {
   const pathname = usePathname()
 
   return (
@@ -129,7 +129,7 @@ export function Sidebar({ user, showDevSwitcher }: SidebarProps) {
           <div className="text-[11px] font-medium mb-1.5" style={{ color: 'var(--apex-text-muted)' }}>
             На вашем счету
           </div>
-          <CoinStatic amount={mockUser.balance} size="md" />
+          <CoinStatic amount={balance} size="md" />
           <div className="text-[10px] mt-0.5" style={{ color: 'var(--apex-text-muted)' }}>
             баллов
           </div>

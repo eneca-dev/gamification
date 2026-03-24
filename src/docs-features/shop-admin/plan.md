@@ -598,27 +598,30 @@ src/app/(main)/admin/
 - [ ] История заказов — будет после создания shop_orders (этап 4)
 
 ### Этап 4: Магазин — БД и бэкенд
-- Миграции: `shop_categories`, `shop_products`, `shop_orders`
-- Миграция: `is_dynamic_coins` в `gamification_event_types` + новые записи (`shop_purchase`, `shop_refund`)
-- Миграция: SQL-функции `purchase_product` и `cancel_order` (`SECURITY INVOKER`, вызываются через `supabaseAdmin`)
-- Seed начальных категорий (artifact, merch, upgrade, raffle)
-- Supabase Storage: bucket `product-images` (public) + политики доступа
-- RLS-политики на таблицах магазина
-- `purchaseProduct()` action (Server Action → `supabaseAdmin.rpc('purchase_product')`)
-- `getProducts()`, `getUserOrders()` queries
+- [x] Миграции: `shop_categories`, `shop_products`, `shop_orders` + RLS-политики + seed категорий
+- [x] Миграция: `is_dynamic_coins` в `gamification_event_types` + новые записи (`shop_purchase`, `shop_refund`)
+- [x] Миграция: SQL-функции `purchase_product` и `cancel_order` (`SECURITY INVOKER`, вызываются через `supabaseAdmin`)
+- [x] Supabase Storage: bucket `product-images` (public) + политики доступа
+- [x] Модуль `shop`: types.ts, queries.ts, actions.ts, index.ts, index.client.ts
+- [x] `purchaseProduct()` action (Server Action → `supabaseAdmin.rpc('purchase_product')`)
+- [x] `getProducts()`, `getProductById()`, `getUserOrders()`, `getCategories()`, `getAllCategories()` queries
+- [x] CRUD actions: `createProduct`, `updateProduct`, `createCategory`, `updateCategory`
+- [x] `src/docs/shop.md` — документация модуля
 
 ### Этап 5: Магазин — UI
-- Переключить `/store` с мок-данных на реальные
-- Карточки товаров (image_url → emoji → placeholder), фильтрация по категориям
-- Кнопка покупки с проверкой баланса
-- История покупок юзера
+- [x] Переключить `/store` с мок-данных на реальные (Server Component + `StoreClient`)
+- [x] `ProductCard` — карточки товаров (image_url → emoji → placeholder, тег «Нет в наличии» / «Осталось: N»)
+- [x] `PurchaseButton` — кнопка покупки с проверкой баланса и состоянием загрузки
+- [x] `StoreClient` — фильтрация по категориям из БД, optimistic update баланса, уведомления
+- [x] `loading.tsx` — скелетон загрузки
+- [x] История покупок юзера — `/store/orders` (OrdersClient: фильтрация по статусу, карточки заказов)
 
 ### Этап 6: Админка магазина
-- CRUD категорий: `createCategory()`, `updateCategory()` actions
+- [x] CRUD категорий: `createCategory()`, `updateCategory()` actions (в модуле shop)
 - UI: управление категориями
-- CRUD товаров: `createProduct()`, `updateProduct()` actions + загрузка картинок
-- UI: таблица товаров, форма создания/редактирования
-- Управление заказами: `updateOrderStatus()`, `cancelOrder()` actions
+- [x] CRUD товаров: `createProduct()`, `updateProduct()` actions (в модуле shop)
+- UI: таблица товаров, форма создания/редактирования + загрузка картинок
+- Управление заказами: `updateOrderStatus()`, `cancelOrder()` actions (в модуле admin)
 - UI: таблица заказов с фильтрами и изменением статуса
 
 ---
