@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
-import { Search, ChevronRight, ChevronDown, ChevronsUp, ChevronsDown, ChevronUp, Check } from 'lucide-react'
+import { Search, ChevronRight, ChevronDown, ChevronsUp, ChevronsDown, ChevronUp, Check, Users } from 'lucide-react'
 
+import { CoinStatic } from '@/components/CoinBalance'
 import { toggleAdmin } from '@/modules/admin/index.client'
 
 import type { AdminUserRow } from '../types'
@@ -227,6 +228,21 @@ export function UsersTable({ users, onSelectUser }: UsersTableProps) {
         </div>
       )}
 
+      {/* Column headers */}
+      <div
+        className="flex items-center text-[11px] font-semibold uppercase tracking-wider"
+        style={{
+          paddingLeft: '2.5rem',
+          borderBottom: '1px solid var(--apex-border)',
+          color: 'var(--apex-text-muted)',
+        }}
+      >
+        <div className="flex-1 min-w-0 px-3 py-2">Сотрудник</div>
+        <div className="w-28 px-3 py-2 shrink-0 text-right">Баланс</div>
+        <div className="w-24 px-3 py-2 shrink-0 text-center">Админ</div>
+        <div className="w-8 shrink-0" />
+      </div>
+
       {/* Grouped content */}
       <div>
         {groups.map((dept, deptIdx) => (
@@ -313,13 +329,14 @@ function DeptSection({
           {dept.label}
         </span>
         <span
-          className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+          className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
           style={{
             background: 'var(--apex-success-bg)',
             color: 'var(--apex-primary)',
           }}
         >
-          {count}
+          <Users size={11} />
+          {count} сотр.
         </span>
       </button>
 
@@ -381,9 +398,10 @@ function TeamSection({
             {team.label}
           </span>
           <span
-            className="text-[10px] font-medium"
+            className="inline-flex items-center gap-1 text-[10px] font-medium"
             style={{ color: 'var(--apex-text-muted)' }}
           >
+            <Users size={10} />
             {team.users.length}
           </span>
         </button>
@@ -443,47 +461,33 @@ function UserRow({
       </div>
 
       {/* Баланс */}
-      <div className="w-24 px-3 py-3 shrink-0 text-right">
-        <span
-          className="text-[14px] font-bold"
-          style={{ color: 'var(--apex-success-text)' }}
-        >
-          {user.total_coins.toLocaleString('ru-RU')}
-        </span>
+      <div className="w-28 px-3 py-3 shrink-0 flex justify-end">
+        <CoinStatic amount={user.total_coins} size="sm" />
       </div>
 
       {/* Роль */}
       <div
-        className="w-32 px-3 py-3 shrink-0"
+        className="w-24 px-3 py-3 shrink-0 flex justify-center"
         onClick={(e) => e.stopPropagation()}
       >
-        <label className="inline-flex items-center gap-2 cursor-pointer">
-          <button
-            role="switch"
-            aria-checked={user.is_admin}
-            onClick={onToggleAdmin}
-            disabled={isPending}
-            className="relative w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none"
-            style={{
-              background: user.is_admin ? 'var(--apex-primary)' : 'var(--apex-border)',
-            }}
-          >
-            <span
-              className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200"
-              style={{
-                transform: user.is_admin ? 'translateX(16px)' : 'translateX(0)',
-              }}
-            />
-          </button>
+        <button
+          role="switch"
+          aria-checked={user.is_admin}
+          aria-label="Переключить роль админа"
+          onClick={onToggleAdmin}
+          disabled={isPending}
+          className="relative w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+          style={{
+            background: user.is_admin ? 'var(--apex-primary)' : 'var(--apex-border)',
+          }}
+        >
           <span
-            className="text-[12px] font-medium select-none"
+            className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200"
             style={{
-              color: user.is_admin ? 'var(--apex-primary)' : 'var(--apex-text-muted)',
+              transform: user.is_admin ? 'translateX(16px)' : 'translateX(0)',
             }}
-          >
-            Админ
-          </span>
-        </label>
+          />
+        </button>
       </div>
 
       {/* Arrow */}
