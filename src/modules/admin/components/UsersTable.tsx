@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { Search, ChevronRight, ChevronDown, ChevronsUp, ChevronsDown, ChevronUp, Check, Users } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
@@ -53,10 +54,9 @@ function countDeptUsers(dept: DeptGroup): number {
 
 interface UsersTableProps {
   users: AdminUserRow[]
-  onSelectUser: (userId: string) => void
 }
 
-export function UsersTable({ users, onSelectUser }: UsersTableProps) {
+export function UsersTable({ users }: UsersTableProps) {
   const [items, setItems] = useState(users)
   const [search, setSearch] = useState('')
   const [deptFilter, setDeptFilter] = useState('all')
@@ -239,7 +239,6 @@ export function UsersTable({ users, onSelectUser }: UsersTableProps) {
             key={dept.label}
             dept={dept}
             isLast={deptIdx === groups.length - 1}
-            onSelectUser={onSelectUser}
             onToggleAdmin={handleToggleAdmin}
             isPending={isPending}
             defaultOpen={allExpanded}
@@ -271,7 +270,6 @@ export function UsersTable({ users, onSelectUser }: UsersTableProps) {
 function DeptSection({
   dept,
   isLast,
-  onSelectUser,
   onToggleAdmin,
   isPending,
   defaultOpen,
@@ -279,7 +277,6 @@ function DeptSection({
 }: {
   dept: DeptGroup
   isLast: boolean
-  onSelectUser: (id: string) => void
   onToggleAdmin: (id: string, current: boolean) => void
   isPending: boolean
   defaultOpen: boolean
@@ -334,7 +331,6 @@ function DeptSection({
           key={team.label}
           team={team}
           showHeader={hasMultipleTeams}
-          onSelectUser={onSelectUser}
           onToggleAdmin={onToggleAdmin}
           isPending={isPending}
         />
@@ -348,13 +344,11 @@ function DeptSection({
 function TeamSection({
   team,
   showHeader,
-  onSelectUser,
   onToggleAdmin,
   isPending,
 }: {
   team: TeamGroup
   showHeader: boolean
-  onSelectUser: (id: string) => void
   onToggleAdmin: (id: string, current: boolean) => void
   isPending: boolean
 }) {
@@ -400,7 +394,6 @@ function TeamSection({
         <UserRow
           key={user.id}
           user={user}
-          onSelect={() => onSelectUser(user.id)}
           onToggleAdmin={() => onToggleAdmin(user.id, user.is_admin)}
           isPending={isPending}
         />
@@ -413,23 +406,21 @@ function TeamSection({
 
 function UserRow({
   user,
-  onSelect,
   onToggleAdmin,
   isPending,
 }: {
   user: AdminUserRow
-  onSelect: () => void
   onToggleAdmin: () => void
   isPending: boolean
 }) {
   return (
-    <div
+    <Link
+      href={`/admin/users/${user.id}`}
       className="group flex items-center cursor-pointer transition-colors"
       style={{
         paddingLeft: '2.5rem',
         borderTop: '1px solid var(--apex-border)',
       }}
-      onClick={onSelect}
       onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--apex-bg)' }}
       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
     >
@@ -487,7 +478,7 @@ function UserRow({
           style={{ color: 'var(--apex-text-muted)' }}
         />
       </div>
-    </div>
+    </Link>
   )
 }
 
