@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useTransition, useMemo, useEffect } from 'react'
-import { Search, ChevronRight, ChevronDown, ChevronsUp, ChevronsDown } from 'lucide-react'
+import { useState, useTransition, useMemo, useEffect, useRef } from 'react'
+import { Search, ChevronRight, ChevronDown, ChevronsUp, ChevronsDown, ChevronUp, Check } from 'lucide-react'
 
 import { toggleAdmin } from '@/modules/admin/index.client'
 
@@ -137,24 +137,11 @@ export function UsersTable({ users, onSelectUser }: UsersTableProps) {
         </div>
 
         {/* Department filter */}
-        <select
+        <DeptDropdown
           value={deptFilter}
-          onChange={(e) => setDeptFilter(e.target.value)}
-          className="px-4 py-2 rounded-lg text-[13px] font-medium outline-none cursor-pointer appearance-none pr-8"
-          style={{
-            background: 'var(--apex-bg)',
-            border: '1px solid var(--apex-border)',
-            color: deptFilter === 'all' ? 'var(--apex-text-secondary)' : 'var(--apex-text)',
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'right 10px center',
-          }}
-        >
-          <option value="all">Все отделы</option>
-          {departments.map((d) => (
-            <option key={d} value={d}>{d}</option>
-          ))}
-        </select>
+          options={departments}
+          onChange={setDeptFilter}
+        />
 
         {/* Admins only toggle */}
         <label className="inline-flex items-center gap-2 cursor-pointer">
@@ -180,7 +167,7 @@ export function UsersTable({ users, onSelectUser }: UsersTableProps) {
               color: adminsOnly ? 'var(--apex-primary)' : 'var(--apex-text-muted)',
             }}
           >
-            Только админы
+            Показать только админов
           </span>
         </label>
 
@@ -508,5 +495,112 @@ function UserRow({
         />
       </div>
     </div>
+  )
+}
+
+// --- Кастомный Apex Dropdown ---
+
+function DeptDropdown({
+  value,
+  options,
+  onChange,
+}: {
+  value: string
+  options: string[]
+  onChange: (val: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const label = value === 'all' ? 'Все отделы' : value
+
+  return (
+    <div ref={ref} className="relative">
+      {/* Trigger */}
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-medium transition-colors"
+        style={{
+          background: value === 'all' ? 'var(--apex-surface)' : 'var(--apex-success-bg)',
+          border: '1px solid var(--apex-border)',
+          color: value === 'all' ? 'var(--apex-text-secondary)' : 'var(--apex-primary)',
+        }}
+      >
+        <span className="truncate max-w-[180px]">{label}</span>
+        {open ? (
+          <ChevronUp size={14} style={{ color: 'var(--apex-text-muted)' }} />
+        ) : (
+          <ChevronDown size={14} style={{ color: 'var(--apex-text-muted)' }} />
+        )}
+      </button>
+
+      {/* List */}
+      {open && (
+        <div
+          className="absolute top-full left-0 mt-1.5 z-50 w-72 rounded-2xl"
+          style={{
+            background: 'var(--apex-surface)',
+            border: '1px solid var(--apex-border)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+          }}
+        >
+          <div className="max-h-80 overflow-y-auto my-2">
+            <DropdownItem
+              label="Все отделы"
+              selected={value === 'all'}
+              onClick={() => { onChange('all'); setOpen(false) }}
+            />
+            {options.map((d) => (
+              <DropdownItem
+                key={d}
+                label={d}
+                selected={value === d}
+                onClick={() => { onChange(d); setOpen(false) }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DropdownItem({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string
+  selected: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-[13px] transition-colors"
+      style={{
+        background: selected ? 'var(--apex-success-bg)' : 'transparent',
+        color: selected ? 'var(--apex-primary)' : 'var(--apex-text)',
+        fontWeight: selected ? 600 : 400,
+        borderRadius: 0,
+      }}
+      onMouseEnter={(e) => {
+        if (!selected) e.currentTarget.style.background = 'var(--apex-bg)'
+      }}
+      onMouseLeave={(e) => {
+        if (!selected) e.currentTarget.style.background = 'transparent'
+      }}
+    >
+      <span className="flex-1 truncate">{label}</span>
+      {selected && <Check size={14} style={{ color: 'var(--apex-primary)' }} />}
+    </button>
   )
 }
