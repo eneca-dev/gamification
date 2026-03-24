@@ -111,105 +111,94 @@ export function UsersTable({ users, onSelectUser }: UsersTableProps) {
       }}
     >
       {/* Toolbar */}
-      <div
-        className="flex items-center gap-3 px-5 py-3 flex-wrap"
-        style={{ borderBottom: '1px solid var(--apex-border)' }}
-      >
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2"
-            style={{ color: 'var(--apex-text-muted)' }}
-          />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Поиск по имени или email"
-            className="w-full pl-8 pr-3 py-2 rounded-full text-[13px] outline-none transition-colors"
-            style={{
-              background: 'var(--apex-bg)',
-              border: '1px solid var(--apex-border)',
-              color: 'var(--apex-text)',
-            }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--apex-focus)' }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--apex-border)' }}
-          />
+      <div style={{ borderBottom: '1px solid var(--apex-border)' }}>
+        {/* Row 1: Search */}
+        <div className="px-5 pt-4 pb-2">
+          <div className="relative">
+            <Search
+              size={15}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2"
+              style={{ color: 'var(--apex-text-muted)' }}
+            />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Поиск по имени или email..."
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl text-[13px] outline-none transition-colors"
+              style={{
+                background: 'var(--apex-bg)',
+                border: '1px solid var(--apex-border)',
+                color: 'var(--apex-text)',
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--apex-focus)' }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--apex-border)' }}
+            />
+          </div>
         </div>
 
-        {/* Department filter */}
-        <DeptDropdown
-          value={deptFilter}
-          options={departments}
-          onChange={setDeptFilter}
-        />
+        {/* Row 2: Filters + Actions */}
+        <div className="flex items-center gap-2 px-5 pb-3 pt-1 flex-wrap">
+          {/* Department filter */}
+          <DeptDropdown
+            value={deptFilter}
+            options={departments}
+            onChange={setDeptFilter}
+          />
 
-        {/* Admins only toggle */}
-        <label className="inline-flex items-center gap-2 cursor-pointer">
+          {/* Admins only — chip toggle */}
           <button
-            role="switch"
-            aria-checked={adminsOnly}
             onClick={() => setAdminsOnly(!adminsOnly)}
-            className="relative w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-medium transition-colors"
             style={{
-              background: adminsOnly ? 'var(--apex-primary)' : 'var(--apex-border)',
+              background: adminsOnly ? 'var(--apex-success-bg)' : 'transparent',
+              border: `1px solid ${adminsOnly ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
+              color: adminsOnly ? 'var(--apex-primary)' : 'var(--apex-text-secondary)',
             }}
           >
-            <span
-              className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200"
-              style={{
-                transform: adminsOnly ? 'translateX(16px)' : 'translateX(0)',
-              }}
-            />
+            {adminsOnly && <Check size={12} />}
+            Только админы
           </button>
-          <span
-            className="text-[12px] font-medium select-none"
-            style={{
-              color: adminsOnly ? 'var(--apex-primary)' : 'var(--apex-text-muted)',
-            }}
-          >
-            Показать только админов
-          </span>
-        </label>
 
-        {/* Expand/Collapse + Count */}
-        <div className="flex items-center gap-2 ml-auto">
-          <button
-            onClick={() => { setAllExpanded(false); setExpandKey((k) => k + 1) }}
-            className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
-            title="Свернуть все"
-            style={{ color: 'var(--apex-text-muted)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--apex-bg)'
-              e.currentTarget.style.color = 'var(--apex-primary)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent'
-              e.currentTarget.style.color = 'var(--apex-text-muted)'
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Expand / Collapse */}
+          <div
+            className="flex items-center gap-0.5 px-2 py-1 rounded-full transition-colors"
+            style={{
+              border: '1px solid var(--apex-border)',
+              color: 'var(--apex-text-muted)',
             }}
           >
-            <ChevronsUp size={16} />
-          </button>
-          <button
-            onClick={() => { setAllExpanded(true); setExpandKey((k) => k + 1) }}
-            className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
-            title="Развернуть все"
-            style={{ color: 'var(--apex-text-muted)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--apex-bg)'
-              e.currentTarget.style.color = 'var(--apex-primary)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent'
-              e.currentTarget.style.color = 'var(--apex-text-muted)'
-            }}
-          >
-            <ChevronsDown size={16} />
-          </button>
+            <button
+              onClick={() => { setAllExpanded(false); setExpandKey((k) => k + 1) }}
+              className="flex items-center justify-center w-6 h-6 rounded-full transition-colors"
+              title="Свернуть все"
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--apex-primary)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'inherit' }}
+            >
+              <ChevronsUp size={15} />
+            </button>
+            <button
+              onClick={() => { setAllExpanded(true); setExpandKey((k) => k + 1) }}
+              className="flex items-center justify-center w-6 h-6 rounded-full transition-colors"
+              title="Развернуть все"
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--apex-primary)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'inherit' }}
+            >
+              <ChevronsDown size={15} />
+            </button>
+          </div>
+
+          {/* Count badge */}
           <span
-            className="text-[12px] font-medium"
-            style={{ color: 'var(--apex-text-muted)' }}
+            className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg"
+            style={{
+              background: 'var(--apex-bg)',
+              color: 'var(--apex-text-muted)',
+            }}
           >
+            <Users size={12} />
             {filtered.length} из {items.length}
           </span>
         </div>
