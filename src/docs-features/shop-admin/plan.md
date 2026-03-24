@@ -618,11 +618,11 @@ src/app/(main)/admin/
 
 ### Этап 6: Админка магазина
 - [x] CRUD категорий: `createCategory()`, `updateCategory()` actions (в модуле shop)
-- UI: управление категориями
+- [x] UI: управление категориями — inline-редактирование в ProductsClient, создание через expandable форму
 - [x] CRUD товаров: `createProduct()`, `updateProduct()` actions (в модуле shop)
-- UI: таблица товаров, форма создания/редактирования + загрузка картинок
-- Управление заказами: `updateOrderStatus()`, `cancelOrder()` actions (в модуле admin)
-- UI: таблица заказов с фильтрами и изменением статуса
+- [x] UI: таблица товаров, форма создания/редактирования (ProductFormModal) + загрузка картинок через uploadProductImage
+- [x] Управление заказами: `updateOrderStatus()`, `cancelOrder()` actions (в модуле admin)
+- [x] UI: таблица заказов (AdminOrdersClient) с фильтрами по статусу, сменой статуса и отменой с возвратом
 
 ---
 

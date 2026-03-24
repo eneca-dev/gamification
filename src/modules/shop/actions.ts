@@ -6,26 +6,33 @@ import { createSupabaseAdminClient } from '@/config/supabase'
 import { getCurrentUser } from '@/modules/auth'
 import { checkIsAdmin } from '@/modules/admin/checkIsAdmin'
 
+import { z } from 'zod'
+
 import {
   createProductSchema,
   updateProductSchema,
   createCategorySchema,
   updateCategorySchema,
 } from './types'
-import type { PurchaseResult, CancelResult } from './types'
+import type { PurchaseResult } from './types'
+
+const productIdSchema = z.string().uuid()
 
 // --- Покупка (доступна всем авторизованным) ---
 
 export async function purchaseProduct(
-  productId: string
+  productId: unknown
 ): Promise<{ success: true; data: PurchaseResult } | { success: false; error: string }> {
+  const parsed = productIdSchema.safeParse(productId)
+  if (!parsed.success) return { success: false, error: 'Невалидный ID товара' }
+
   const user = await getCurrentUser()
   if (!user?.wsUserId) return { success: false, error: 'Пользователь не найден в системе' }
 
   const supabase = createSupabaseAdminClient()
 
   const { data, error } = await supabase.rpc('purchase_product', {
-    p_product_id: productId,
+    p_product_id: parsed.data,
     p_user_id: user.wsUserId,
   })
 
@@ -149,5 +156,67 @@ export async function updateProduct(
 
   revalidatePath('/admin/products')
   revalidatePath('/store')
+  return { success: true }
+}
+
+// --- Загрузка изображений (только админ) ---
+
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'] as const
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024
+
+const imageUrlSchema = z.string().url().refine(
+  (url) => url.includes('/product-images/products/'),
+  'Невалидный URL изображения'
+)
+
+export async function uploadProductImage(
+  formData: FormData
+): Promise<{ success: true; url: string } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const file = formData.get('file') as File | null
+  if (!file) return { success: false, error: 'Файл не выбран' }
+
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type as typeof ALLOWED_IMAGE_TYPES[number])) {
+    return { success: false, error: 'Формат: JPEG, PNG или WebP' }
+  }
+  if (file.size > MAX_IMAGE_SIZE) return { success: false, error: 'Максимум 2 МБ' }
+
+  const rawExt = (file.name.split('.').pop() ?? '').toLowerCase()
+  const ext = ALLOWED_EXTENSIONS.includes(rawExt as typeof ALLOWED_EXTENSIONS[number]) ? rawExt : 'jpg'
+
+  const supabase = createSupabaseAdminClient()
+  const path = `products/${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`
+
+  const { error } = await supabase.storage
+    .from('product-images')
+    .upload(path, file)
+
+  if (error) return { success: false, error: 'Ошибка загрузки изображения' }
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('product-images')
+    .getPublicUrl(path)
+
+  return { success: true, url: publicUrl }
+}
+
+export async function deleteProductImage(
+  imageUrl: unknown
+): Promise<{ success: true } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const parsed = imageUrlSchema.safeParse(imageUrl)
+  if (!parsed.success) return { success: false, error: 'Невалидный URL изображения' }
+
+  const path = parsed.data.split('/product-images/')[1]
+  if (!path || !path.startsWith('products/')) return { success: false, error: 'Невалидный путь' }
+
+  const supabase = createSupabaseAdminClient()
+  await supabase.storage.from('product-images').remove([path])
+
   return { success: true }
 }

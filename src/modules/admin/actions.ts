@@ -4,8 +4,11 @@ import { revalidatePath } from 'next/cache'
 
 import { createSupabaseAdminClient } from '@/config/supabase'
 
+import { getCurrentUser } from '@/modules/auth'
+
 import { checkIsAdmin } from './checkIsAdmin'
-import { updateEventTypeSchema } from './types'
+import { updateEventTypeSchema, updateOrderStatusSchema, cancelOrderSchema } from './types'
+import type { CancelResult } from '@/modules/shop'
 
 export async function updateEventType(
   input: { key: string; name?: string; coins?: number; description?: string | null; is_active?: boolean }
@@ -71,4 +74,77 @@ export async function toggleAdmin(
 
   revalidatePath('/admin/users')
   return { success: true, isAdmin: newValue }
+}
+
+export async function updateOrderStatus(
+  input: unknown
+): Promise<{ success: true } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const parsed = updateOrderStatusSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: 'Невалидные данные' }
+
+  const user = await getCurrentUser()
+  if (!user?.wsUserId) return { success: false, error: 'Пользователь не найден' }
+
+  const { orderId, status, note } = parsed.data
+  const supabase = createSupabaseAdminClient()
+
+  const updateData: Record<string, unknown> = {
+    status,
+    status_changed_by: user.wsUserId,
+    status_changed_at: new Date().toISOString(),
+  }
+  if (note !== undefined) updateData.note = note
+
+  const { data, error } = await supabase
+    .from('shop_orders')
+    .update(updateData)
+    .eq('id', orderId)
+    .neq('status', 'cancelled')
+    .select('id')
+
+  if (error) return { success: false, error: error.message }
+  if (!data || data.length === 0) return { success: false, error: 'Заказ не найден или уже отменён' }
+
+  revalidatePath('/admin/orders')
+  revalidatePath('/store/orders')
+  return { success: true }
+}
+
+export async function cancelOrder(
+  input: unknown
+): Promise<{ success: true; data: CancelResult } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const parsed = cancelOrderSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: 'Невалидные данные' }
+
+  const user = await getCurrentUser()
+  if (!user?.wsUserId) return { success: false, error: 'Пользователь не найден' }
+
+  const { orderId, note } = parsed.data
+  const supabase = createSupabaseAdminClient()
+
+  const { data, error } = await supabase.rpc('cancel_order', {
+    p_order_id: orderId,
+    p_admin_id: user.wsUserId,
+    p_note: note ?? null,
+  })
+
+  if (error) {
+    const msg = error.message
+    if (msg.includes('не найден')) return { success: false, error: 'Заказ не найден' }
+    if (msg.includes('уже отменён')) return { success: false, error: 'Заказ уже отменён' }
+    if (msg.includes('уже выполнен')) return { success: false, error: 'Возврат уже выполнен' }
+    return { success: false, error: 'Ошибка при отмене заказа' }
+  }
+
+  revalidatePath('/admin/orders')
+  revalidatePath('/store/orders')
+  revalidatePath('/store')
+  revalidatePath('/profile')
+  return { success: true, data: data as CancelResult }
 }

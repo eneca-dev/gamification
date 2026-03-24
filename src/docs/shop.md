@@ -31,12 +31,15 @@
 - `updateCategory(input)` — обновление категории (включая is_active). Только админ
 - `createProduct(input)` — создание товара. Только админ. Записывает `created_by`
 - `updateProduct(input)` — обновление товара (включая is_active). Только админ
+- `uploadProductImage(formData)` — загрузка изображения в Supabase Storage bucket `product-images`. Только админ. Возвращает publicUrl
+- `deleteProductImage(imageUrl)` — удаление изображения из Storage. Только админ
 
 ## Queries
 
 - `getCategories()` — активные категории, отсортированные по sort_order. Серверный клиент
 - `getAllCategories()` — все категории (для админки). supabaseAdmin
 - `getProducts(categorySlug?)` — активные товары с активными категориями. Фильтр по slug
+- `getAllProducts()` — все товары с категориями (для админки, включая неактивные). supabaseAdmin
 - `getProductById(id)` — один товар с категорией
 - `getUserOrders(wsUserId)` — заказы пользователя с названием товара и суммой. supabaseAdmin
 - `getUserBalance(wsUserId)` — баланс пользователя из gamification_balances. supabaseAdmin

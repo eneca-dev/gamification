@@ -1,13 +1,8 @@
-import { ShoppingBag } from 'lucide-react'
+import { getOrders } from '@/modules/admin'
+import { AdminOrdersClient } from '@/modules/admin/components/AdminOrdersClient'
 
-import { AdminPlaceholder } from '@/modules/admin/components/AdminPlaceholder'
+export default async function AdminOrdersPage() {
+  const orders = await getOrders()
 
-export default function AdminOrdersPage() {
-  return (
-    <AdminPlaceholder
-      icon={ShoppingBag}
-      title="Заказы"
-      description="Раздел будет доступен в следующем обновлении"
-    />
-  )
+  return <AdminOrdersClient orders={orders} />
 }

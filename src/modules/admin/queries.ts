@@ -1,6 +1,6 @@
 import { createSupabaseServerClient, createSupabaseAdminClient } from '@/config/supabase'
 
-import type { EventTypeRow, AdminUserRow, UserDetail, UserTransaction } from './types'
+import type { EventTypeRow, AdminUserRow, UserDetail, UserTransaction, AdminOrderRow } from './types'
 
 // gamification_balances — связь 1:1, но Supabase может вернуть объект или массив
 function extractCoins(balance: unknown): number {
@@ -95,4 +95,41 @@ export async function getUserDetail(userId: string): Promise<UserDetail | null> 
   }))
 
   return { user, transactions }
+}
+
+export async function getOrders(): Promise<AdminOrderRow[]> {
+  const supabase = createSupabaseAdminClient()
+
+  const { data, error } = await supabase
+    .from('shop_orders')
+    .select(`
+      *,
+      user:ws_users!user_id ( first_name, last_name, email ),
+      product:shop_products!product_id ( name, emoji ),
+      transaction:gamification_transactions!transaction_id ( coins )
+    `)
+    .order('created_at', { ascending: false })
+
+  if (error) throw new Error(error.message)
+
+  return (data ?? []).map((row) => {
+    const user = Array.isArray(row.user) ? row.user[0] : row.user
+    const product = Array.isArray(row.product) ? row.product[0] : row.product
+    const transaction = Array.isArray(row.transaction) ? row.transaction[0] : row.transaction
+    return {
+      id: row.id,
+      user_id: row.user_id,
+      user_name: `${user?.last_name ?? ''} ${user?.first_name ?? ''}`.trim() || 'Неизвестный',
+      user_email: user?.email ?? '',
+      product_id: row.product_id,
+      product_name: product?.name ?? 'Удалённый товар',
+      product_emoji: product?.emoji ?? null,
+      status: row.status,
+      coins_spent: Math.abs(transaction?.coins ?? 0),
+      note: row.note,
+      status_changed_by: row.status_changed_by,
+      status_changed_at: row.status_changed_at,
+      created_at: row.created_at,
+    }
+  })
 }

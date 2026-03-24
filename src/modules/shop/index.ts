@@ -1,4 +1,4 @@
-export { getCategories, getAllCategories, getProducts, getProductById, getUserOrders, getUserBalance } from './queries'
+export { getCategories, getAllCategories, getProducts, getAllProducts, getProductById, getUserOrders, getUserBalance } from './queries'
 export {
   purchaseProduct,
   createCategory,

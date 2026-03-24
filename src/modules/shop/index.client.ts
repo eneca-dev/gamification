@@ -5,6 +5,8 @@ export {
   updateCategory,
   createProduct,
   updateProduct,
+  uploadProductImage,
+  deleteProductImage,
 } from './actions'
 export type {
   ShopCategory,

@@ -68,6 +68,25 @@ export async function getProducts(categorySlug?: string): Promise<ShopProductWit
     })) as ShopProductWithCategory[]
 }
 
+export async function getAllProducts(): Promise<ShopProductWithCategory[]> {
+  const supabase = createSupabaseAdminClient()
+
+  const { data, error } = await supabase
+    .from('shop_products')
+    .select(`
+      *,
+      category:shop_categories!category_id ( name, slug, is_physical, is_active )
+    `)
+    .order('sort_order', { ascending: true })
+
+  if (error) throw new Error(error.message)
+
+  return (data ?? []).map((p) => ({
+    ...p,
+    category: Array.isArray(p.category) ? p.category[0] : p.category,
+  })) as ShopProductWithCategory[]
+}
+
 export async function getProductById(id: string): Promise<ShopProductWithCategory | null> {
   const supabase = await createSupabaseServerClient()
 

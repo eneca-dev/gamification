@@ -25,7 +25,8 @@
       "Bash(npm run:*)",
       "Bash(grep:*)",
       "Bash(node:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(find \"D:/1work/gamification/gamification/src/app/\\(main\\)/admin\" -type f)"
     ]
   },
   "enableAllProjectMcpServers": true,

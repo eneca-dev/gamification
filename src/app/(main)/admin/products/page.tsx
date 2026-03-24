@@ -1,13 +1,11 @@
-import { Package } from 'lucide-react'
+import { getAllProducts, getAllCategories } from '@/modules/shop'
+import { ProductsClient } from '@/modules/admin/components/ProductsClient'
 
-import { AdminPlaceholder } from '@/modules/admin/components/AdminPlaceholder'
+export default async function AdminProductsPage() {
+  const [products, categories] = await Promise.all([
+    getAllProducts(),
+    getAllCategories(),
+  ])
 
-export default function AdminProductsPage() {
-  return (
-    <AdminPlaceholder
-      icon={Package}
-      title="Товары"
-      description="Раздел будет доступен в следующем обновлении"
-    />
-  )
+  return <ProductsClient products={products} categories={categories} />
 }
