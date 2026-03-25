@@ -159,6 +159,41 @@ export async function updateProduct(
   return { success: true }
 }
 
+// --- Удаление товара (только админ) ---
+
+export async function deleteProduct(
+  productId: unknown
+): Promise<{ success: true } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const parsed = productIdSchema.safeParse(productId)
+  if (!parsed.success) return { success: false, error: 'Невалидный ID товара' }
+
+  const supabase = createSupabaseAdminClient()
+
+  // Проверяем, нет ли заказов на этот товар
+  const { count } = await supabase
+    .from('shop_orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('product_id', parsed.data)
+
+  if (count && count > 0) {
+    return { success: false, error: 'Нельзя удалить товар с существующими заказами. Деактивируйте его вместо удаления' }
+  }
+
+  const { error } = await supabase
+    .from('shop_products')
+    .delete()
+    .eq('id', parsed.data)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/admin/products')
+  revalidatePath('/store')
+  return { success: true }
+}
+
 // --- Загрузка изображений (только админ) ---
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const

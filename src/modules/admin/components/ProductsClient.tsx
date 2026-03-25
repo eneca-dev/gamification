@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { Plus, Pencil, ChevronDown, ChevronRight } from 'lucide-react'
+import { useState, useTransition, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Check, X } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
 import {
@@ -9,7 +10,7 @@ import {
   updateCategory,
   createProduct,
   updateProduct,
-  uploadProductImage,
+  deleteProduct,
   deleteProductImage,
 } from '@/modules/shop/index.client'
 
@@ -30,22 +31,39 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   const [error, setError] = useState<string | null>(null)
   const [notification, setNotification] = useState<string | null>(null)
 
-  // Товары — фильтр и модал
+  // Товары — фильтр, поиск и модал
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [editingProduct, setEditingProduct] = useState<ShopProductWithCategory | null>(null)
   const [isCreatingProduct, setIsCreatingProduct] = useState(false)
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null)
+
+  // Inline-редактирование товаров
+  const [inlineEdit, setInlineEdit] = useState<{
+    productId: string
+    field: 'category_id' | 'price' | 'stock'
+    value: string
+  } | null>(null)
 
   // Категории — секция
   const [categoriesExpanded, setCategoriesExpanded] = useState(false)
   const [isCreatingCategory, setIsCreatingCategory] = useState(false)
-  const [newCat, setNewCat] = useState({ name: '', slug: '', description: '', is_physical: false, sort_order: 0 })
+  const [newCat, setNewCat] = useState({ name: '', slug: '', description: '', is_physical: false })
   const [editingCatId, setEditingCatId] = useState<string | null>(null)
   const [editCatField, setEditCatField] = useState<'name' | 'slug' | 'description' | null>(null)
   const [editCatValue, setEditCatValue] = useState('')
 
-  const filteredProducts = categoryFilter === 'all'
-    ? products
-    : products.filter((p) => p.category?.slug === categoryFilter)
+  const filteredProducts = products
+    .filter((p) => categoryFilter === 'all' || p.category?.slug === categoryFilter)
+    .filter((p) => {
+      if (!searchQuery.trim()) return true
+      const q = searchQuery.toLowerCase()
+      return (
+        p.name.toLowerCase().includes(q) ||
+        (p.description?.toLowerCase().includes(q) ?? false) ||
+        (p.category?.name.toLowerCase().includes(q) ?? false)
+      )
+    })
 
   function showNotification(msg: string) {
     setNotification(msg)
@@ -116,10 +134,11 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             ...newCat,
             description: newCat.description.trim() || null,
             is_active: true,
+            sort_order: 0,
             created_at: new Date().toISOString(),
           },
         ])
-        setNewCat({ name: '', slug: '', description: '', is_physical: false, sort_order: 0 })
+        setNewCat({ name: '', slug: '', description: '', is_physical: false })
         setIsCreatingCategory(false)
         showNotification('Категория создана')
       }
@@ -141,6 +160,88 @@ export function ProductsClient({ products: initialProducts, categories: initialC
     })
   }
 
+  function handleDeleteProduct(id: string) {
+    const prev = products
+    setProducts((items) => items.filter((p) => p.id !== id))
+    setDeletingProductId(null)
+
+    startProductTransition(async () => {
+      const result = await deleteProduct(id)
+      if (!result.success) {
+        setProducts(prev)
+        setError(result.error)
+      } else {
+        showNotification('Товар удалён')
+      }
+    })
+  }
+
+  // --- Inline edit ---
+
+  function startInlineEdit(productId: string, field: 'category_id' | 'price' | 'stock', currentValue: string) {
+    setInlineEdit({ productId, field, value: currentValue })
+  }
+
+  function cancelInlineEdit() {
+    setInlineEdit(null)
+  }
+
+  function saveInlineEdit() {
+    if (!inlineEdit) return
+    const { productId, field, value } = inlineEdit
+
+    let updatePayload: Record<string, unknown> = {}
+
+    if (field === 'price') {
+      const num = parseInt(value, 10)
+      if (isNaN(num) || num <= 0) {
+        setError('Цена должна быть больше 0')
+        return
+      }
+      updatePayload = { price: num }
+    } else if (field === 'stock') {
+      if (value === '') {
+        updatePayload = { stock: null }
+      } else {
+        const num = parseInt(value, 10)
+        if (isNaN(num) || num < 0) {
+          setError('Количество должно быть >= 0')
+          return
+        }
+        updatePayload = { stock: num }
+      }
+    } else if (field === 'category_id') {
+      if (!value) {
+        setError('Выберите категорию')
+        return
+      }
+      updatePayload = { category_id: value }
+    }
+
+    const prev = products
+    const cat = field === 'category_id' ? categories.find((c) => c.id === value) : null
+    setProducts((items) =>
+      items.map((p) => {
+        if (p.id !== productId) return p
+        const updated = { ...p, ...updatePayload }
+        if (cat) {
+          updated.category = { name: cat.name, slug: cat.slug, is_physical: cat.is_physical, is_active: cat.is_active }
+          updated.category_id = cat.id
+        }
+        return updated
+      })
+    )
+    cancelInlineEdit()
+
+    startProductTransition(async () => {
+      const result = await updateProduct({ id: productId, ...updatePayload })
+      if (!result.success) {
+        setProducts(prev)
+        setError(result.error)
+      }
+    })
+  }
+
   function handleProductSave(data: ProductFormData, imageFile: File | null) {
     startProductTransition(async () => {
       let imageUrl = data.image_url
@@ -149,7 +250,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
       if (imageFile) {
         const fd = new FormData()
         fd.append('file', imageFile)
-        const uploadResult = await uploadProductImage(fd)
+        const res = await fetch('/api/admin/upload-product-image', { method: 'POST', body: fd })
+        const uploadResult = await res.json() as { success: true; url: string } | { success: false; error: string }
         if (!uploadResult.success) {
           setError(uploadResult.error)
           return
@@ -225,8 +327,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
   return (
     <div className="space-y-5">
-      {/* Toast */}
-      {notification && (
+      {/* Toast — через портал, чтобы обойти transform containing block */}
+      {notification && createPortal(
         <div className="fixed top-6 right-6 z-50 animate-fade-in-up">
           <div
             className="rounded-xl px-5 py-3 text-[13px] font-semibold shadow-lg"
@@ -238,7 +340,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           >
             {notification}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Error */}
@@ -333,17 +436,6 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                     />
                     Физический товар
                   </label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[12px]" style={{ color: 'var(--apex-text-muted)' }}>Порядок:</span>
-                    <input
-                      type="number"
-                      value={newCat.sort_order}
-                      onChange={(e) => setNewCat({ ...newCat, sort_order: parseInt(e.target.value, 10) || 0 })}
-                      className="w-16 px-2 py-1 rounded-lg text-[13px] outline-none"
-                      style={catInputStyle}
-                      min={0}
-                    />
-                  </div>
                   <div className="flex-1" />
                   <button
                     onClick={handleCreateCategory}
@@ -368,7 +460,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             <table className="w-full">
               <thead>
                 <tr style={{ borderTop: '1px solid var(--apex-border)', borderBottom: '1px solid var(--apex-border)' }}>
-                  {['Название', 'Slug', 'Описание', 'Тип', 'Порядок', 'Статус'].map((h) => (
+                  {['Название', 'Slug', 'Описание', 'Тип', 'Статус'].map((h) => (
                     <th
                       key={h}
                       className="text-left text-[12px] font-semibold px-5 py-2.5"
@@ -459,13 +551,6 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                         </span>
                       </td>
 
-                      {/* Порядок */}
-                      <td className="px-5 py-2.5">
-                        <span className="text-[12px]" style={{ color: 'var(--apex-text-muted)' }}>
-                          {cat.sort_order}
-                        </span>
-                      </td>
-
                       {/* Статус */}
                       <td className="px-5 py-2.5">
                         <ToggleSwitch
@@ -509,14 +594,36 @@ export function ProductsClient({ products: initialProducts, categories: initialC
               })}
             </div>
           </div>
-          <button
-            onClick={() => setIsCreatingProduct(true)}
-            className="px-3 py-1.5 rounded-lg text-[12px] font-semibold"
-            style={{ background: 'var(--apex-primary)', color: 'white' }}
-          >
-            <Plus size={14} className="inline -translate-y-[1px] mr-1" />
-            Добавить товар
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Поиск */}
+            <div className="relative">
+              <Search
+                size={14}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                style={{ color: 'var(--apex-text-muted)' }}
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Поиск..."
+                className="pl-8 pr-3 py-1.5 rounded-lg text-[12px] outline-none w-48"
+                style={{
+                  background: 'var(--apex-bg)',
+                  border: '1px solid var(--apex-border)',
+                  color: 'var(--apex-text)',
+                }}
+              />
+            </div>
+            <button
+              onClick={() => setIsCreatingProduct(true)}
+              className="px-3 py-1.5 rounded-lg text-[12px] font-semibold"
+              style={{ background: 'var(--apex-primary)', color: 'white' }}
+            >
+              <Plus size={14} className="inline -translate-y-[1px] mr-1" />
+              Добавить товар
+            </button>
+          </div>
         </div>
 
         {/* Таблица товаров */}
@@ -539,106 +646,194 @@ export function ProductsClient({ products: initialProducts, categories: initialC
               <tr>
                 <td colSpan={7} className="text-center py-12">
                   <p className="text-[13px] font-medium" style={{ color: 'var(--apex-text-muted)' }}>
-                    Нет товаров
+                    {searchQuery.trim() ? 'Ничего не найдено' : 'Нет товаров'}
                   </p>
                 </td>
               </tr>
             ) : (
-              filteredProducts.map((product) => (
-                <tr key={product.id} className="group" style={{ borderBottom: '1px solid var(--apex-border)' }}>
-                  {/* Изображение */}
-                  <td className="px-5 py-2.5 w-12">
-                    <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center text-xl overflow-hidden"
-                      style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
-                    >
-                      {product.image_url ? (
-                        <img src={product.image_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        product.emoji ?? '📦'
-                      )}
-                    </div>
-                  </td>
+              filteredProducts.map((product) => {
+                const isInlineEditing = inlineEdit?.productId === product.id
+                const isConfirmingDelete = deletingProductId === product.id
 
-                  {/* Название */}
-                  <td className="px-5 py-2.5">
-                    <span className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>
-                      {product.name}
-                    </span>
-                    {product.description && (
-                      <p className="text-[11px] mt-0.5 truncate max-w-[250px]" style={{ color: 'var(--apex-text-muted)' }}>
-                        {product.description}
-                      </p>
-                    )}
-                  </td>
-
-                  {/* Категория */}
-                  <td className="px-5 py-2.5">
-                    <span
-                      className="text-[11px] font-bold px-2 py-0.5 rounded-md"
-                      style={{ background: 'var(--apex-tag-teal-bg)', color: 'var(--apex-tag-teal-text)' }}
-                    >
-                      {product.category?.name ?? '—'}
-                    </span>
-                  </td>
-
-                  {/* Цена */}
-                  <td className="px-5 py-2.5">
-                    <CoinStatic amount={product.price} size="sm" />
-                  </td>
-
-                  {/* Остаток */}
-                  <td className="px-5 py-2.5">
-                    {product.stock != null ? (
-                      <span
-                        className="text-[13px] font-semibold"
+                return (
+                  <tr key={product.id} className="group" style={{ borderBottom: '1px solid var(--apex-border)' }}>
+                    {/* Изображение */}
+                    <td className="px-5 py-2.5 w-12">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center text-xl overflow-hidden"
                         style={{
-                          color: product.stock === 0
-                            ? 'var(--apex-danger)'
-                            : product.stock <= 5
-                              ? 'var(--apex-warning-text)'
-                              : 'var(--apex-text)',
+                          background: product.image_url ? 'var(--apex-bg)' : 'var(--apex-emoji-bg)',
+                          border: '1px solid var(--apex-border)',
                         }}
                       >
-                        {product.stock}
-                      </span>
-                    ) : (
-                      <span className="text-[12px]" style={{ color: 'var(--apex-text-muted)' }}>
-                        ∞
-                      </span>
-                    )}
-                  </td>
+                        {product.image_url ? (
+                          <img src={product.image_url} alt="" className="w-full h-full object-cover" />
+                        ) : product.emoji ? (
+                          product.emoji
+                        ) : (
+                          <span className="text-[16px]" style={{ color: '#ccc' }}>?</span>
+                        )}
+                      </div>
+                    </td>
 
-                  {/* Статус */}
-                  <td className="px-5 py-2.5">
-                    <ToggleSwitch
-                      checked={product.is_active}
-                      onChange={() => toggleProductActive(product.id, product.is_active)}
-                      disabled={isProductPending}
-                      label={product.is_active ? 'Активен' : 'Неактивен'}
-                    />
-                  </td>
+                    {/* Название */}
+                    <td className="px-5 py-2.5">
+                      <span className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>
+                        {product.name}
+                      </span>
+                      {product.description && (
+                        <p className="text-[11px] mt-0.5 truncate max-w-[250px]" style={{ color: 'var(--apex-text-muted)' }}>
+                          {product.description}
+                        </p>
+                      )}
+                    </td>
 
-                  {/* Действия */}
-                  <td className="px-5 py-2.5">
-                    <button
-                      onClick={() => setEditingProduct(product)}
-                      className="w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ color: 'var(--apex-text-muted)' }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = 'var(--apex-primary)'
-                        e.currentTarget.style.background = 'var(--apex-success-bg)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = 'var(--apex-text-muted)'
-                        e.currentTarget.style.background = 'transparent'
-                      }}
-                    >
-                      <Pencil size={14} />
-                    </button>
-                  </td>
-                </tr>
-              ))
+                    {/* Категория — inline editable */}
+                    <td className="px-5 py-2.5">
+                      {isInlineEditing && inlineEdit.field === 'category_id' ? (
+                        <InlineSelect
+                          value={inlineEdit.value}
+                          onChange={(v) => setInlineEdit({ ...inlineEdit, value: v })}
+                          onSave={saveInlineEdit}
+                          onCancel={cancelInlineEdit}
+                          options={categories.filter((c) => c.is_active || c.id === product.category_id).map((c) => ({
+                            value: c.id,
+                            label: c.name,
+                          }))}
+                        />
+                      ) : (
+                        <InlineEditableCell onClick={() => startInlineEdit(product.id, 'category_id', product.category_id)}>
+                          <span
+                            className="text-[11px] font-bold px-2 py-0.5 rounded-md"
+                            style={{ background: 'var(--apex-tag-teal-bg)', color: 'var(--apex-tag-teal-text)' }}
+                          >
+                            {product.category?.name ?? '—'}
+                          </span>
+                        </InlineEditableCell>
+                      )}
+                    </td>
+
+                    {/* Цена — inline editable */}
+                    <td className="px-5 py-2.5">
+                      {isInlineEditing && inlineEdit.field === 'price' ? (
+                        <InlineNumberInput
+                          value={inlineEdit.value}
+                          onChange={(v) => setInlineEdit({ ...inlineEdit, value: v })}
+                          onSave={saveInlineEdit}
+                          onCancel={cancelInlineEdit}
+                          min={1}
+                        />
+                      ) : (
+                        <InlineEditableCell onClick={() => startInlineEdit(product.id, 'price', String(product.price))}>
+                          <CoinStatic amount={product.price} size="sm" />
+                        </InlineEditableCell>
+                      )}
+                    </td>
+
+                    {/* Остаток — inline editable только для физических товаров */}
+                    <td className="px-5 py-2.5">
+                      {product.category?.is_physical ? (
+                        isInlineEditing && inlineEdit.field === 'stock' ? (
+                          <InlineNumberInput
+                            value={inlineEdit.value}
+                            onChange={(v) => setInlineEdit({ ...inlineEdit, value: v })}
+                            onSave={saveInlineEdit}
+                            onCancel={cancelInlineEdit}
+                            min={0}
+                          />
+                        ) : (
+                          <InlineEditableCell onClick={() => startInlineEdit(product.id, 'stock', product.stock != null ? String(product.stock) : '0')}>
+                            <span
+                              className="text-[13px] font-semibold"
+                              style={{
+                                color: product.stock === 0
+                                  ? 'var(--apex-danger)'
+                                  : (product.stock ?? 0) <= 5
+                                    ? 'var(--apex-warning-text)'
+                                    : 'var(--apex-text)',
+                              }}
+                            >
+                              {product.stock ?? 0}
+                            </span>
+                          </InlineEditableCell>
+                        )
+                      ) : (
+                        <span className="text-[12px]" style={{ color: 'var(--apex-text-muted)' }}>
+                          ∞
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Статус */}
+                    <td className="px-5 py-2.5">
+                      <ToggleSwitch
+                        checked={product.is_active}
+                        onChange={() => toggleProductActive(product.id, product.is_active)}
+                        disabled={isProductPending}
+                        label={product.is_active ? 'Активен' : 'Неактивен'}
+                      />
+                    </td>
+
+                    {/* Действия */}
+                    <td className="px-5 py-2.5">
+                      {isConfirmingDelete ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-[11px] font-medium mr-1" style={{ color: 'var(--apex-danger)' }}>
+                            Удалить?
+                          </span>
+                          <button
+                            onClick={() => handleDeleteProduct(product.id)}
+                            className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                            style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
+                          >
+                            <Check size={14} />
+                          </button>
+                          <button
+                            onClick={() => setDeletingProductId(null)}
+                            className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                            style={{ color: 'var(--apex-text-muted)' }}
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => setEditingProduct(product)}
+                            className="w-8 h-8 rounded-full flex items-center justify-center"
+                            style={{ color: 'var(--apex-text-muted)' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color = 'var(--apex-primary)'
+                              e.currentTarget.style.background = 'var(--apex-success-bg)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color = 'var(--apex-text-muted)'
+                              e.currentTarget.style.background = 'transparent'
+                            }}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => setDeletingProductId(product.id)}
+                            className="w-8 h-8 rounded-full flex items-center justify-center"
+                            style={{ color: 'var(--apex-text-muted)' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color = 'var(--apex-danger)'
+                              e.currentTarget.style.background = 'var(--apex-error-bg)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color = 'var(--apex-text-muted)'
+                              e.currentTarget.style.background = 'transparent'
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })
             )}
           </tbody>
         </table>
@@ -648,8 +843,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         </div>
       </div>
 
-      {/* Модал создания/редактирования товара */}
-      {(isCreatingProduct || editingProduct) && (
+      {/* Модал создания/редактирования товара — через портал */}
+      {(isCreatingProduct || editingProduct) && createPortal(
         <ProductFormModal
           product={editingProduct}
           categories={categories}
@@ -659,7 +854,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             setIsCreatingProduct(false)
           }}
           isPending={isProductPending}
-        />
+        />,
+        document.body,
       )}
     </div>
   )
@@ -691,6 +887,143 @@ function CatEditableCell({ onClick, children }: { onClick: () => void; children:
         }}
       >
         <Pencil size={12} />
+      </button>
+    </div>
+  )
+}
+
+function InlineEditableCell({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <div className="group/cell flex items-center gap-2 cursor-pointer" onClick={onClick}>
+      {children}
+      <button
+        className="w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity shrink-0"
+        style={{ color: 'var(--apex-text-muted)' }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = 'var(--apex-primary)'
+          e.currentTarget.style.background = 'var(--apex-success-bg)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = 'var(--apex-text-muted)'
+          e.currentTarget.style.background = 'transparent'
+        }}
+      >
+        <Pencil size={12} />
+      </button>
+    </div>
+  )
+}
+
+function InlineNumberInput({
+  value,
+  onChange,
+  onSave,
+  onCancel,
+  min,
+  placeholder,
+}: {
+  value: string
+  onChange: (v: string) => void
+  onSave: () => void
+  onCancel: () => void
+  min?: number
+  placeholder?: string
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    ref.current?.select()
+  }, [])
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        ref={ref}
+        type="number"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') onSave()
+          if (e.key === 'Escape') onCancel()
+        }}
+        className="w-20 px-2 py-1 rounded-lg text-[13px] outline-none"
+        style={{
+          background: 'var(--apex-surface)',
+          border: '1px solid var(--apex-focus)',
+          color: 'var(--apex-text)',
+          boxShadow: '0 0 0 1px var(--apex-focus)',
+        }}
+        autoFocus
+        min={min}
+        placeholder={placeholder}
+      />
+      <button
+        onClick={onSave}
+        className="w-6 h-6 rounded-full flex items-center justify-center"
+        style={{ color: 'var(--apex-success-text)' }}
+      >
+        <Check size={14} />
+      </button>
+      <button
+        onClick={onCancel}
+        className="w-6 h-6 rounded-full flex items-center justify-center"
+        style={{ color: 'var(--apex-text-muted)' }}
+      >
+        <X size={14} />
+      </button>
+    </div>
+  )
+}
+
+function InlineSelect({
+  value,
+  onChange,
+  onSave,
+  onCancel,
+  options,
+}: {
+  value: string
+  onChange: (v: string) => void
+  onSave: () => void
+  onCancel: () => void
+  options: { value: string; label: string }[]
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <select
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onCancel()
+        }}
+        className="px-2 py-1 rounded-lg text-[12px] outline-none"
+        style={{
+          background: 'var(--apex-surface)',
+          border: '1px solid var(--apex-focus)',
+          color: 'var(--apex-text)',
+          boxShadow: '0 0 0 1px var(--apex-focus)',
+        }}
+        autoFocus
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+      <button
+        onClick={onSave}
+        className="w-6 h-6 rounded-full flex items-center justify-center"
+        style={{ color: 'var(--apex-success-text)' }}
+      >
+        <Check size={14} />
+      </button>
+      <button
+        onClick={onCancel}
+        className="w-6 h-6 rounded-full flex items-center justify-center"
+        style={{ color: 'var(--apex-text-muted)' }}
+      >
+        <X size={14} />
       </button>
     </div>
   )

@@ -130,9 +130,6 @@ export function Sidebar({ user, balance, showDevSwitcher }: SidebarProps) {
             На вашем счету
           </div>
           <CoinStatic amount={balance} size="md" />
-          <div className="text-[10px] mt-0.5" style={{ color: 'var(--apex-text-muted)' }}>
-            баллов
-          </div>
         </div>
       </div>
 

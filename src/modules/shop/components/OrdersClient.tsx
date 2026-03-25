@@ -105,7 +105,7 @@ export function OrdersClient({ orders }: OrdersClientProps) {
                       className="w-full h-full object-cover rounded-xl"
                     />
                   ) : (
-                    order.product.emoji ?? '📦'
+                    order.product.emoji || <span style={{ color: '#ccc', fontSize: '16px' }}>?</span>
                   )}
                 </div>
 

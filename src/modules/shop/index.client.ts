@@ -5,6 +5,7 @@ export {
   updateCategory,
   createProduct,
   updateProduct,
+  deleteProduct,
   uploadProductImage,
   deleteProductImage,
 } from './actions'

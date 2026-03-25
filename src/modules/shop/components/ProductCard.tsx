@@ -28,15 +28,18 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing 
       }}
     >
       {/* Зона картинки / эмодзи */}
-      <div className="h-36 product-image-placeholder relative">
+      <div
+        className="h-36 flex items-center justify-center relative overflow-hidden"
+        style={{ background: product.image_url ? 'transparent' : 'var(--apex-emoji-bg)' }}
+      >
         {product.image_url ? (
           <img
             src={product.image_url}
             alt={product.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         ) : (
-          <span className="text-5xl">{product.emoji ?? '📦'}</span>
+          <span className="text-5xl">{product.emoji || <span style={{ color: '#ccc' }}>?</span>}</span>
         )}
         {outOfStock && (
           <span
@@ -57,7 +60,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing 
       </div>
 
       {/* Детали товара */}
-      <div className="p-4">
+      <div className="p-4" style={{ background: 'var(--surface-elevated)' }}>
         <div
           className="text-[11px] font-semibold mb-1"
           style={{ color: 'var(--text-muted)' }}

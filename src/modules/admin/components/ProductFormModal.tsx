@@ -25,11 +25,11 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
   const [categoryId, setCategoryId] = useState(defaultCategoryId)
   const [emoji, setEmoji] = useState(product?.emoji ?? '')
   const [stock, setStock] = useState<string>(product?.stock != null ? String(product.stock) : '')
-  const [sortOrder, setSortOrder] = useState(product?.sort_order ?? 0)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(product?.image_url ?? null)
   const [removeImage, setRemoveImage] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const selectedCategory = categories.find((c) => c.id === categoryId)
@@ -40,13 +40,18 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', handleEsc)
-    return () => document.removeEventListener('keydown', handleEsc)
+
+    // Блокируем скролл body при открытии модалки
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.removeEventListener('keydown', handleEsc)
+      document.body.style.overflow = prevOverflow
+    }
   }, [onClose])
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
+  function processFile(file: File) {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
     if (!allowedTypes.includes(file.type)) {
       setErrors((prev) => ({ ...prev, image: 'Формат: JPEG, PNG или WebP' }))
@@ -65,6 +70,18 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
       delete next.image
       return next
     })
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) processFile(file)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) processFile(file)
   }
 
   function handleRemoveImage() {
@@ -100,7 +117,7 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
       image_url: removeImage ? null : (imagePreview && !imageFile ? product?.image_url ?? null : null),
       emoji: emoji.trim() || null,
       stock: isPhysical ? parseInt(stock, 10) : null,
-      sort_order: sortOrder,
+      sort_order: product?.sort_order ?? 0,
     }
 
     onSave(data, imageFile)
@@ -108,15 +125,15 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" />
+      <div className="fixed inset-0 bg-black/40" />
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-6 animate-scale-in"
+        className="relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-6 animate-scale-in"
         style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -220,18 +237,6 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
             </Field>
           </div>
 
-          {/* Порядок сортировки */}
-          <Field label="Порядок сортировки">
-            <input
-              type="number"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(parseInt(e.target.value, 10) || 0)}
-              className="w-full px-3 py-2 rounded-lg text-[13px] outline-none"
-              style={inputStyle()}
-              min={0}
-            />
-          </Field>
-
           {/* Изображение */}
           <Field label="Изображение" error={errors.image}>
             <div className="space-y-3">
@@ -253,16 +258,25 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
                   </button>
                 </div>
               )}
-              <label
-                className="flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer text-[13px] font-medium w-fit"
+              <div
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className="flex flex-col items-center gap-2 px-4 py-5 rounded-xl cursor-pointer transition-colors text-center"
                 style={{
-                  background: 'var(--apex-bg)',
-                  border: '1px solid var(--apex-border)',
+                  background: isDragging ? 'var(--apex-success-bg)' : 'var(--apex-bg)',
+                  border: `2px dashed ${isDragging ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
                   color: 'var(--apex-text-secondary)',
                 }}
               >
-                <Upload size={14} />
-                {imagePreview ? 'Заменить' : 'Загрузить'}
+                <Upload size={20} style={{ color: isDragging ? 'var(--apex-primary)' : 'var(--apex-text-muted)' }} />
+                <span className="text-[13px] font-medium">
+                  {isDragging ? 'Отпустите файл' : imagePreview ? 'Заменить изображение' : 'Перетащите или нажмите'}
+                </span>
+                <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
+                  JPEG, PNG или WebP, до 2 МБ
+                </span>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -270,10 +284,7 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
                   onChange={handleFileChange}
                   className="hidden"
                 />
-              </label>
-              <p className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
-                JPEG, PNG или WebP, до 2 МБ
-              </p>
+              </div>
             </div>
           </Field>
 
