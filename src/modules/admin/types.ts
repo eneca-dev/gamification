@@ -58,6 +58,8 @@ export interface AdminOrderRow {
   product_id: string
   product_name: string
   product_emoji: string | null
+  product_image_url: string | null
+  is_physical: boolean
   status: 'pending' | 'processing' | 'fulfilled' | 'cancelled'
   coins_spent: number
   note: string | null

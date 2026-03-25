@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Check, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Check, X, HelpCircle } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
 import {
@@ -50,7 +50,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   const [isCreatingCategory, setIsCreatingCategory] = useState(false)
   const [newCat, setNewCat] = useState({ name: '', slug: '', description: '', is_physical: false })
   const [editingCatId, setEditingCatId] = useState<string | null>(null)
-  const [editCatField, setEditCatField] = useState<'name' | 'slug' | 'description' | null>(null)
+  const [editCatField, setEditCatField] = useState<'name' | 'slug' | 'description' | 'is_physical' | null>(null)
   const [editCatValue, setEditCatValue] = useState('')
 
   const filteredProducts = products
@@ -72,10 +72,14 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
   // --- Категории ---
 
-  function startCatEdit(cat: ShopCategory, field: 'name' | 'slug' | 'description') {
+  function startCatEdit(cat: ShopCategory, field: 'name' | 'slug' | 'description' | 'is_physical') {
     setEditingCatId(cat.id)
     setEditCatField(field)
-    setEditCatValue(field === 'description' ? (cat.description ?? '') : cat[field])
+    setEditCatValue(
+      field === 'description' ? (cat.description ?? '')
+        : field === 'is_physical' ? String(cat.is_physical)
+        : cat[field]
+    )
     setError(null)
   }
 
@@ -87,11 +91,30 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
   function saveCatEdit(id: string) {
     if (!editCatField) return
+
+    if (editCatField === 'is_physical') {
+      submitCatUpdate(id, { is_physical: editCatValue === 'true' })
+      return
+    }
+
     const value = editCatValue.trim()
     if (editCatField !== 'description' && !value) {
       setError(`${editCatField === 'name' ? 'Название' : 'Slug'} обязателен`)
       return
     }
+
+    if (editCatField === 'slug') {
+      if (!/^[a-z][a-z0-9_]*$/.test(value)) {
+        setError('Slug: только строчные латинские буквы, цифры и _, начинается с буквы')
+        return
+      }
+      const isDuplicate = categories.some((c) => c.id !== id && c.slug === value)
+      if (isDuplicate) {
+        setError('Slug уже используется другой категорией')
+        return
+      }
+    }
+
     submitCatUpdate(id, { [editCatField]: editCatField === 'description' ? (value || null) : value })
   }
 
@@ -116,6 +139,14 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   function handleCreateCategory() {
     if (!newCat.name.trim() || !newCat.slug.trim()) {
       setError('Название и slug обязательны')
+      return
+    }
+    if (!/^[a-z][a-z0-9_]*$/.test(newCat.slug)) {
+      setError('Slug: только строчные латинские буквы, цифры и _, начинается с буквы')
+      return
+    }
+    if (categories.some((c) => c.slug === newCat.slug)) {
+      setError('Slug уже используется другой категорией')
       return
     }
 
@@ -409,14 +440,19 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                     className="px-3 py-2 rounded-lg text-[13px] outline-none"
                     style={catInputStyle}
                   />
-                  <input
-                    type="text"
-                    value={newCat.slug}
-                    onChange={(e) => setNewCat({ ...newCat, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                    placeholder="slug"
-                    className="px-3 py-2 rounded-lg text-[13px] outline-none font-mono"
-                    style={catInputStyle}
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={newCat.slug}
+                      onChange={(e) => setNewCat({ ...newCat, slug: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
+                      placeholder="slug"
+                      className="w-full px-3 py-2 pr-8 rounded-lg text-[13px] outline-none font-mono"
+                      style={catInputStyle}
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2">
+                      <SlugHelp />
+                    </span>
+                  </div>
                   <input
                     type="text"
                     value={newCat.description}
@@ -457,7 +493,14 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             )}
 
             {/* Таблица категорий */}
-            <table className="w-full">
+            <table className="w-full" style={{ tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: '25%' }} />
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '25%' }} />
+                <col style={{ width: '15%' }} />
+                <col style={{ width: '15%' }} />
+              </colgroup>
               <thead>
                 <tr style={{ borderTop: '1px solid var(--apex-border)', borderBottom: '1px solid var(--apex-border)' }}>
                   {['Название', 'Slug', 'Описание', 'Тип', 'Статус'].map((h) => (
@@ -467,6 +510,11 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                       style={{ color: 'var(--apex-text-secondary)' }}
                     >
                       {h}
+                      {h === 'Slug' && (
+                        <span className="inline-block ml-1 align-middle">
+                          <SlugHelp size={12} />
+                        </span>
+                      )}
                     </th>
                   ))}
                 </tr>
@@ -500,7 +548,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                         {isEditingThis && editCatField === 'slug' ? (
                           <CatInlineEdit
                             value={editCatValue}
-                            onChange={setEditCatValue}
+                            onChange={(v) => setEditCatValue(v.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                             onSave={() => saveCatEdit(cat.id)}
                             onCancel={cancelCatEdit}
                           />
@@ -540,15 +588,24 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
                       {/* Тип */}
                       <td className="px-5 py-2.5">
-                        <span
-                          className="text-[11px] font-bold px-2 py-0.5 rounded-md"
-                          style={{
-                            background: cat.is_physical ? 'var(--apex-info-bg)' : 'var(--apex-tag-purple-bg)',
-                            color: cat.is_physical ? 'var(--apex-info-text)' : 'var(--apex-tag-purple-text)',
+                        <CatTypeDropdown
+                          catId={cat.id}
+                          isPhysical={cat.is_physical}
+                          isOpen={editingCatId === cat.id && editCatField === 'is_physical'}
+                          onToggle={() => {
+                            if (editingCatId === cat.id && editCatField === 'is_physical') {
+                              cancelCatEdit()
+                            } else {
+                              startCatEdit(cat, 'is_physical')
+                            }
                           }}
-                        >
-                          {cat.is_physical ? 'Физический' : 'Цифровой'}
-                        </span>
+                          onSelect={(val) => {
+                            cancelCatEdit()
+                            if (val !== cat.is_physical) {
+                              submitCatUpdate(cat.id, { is_physical: val })
+                            }
+                          }}
+                        />
                       </td>
 
                       {/* Статус */}
@@ -627,7 +684,16 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         </div>
 
         {/* Таблица товаров */}
-        <table className="w-full">
+        <table className="w-full" style={{ tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: '60px' }} />
+            <col />
+            <col style={{ width: '150px' }} />
+            <col style={{ width: '120px' }} />
+            <col style={{ width: '100px' }} />
+            <col style={{ width: '200px' }} />
+            <col style={{ width: '90px' }} />
+          </colgroup>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--apex-border)' }}>
               {['', 'Название', 'Категория', 'Цена', 'Остаток', 'Статус', ''].map((h, i) => (
@@ -766,12 +832,19 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
                     {/* Статус */}
                     <td className="px-5 py-2.5">
-                      <ToggleSwitch
-                        checked={product.is_active}
-                        onChange={() => toggleProductActive(product.id, product.is_active)}
-                        disabled={isProductPending}
-                        label={product.is_active ? 'Активен' : 'Неактивен'}
-                      />
+                      <div className="flex items-center gap-2">
+                        <ToggleSwitch
+                          checked={product.is_active}
+                          onChange={() => toggleProductActive(product.id, product.is_active)}
+                          disabled={isProductPending}
+                          label={product.is_active ? 'Активен' : 'Неактивен'}
+                        />
+                        {!product.category?.is_active && (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ background: 'var(--apex-warning-bg)', color: 'var(--apex-warning-text)' }}>
+                            Категория неактивна
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Действия */}
@@ -936,7 +1009,10 @@ function InlineNumberInput({
   }, [])
 
   return (
-    <div className="flex items-center gap-1">
+    <div
+      className="flex items-center gap-1"
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) onCancel() }}
+    >
       <input
         ref={ref}
         type="number"
@@ -989,7 +1065,10 @@ function InlineSelect({
   options: { value: string; label: string }[]
 }) {
   return (
-    <div className="flex items-center gap-1">
+    <div
+      className="flex items-center gap-1"
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) onCancel() }}
+    >
       <select
         value={value}
         onChange={(e) => {
@@ -1051,6 +1130,7 @@ function CatInlineEdit({
         if (e.key === 'Enter') onSave()
         if (e.key === 'Escape') onCancel()
       }}
+      onBlur={onCancel}
       className="w-full px-2.5 py-1.5 rounded-lg text-[13px] outline-none"
       style={{
         background: 'var(--apex-surface)',
@@ -1120,5 +1200,143 @@ function FilterPill({
     >
       {children}
     </button>
+  )
+}
+
+function SlugHelp({ size = 14 }: { size?: number }) {
+  const [show, setShow] = useState(false)
+  const ref = useRef<HTMLSpanElement>(null)
+
+  useEffect(() => {
+    if (!show) return
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setShow(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [show])
+
+  return (
+    <span ref={ref} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setShow(!show)}
+        className="flex items-center justify-center cursor-help"
+      >
+        <HelpCircle size={size} style={{ color: 'var(--apex-text-muted)' }} />
+      </button>
+      {show && (
+        <div
+          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 w-56 rounded-xl px-4 py-3 shadow-lg text-[11px] leading-relaxed"
+          style={{
+            background: 'var(--apex-surface)',
+            border: '1px solid var(--apex-border)',
+            color: 'var(--apex-text-secondary)',
+          }}
+        >
+          <p className="font-semibold mb-1" style={{ color: 'var(--apex-text)' }}>Требования к slug</p>
+          <ul className="space-y-0.5 list-disc pl-3">
+            <li>Только строчные латинские буквы, цифры и нижние подчёркивания</li>
+            <li>Начинается с буквы</li>
+            <li>Уникальное значение</li>
+          </ul>
+        </div>
+      )}
+    </span>
+  )
+}
+
+const TYPE_OPTIONS = [
+  { value: true, label: 'Физический', bg: 'var(--apex-info-bg)', text: 'var(--apex-info-text)' },
+  { value: false, label: 'Цифровой', bg: 'var(--apex-tag-purple-bg)', text: 'var(--apex-tag-purple-text)' },
+]
+
+function CatTypeDropdown({
+  catId,
+  isPhysical,
+  isOpen,
+  onToggle,
+  onSelect,
+}: {
+  catId: string
+  isPhysical: boolean
+  isOpen: boolean
+  onToggle: () => void
+  onSelect: (value: boolean) => void
+}) {
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const current = TYPE_OPTIONS.find((o) => o.value === isPhysical)!
+
+  useEffect(() => {
+    if (!isOpen) return
+    function handleClick(e: MouseEvent) {
+      if (
+        btnRef.current && !btnRef.current.contains(e.target as Node) &&
+        menuRef.current && !menuRef.current.contains(e.target as Node)
+      ) onToggle()
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [isOpen, onToggle])
+
+  useEffect(() => {
+    if (isOpen && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      setPos({ top: rect.bottom + 6, left: rect.left })
+    }
+  }, [isOpen])
+
+  return (
+    <div className="inline-block">
+      <button
+        ref={btnRef}
+        onClick={onToggle}
+        className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md cursor-pointer transition-opacity hover:opacity-80"
+        style={{ background: current.bg, color: current.text }}
+      >
+        {current.label}
+        <ChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[100] min-w-[140px] rounded-xl py-1.5 shadow-lg animate-scale-in"
+          style={{
+            top: pos.top,
+            left: pos.left,
+            background: 'var(--apex-surface)',
+            border: '1px solid var(--apex-border)',
+          }}
+        >
+          {TYPE_OPTIONS.map((o) => {
+            const isCurrent = o.value === isPhysical
+            return (
+              <button
+                key={String(o.value)}
+                onClick={() => onSelect(o.value)}
+                className="w-full text-left px-4 py-2 text-[12px] font-medium transition-colors flex items-center gap-2.5"
+                style={{
+                  color: isCurrent ? o.text : 'var(--apex-text)',
+                  background: isCurrent ? o.bg : 'transparent',
+                  cursor: isCurrent ? 'default' : 'pointer',
+                }}
+                onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.background = 'var(--apex-bg)' }}
+                onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.background = 'transparent' }}
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: o.text }}
+                />
+                {o.label}
+              </button>
+            )
+          })}
+        </div>,
+        document.body,
+      )}
+    </div>
   )
 }

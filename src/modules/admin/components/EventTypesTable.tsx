@@ -93,7 +93,14 @@ export function EventTypesTable({ eventTypes }: EventTypesTableProps) {
         </div>
       )}
 
-      <table className="w-full">
+      <table className="w-full" style={{ tableLayout: 'fixed' }}>
+        <colgroup>
+          <col style={{ width: '25%' }} />
+          <col style={{ width: '20%' }} />
+          <col style={{ width: '25%' }} />
+          <col style={{ width: '15%' }} />
+          <col style={{ width: '15%' }} />
+        </colgroup>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--apex-border)' }}>
             {['Название', 'Ключ', 'Описание', 'Коины', 'Статус'].map((h) => (
@@ -322,7 +329,10 @@ function InlineEdit({
   width?: string
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div
+      className="flex items-center gap-2"
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) onCancel() }}
+    >
       <input
         type={type}
         value={value}

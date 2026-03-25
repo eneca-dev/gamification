@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { Loader2 } from 'lucide-react'
+import { useState, useTransition, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { ChevronDown, Loader2 } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
 import { updateOrderStatus, cancelOrder } from '@/modules/admin/index.client'
@@ -25,19 +26,11 @@ const FILTER_TABS: { value: StatusFilter; label: string }[] = [
   { value: 'cancelled', label: 'Отменены' },
 ]
 
-const STATUS_TRANSITIONS: Record<string, { value: string; label: string }[]> = {
-  pending: [
-    { value: 'processing', label: 'В работу' },
-    { value: 'fulfilled', label: 'Выполнен' },
-  ],
-  processing: [
-    { value: 'pending', label: 'Вернуть в ожидание' },
-    { value: 'fulfilled', label: 'Выполнен' },
-  ],
-  fulfilled: [
-    { value: 'pending', label: 'Вернуть в ожидание' },
-  ],
-}
+const ALL_STATUSES = [
+  { value: 'pending', label: 'Ожидает' },
+  { value: 'processing', label: 'В работе' },
+  { value: 'fulfilled', label: 'Выполнен' },
+]
 
 interface AdminOrdersClientProps {
   orders: AdminOrderRow[]
@@ -50,6 +43,11 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
   const [notification, setNotification] = useState<string | null>(null)
   const [filter, setFilter] = useState<StatusFilter>('all')
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null)
+
+  // Дропдаун статуса
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
+  // Развёрнутые комментарии
+  const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null)
 
   // Подтверждение отмены
   const [cancellingId, setCancellingId] = useState<string | null>(null)
@@ -71,6 +69,7 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
   }
 
   function handleStatusChange(orderId: string, newStatus: string) {
+    setOpenDropdownId(null)
     const prev = orders
     setPendingOrderId(orderId)
     setOrders((list) =>
@@ -120,8 +119,8 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
 
   return (
     <div className="space-y-4">
-      {/* Toast */}
-      {notification && (
+      {/* Toast — через портал */}
+      {notification && createPortal(
         <div className="fixed top-6 right-6 z-50 animate-fade-in-up">
           <div
             className="rounded-xl px-5 py-3 text-[13px] font-semibold shadow-lg"
@@ -133,7 +132,8 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
           >
             {notification}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Error */}
@@ -173,7 +173,7 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
         <table className="w-full">
           <thead>
             <tr style={{ borderBottom: '1px solid var(--apex-border)' }}>
-              {['Покупатель', 'Товар', 'Сумма', 'Статус', 'Дата', 'Действия'].map((h) => (
+              {['Покупатель', 'Товар', 'Сумма', 'Статус', 'Дата'].map((h) => (
                 <th
                   key={h}
                   className="text-left text-[12px] font-semibold px-5 py-3"
@@ -187,7 +187,7 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-12">
+                <td colSpan={5} className="text-center py-12">
                   <p className="text-[13px] font-medium" style={{ color: 'var(--apex-text-muted)' }}>
                     Нет заказов
                   </p>
@@ -196,7 +196,6 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
             ) : (
               filtered.map((order) => {
                 const status = STATUS_CONFIG[order.status]
-                const transitions = STATUS_TRANSITIONS[order.status] ?? []
                 const isCancelled = order.status === 'cancelled'
                 const isOrderPending = pendingOrderId === order.id
                 const date = new Date(order.created_at)
@@ -218,9 +217,21 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
                     {/* Товар */}
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
-                        {order.product_emoji && (
-                          <span className="text-lg">{order.product_emoji}</span>
-                        )}
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-base overflow-hidden flex-shrink-0"
+                          style={{
+                            background: order.product_image_url ? 'var(--apex-bg)' : 'var(--apex-emoji-bg)',
+                            border: '1px solid var(--apex-border)',
+                          }}
+                        >
+                          {order.product_image_url ? (
+                            <img src={order.product_image_url} alt="" className="w-full h-full object-cover" />
+                          ) : order.product_emoji ? (
+                            order.product_emoji
+                          ) : (
+                            <span style={{ color: '#ccc', fontSize: '12px' }}>?</span>
+                          )}
+                        </div>
                         <span className="text-[13px] font-medium" style={{ color: 'var(--apex-text)' }}>
                           {order.product_name}
                         </span>
@@ -232,82 +243,87 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
                       <CoinStatic amount={order.coins_spent} size="sm" />
                     </td>
 
-                    {/* Статус */}
+                    {/* Статус — с дропдауном */}
                     <td className="px-5 py-3">
-                      <span
-                        className="text-[11px] font-bold px-2.5 py-1 rounded-md"
-                        style={{ background: status.bg, color: status.text }}
-                      >
-                        {status.label}
-                      </span>
-                      {order.note && (
-                        <p className="text-[11px] mt-1 italic max-w-[150px] truncate" style={{ color: 'var(--apex-text-muted)' }}>
-                          {order.note}
-                        </p>
-                      )}
-                    </td>
-
-                    {/* Дата */}
-                    <td className="px-5 py-3">
-                      <span className="text-[12px]" style={{ color: 'var(--apex-text-secondary)' }}>
-                        {date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </span>
-                      <p className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
-                        {date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </td>
-
-                    {/* Действия */}
-                    <td className="px-5 py-3">
-                      {isCancelled ? (
-                        <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>—</span>
-                      ) : isOrderPending ? (
-                        <Loader2 size={16} className="animate-spin" style={{ color: 'var(--apex-text-muted)' }} />
-                      ) : (
+                      <div>
                         <div className="flex items-center gap-2">
-                          {/* Смена статуса */}
-                          {transitions.length > 0 && (
-                            <select
-                              value=""
-                              onChange={(e) => {
-                                if (e.target.value) handleStatusChange(order.id, e.target.value)
-                              }}
-                              className="px-2 py-1 rounded-lg text-[11px] font-medium outline-none cursor-pointer"
-                              style={{
-                                background: 'var(--apex-bg)',
-                                border: '1px solid var(--apex-border)',
-                                color: 'var(--apex-text-secondary)',
-                              }}
+                          {isOrderPending ? (
+                            <span
+                              className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-md"
+                              style={{ background: status.bg, color: status.text }}
                             >
-                              <option value="">Статус...</option>
-                              {transitions.map((t) => (
-                                <option key={t.value} value={t.value}>{t.label}</option>
-                              ))}
-                            </select>
+                              <Loader2 size={12} className="animate-spin" />
+                              {status.label}
+                            </span>
+                          ) : isCancelled ? (
+                            <span
+                              className="text-[11px] font-bold px-2.5 py-1 rounded-md"
+                              style={{ background: status.bg, color: status.text }}
+                            >
+                              {status.label}
+                            </span>
+                          ) : !order.is_physical ? (
+                            <>
+                              <span
+                                className="text-[11px] font-bold px-2.5 py-1 rounded-md"
+                                style={{ background: status.bg, color: status.text }}
+                              >
+                                {status.label}
+                              </span>
+                              <button
+                                onClick={() => setCancellingId(order.id)}
+                                className="px-2 py-1 rounded-md text-[11px] font-semibold transition-colors"
+                                style={{ color: 'var(--apex-danger)' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--apex-error-bg)' }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                              >
+                                Отменить
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <StatusDropdown
+                                currentStatus={order.status}
+                                isOpen={openDropdownId === order.id}
+                                onToggle={() => setOpenDropdownId(openDropdownId === order.id ? null : order.id)}
+                                onSelect={(val) => handleStatusChange(order.id, val)}
+                              />
+                              <button
+                                onClick={() => setCancellingId(order.id)}
+                                className="px-2 py-1 rounded-md text-[11px] font-semibold transition-colors"
+                                style={{ color: 'var(--apex-danger)' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--apex-error-bg)' }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                              >
+                                Отменить
+                              </button>
+                            </>
                           )}
-
-                          {/* Отмена */}
-                          <button
-                            onClick={() => setCancellingId(order.id)}
-                            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors"
-                            style={{
-                              background: 'var(--apex-error-bg)',
-                              color: 'var(--apex-danger)',
-                              border: '1px solid transparent',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = 'var(--apex-danger)'
-                              e.currentTarget.style.color = 'white'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'var(--apex-error-bg)'
-                              e.currentTarget.style.color = 'var(--apex-danger)'
-                            }}
-                          >
-                            Отменить
-                          </button>
                         </div>
-                      )}
+                        {order.note && (
+                          <p
+                            className="text-[11px] mt-1 italic cursor-pointer max-w-[200px]"
+                            style={{
+                              color: 'var(--apex-text-muted)',
+                              overflow: 'hidden',
+                              display: expandedNoteId === order.id ? undefined : '-webkit-box',
+                              WebkitLineClamp: expandedNoteId === order.id ? undefined : 1,
+                              WebkitBoxOrient: expandedNoteId === order.id ? undefined : 'vertical',
+                            }}
+                            onClick={() => setExpandedNoteId(expandedNoteId === order.id ? null : order.id)}
+                          >
+                            {order.note}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Дата — 1 строка */}
+                    <td className="px-5 py-3">
+                      <span className="text-[12px] whitespace-nowrap" style={{ color: 'var(--apex-text-secondary)' }}>
+                        {date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}{', '}
+                        {date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </td>
                   </tr>
                 )
@@ -322,7 +338,7 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
       </div>
 
       {/* Модал подтверждения отмены */}
-      {cancellingId && (
+      {cancellingId && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
           onClick={() => { setCancellingId(null); setCancelNote('') }}
@@ -377,7 +393,99 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
+      )}
+    </div>
+  )
+}
+
+// --- Дропдаун смены статуса ---
+
+function StatusDropdown({
+  currentStatus,
+  isOpen,
+  onToggle,
+  onSelect,
+}: {
+  currentStatus: string
+  isOpen: boolean
+  onToggle: () => void
+  onSelect: (value: string) => void
+}) {
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const current = STATUS_CONFIG[currentStatus]
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+
+  useEffect(() => {
+    if (!isOpen) return
+    function handleClick(e: MouseEvent) {
+      if (
+        btnRef.current && !btnRef.current.contains(e.target as Node) &&
+        menuRef.current && !menuRef.current.contains(e.target as Node)
+      ) onToggle()
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [isOpen, onToggle])
+
+  useEffect(() => {
+    if (isOpen && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      setPos({ top: rect.bottom + 6, left: rect.left })
+    }
+  }, [isOpen])
+
+  return (
+    <div className="inline-block">
+      <button
+        ref={btnRef}
+        onClick={onToggle}
+        className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-md cursor-pointer transition-opacity hover:opacity-80"
+        style={{ background: current.bg, color: current.text }}
+      >
+        {current.label}
+        <ChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[100] min-w-[160px] rounded-xl py-1.5 shadow-lg animate-scale-in"
+          style={{
+            top: pos.top,
+            left: pos.left,
+            background: 'var(--apex-surface)',
+            border: '1px solid var(--apex-border)',
+          }}
+        >
+          {ALL_STATUSES.map((s) => {
+            const sc = STATUS_CONFIG[s.value]
+            const isCurrent = s.value === currentStatus
+            return (
+              <button
+                key={s.value}
+                onClick={() => { if (!isCurrent) onSelect(s.value) }}
+                className="w-full text-left px-4 py-2 text-[12px] font-medium transition-colors flex items-center gap-2.5"
+                style={{
+                  color: isCurrent ? sc.text : 'var(--apex-text)',
+                  background: isCurrent ? sc.bg : 'transparent',
+                  cursor: isCurrent ? 'default' : 'pointer',
+                }}
+                onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.background = 'var(--apex-bg)' }}
+                onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.background = 'transparent' }}
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: sc.text }}
+                />
+                {s.label}
+              </button>
+            )
+          })}
+        </div>,
+        document.body,
       )}
     </div>
   )

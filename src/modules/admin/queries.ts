@@ -105,7 +105,7 @@ export async function getOrders(): Promise<AdminOrderRow[]> {
     .select(`
       *,
       user:ws_users!user_id ( first_name, last_name, email ),
-      product:shop_products!product_id ( name, emoji ),
+      product:shop_products!product_id ( name, emoji, image_url, category:shop_categories!category_id ( is_physical ) ),
       transaction:gamification_transactions!transaction_id ( coins )
     `)
     .order('created_at', { ascending: false })
@@ -124,6 +124,11 @@ export async function getOrders(): Promise<AdminOrderRow[]> {
       product_id: row.product_id,
       product_name: product?.name ?? 'Удалённый товар',
       product_emoji: product?.emoji ?? null,
+      product_image_url: product?.image_url ?? null,
+      is_physical: (() => {
+        const cat = Array.isArray(product?.category) ? product.category[0] : product?.category
+        return cat?.is_physical ?? true
+      })(),
       status: row.status,
       coins_spent: Math.abs(transaction?.coins ?? 0),
       note: row.note,

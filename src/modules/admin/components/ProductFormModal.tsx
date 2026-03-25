@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Upload, Trash2, Loader2 } from 'lucide-react'
-
+import { X, Upload, Trash2, Loader2, ChevronDown, Check } from 'lucide-react'
 import type { ShopProductWithCategory, ShopCategory } from '@/modules/shop/index.client'
 import type { ProductFormData } from '../types'
 
@@ -191,32 +190,20 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
 
             {/* Категория */}
             <Field label="Категория" error={errors.category_id}>
-              <select
+              <CustomSelect
                 value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg text-[13px] outline-none"
-                style={inputStyle(errors.category_id)}
-              >
-                <option value="">Выберите...</option>
-                {activeCategories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+                onChange={setCategoryId}
+                options={activeCategories.map((c) => ({ value: c.id, label: c.name }))}
+                placeholder="Выберите..."
+                error={errors.category_id}
+              />
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             {/* Эмодзи */}
             <Field label="Эмодзи">
-              <input
-                type="text"
-                value={emoji}
-                onChange={(e) => setEmoji(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg text-[13px] outline-none"
-                style={inputStyle()}
-                placeholder="📦"
-                maxLength={10}
-              />
+              <EmojiInput value={emoji} onChange={setEmoji} />
             </Field>
 
             {/* Stock */}
@@ -356,5 +343,98 @@ function inputStyle(error?: string): React.CSSProperties {
     border: `1px solid ${error ? 'var(--apex-danger)' : 'var(--apex-border)'}`,
     color: 'var(--apex-text)',
   }
+}
+
+function EmojiInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 rounded-lg text-[13px] outline-none"
+        style={inputStyle()}
+        placeholder="Вставьте эмодзи"
+        maxLength={10}
+      />
+      <p className="text-[10px] mt-1" style={{ color: 'var(--apex-text-muted)' }}>
+        Win + Ю — откроет панель эмодзи с поиском
+      </p>
+    </div>
+  )
+}
+
+function CustomSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  error,
+}: {
+  value: string
+  onChange: (v: string) => void
+  options: { value: string; label: string }[]
+  placeholder: string
+  error?: string
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const selected = options.find((o) => o.value === value)
+
+  useEffect(() => {
+    if (!isOpen) return
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [isOpen])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] outline-none text-left"
+        style={inputStyle(error)}
+      >
+        <span style={{ color: selected ? 'var(--apex-text)' : 'var(--apex-text-muted)' }}>
+          {selected?.label ?? placeholder}
+        </span>
+        <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--apex-text-muted)' }} />
+      </button>
+
+      {isOpen && (
+        <div
+          className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl py-1.5 shadow-lg max-h-48 overflow-y-auto"
+          style={{
+            background: 'var(--apex-surface)',
+            border: '1px solid var(--apex-border)',
+          }}
+        >
+          {options.map((o) => {
+            const isSelected = o.value === value
+            return (
+              <button
+                type="button"
+                key={o.value}
+                onClick={() => { onChange(o.value); setIsOpen(false) }}
+                className="w-full text-left px-4 py-2 text-[12px] font-medium transition-colors flex items-center justify-between"
+                style={{
+                  color: isSelected ? 'var(--apex-primary)' : 'var(--apex-text)',
+                  background: isSelected ? 'var(--apex-success-bg)' : 'transparent',
+                }}
+                onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--apex-bg)' }}
+                onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = isSelected ? 'var(--apex-success-bg)' : 'transparent' }}
+              >
+                {o.label}
+                {isSelected && <Check size={14} />}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
