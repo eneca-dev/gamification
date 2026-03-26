@@ -18,13 +18,12 @@ export async function searchDevUsers(
 
   let query = supabase
     .from('ws_users')
-    .select('email, first_name, last_name, department, department_code, team')
+    .select('id, email, first_name, last_name, department, department_code, team')
     .eq('is_active', true)
     .order('last_name', { ascending: true })
     .limit(limit)
 
   if (search.trim()) {
-    // Поиск по имени, фамилии или email
     const term = `%${search.trim()}%`
     query = query.or(
       `first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term}`
@@ -36,6 +35,7 @@ export async function searchDevUsers(
   if (error || !data) return []
 
   return data.map((u) => ({
+    id: u.id,
     email: u.email,
     firstName: u.first_name,
     lastName: u.last_name,
@@ -58,7 +58,7 @@ export async function getDevUserByEmail(
   const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase
     .from('ws_users')
-    .select('email, first_name, last_name, department, department_code, team')
+    .select('id, email, first_name, last_name, department, department_code, team')
     .eq('email', email.toLowerCase())
     .eq('is_active', true)
     .single()
@@ -66,6 +66,7 @@ export async function getDevUserByEmail(
   if (error || !data) return null
 
   return {
+    id: data.id,
     email: data.email,
     firstName: data.first_name,
     lastName: data.last_name,
