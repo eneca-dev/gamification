@@ -69,7 +69,6 @@ function TopFivePanel({
   currentUserRank?: number | null;
 }) {
   const sorted = [...entries].sort((a, b) => b.value - a.value).slice(0, 5);
-  const currentInTop = sorted.some((e) => e.isCurrentUser);
 
   return (
     <div

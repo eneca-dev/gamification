@@ -71,23 +71,15 @@ export function ProgressCard({ entityType, groupLabel, items, daysElapsed, perio
       </div>
 
       <div className="space-y-4">
-        {displayItems.map((item) => {
-            const cfg = AREA_CONFIG[item.area]
-            const Icon = cfg.icon
-            const pct = Math.min((item.days_in_top / item.threshold) * 100, 100)
-            const remaining = Math.max(item.threshold - item.days_in_top, 0)
-            const bonus = ACHIEVEMENT_BONUSES[entityType]
-
-            return (
-              <AreaRow
-                key={item.area}
-                item={item}
-                entityType={entityType}
-                daysElapsed={daysElapsed}
-                periodDays={periodDays}
-              />
-            )
-          })}
+        {displayItems.map((item) => (
+          <AreaRow
+            key={item.area}
+            item={item}
+            entityType={entityType}
+            daysElapsed={daysElapsed}
+            periodDays={periodDays}
+          />
+        ))}
         </div>
     </div>
   )

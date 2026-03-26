@@ -34,8 +34,8 @@ function getQuarterMonths(): { month: number; year: number; label: string }[] {
 }
 
 function periodToMonthIndex(periodStart: string): { month: number; year: number } {
-  const d = new Date(periodStart)
-  return { month: d.getMonth(), year: d.getFullYear() }
+  const [year, month] = periodStart.split('-').map(Number)
+  return { month: month - 1, year }
 }
 
 // Одна ячейка кубка

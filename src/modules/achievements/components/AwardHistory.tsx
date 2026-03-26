@@ -18,9 +18,9 @@ const ENTITY_CONFIG = {
 } as const
 
 function formatPeriod(periodStart: string): string {
-  const start = new Date(periodStart)
-  const end = new Date(start)
-  end.setDate(end.getDate() + 27)
+  const [year, month] = periodStart.split('-').map(Number)
+  const start = new Date(year, month - 1, 1)
+  const end = new Date(year, month, 0) // последний день месяца
   const fmt = (d: Date) => d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
   return `${fmt(start)} - ${fmt(end)}`
 }
