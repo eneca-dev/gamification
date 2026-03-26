@@ -1,33 +1,56 @@
 # gratitudes
 
-Благодарности, полученные текущим пользователем. Данные из Airtable, отображаются на главной.
+Благодарности между сотрудниками. Отправляются из приложения, коины начисляются автоматически триггером в БД.
 
 ## Логика работы
 
-Данные синхронизируются из Airtable через Edge Function в таблицу `at_gratitudes`.
-View `v_gratitudes_feed` добавляет имя отправителя (из `ws_users`) и `earned_coins` (из `gamification_transactions`).
+Пользователь отправляет благодарность через модалку на dashboard. Server action `sendGratitude` вставляет запись в таблицу `gratitudes`. Триггер `trg_award_gratitude_points_v2` начисляет получателю коины (`gratitude_recipient_points`, 20 ПК по умолчанию).
 
-Коины начисляются только за первую благодарность от отправителя за неделю. Логика определения — на стороне Edge Function, которая создаёт запись в `gamification_event_logs` с `event_type = 'gratitude_recipient_points'` и `details.gratitude_id`. View просто проверяет наличие связанной транзакции.
+Квота: 1 начисление коинов в неделю на отправителя. Благодарности без лимита — можно отправлять сколько угодно, но коины получатель получит только за первую от этого отправителя на текущей неделе (пн-вс).
+
+Нельзя отправить благодарность самому себе (CHECK constraint + серверная валидация).
 
 ## Зависимости
 
-- `at_gratitudes` — сырые данные из Airtable
-- `ws_users` — имя отправителя по email
-- `gamification_event_logs` — определение earned_coins через `details.gratitude_id`
-- `gamification_transactions` — реальная сумма коинов
-- View `v_gratitudes_feed` — агрегирует всё выше
-- `createSupabaseAdminClient` — ws_users и event_logs закрыты RLS (service_role only)
+- Таблица `gratitudes` — sender_id/recipient_id FK на ws_users
+- `gamification_event_logs` — запись о начислении (event_type = `gratitude_recipient_points`, source = `gratitudes`)
+- `gamification_transactions` — коины
+- `gamification_balances` — баланс (обновляется триггером)
+- `gamification_event_types` — конфигурация коинов (key = `gratitude_recipient_points`)
+- RPC: `get_user_gratitudes`, `get_gratitudes_feed`, `get_sender_quota`
 
 ## Типы
 
-- `GratitudeFeedItem` — id, sender_name, recipient_name, message, earned_coins (0 если без коинов)
+- `Gratitude` — полная благодарность с именами sender/recipient, department, earned_coins
+- `SenderQuota` — { used: boolean, coins_per_gratitude: number }
+- `GratitudeRecipient` — { id, name, department } для списка выбора
+- `SendGratitudeInput` — Zod-схема: recipient_id (uuid), message (1-500), category (nullable)
 
 ## Queries
 
-- `getUserGratitudes(recipientEmail, limit?)` — благодарности полученные конкретным пользователем, с earned_coins
+- `getUserGratitudes(recipientEmail, limit?)` — благодарности полученные пользователем, с earned_coins
+- `getGratitudesFeed(limit?)` — все благодарности (для activity page)
+- `getSenderQuota(senderId)` — статус квоты отправителя на текущей неделе
+- `getGratitudeRecipients(excludeUserId)` — список активных ws_users для выбора
+
+## Actions
+
+- `sendGratitude({ recipient_id, message, category })` — отправка. Валидация Zod, проверка sender != recipient, INSERT в gratitudes, revalidatePath('/')
+
+## Компоненты
+
+- `SendGratitudeButton` — кнопка + dialog (модалка). Поиск получателя, ввод сообщения, отображение квоты. Используется на dashboard.
+
+## Поле category
+
+Подготовлено для будущего достижения `ach_culture_mentor` (наставничество). Пока не используется в UI — передаётся null.
+
+## Устаревшая система (НЕ УДАЛЕНА)
+
+Таблица `at_gratitudes`, VIEW `v_gratitudes_feed`, функция `fn_award_gratitude_points`, edge function `sync-gratitudes` — отключены, будут удалены позже.
 
 ## Ограничения
 
-- Данные только для чтения (запись через Airtable форму)
-- earned_coins = 0 не значит "благодарность не учтена" — просто отправитель уже отправлял кому-то на этой неделе
-- Реальная сумма коинов = 20 (определяется event_coin_config в БД, не хардкодится на фронте)
+- earned_coins = 0 не значит "благодарность не учтена" — отправитель уже использовал квоту
+- Коины = 20 ПК, значение берётся из `gamification_event_types`, не хардкодится
+- Получатель должен быть active в ws_users

@@ -24,7 +24,8 @@
       "Bash(find /d/1work/gamification/gamification/src/docs* -type f -name *.md)",
       "Bash(npm run:*)",
       "Bash(grep:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "mcp__Sequential_Thinking__sequentialthinking"
     ]
   },
   "enableAllProjectMcpServers": true,

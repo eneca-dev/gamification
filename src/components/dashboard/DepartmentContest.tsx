@@ -7,6 +7,8 @@ interface DepartmentContestProps {
   departments: DepartmentEntry[];
   automationDepartments?: DepartmentEntry[];
   daysLeft: number;
+  title?: string;
+  currentEntityName?: string | null;
 }
 
 interface DisciplineColumnProps {
@@ -20,6 +22,7 @@ interface DisciplineColumnProps {
   maxMetric: number;
   metricSuffix: string;
   accentColor: string;
+  currentName?: string | null;
 }
 
 function DisciplineColumn({
@@ -33,6 +36,7 @@ function DisciplineColumn({
   maxMetric,
   metricSuffix,
   accentColor,
+  currentName,
 }: DisciplineColumnProps) {
   const leader = sorted[0];
   const currentDept = sorted.find((d) => d.isCurrentDepartment);
@@ -45,23 +49,51 @@ function DisciplineColumn({
         <span className="text-[12px] font-semibold" style={{ color: accentColor }}>{title}</span>
       </div>
 
-      {/* Prize block */}
-      <div
-        className="flex items-center justify-between px-3 py-2 rounded-xl"
-        style={{
-          background: "var(--orange-50)",
-          border: `1px solid rgba(var(--orange-500-rgb), 0.2)`,
-        }}
-      >
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm">🏆</span>
-          <div>
-            <div className="text-[11px] font-semibold" style={{ color: "var(--apex-text)" }}>Топ-1 отдел</div>
-            <div className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>каждому</div>
+      {/* Текущая позиция */}
+      {currentDept ? (
+        <div
+          className="flex items-center justify-between px-3 py-2 rounded-xl"
+          style={{
+            background: currentRank !== null && currentRank <= 5
+              ? "var(--apex-success-bg)"
+              : "var(--surface)",
+            border: currentRank !== null && currentRank <= 5
+              ? `1px solid rgba(var(--apex-primary-rgb), 0.15)`
+              : `1px solid var(--apex-border)`,
+          }}
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">{currentRank === 1 ? '🥇' : currentRank === 2 ? '🥈' : currentRank === 3 ? '🥉' : '📍'}</span>
+            <div>
+              <div className="text-[11px] font-semibold" style={{ color: "var(--apex-text)" }}>
+                {currentDept.shortName}
+              </div>
+              <div className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>ваша позиция</div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-[16px] font-bold" style={{ color: currentRank !== null && currentRank <= 3 ? accentColor : "var(--apex-text)" }}>
+              #{currentRank}
+            </div>
           </div>
         </div>
-        <div className="text-[16px] font-bold" style={{ color: "var(--orange-500)" }}>+{prize} ПК</div>
-      </div>
+      ) : (
+        <div
+          className="flex items-center justify-between px-3 py-2 rounded-xl"
+          style={{ background: "var(--surface)", border: `1px solid var(--apex-border)` }}
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">📍</span>
+            <div>
+              <div className="text-[11px] font-semibold" style={{ color: "var(--apex-text)" }}>
+                {currentName ?? 'Не определено'}
+              </div>
+              <div className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>нет активности</div>
+            </div>
+          </div>
+          <div className="text-[13px] font-bold" style={{ color: "var(--apex-text-muted)" }}>0{metricSuffix}</div>
+        </div>
+      )}
 
       {/* Metric label */}
       <div className="flex items-center gap-1">
@@ -194,9 +226,9 @@ function DisciplineColumn({
   );
 }
 
-export function DepartmentContest({ departments, automationDepartments, daysLeft }: DepartmentContestProps) {
+export function DepartmentContest({ departments, automationDepartments, daysLeft, title = "Соревнование отделов", currentEntityName }: DepartmentContestProps) {
   const sortedWs = [...departments]
-    .sort((a, b) => b.wsPercent - a.wsPercent)
+    .sort((a, b) => b.contestScore - a.contestScore)
     .map((d, i) => ({ ...d, rank: i + 1 }));
 
   const autoSource = automationDepartments ?? departments;
@@ -216,7 +248,7 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
         <div className="flex items-center gap-2">
           <Trophy size={14} style={{ color: "var(--orange-500)" }} />
           <div className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--apex-text-muted)" }}>
-            Соревнование отделов
+            {title}
           </div>
         </div>
         <div
@@ -239,13 +271,14 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
           title="Worksection"
           icon="📋"
           prize={150}
-          metricLabel="% зелёных дней"
+          metricLabel="Баллы с учётом вовлечённости"
           sorted={sortedWs}
-          getMetric={(d) => d.wsPercent}
-          getUsing={(d) => Math.round((d.wsPercent / 100) * d.totalEmployees)}
-          maxMetric={100}
-          metricSuffix="%"
+          getMetric={(d) => Math.round(d.contestScore)}
+          getUsing={(d) => d.employeesUsing}
+          maxMetric={Math.round(sortedWs[0]?.contestScore ?? 1)}
+          metricSuffix=""
           accentColor="var(--apex-primary)"
+          currentName={currentEntityName}
         />
         <DisciplineColumn
           title="Автоматизации"
@@ -258,6 +291,7 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
           maxMetric={Math.round(sortedAuto[0]?.contestScore ?? 1)}
           metricSuffix=""
           accentColor="var(--orange-500)"
+          currentName={currentEntityName}
         />
       </div>
     </div>
