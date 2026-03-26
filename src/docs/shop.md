@@ -10,28 +10,32 @@
 
 Обе функции `SECURITY INVOKER`, вызываются через `supabaseAdmin` (service_role).
 
+Загрузка изображений товаров — через API route `/api/admin/upload-product-image` (не Server Action, чтобы обойти лимит 1 МБ на body в Next.js 16).
+
 ## Зависимости
 
 - Таблицы: `shop_categories`, `shop_products`, `shop_orders`
 - Связь с: `gamification_event_logs`, `gamification_transactions`, `gamification_balances`, `ws_users`
 - Event types: `shop_purchase` (is_dynamic_coins), `shop_refund` (is_dynamic_coins)
 - Storage: bucket `product-images` (public)
+- API route: `/api/admin/upload-product-image` — загрузка изображений (POST, FormData)
 - Модули: `auth` (getCurrentUser, wsUserId), `admin` (checkIsAdmin)
 
 ## Типы
 
 - `OrderStatus` — `'pending' | 'processing' | 'fulfilled' | 'cancelled'`
 - `ShopProductWithCategory` — товар + вложенная категория (name, slug, is_physical, is_active)
-- `ShopOrderWithDetails` — заказ + название товара + coins_spent (через JOIN на transaction)
+- `ShopOrderWithDetails` — заказ + название товара + emoji + image_url + coins_spent (через JOIN на transaction)
+- `ShopCategory` — категория: id, name, slug, description, is_physical, is_active, sort_order
 
 ## Actions
 
 - `purchaseProduct(productId)` — покупка, доступна всем. RPC `purchase_product`. Revalidate: `/store`, `/profile`
 - `createCategory(input)` — создание категории. Только админ. Revalidate: `/admin/products`, `/store`
-- `updateCategory(input)` — обновление категории (включая is_active). Только админ
+- `updateCategory(input)` — обновление категории (name, slug, description, is_physical, is_active). Только админ
 - `createProduct(input)` — создание товара. Только админ. Записывает `created_by`
 - `updateProduct(input)` — обновление товара (включая is_active). Только админ
-- `uploadProductImage(formData)` — загрузка изображения в Supabase Storage bucket `product-images`. Только админ. Возвращает publicUrl
+- `deleteProduct(productId)` — удаление товара. Проверяет наличие заказов — если есть, блокирует. Удаляет изображение из Storage. Только админ
 - `deleteProductImage(imageUrl)` — удаление изображения из Storage. Только админ
 
 ## Queries
@@ -41,20 +45,21 @@
 - `getProducts(categorySlug?)` — активные товары с активными категориями. Фильтр по slug
 - `getAllProducts()` — все товары с категориями (для админки, включая неактивные). supabaseAdmin
 - `getProductById(id)` — один товар с категорией
-- `getUserOrders(wsUserId)` — заказы пользователя с названием товара и суммой. supabaseAdmin
+- `getUserOrders(wsUserId)` — заказы пользователя с названием товара, emoji, image_url и суммой. supabaseAdmin
 - `getUserBalance(wsUserId)` — баланс пользователя из gamification_balances. supabaseAdmin
 
 ## Компоненты
 
 - `StoreClient` — клиентский контейнер: фильтрация по категориям, optimistic update баланса при покупке, уведомления
-- `ProductCard` — карточка товара: image_url / emoji / placeholder, тег stock, категория, цена, кнопка покупки
+- `ProductCard` — карточка товара: image_url (object-contain) / emoji / placeholder (?), фон emoji — var(--apex-emoji-bg), разделитель между картинкой и футером, футер с var(--apex-bg)
 - `PurchaseButton` — кнопка покупки: проверка баланса и stock, состояние загрузки
-- `OrdersClient` — клиентский контейнер страницы «Мои заказы»: фильтрация по статусу, отображение истории с датами, суммами и статус-бейджами
+- `OrdersClient` — клиентский контейнер страницы «Мои заказы»: фильтрация по статусу, отображение image_url / emoji / placeholder
 
 ## Ограничения
 
 - `stock` обязателен для физических категорий (валидация в Server Action, не в БД)
-- `stock = NULL` для нефизических — безлимит, поле скрыто в UI
+- `stock = NULL` для нефизических — безлимит, поле скрыто в UI, не редактируемо inline
 - Отмена доступна для любого статуса кроме `cancelled`. Idempotency через `shop_refund_{order_id}`
 - Race condition при покупке: защита через `FOR UPDATE` на balance и product
 - `cancelOrder` — в модуле `admin`, не здесь (админская операция)
+- Slug категории: только строчные латинские буквы, цифры и _, начинается с буквы, уникальный
