@@ -48,7 +48,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   // Категории — секция
   const [categoriesExpanded, setCategoriesExpanded] = useState(false)
   const [isCreatingCategory, setIsCreatingCategory] = useState(false)
-  const [newCat, setNewCat] = useState({ name: '', slug: '', description: '', is_physical: false })
+  const [newCat, setNewCat] = useState({ name: '', slug: '', description: '', is_physical: true })
   const [editingCatId, setEditingCatId] = useState<string | null>(null)
   const [editCatField, setEditCatField] = useState<'name' | 'slug' | 'description' | 'is_physical' | null>(null)
   const [editCatValue, setEditCatValue] = useState('')
@@ -431,7 +431,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                 className="px-5 py-4 space-y-3"
                 style={{ borderTop: '1px solid var(--apex-border)', background: 'var(--apex-bg)' }}
               >
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-4 gap-3">
                   <input
                     type="text"
                     value={newCat.name}
@@ -461,9 +461,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                     className="px-3 py-2 rounded-lg text-[13px] outline-none"
                     style={catInputStyle}
                   />
-                </div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 text-[13px]" style={{ color: 'var(--apex-text-secondary)' }}>
+                  <label className="flex items-center gap-2 text-[13px] px-3 py-2" style={{ color: 'var(--apex-text-secondary)' }}>
                     <input
                       type="checkbox"
                       checked={newCat.is_physical}
@@ -472,6 +470,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                     />
                     Физический товар
                   </label>
+                </div>
+                <div className="flex items-center gap-4">
                   <div className="flex-1" />
                   <button
                     onClick={handleCreateCategory}
@@ -633,23 +633,16 @@ export function ProductsClient({ products: initialProducts, categories: initialC
       >
         {/* Заголовок товаров */}
         <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid var(--apex-border)' }}>
-          <div className="flex items-center gap-3">
-            <span className="text-[14px] font-semibold" style={{ color: 'var(--apex-text)' }}>
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <span className="text-[14px] font-semibold shrink-0" style={{ color: 'var(--apex-text)' }}>
               Товары
             </span>
-            <div className="flex gap-1.5">
-              <FilterPill active={categoryFilter === 'all'} onClick={() => setCategoryFilter('all')}>
-                Все ({products.length})
-              </FilterPill>
-              {categories.map((cat) => {
-                const count = products.filter((p) => p.category?.slug === cat.slug).length
-                return (
-                  <FilterPill key={cat.id} active={categoryFilter === cat.slug} onClick={() => setCategoryFilter(cat.slug)}>
-                    {cat.name} ({count})
-                  </FilterPill>
-                )
-              })}
-            </div>
+            <CategoryFilters
+              categories={categories}
+              products={products}
+              categoryFilter={categoryFilter}
+              onFilterChange={setCategoryFilter}
+            />
           </div>
           <div className="flex items-center gap-3">
             {/* Поиск */}
@@ -836,12 +829,12 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                         <ToggleSwitch
                           checked={product.is_active}
                           onChange={() => toggleProductActive(product.id, product.is_active)}
-                          disabled={isProductPending}
+                          disabled={isProductPending || !product.category?.is_active}
                           label={product.is_active ? 'Активен' : 'Неактивен'}
                         />
                         {!product.category?.is_active && (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ background: 'var(--apex-warning-bg)', color: 'var(--apex-warning-text)' }}>
-                            Категория неактивна
+                          <span className="text-[10px] font-medium leading-tight px-1.5 py-0.5 rounded" style={{ background: 'var(--apex-warning-bg)', color: 'var(--apex-warning-text)' }}>
+                            Категория<br />неактивна
                           </span>
                         )}
                       </div>
@@ -1156,7 +1149,7 @@ function ToggleSwitch({
   label: string
 }) {
   return (
-    <label className="inline-flex items-center gap-2.5 cursor-pointer">
+    <label className="inline-flex items-center gap-2.5" style={{ cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.4 : 1 }}>
       <button
         role="switch"
         aria-checked={checked}
@@ -1200,6 +1193,146 @@ function FilterPill({
     >
       {children}
     </button>
+  )
+}
+
+function CategoryFilters({
+  categories,
+  products,
+  categoryFilter,
+  onFilterChange,
+}: {
+  categories: ShopCategory[]
+  products: ShopProductWithCategory[]
+  categoryFilter: string
+  onFilterChange: (slug: string) => void
+}) {
+  const [showAll, setShowAll] = useState(false)
+  const [visibleCount, setVisibleCount] = useState(categories.length)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const measureRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function measure() {
+      const container = containerRef.current
+      const measurer = measureRef.current
+      if (!container || !measurer) return
+
+      const maxWidth = container.offsetWidth
+      const children = Array.from(measurer.children) as HTMLElement[]
+      if (children.length === 0) return
+
+      const gap = 6
+      const overflowBtnWidth = 50
+      let usedWidth = children[0].offsetWidth + gap // "Все" всегда видна
+      let fits = 0
+
+      for (let i = 1; i < children.length; i++) {
+        const next = usedWidth + children[i].offsetWidth + gap
+        // Проверяем: поместится ли этот пилл + кнопка +N (если есть ещё после него)
+        const hasMore = i < children.length - 1
+        if (next + (hasMore ? overflowBtnWidth : 0) > maxWidth) break
+        usedWidth = next
+        fits++
+      }
+
+      setVisibleCount(fits)
+    }
+
+    measure()
+    const obs = new ResizeObserver(measure)
+    if (containerRef.current) obs.observe(containerRef.current)
+    return () => obs.disconnect()
+  }, [categories, products])
+
+  useEffect(() => {
+    if (!showAll) return
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setShowAll(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showAll])
+
+  const visible = categories.slice(0, visibleCount)
+  const overflow = categories.slice(visibleCount)
+  const hasOverflow = overflow.length > 0
+  const overflowActive = overflow.some((c) => c.slug === categoryFilter)
+
+  return (
+    <div ref={containerRef} className="flex-1 min-w-0 relative">
+      {/* Невидимый измеритель */}
+      <div ref={measureRef} className="flex gap-1.5 absolute invisible pointer-events-none whitespace-nowrap top-0 left-0">
+        <FilterPill active={false} onClick={() => {}}>Все ({products.length})</FilterPill>
+        {categories.map((cat) => {
+          const count = products.filter((p) => p.category?.slug === cat.slug).length
+          return (
+            <FilterPill key={cat.id} active={false} onClick={() => {}}>{cat.name} ({count})</FilterPill>
+          )
+        })}
+      </div>
+
+      {/* Видимые пиллы */}
+      <div className="flex items-center gap-1.5">
+        <FilterPill active={categoryFilter === 'all'} onClick={() => onFilterChange('all')}>
+          Все ({products.length})
+        </FilterPill>
+        {visible.map((cat) => {
+          const count = products.filter((p) => p.category?.slug === cat.slug).length
+          return (
+            <FilterPill key={cat.id} active={categoryFilter === cat.slug} onClick={() => onFilterChange(cat.slug)}>
+              {cat.name} ({count})
+            </FilterPill>
+          )
+        })}
+        {hasOverflow && (
+          <div ref={dropdownRef} className="relative">
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="flex items-center gap-0.5 px-2 py-1 rounded-lg text-[11px] font-semibold transition-colors"
+              style={{
+                background: overflowActive ? 'var(--apex-primary)' : 'transparent',
+                color: overflowActive ? 'white' : 'var(--apex-text-muted)',
+              }}
+            >
+              +{overflow.length}
+              <ChevronDown size={12} className={`transition-transform ${showAll ? 'rotate-180' : ''}`} />
+            </button>
+            {showAll && (
+              <div
+                className="absolute top-full left-0 mt-1.5 z-50 min-w-[160px] rounded-xl py-1.5 shadow-lg animate-scale-in"
+                style={{
+                  background: 'var(--apex-surface)',
+                  border: '1px solid var(--apex-border)',
+                }}
+              >
+                {overflow.map((cat) => {
+                  const count = products.filter((p) => p.category?.slug === cat.slug).length
+                  const isActive = categoryFilter === cat.slug
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => { onFilterChange(cat.slug); setShowAll(false) }}
+                      className="w-full text-left px-4 py-2 text-[12px] font-medium transition-colors flex items-center justify-between"
+                      style={{
+                        color: isActive ? 'var(--apex-primary)' : 'var(--apex-text)',
+                        background: isActive ? 'var(--apex-success-bg)' : 'transparent',
+                      }}
+                      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--apex-bg)' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = isActive ? 'var(--apex-success-bg)' : 'transparent' }}
+                    >
+                      <span>{cat.name} ({count})</span>
+                      {isActive && <Check size={14} />}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
