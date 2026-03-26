@@ -1,7 +1,6 @@
 "use client";
 
 import { Crown, Zap } from "lucide-react";
-import type { LeaderboardEntry } from "@/lib/data";
 import type { AutomationLeaderboardEntry } from "@/modules/revit";
 
 // ─── Внутренний тип для рендеринга строки панели ──────────────────────────────
@@ -60,14 +59,17 @@ function TopFivePanel({
   entries,
   accentColor,
   unit = "б",
+  currentUserRank,
 }: {
   title: string;
   icon: React.ReactNode;
   entries: PanelEntry[];
   accentColor: string;
   unit?: string;
+  currentUserRank?: number | null;
 }) {
   const sorted = [...entries].sort((a, b) => b.value - a.value).slice(0, 5);
+  const currentInTop = sorted.some((e) => e.isCurrentUser);
 
   return (
     <div
@@ -77,11 +79,34 @@ function TopFivePanel({
         border: "1px solid var(--apex-border)",
       }}
     >
-      <div className="flex items-center gap-2 mb-4">
-        {icon}
-        <div className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--apex-text-muted)" }}>
-          {title}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          {icon}
+          <div className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--apex-text-muted)" }}>
+            {title}
+          </div>
         </div>
+        {currentUserRank != null ? (
+          <span
+            className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+            style={{
+              background: currentUserRank <= 5 ? "var(--apex-success-bg)" : "var(--surface)",
+              color: currentUserRank <= 3 ? accentColor : "var(--apex-text-muted)",
+              border: currentUserRank <= 5
+                ? `1px solid rgba(var(--apex-primary-rgb), 0.15)`
+                : `1px solid var(--apex-border)`,
+            }}
+          >
+            Вы: #{currentUserRank}
+          </span>
+        ) : (
+          <span
+            className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+            style={{ background: "var(--surface)", color: "var(--apex-text-muted)", border: `1px solid var(--apex-border)` }}
+          >
+            Нет баллов
+          </span>
+        )}
       </div>
 
       <div className="space-y-1.5">
@@ -151,49 +176,44 @@ function TopFivePanel({
 // ─── Публичный компонент ──────────────────────────────────────────────────────
 
 interface LeaderboardProps {
-  entries: LeaderboardEntry[];
+  entries: AutomationLeaderboardEntry[];
   automationEntries?: AutomationLeaderboardEntry[];
 }
 
 export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
-  const generalPanel: PanelEntry[] = entries.map((e) => ({
-    name: e.name,
-    avatar: e.avatar,
-    avatarColor: e.avatarColor,
-    value: e.totalCoins,
-    isCurrentUser: e.isCurrentUser,
-  }));
+  const toPanel = (list: AutomationLeaderboardEntry[]): PanelEntry[] =>
+    list.map((e) => ({
+      name: e.fullName || e.email,
+      avatar: getInitials(e.fullName || e.email),
+      avatarColor: emailToColor(e.email || e.fullName),
+      value: e.totalCoins,
+      isCurrentUser: e.isCurrentUser,
+    }));
 
-  const automationPanel: PanelEntry[] = automationEntries
-    ? automationEntries.map((e) => ({
-        name: e.fullName || e.email,
-        avatar: getInitials(e.fullName || e.email),
-        avatarColor: emailToColor(e.email),
-        value: e.totalCoins,
-        isCurrentUser: e.isCurrentUser,
-      }))
-    : entries.map((e) => ({
-        name: e.name,
-        avatar: e.avatar,
-        avatarColor: e.avatarColor,
-        value: e.breakdown.revit,
-        isCurrentUser: e.isCurrentUser,
-      }));
+  // Ранг текущего юзера (может быть за пределами топ-5)
+  const findRank = (list: AutomationLeaderboardEntry[]): number | null => {
+    const sorted = [...list].sort((a, b) => b.totalCoins - a.totalCoins);
+    const idx = sorted.findIndex((e) => e.isCurrentUser);
+    return idx >= 0 ? idx + 1 : null;
+  };
 
   return (
     <div className="grid grid-cols-2 gap-5 h-full">
       <TopFivePanel
-        title="Топ-5 Общий"
-        icon={<Crown size={14} style={{ color: "var(--orange-500)" }} />}
-        entries={generalPanel}
+        title="Топ-5 Worksection"
+        icon={<Crown size={14} style={{ color: "var(--apex-primary)" }} />}
+        entries={toPanel(entries)}
         accentColor="var(--apex-primary)"
+        unit="ПК"
+        currentUserRank={findRank(entries)}
       />
       <TopFivePanel
-        title="Топ-5 Автоматизации ★"
+        title="Топ-5 Автоматизации"
         icon={<Zap size={14} style={{ color: "var(--orange-500)" }} />}
-        entries={automationPanel}
-        unit={automationEntries ? "ПК" : "б"}
+        entries={toPanel(automationEntries ?? [])}
+        unit="ПК"
         accentColor="var(--orange-500)"
+        currentUserRank={findRank(automationEntries ?? [])}
       />
     </div>
   );

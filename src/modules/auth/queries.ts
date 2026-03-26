@@ -47,7 +47,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
           department: devUser.department,
           team: devUser.team,
           isAdmin: false,
-          wsUserId: null,
+          wsUserId: devUser.id,
           isImpersonating: true,
         }
       }

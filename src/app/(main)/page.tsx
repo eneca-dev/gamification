@@ -6,18 +6,21 @@ import { DepartmentContest } from "@/components/dashboard/DepartmentContest";
 import {
   wsAlerts,
   dailyTasks,
-  leaderboard,
-  departmentContest,
-  daysUntilMonthEnd,
 } from "@/lib/data";
 import type { Transaction, DailyTask, DepartmentEntry } from "@/lib/data";
 import { getCurrentUser } from "@/modules/auth/queries";
 import {
   getRevitWidgetData,
-  getTopAutomationUsers,
   getRevitTransactions,
-  getDepartmentAutomationStats,
 } from "@/modules/revit";
+import {
+  getRevitPersonalRanking,
+  getRevitTeamRanking,
+  getRevitDepartmentRanking,
+  getWsPersonalRanking,
+  getWsTeamRanking,
+  getWsDepartmentRanking,
+} from "@/modules/achievements";
 import {
   getStreakDayStatuses,
   getAutomationDays,
@@ -27,7 +30,6 @@ import {
   getRevitStreakData,
 } from "@/modules/streak-panel";
 import { getUserGratitudes } from "@/modules/gratitudes";
-
 import type { CalendarDay, CalendarDayStatus, StreakPanelData } from "@/modules/streak-panel";
 
 const DEPT_COLORS = [
@@ -122,23 +124,32 @@ export default async function DashboardPage() {
   const userEmail = currentUser?.email ?? "";
   const userId = currentUser?.id ?? "";
 
-  // Получаем ws_user_id из ws_users по email
+  // Получаем ws_user данные (id, department_code, team) для сопоставления с рейтингами
   let wsUserId: string | null = null;
+  let wsDeptCode: string | null = null;
+  let wsTeam: string | null = null;
   if (userEmail) {
     const { createSupabaseServerClient } = await import("@/config/supabase");
     const supabase = await createSupabaseServerClient();
     const { data: wsUser } = await supabase
       .from("ws_users")
-      .select("id")
+      .select("id, department_code, team")
       .eq("email", userEmail.toLowerCase())
       .eq("is_active", true)
       .maybeSingle();
     wsUserId = wsUser?.id ?? null;
+    wsDeptCode = wsUser?.department_code ?? null;
+    wsTeam = wsUser?.team ?? null;
   }
 
   // Параллельно: данные стриков + ревит + благодарности + транзакции + отделы
-  const [wsStreak, revitStreak, revitData, topAutomationUsers, myGratitudes, revitTransactions, automationDepts] =
-    await Promise.all([
+  const [
+    wsStreak, revitStreak, revitData,
+    revitPersonalRanking, wsPersonalRanking,
+    revitTeamRanking, wsTeamRanking,
+    revitDeptRanking, wsDeptRanking,
+    myGratitudes, revitTransactions,
+  ] = await Promise.all([
       wsUserId ? getWsStreakData(wsUserId) : Promise.resolve({
         currentStreak: 0, longestStreak: 0, streakStartDate: null, completedCycles: 0,
         milestones: [
@@ -157,10 +168,14 @@ export default async function DashboardPage() {
       userEmail
         ? getRevitWidgetData(userEmail)
         : Promise.resolve({ streak: null, activeDates: [], yesterdaySummary: { pluginCount: 0, coinsEarned: 0 } }),
-      getTopAutomationUsers(10, currentUser?.email),
+      getRevitPersonalRanking(500),
+      getWsPersonalRanking(500),
+      getRevitTeamRanking(100),
+      getWsTeamRanking(100),
+      getRevitDepartmentRanking(50),
+      getWsDepartmentRanking(50),
       userEmail ? getUserGratitudes(userEmail, 20) : Promise.resolve([]),
       userEmail ? getRevitTransactions(userEmail, 10) : Promise.resolve([]),
-      getDepartmentAutomationStats(currentUser?.email),
     ]);
 
   // Грид: 4 месяца (1 назад + текущий + 2 вперёд)
@@ -249,20 +264,36 @@ export default async function DashboardPage() {
     .slice(0, 5)
     .map((item) => item.tx);
 
-  // Соревнование отделов — автоматизация из реальных данных
-  const automationDepartments: DepartmentEntry[] = automationDepts.map((d, i) => ({
-    name: d.departmentCode,
-    shortName: d.departmentCode,
-    color: DEPT_COLORS[i % DEPT_COLORS.length],
-    employeesUsing: d.usersEarning,
-    totalEmployees: d.totalEmployees,
-    usagePercent: 0,
-    totalCoins: d.totalCoins,
-    contestScore: d.contestScore,
-    wsPercent: 0,
-    isCurrentDepartment: d.isCurrentDepartment,
-  }));
+  // Конвертируем RankingEntry[] в формат для Leaderboard
+  const toLeaderboardEntries = (entries: typeof wsPersonalRanking) =>
+    entries.map((r) => ({
+      email: r.entity_id,
+      fullName: r.label,
+      totalCoins: r.score,
+      launchCount: 0,
+      isCurrentUser: r.entity_id === wsUserId,
+    }))
 
+  // Дней до конца месяца
+  const now = new Date();
+  const daysLeft = Math.max(1, new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate());
+
+  // Конвертируем RankingEntry[] в DepartmentEntry[]
+  const toDeptEntries = (entries: typeof wsDeptRanking, currentDept: string | null): DepartmentEntry[] =>
+    entries.map((r, i) => ({
+      name: r.entity_id,
+      shortName: r.entity_id,
+      color: DEPT_COLORS[i % DEPT_COLORS.length],
+      employeesUsing: parseInt(r.extra?.split('/')[0] ?? '0'),
+      totalEmployees: parseInt(r.extra?.split('/')[1] ?? '0'),
+      usagePercent: 0,
+      totalCoins: 0,
+      contestScore: r.score,
+      wsPercent: 0,
+      isCurrentDepartment: r.entity_id === currentDept,
+    }))
+
+  const currentDept = wsDeptCode;
   const hasAlerts = wsAlerts.length > 0;
 
   return (
@@ -277,23 +308,35 @@ export default async function DashboardPage() {
         <StreakPanel streakData={streakPanelData} tasks={allDailyTasks} />
       </div>
 
-      <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-3">
+      <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-2">
         <div className="col-span-2">
           <TransactionFeed transactions={allTransactions} />
         </div>
         <div className="col-span-3">
           <Leaderboard
-            entries={leaderboard}
-            automationEntries={topAutomationUsers.length > 0 ? topAutomationUsers : undefined}
+            entries={toLeaderboardEntries(wsPersonalRanking)}
+            automationEntries={toLeaderboardEntries(revitPersonalRanking)}
           />
         </div>
       </div>
 
+      <div className="animate-fade-in-up stagger-3">
+        <DepartmentContest
+          departments={toDeptEntries(wsDeptRanking, currentDept)}
+          automationDepartments={toDeptEntries(revitDeptRanking, currentDept)}
+          daysLeft={daysLeft}
+          currentEntityName={wsDeptCode}
+        />
+      </div>
+
+      {/* Топ команд */}
       <div className="animate-fade-in-up stagger-4">
         <DepartmentContest
-          departments={departmentContest}
-          automationDepartments={automationDepartments.length > 0 ? automationDepartments : undefined}
-          daysLeft={daysUntilMonthEnd}
+          departments={toDeptEntries(wsTeamRanking, wsTeam)}
+          automationDepartments={toDeptEntries(revitTeamRanking, wsTeam)}
+          daysLeft={daysLeft}
+          title="Соревнование команд"
+          currentEntityName={wsTeam}
         />
       </div>
     </div>
