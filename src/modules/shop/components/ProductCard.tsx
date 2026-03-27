@@ -11,9 +11,10 @@ interface ProductCardProps {
   index: number
   onPurchase: (productId: string, price: number) => void
   isPurchasing: boolean
+  categoryDescription?: string | null
 }
 
-export function ProductCard({ product, balance, index, onPurchase, isPurchasing }: ProductCardProps) {
+export function ProductCard({ product, balance, index, onPurchase, isPurchasing, categoryDescription }: ProductCardProps) {
   const canAfford = balance >= product.price
   const outOfStock = product.category.is_physical && product.stock !== null && product.stock === 0
   const deficit = product.price - balance
@@ -61,18 +62,31 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing 
 
       {/* Детали товара */}
       <div className="p-4" style={{ background: 'var(--surface-elevated)' }}>
-        <div
-          className="text-[11px] font-semibold mb-1"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          {product.category.name}
+        <div className="mb-1">
+          <span className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>
+            {product.category.name}
+          </span>
+          {categoryDescription && (
+            <span className="text-[10px] ml-1" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>
+              — {categoryDescription}
+            </span>
+          )}
         </div>
         <h3
-          className="text-[13px] font-bold leading-snug mb-3"
-          style={{ color: 'var(--text-primary)', minHeight: '36px' }}
+          className="text-[13px] font-bold leading-snug"
+          style={{ color: 'var(--text-primary)' }}
         >
           {product.name}
         </h3>
+        {product.description && (
+          <p
+            className="text-[11px] mt-0.5 mb-2 line-clamp-2"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            {product.description}
+          </p>
+        )}
+        {!product.description && <div className="mb-3" />}
 
         <div className="flex items-center justify-between mb-3">
           <CoinStatic amount={product.price} size="sm" />

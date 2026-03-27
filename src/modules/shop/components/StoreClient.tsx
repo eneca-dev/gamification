@@ -24,12 +24,7 @@ export function StoreClient({ products, categories, balance }: StoreClientProps)
     ? products
     : products.filter((p) => p.category.slug === activeFilter)
 
-  const categoryDescriptions: Record<string, { icon: string; text: string }> = {
-    upgrade: { icon: 'i', text: 'Оборудование из этой категории остается собственностью компании' },
-    merch: { icon: '🎁', text: 'Товары из этой категории переходят в собственность сотрудника' },
-  }
-
-  const activeCategoryInfo = categoryDescriptions[activeFilter]
+  const activeCategory = categories.find((c) => c.slug === activeFilter)
 
   function handlePurchase(productId: string, _price: number) {
     setPurchasingId(productId)
@@ -122,20 +117,19 @@ export function StoreClient({ products, categories, balance }: StoreClientProps)
         })}
       </div>
 
-      {/* Инфо-баннер категории */}
-      {activeCategoryInfo && (
+      {/* Описание категории */}
+      {activeFilter !== 'all' && activeCategory?.description ? (
         <div
-          className="animate-fade-in-up rounded-xl px-4 py-3 flex items-center gap-3 text-[12px] font-medium"
+          className="animate-fade-in-up rounded-xl px-4 py-3 text-[12px] font-medium"
           style={{
             background: 'var(--apex-success-bg)',
             border: '1px solid rgba(var(--apex-primary-rgb), 0.12)',
             color: 'var(--text-secondary)',
           }}
         >
-          <span className="text-base">{activeCategoryInfo.icon}</span>
-          {activeCategoryInfo.text}
+          {activeCategory.description}
         </div>
-      )}
+      ) : null}
 
       {/* Грид товаров */}
       {filtered.length > 0 ? (
@@ -148,6 +142,7 @@ export function StoreClient({ products, categories, balance }: StoreClientProps)
               index={i}
               onPurchase={handlePurchase}
               isPurchasing={isPending && purchasingId === product.id}
+              categoryDescription={activeFilter === 'all' ? categories.find((c) => c.slug === product.category.slug)?.description : null}
             />
           ))}
         </div>
