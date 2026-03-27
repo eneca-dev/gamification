@@ -494,7 +494,12 @@ SET total_coins = (SELECT COALESCE(SUM(coins), 0) FROM gamification_transactions
 
 #### `ws_daily_statuses` (таблица)
 
-Статус дня сотрудника: `green` / `red` / `absent`. Заполняется VPS-скриптом `compute-gamification` (upsert по user_id + date). PK: `(user_id, date)`. Колонки: `status`, `absence_type`, `red_reasons`. Нет записи = скрипт ещё не обработал день.
+Статус дня сотрудника: `green` / `red` / `absent`. Заполняется VPS-скриптом `compute-gamification` (upsert по user_id + date). PK: `(user_id, date)`. Колонки: `status`, `absence_type`, `red_reasons` (jsonb). Нет записи = скрипт ещё не обработал день.
+
+`red_reasons` — массив объектов с причинами красного дня. Каждый объект содержит `type` и опциональные поля задачи:
+- `{ type: 'red_day' }` — не внесён отчёт
+- `{ type: 'task_dynamics_violation', ws_task_id, ws_task_name, ws_project_id, ws_l2_id }` — не сменён процент готовности
+- `{ type: 'section_red', ws_task_id, ws_task_name, ws_project_id, ws_l2_id }` — нарушение в подчинённой задаче (для ТЛ)
 
 #### `view_daily_statuses` (deprecated)
 

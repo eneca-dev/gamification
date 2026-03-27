@@ -141,6 +141,7 @@ View `view_daily_statuses` агрегирует эту логику.
 
 **Section discipline** (`section_red`):
 - Руководитель раздела получает красный день, если у любого L3-исполнителя его раздела есть task dynamics violation
+- details: `{ ws_task_id (L2), ws_task_name (L2), ws_project_id (L2), violator_email, violator_task_id (L3), violator_task_name (L3), violator_project_id (L3), violation_type }`
 
 ### Стрик WS
 

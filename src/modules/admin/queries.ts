@@ -1,6 +1,9 @@
 import { createSupabaseServerClient, createSupabaseAdminClient } from '@/config/supabase'
 
-import type { EventTypeRow, AdminUserRow, UserDetail, UserTransaction, AdminOrderRow } from './types'
+import type {
+  EventTypeRow, AdminUserRow, UserDetail, UserTransaction, AdminOrderRow,
+  CalendarHolidayRow, CalendarWorkdayRow,
+} from './types'
 
 // gamification_balances — связь 1:1, но Supabase может вернуть объект или массив
 function extractCoins(balance: unknown): number {
@@ -80,7 +83,7 @@ export async function getUserDetail(userId: string): Promise<UserDetail | null> 
   // Транзакции
   const { data: txData } = await supabase
     .from('view_user_transactions')
-    .select('event_date, event_type, source, coins, description, created_at')
+    .select('event_date, event_type, source, coins, description, details, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(50)
@@ -91,6 +94,7 @@ export async function getUserDetail(userId: string): Promise<UserDetail | null> 
     source: t.source,
     coins: t.coins,
     description: t.description,
+    details: (t.details as Record<string, unknown>) ?? null,
     created_at: t.created_at,
   }))
 
@@ -137,4 +141,28 @@ export async function getOrders(): Promise<AdminOrderRow[]> {
       created_at: row.created_at,
     }
   })
+}
+
+export async function getCalendarHolidays(): Promise<CalendarHolidayRow[]> {
+  const supabase = createSupabaseAdminClient()
+
+  const { data, error } = await supabase
+    .from('calendar_holidays')
+    .select('id, date, name, created_at')
+    .order('date', { ascending: true })
+
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+
+export async function getCalendarWorkdays(): Promise<CalendarWorkdayRow[]> {
+  const supabase = createSupabaseAdminClient()
+
+  const { data, error } = await supabase
+    .from('calendar_workdays')
+    .select('id, date, name, created_at')
+    .order('date', { ascending: true })
+
+  if (error) throw new Error(error.message)
+  return data ?? []
 }

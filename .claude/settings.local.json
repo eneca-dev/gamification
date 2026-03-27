@@ -33,7 +33,12 @@
       "mcp__Sequential_Thinking__sequentialthinking",
       "Bash(ls -la \"/d/1work/gamification/gamification/src/app/\\(main\\)/store/\")",
       "Bash(ls -la \"/d/1work/gamification/gamification/src/app/\\(main\\)/store/orders/\")",
-      "Bash(cat \"/d/1work/gamification/gamification/src/app/\\(main\\)/store/orders/loading.tsx\")"
+      "Bash(cat \"/d/1work/gamification/gamification/src/app/\\(main\\)/store/orders/loading.tsx\")",
+      "Bash(find d:/1work/gamification/gamification/src/app/admin -type f -name *.tsx)",
+      "Bash(ls -la d:/1work/gamification/gamification/src/app/\\\\\\(main\\\\\\)/admin/)",
+      "Bash(find /d/1work/gamification-vps-scripts/src -name *.ts)",
+      "Bash(find /d/1work/gamification/gamification -name *migration* -o -name *schema*)",
+      "Bash(ls \"d:/1work/gamification/gamification/src/app/\\(main\\)/admin/\")"
     ]
   },
   "enableAllProjectMcpServers": true,

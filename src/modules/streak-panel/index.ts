@@ -8,6 +8,7 @@ export {
 } from './queries'
 
 export type {
+  RedReason,
   DayStatusRow,
   CalendarDayStatus,
   CalendarDay,

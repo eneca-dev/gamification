@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, Coins } from 'lucide-react'
 import Link from 'next/link'
 
-import { getUserDetail } from '@/modules/admin'
+import { getUserDetail, formatTransactionReason } from '@/modules/admin'
 import { RoleProvider, RoleBadge, RoleSwitch } from '@/modules/admin/components/RoleToggle'
 import { CoinBalance, CoinStatic } from '@/components/CoinBalance'
 
@@ -116,36 +116,42 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           </div>
         ) : (
           <div>
-            {transactions.map((tx, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between px-5 py-3 transition-colors"
-                style={{
-                  borderBottom:
-                    i < transactions.length - 1
-                      ? '1px solid var(--apex-border)'
-                      : 'none',
-                }}
-              >
-                <div className="min-w-0 flex-1">
-                  <div
-                    className="text-[13px] font-medium truncate"
-                    style={{ color: 'var(--apex-text)' }}
-                  >
-                    {tx.description ?? tx.event_type}
+            {transactions.map((tx, i) => {
+              const reason = formatTransactionReason(tx)
+              return (
+                <div
+                  key={i}
+                  className="flex items-center justify-between px-5 py-3 transition-colors"
+                  style={{
+                    borderBottom:
+                      i < transactions.length - 1
+                        ? '1px solid var(--apex-border)'
+                        : 'none',
+                  }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className="text-[13px] font-medium truncate"
+                      style={{ color: 'var(--apex-text)' }}
+                    >
+                      {tx.description ?? tx.event_type}
+                    </div>
+                    {reason && (
+                      <TransactionReason text={reason} />
+                    )}
+                    <div
+                      className="text-[11px] mt-0.5"
+                      style={{ color: 'var(--apex-text-muted)' }}
+                    >
+                      {tx.event_date} · {tx.source}
+                    </div>
                   </div>
-                  <div
-                    className="text-[11px] mt-0.5"
-                    style={{ color: 'var(--apex-text-muted)' }}
-                  >
-                    {tx.event_date} · {tx.source}
+                  <div className="shrink-0 ml-4">
+                    <CoinBalance amount={tx.coins} size="sm" />
                   </div>
                 </div>
-                <div className="shrink-0 ml-4">
-                  <CoinBalance amount={tx.coins} size="sm" />
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
@@ -161,6 +167,41 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// Причина красного дня — с кликабельной ссылкой на задачу WS
+function TransactionReason({ text }: { text: string }) {
+  const urlMatch = text.match(/(https:\/\/eneca\.worksection\.com\/\S+)/)
+  if (!urlMatch) {
+    return (
+      <div
+        className="text-[11px] mt-0.5"
+        style={{ color: 'var(--apex-danger)' }}
+      >
+        {text}
+      </div>
+    )
+  }
+
+  const url = urlMatch[1]
+  const before = text.slice(0, urlMatch.index)
+  return (
+    <div
+      className="text-[11px] mt-0.5"
+      style={{ color: 'var(--apex-danger)' }}
+    >
+      {before}
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline"
+        style={{ color: 'var(--apex-info-text)' }}
+      >
+        открыть задачу
+      </a>
     </div>
   )
 }

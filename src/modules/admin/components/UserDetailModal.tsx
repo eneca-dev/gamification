@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { X, Coins } from 'lucide-react'
 
+import { formatTransactionReason } from '../types'
 import type { UserDetail } from '../types'
 
 interface UserDetailModalProps {
@@ -122,7 +123,9 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                   className="rounded-xl overflow-hidden"
                   style={{ border: '1px solid var(--apex-border)' }}
                 >
-                  {detail.transactions.map((tx, i) => (
+                  {detail.transactions.map((tx, i) => {
+                    const reason = formatTransactionReason(tx)
+                    return (
                     <div
                       key={i}
                       className="flex items-center justify-between px-4 py-2.5"
@@ -133,13 +136,16 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                             : 'none',
                       }}
                     >
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <div
                           className="text-[12px] font-medium"
                           style={{ color: 'var(--apex-text)' }}
                         >
                           {tx.description ?? tx.event_type}
                         </div>
+                        {reason && (
+                          <ModalTransactionReason text={reason} />
+                        )}
                         <div
                           className="text-[11px]"
                           style={{ color: 'var(--apex-text-muted)' }}
@@ -164,13 +170,42 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                         </span>
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function ModalTransactionReason({ text }: { text: string }) {
+  const urlMatch = text.match(/(https:\/\/eneca\.worksection\.com\/\S+)/)
+  if (!urlMatch) {
+    return (
+      <div className="text-[10px] mt-0.5" style={{ color: 'var(--apex-danger)' }}>
+        {text}
+      </div>
+    )
+  }
+
+  const url = urlMatch[1]
+  const before = text.slice(0, urlMatch.index)
+  return (
+    <div className="text-[10px] mt-0.5" style={{ color: 'var(--apex-danger)' }}>
+      {before}
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline"
+        style={{ color: 'var(--apex-info-text)' }}
+      >
+        открыть задачу
+      </a>
     </div>
   )
 }

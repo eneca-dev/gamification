@@ -25,9 +25,19 @@
 
 ## Типы
 
+- `RedReason` — причина красного дня (jsonb из `ws_daily_statuses.red_reasons`): `{ type, ws_task_id?, ws_task_name?, ws_project_id?, ws_l2_id? }`
 - `CalendarDayStatus` — union: green | red | gray | frozen | future | out | no_data
-- `CalendarDay` — день грида: date, status, automation, absenceType?, redReasons?
+- `CalendarDay` — день грида: date, status, automation, absenceType?, redReasons? (RedReason[])
 - `StreakPanelData` — все данные для компонента: calendarDays, completedCycles, ws, revit
+
+## Tooltip красных дней
+
+При наведении на красную ячейку показываются человеко-читаемые причины:
+- `red_day` → «Не внесён отчёт»
+- `task_dynamics_violation` → «В задаче «{имя}» не был вовремя сменён процент готовности» + ссылка на WS
+- `section_red` → «В задаче «{имя}» не была вовремя сменена метка готовности» + ссылка на WS
+
+Ссылки строятся по формату: `https://eneca.worksection.com/project/{projectId}/{l2Id}/{taskId}/`
 
 ## Queries
 

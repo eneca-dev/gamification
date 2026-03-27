@@ -40,6 +40,7 @@ export interface UserTransaction {
   source: string
   coins: number
   description: string | null
+  details: Record<string, unknown> | null
   created_at: string
 }
 
@@ -82,6 +83,84 @@ export const cancelOrderSchema = z.object({
 })
 
 export type CancelOrderInput = z.infer<typeof cancelOrderSchema>
+
+// --- Форматирование причин красного дня для транзакций ---
+
+const WS_BASE = 'https://eneca.worksection.com/project'
+
+function buildWsTaskUrl(details: Record<string, unknown>): string | null {
+  const projectId = details.ws_project_id as string | undefined
+  const taskId = details.ws_task_id as string | undefined
+  const l2Id = details.ws_l2_id as string | undefined
+  if (!projectId || !taskId) return null
+  if (l2Id) return `${WS_BASE}/${projectId}/${l2Id}/${taskId}/`
+  return `${WS_BASE}/${projectId}/${taskId}/`
+}
+
+/** Человеко-читаемое описание причины для транзакции */
+export function formatTransactionReason(tx: UserTransaction): string | null {
+  if (!tx.details) return null
+  const d = tx.details
+
+  if (tx.event_type === 'red_day') {
+    return 'Не внесён отчёт'
+  }
+
+  if (tx.event_type === 'task_dynamics_violation') {
+    const name = (d.ws_task_name as string) ?? 'неизвестная задача'
+    const url = buildWsTaskUrl(d)
+    return url
+      ? `В задаче «${name}» не был вовремя сменён процент готовности — ${url}`
+      : `В задаче «${name}» не был вовремя сменён процент готовности`
+  }
+
+  if (tx.event_type === 'section_red') {
+    const name = (d.violator_task_name as string) ?? (d.ws_task_name as string) ?? 'неизвестная задача'
+    const violatorProjectId = d.violator_project_id as string | undefined
+    const violatorTaskId = d.violator_task_id as string | undefined
+    const l2Id = d.ws_task_id as string | undefined
+    let url: string | null = null
+    if (violatorProjectId && violatorTaskId) {
+      url = l2Id
+        ? `${WS_BASE}/${violatorProjectId}/${l2Id}/${violatorTaskId}/`
+        : `${WS_BASE}/${violatorProjectId}/${violatorTaskId}/`
+    }
+    return url
+      ? `В задаче «${name}» не была вовремя сменена метка готовности — ${url}`
+      : `В задаче «${name}» не была вовремя сменена метка готовности`
+  }
+
+  return null
+}
+
+// --- Calendar (holidays / workdays) ---
+
+export interface CalendarHolidayRow {
+  id: number
+  date: string
+  name: string
+  created_at: string
+}
+
+export interface CalendarWorkdayRow {
+  id: number
+  date: string
+  name: string
+  created_at: string
+}
+
+export const addCalendarDateSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Формат даты: YYYY-MM-DD'),
+  name: z.string().min(1, 'Название обязательно').max(100, 'Максимум 100 символов'),
+})
+
+export type AddCalendarDateInput = z.infer<typeof addCalendarDateSchema>
+
+export const deleteCalendarDateSchema = z.object({
+  id: z.number().int().positive(),
+})
+
+export type DeleteCalendarDateInput = z.infer<typeof deleteCalendarDateSchema>
 
 // --- Форма товара (используется в ProductFormModal → ProductsClient) ---
 

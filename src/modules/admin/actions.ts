@@ -7,7 +7,10 @@ import { createSupabaseAdminClient } from '@/config/supabase'
 import { getCurrentUser } from '@/modules/auth'
 
 import { checkIsAdmin } from './checkIsAdmin'
-import { updateEventTypeSchema, updateOrderStatusSchema, cancelOrderSchema } from './types'
+import {
+  updateEventTypeSchema, updateOrderStatusSchema, cancelOrderSchema,
+  addCalendarDateSchema, deleteCalendarDateSchema,
+} from './types'
 import type { CancelResult } from '@/modules/shop'
 
 export async function updateEventType(
@@ -147,4 +150,120 @@ export async function cancelOrder(
   revalidatePath('/store')
   revalidatePath('/profile')
   return { success: true, data: data as CancelResult }
+}
+
+// --- Calendar ---
+
+export async function addCalendarHoliday(
+  input: unknown
+): Promise<{ success: true; data: { id: number; date: string; name: string; created_at: string } } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const parsed = addCalendarDateSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: parsed.error.errors[0]?.message ?? 'Невалидные данные' }
+
+  const supabase = createSupabaseAdminClient()
+
+  // Проверяем что дата не в calendar_workdays
+  const { data: existing } = await supabase
+    .from('calendar_workdays')
+    .select('id')
+    .eq('date', parsed.data.date)
+    .maybeSingle()
+
+  if (existing) return { success: false, error: 'Эта дата уже отмечена как рабочий перенос. Сначала удалите её оттуда' }
+
+  const { data, error } = await supabase
+    .from('calendar_holidays')
+    .insert({ date: parsed.data.date, name: parsed.data.name })
+    .select('id, date, name, created_at')
+    .single()
+
+  if (error) {
+    if (error.code === '23505') return { success: false, error: 'Эта дата уже добавлена как праздник' }
+    return { success: false, error: error.message }
+  }
+
+  revalidatePath('/admin/calendar')
+  return { success: true, data }
+}
+
+export async function deleteCalendarHoliday(
+  input: unknown
+): Promise<{ success: true } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const parsed = deleteCalendarDateSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: 'Невалидные данные' }
+
+  const supabase = createSupabaseAdminClient()
+
+  const { error } = await supabase
+    .from('calendar_holidays')
+    .delete()
+    .eq('id', parsed.data.id)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/admin/calendar')
+  return { success: true }
+}
+
+export async function addCalendarWorkday(
+  input: unknown
+): Promise<{ success: true; data: { id: number; date: string; name: string; created_at: string } } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const parsed = addCalendarDateSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: parsed.error.errors[0]?.message ?? 'Невалидные данные' }
+
+  const supabase = createSupabaseAdminClient()
+
+  // Проверяем что дата не в calendar_holidays
+  const { data: existing } = await supabase
+    .from('calendar_holidays')
+    .select('id')
+    .eq('date', parsed.data.date)
+    .maybeSingle()
+
+  if (existing) return { success: false, error: 'Эта дата уже отмечена как праздник. Сначала удалите её оттуда' }
+
+  const { data, error } = await supabase
+    .from('calendar_workdays')
+    .insert({ date: parsed.data.date, name: parsed.data.name })
+    .select('id, date, name, created_at')
+    .single()
+
+  if (error) {
+    if (error.code === '23505') return { success: false, error: 'Эта дата уже добавлена как рабочий перенос' }
+    return { success: false, error: error.message }
+  }
+
+  revalidatePath('/admin/calendar')
+  return { success: true, data }
+}
+
+export async function deleteCalendarWorkday(
+  input: unknown
+): Promise<{ success: true } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const parsed = deleteCalendarDateSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: 'Невалидные данные' }
+
+  const supabase = createSupabaseAdminClient()
+
+  const { error } = await supabase
+    .from('calendar_workdays')
+    .delete()
+    .eq('id', parsed.data.id)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/admin/calendar')
+  return { success: true }
 }

@@ -4,7 +4,7 @@ import { Fragment } from "react";
 import { Trophy, CheckCircle2 } from "lucide-react";
 import { sourceColors } from "@/lib/data";
 import type { DailyTask } from "@/lib/data";
-import type { CalendarDayStatus, CalendarDay, StreakMilestone, StreakPanelData } from "@/modules/streak-panel";
+import type { CalendarDayStatus, CalendarDay, RedReason, StreakMilestone, StreakPanelData } from "@/modules/streak-panel";
 
 // ─── Layout constants ────────────────────────────────────────────────────────
 const CELL = 18;
@@ -93,6 +93,38 @@ function buildWeeksAndMonths(calendarDays: CalendarDay[]) {
   return { weeks, groups };
 }
 
+// Построение WS URL задачи
+function buildTaskUrl(reason: RedReason): string | null {
+  if (!reason.ws_project_id || !reason.ws_task_id) return null;
+  const base = "https://eneca.worksection.com/project";
+  if (reason.ws_l2_id) {
+    return `${base}/${reason.ws_project_id}/${reason.ws_l2_id}/${reason.ws_task_id}/`;
+  }
+  return `${base}/${reason.ws_project_id}/${reason.ws_task_id}/`;
+}
+
+// Человеко-читаемое описание причины красного дня
+function formatRedReason(reason: RedReason): string {
+  if (reason.type === "red_day") {
+    return "Не внесён отчёт";
+  }
+  if (reason.type === "task_dynamics_violation") {
+    const taskName = reason.ws_task_name ?? "неизвестная задача";
+    const url = buildTaskUrl(reason);
+    return url
+      ? `В задаче «${taskName}» не был вовремя сменён процент готовности — ${url}`
+      : `В задаче «${taskName}» не был вовремя сменён процент готовности`;
+  }
+  if (reason.type === "section_red") {
+    const taskName = reason.ws_task_name ?? "неизвестная задача";
+    const url = buildTaskUrl(reason);
+    return url
+      ? `В задаче «${taskName}» не была вовремя сменена метка готовности — ${url}`
+      : `В задаче «${taskName}» не была вовремя сменена метка готовности`;
+  }
+  return reason.type;
+}
+
 // Тултип для ячейки
 function getDayTooltip(day: CalendarDay): string | undefined {
   if (day.status === "out") return undefined;
@@ -104,7 +136,8 @@ function getDayTooltip(day: CalendarDay): string | undefined {
   }
 
   if (day.status === "red" && day.redReasons?.length) {
-    text += ` (${day.redReasons.join(", ")})`;
+    const reasons = day.redReasons.map(formatRedReason);
+    text += `\n${reasons.join("\n")}`;
   }
 
   if (day.automation && day.status !== "frozen") {

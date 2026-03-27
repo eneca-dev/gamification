@@ -30,7 +30,7 @@ import {
   getRevitStreakData,
 } from "@/modules/streak-panel";
 import { getUserGratitudes } from "@/modules/gratitudes";
-import type { CalendarDay, CalendarDayStatus, StreakPanelData } from "@/modules/streak-panel";
+import type { CalendarDay, CalendarDayStatus, RedReason, StreakPanelData } from "@/modules/streak-panel";
 
 const DEPT_COLORS = [
   "#e91e63", "#2196f3", "#ff9800", "#4caf50", "#9c27b0",
@@ -56,7 +56,7 @@ function getGridRange(): { rangeStart: string; rangeEnd: string } {
 function buildCalendarDays(
   rangeStart: string,
   rangeEnd: string,
-  statusMap: Map<string, { status: string; absence_type: string | null; red_reasons: string[] | null }>,
+  statusMap: Map<string, { status: string; absence_type: string | null; red_reasons: RedReason[] | null }>,
   automationDates: Set<string>,
   holidays: Set<string>,
   workdays: Set<string>,
@@ -93,7 +93,7 @@ function buildCalendarDays(
 
     let uiStatus: CalendarDayStatus;
     let absenceType: string | null = null;
-    let redReasons: string[] | null = null;
+    let redReasons: RedReason[] | null = null;
 
     if (row.status === "green") {
       uiStatus = "green";
@@ -190,7 +190,7 @@ export default async function DashboardPage() {
   ]);
 
   // Собираем Map статусов для быстрого доступа
-  const statusMap = new Map<string, { status: string; absence_type: string | null; red_reasons: string[] | null }>();
+  const statusMap = new Map<string, { status: string; absence_type: string | null; red_reasons: RedReason[] | null }>();
   for (const row of dayStatuses) {
     statusMap.set(row.date, { status: row.status, absence_type: row.absence_type, red_reasons: row.red_reasons });
   }
