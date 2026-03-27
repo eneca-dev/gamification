@@ -3,6 +3,7 @@ import { ArrowLeft, Coins } from 'lucide-react'
 import Link from 'next/link'
 
 import { getUserDetail } from '@/modules/admin'
+import { RoleProvider, RoleBadge, RoleSwitch } from '@/modules/admin/components/RoleToggle'
 import { CoinBalance, CoinStatic } from '@/components/CoinBalance'
 
 interface UserDetailPageProps {
@@ -30,74 +31,61 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
       </Link>
 
       {/* Header card */}
-      <div
-        className="rounded-2xl p-6"
-        style={{
-          background: 'var(--apex-surface)',
-          border: '1px solid var(--apex-border)',
-        }}
-      >
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h2
-              className="text-[20px] font-bold"
-              style={{ color: 'var(--apex-text)' }}
-            >
-              {user.last_name} {user.first_name}
-            </h2>
-            <p
-              className="text-[13px] mt-0.5"
-              style={{ color: 'var(--apex-text-muted)' }}
-            >
-              {user.email}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {user.is_admin && (
-              <span
-                className="text-[11px] font-semibold px-3 py-1 rounded-full"
-                style={{
-                  background: 'var(--apex-success-bg)',
-                  color: 'var(--apex-primary)',
-                }}
+      <RoleProvider userId={user.id} initialIsAdmin={user.is_admin}>
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            background: 'var(--apex-surface)',
+            border: '1px solid var(--apex-border)',
+          }}
+        >
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h2
+                className="text-[20px] font-bold"
+                style={{ color: 'var(--apex-text)' }}
               >
-                Админ
+                {user.last_name} {user.first_name}
+              </h2>
+              <p
+                className="text-[13px] mt-0.5"
+                style={{ color: 'var(--apex-text-muted)' }}
+              >
+                {user.email}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <RoleBadge />
+            </div>
+          </div>
+
+          {/* Info grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+            <InfoCard label="Баланс" accent>
+              <CoinStatic amount={user.total_coins} size="sm" />
+            </InfoCard>
+            <InfoCard label="Отдел">
+              <span
+                className="text-[13px] font-semibold"
+                style={{ color: 'var(--apex-text)' }}
+              >
+                {user.department ?? '—'}
               </span>
-            )}
+            </InfoCard>
+            <InfoCard label="Команда">
+              <span
+                className="text-[13px] font-semibold"
+                style={{ color: 'var(--apex-text)' }}
+              >
+                {user.team ?? '—'}
+              </span>
+            </InfoCard>
+            <InfoCard label="Роль">
+              <RoleSwitch />
+            </InfoCard>
           </div>
         </div>
-
-        {/* Info grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
-          <InfoCard label="Баланс" accent>
-            <CoinStatic amount={user.total_coins} size="sm" />
-          </InfoCard>
-          <InfoCard label="Отдел">
-            <span
-              className="text-[13px] font-semibold"
-              style={{ color: 'var(--apex-text)' }}
-            >
-              {user.department ?? '—'}
-            </span>
-          </InfoCard>
-          <InfoCard label="Команда">
-            <span
-              className="text-[13px] font-semibold"
-              style={{ color: 'var(--apex-text)' }}
-            >
-              {user.team ?? '—'}
-            </span>
-          </InfoCard>
-          <InfoCard label="Роль">
-            <span
-              className="text-[13px] font-semibold"
-              style={{ color: 'var(--apex-text)' }}
-            >
-              {user.is_admin ? 'Администратор' : 'Пользователь'}
-            </span>
-          </InfoCard>
-        </div>
-      </div>
+      </RoleProvider>
 
       {/* Transactions */}
       <div
