@@ -30,7 +30,10 @@
       "Bash(find d:/1work/gamification/gamification/src/app -path *admin* -type f)",
       "Bash(npm install:*)",
       "Bash(npm uninstall:*)",
-      "mcp__Sequential_Thinking__sequentialthinking"
+      "mcp__Sequential_Thinking__sequentialthinking",
+      "Bash(ls -la \"/d/1work/gamification/gamification/src/app/\\(main\\)/store/\")",
+      "Bash(ls -la \"/d/1work/gamification/gamification/src/app/\\(main\\)/store/orders/\")",
+      "Bash(cat \"/d/1work/gamification/gamification/src/app/\\(main\\)/store/orders/loading.tsx\")"
     ]
   },
   "enableAllProjectMcpServers": true,

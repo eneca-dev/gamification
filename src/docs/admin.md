@@ -26,8 +26,12 @@
 
 - `EventTypeRow` — строка из `gamification_event_types`: key, name, coins, description, is_active
 - `UpdateEventTypeInput` — Zod-схема: key (string, обязателен), name/coins/description/is_active (опционально)
-- `AdminOrderRow` — заказ с user_name, user_email, product_name, product_emoji, product_image_url, is_physical, coins_spent, status, note
+- `AdminUserRow` — пользователь с балансом: id, email, first_name, last_name, department, team, is_admin, is_active, total_coins
+- `UserDetail` — `{ user: AdminUserRow, transactions: UserTransaction[] }`
+- `UserTransaction` — строка из `view_user_transactions`: event_date, event_type, source, coins, description, created_at
+- `AdminOrderRow` — заказ с user_name, user_email, product_name, product_emoji, product_image_url, is_physical, coins_spent, status, note, status_changed_by, status_changed_at
 - `UpdateOrderStatusInput` — Zod-схема: orderId (uuid), status (pending/processing/fulfilled), note (optional)
+- `CancelOrderInput` — Zod-схема: orderId (uuid), note (optional, max 500)
 - `ProductFormData` — данные формы товара: name, description, price, category_id, image_url, emoji, stock, sort_order
 
 ## Actions
@@ -46,14 +50,15 @@
 
 ## Компоненты
 
-- `AdminNav` — навигация по разделам админки (табы)
+- `AdminNav` — навигация по разделам админки (табы: Overview, Events, Users, Products, Orders)
 - `EventTypesTable` — таблица событий с inline-редактированием (name, coins, description), table-layout: fixed
-- `AdminUsersClient` — таблица пользователей с поиском, переключением is_admin
-- `UsersTable` — таблица пользователей с сортировкой
-- `UserDetailModal` — модалка с деталями пользователя и транзакциями
+- `AdminUsersClient` — обёртка над UsersTable, принимает `AdminUserRow[]`
+- `UsersTable` — таблица пользователей с поиском, фильтрацией по отделу, тогглом «только админы», группировкой по отделам/командам, inline-переключением ролей
+- `RoleToggle` — контекст-компонент для управления ролями: `RoleProvider` (state + optimistic), `RoleBadge` (отображение), `RoleSwitch` (интерактивный тоггл)
+- `UserDetailModal` — боковая панель с деталями пользователя и последними 50 транзакциями. Загружает данные через API route `/api/admin/user-detail`
 - `ProductsClient` — управление товарами и категориями: inline-редактирование, поиск, фильтрация по категориям (динамический overflow пиллов), удаление товаров, создание/редактирование через модалку
 - `ProductFormModal` — модалка создания/редактирования товара: кастомный дропдаун категории, эмодзи-инпут (Win+.), drag-and-drop загрузка изображений, блокировка скролла. Рендерится через портал
-- `AdminOrdersClient` — управление заказами: дропдаун статуса на бейдже (через портал), кнопка отмены, раскрываемые комментарии, модал подтверждения отмены (через портал)
+- `AdminOrdersClient` — управление заказами: дропдаун статуса на бейдже (через портал, вложенный `StatusDropdown` с позиционированием через useRef), кнопка отмены, раскрываемые комментарии, модал подтверждения отмены (через портал)
 - `AdminPlaceholder` — заглушка для неактивных разделов
 - `AdminTableSkeleton` — скелетон загрузки таблиц
 
@@ -69,6 +74,22 @@
 - Inline-редакторы закрываются при клике вне поля (onBlur с проверкой relatedTarget)
 - Таблицы используют `table-layout: fixed` с `<colgroup>` для стабильных колонок при inline-редактировании
 - Тоггл статуса товара блокируется (disabled + opacity 0.4) при неактивной категории
+
+## API Routes
+
+- `GET /api/admin/user-detail?id={userId}` — детали пользователя для `UserDetailModal`. Guard: `checkIsAdmin()` → 403. Возвращает `UserDetail` JSON или 404
+- `POST /api/admin/upload-product-image` — загрузка изображения товара. Guard: `checkIsAdmin()` → 403. FormData с полем `file`. Валидация: JPEG/PNG/WebP, max 2 МБ. Storage path: `products/{timestamp}_{uuid}.{ext}`. Возвращает публичный URL
+
+## Страницы
+
+- `/admin` — layout с заголовком и `AdminNav`. Главная — placeholder
+- `/admin/events` — `getEventTypes()` → `EventTypesTable`
+- `/admin/users` — `getUsers()` → `AdminUsersClient`
+- `/admin/users/[id]` — `getUserDetail(id)` → детальная страница пользователя с `RoleProvider`, информационными карточками, списком транзакций. 404 если не найден
+- `/admin/products` — `getAllProducts()` + `getAllCategories()` параллельно → `ProductsClient`
+- `/admin/orders` — `getOrders()` → `AdminOrdersClient`
+
+Все страницы с данными имеют `loading.tsx` со скелетонами.
 
 ## Ограничения
 
