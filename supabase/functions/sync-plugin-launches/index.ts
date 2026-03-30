@@ -176,8 +176,34 @@ Deno.serve(async (req) => {
 
   const totalSynced = results.reduce((acc, r) => acc + r.synced, 0);
 
+  // Снапшот рейтингов для достижений (обновляет materialized views + записывает топы дня)
+  let snapshotResult = null;
+  try {
+    const { data, error } = await supabase.rpc('fn_ach_snapshot_rankings');
+    if (error) throw error;
+    snapshotResult = data;
+  } catch (e) {
+    snapshotResult = { error: String(e) };
+  }
+
+  // Проверка достижений по благодарностям
+  let gratitudeAchResult = null;
+  try {
+    const { data, error } = await supabase.rpc('fn_ach_check_gratitude_achievements');
+    if (error) throw error;
+    gratitudeAchResult = data;
+  } catch (e) {
+    gratitudeAchResult = { error: String(e) };
+  }
+
   return new Response(
-    JSON.stringify({ ok: true, days, totalSynced, results }),
+    JSON.stringify({
+      ok: true,
+      days,
+      totalSynced,
+      results,
+      achievements: { snapshot: snapshotResult, gratitude: gratitudeAchResult },
+    }),
     { headers: { 'Content-Type': 'application/json' } },
   );
 });

@@ -1,4 +1,4 @@
-export { getEventTypes, getRankingSettings, getGratitudeSettings, getUsers, getUserDetail, getOrders, getCalendarHolidays, getCalendarWorkdays } from './queries'
+export { getEventTypes, getRankingSettings, getGratitudeSettings, getUsers, getUserDetail, getOrders, getCalendarHolidays, getCalendarWorkdays, getUsersLight } from './queries'
 export {
   updateEventType, updateRankingSetting, updateGratitudeSetting,
   toggleAdmin, updateOrderStatus, cancelOrder,

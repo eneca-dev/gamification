@@ -1,6 +1,7 @@
 "use client";
 
-import { Trophy, Clock, Users } from "lucide-react";
+import { useState } from "react";
+import { Trophy, Clock, Info } from "lucide-react";
 import type { DepartmentEntry } from "@/lib/data";
 
 interface DepartmentContestProps {
@@ -9,6 +10,50 @@ interface DepartmentContestProps {
   daysLeft: number;
   title?: string;
   currentEntityName?: string | null;
+  wsTooltip?: string;
+  autoTooltip?: string;
+}
+
+function InfoTooltip({ text }: { text: string }) {
+  const [show, setShow] = useState(false);
+
+  return (
+    <span
+      className="relative inline-flex cursor-help"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      <span
+        className="w-4 h-4 rounded-full flex items-center justify-center"
+        style={{ background: "var(--surface)", border: "1px solid var(--apex-border)" }}
+      >
+        <Info size={10} style={{ color: "var(--apex-text-muted)" }} />
+      </span>
+      {show && (
+        <div
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2.5 rounded-xl text-[11px] font-medium w-64 pointer-events-none"
+          style={{
+            zIndex: 100,
+            background: "#ffffff",
+            color: "var(--text-primary)",
+            border: "1px solid var(--apex-border)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+          }}
+        >
+          <div className="text-[10px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+            {text}
+          </div>
+          <div className="text-[9px] mt-1.5 pt-1" style={{ color: "var(--text-muted)", borderTop: "1px solid var(--apex-border)" }}>
+            Сотрудники на больничном, в отпуске или отгуле не учитываются.
+          </div>
+          <div
+            className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 rotate-45"
+            style={{ background: "#ffffff", borderRight: "1px solid var(--apex-border)", borderBottom: "1px solid var(--apex-border)" }}
+          />
+        </div>
+      )}
+    </span>
+  );
 }
 
 interface DisciplineColumnProps {
@@ -23,6 +68,7 @@ interface DisciplineColumnProps {
   metricSuffix: string;
   accentColor: string;
   currentName?: string | null;
+  tooltip?: string;
 }
 
 function DisciplineColumn({
@@ -37,6 +83,7 @@ function DisciplineColumn({
   metricSuffix,
   accentColor,
   currentName,
+  tooltip,
 }: DisciplineColumnProps) {
   const leader = sorted[0];
   const currentDept = sorted.find((d) => d.isCurrentDepartment);
@@ -47,6 +94,7 @@ function DisciplineColumn({
       <div className="flex items-center gap-1.5">
         <span className="text-[13px]">{icon}</span>
         <span className="text-[12px] font-semibold" style={{ color: accentColor }}>{title}</span>
+        {tooltip && <InfoTooltip text={tooltip} />}
       </div>
 
       {/* Текущая позиция */}
@@ -94,12 +142,6 @@ function DisciplineColumn({
           <div className="text-[13px] font-bold" style={{ color: "var(--apex-text-muted)" }}>0{metricSuffix}</div>
         </div>
       )}
-
-      {/* Metric label */}
-      <div className="flex items-center gap-1">
-        <Users size={10} style={{ color: "var(--apex-text-muted)" }} />
-        <span className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>{metricLabel}</span>
-      </div>
 
       {/* Department rows — scrollable */}
       <div className="space-y-1.5 max-h-[340px] overflow-y-auto scrollbar-hide">
@@ -226,7 +268,7 @@ function DisciplineColumn({
   );
 }
 
-export function DepartmentContest({ departments, automationDepartments, daysLeft, title = "Соревнование отделов", currentEntityName }: DepartmentContestProps) {
+export function DepartmentContest({ departments, automationDepartments, daysLeft, title = "Соревнование отделов", currentEntityName, wsTooltip, autoTooltip }: DepartmentContestProps) {
   const sortedWs = [...departments]
     .sort((a, b) => b.contestScore - a.contestScore)
     .map((d, i) => ({ ...d, rank: i + 1 }));
@@ -279,9 +321,10 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
           metricSuffix=""
           accentColor="var(--apex-primary)"
           currentName={currentEntityName}
+          tooltip={wsTooltip}
         />
         <DisciplineColumn
-          title="Автоматизации"
+          title="Revit"
           icon="⚡"
           prize={200}
           metricLabel="Баллы с учётом вовлечённости"
@@ -292,6 +335,7 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
           metricSuffix=""
           accentColor="var(--orange-500)"
           currentName={currentEntityName}
+          tooltip={autoTooltip}
         />
       </div>
     </div>

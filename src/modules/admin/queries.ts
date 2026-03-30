@@ -188,3 +188,26 @@ export async function getCalendarWorkdays(): Promise<CalendarWorkdayRow[]> {
   if (error) throw new Error(error.message)
   return data ?? []
 }
+
+// Лёгкий список пользователей (для поиска в админке)
+export async function getUsersLight(): Promise<{ id: string; name: string; department: string | null }[]> {
+  const supabase = createSupabaseAdminClient()
+
+  const { data, error } = await supabase
+    .from('ws_users')
+    .select('id, first_name, last_name, department_code')
+    .eq('is_active', true)
+    .not('team', 'eq', 'Декретный')
+    .order('last_name')
+
+  if (error) {
+    console.error('getUsersLight:', error.message)
+    return []
+  }
+
+  return (data ?? []).map((u) => ({
+    id: u.id,
+    name: `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim(),
+    department: u.department_code,
+  }))
+}

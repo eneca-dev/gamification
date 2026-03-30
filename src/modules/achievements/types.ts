@@ -107,3 +107,28 @@ export interface FullAchievementProgress {
   ranking: AchievementProgress | null
   gratitude: GratitudeAchProgress[]
 }
+
+// Прогресс к достижению (для админки — вся компания)
+export interface CompanyProgressEntry {
+  entity_id: string
+  entity_type: AchievementEntityType
+  area: string
+  label: string
+  days_in_top: number
+  threshold: number
+  remaining: number
+  earned: boolean
+}
+
+// Достижение компании (для ленты)
+export interface CompanyAward {
+  id: string
+  entity_id: string
+  entity_type: AchievementEntityType
+  area: AchievementArea
+  period_start: string
+  days_in_top: number
+  awarded_at: string
+  score: number
+  label: string // ФИО / команда / отдел
+}

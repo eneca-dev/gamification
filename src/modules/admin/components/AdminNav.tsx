@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, Users, Package, ShoppingBag, Zap, CalendarDays } from 'lucide-react'
+import { BarChart3, Users, Package, ShoppingBag, Zap, CalendarDays, Trophy } from 'lucide-react'
 
 const navItems = [
   { href: '/admin', label: 'Обзор', icon: BarChart3, exact: true },
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/admin/products', label: 'Товары', icon: Package, exact: false },
   { href: '/admin/orders', label: 'Заказы', icon: ShoppingBag, exact: false },
   { href: '/admin/calendar', label: 'Календарь', icon: CalendarDays, exact: false },
+  { href: '/admin/achievements', label: 'Достижения', icon: Trophy, exact: false },
 ]
 
 export function AdminNav() {
