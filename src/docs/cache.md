@@ -44,6 +44,7 @@ Realtime-подписки настраиваются в `realtime/config.ts`: т
 
 **Ключи кэша:**
 - `queryKeys` — фабрика ключей, пополняется в `keys/query-keys.ts` по мере создания модулей
+- `queryKeys.balance.all` / `queryKeys.balance.current()` — баланс текущего пользователя (polling в Sidebar)
 
 ## Ограничения
 

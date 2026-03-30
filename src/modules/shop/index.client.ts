@@ -1,5 +1,6 @@
 // Клиентобезопасные экспорты — типы + server actions для форм
 export {
+  getBalanceAction,
   purchaseProduct,
   createCategory,
   updateCategory,

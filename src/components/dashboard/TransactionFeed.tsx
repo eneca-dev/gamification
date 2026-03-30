@@ -19,7 +19,7 @@ export function TransactionFeed({ transactions }: TransactionFeedProps) {
         <div className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--apex-text-muted)" }}>
           Последние операции
         </div>
-        <a href="/achievements" className="text-[12px] font-semibold" style={{ color: "var(--apex-primary)" }}>
+        <a href="/transactions" className="text-[12px] font-semibold" style={{ color: "var(--apex-primary)" }}>
           Все операции →
         </a>
       </div>

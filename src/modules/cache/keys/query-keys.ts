@@ -12,6 +12,11 @@
  * - detail(id): конкретная запись
  */
 
-export const queryKeys = {} as const
+export const queryKeys = {
+  balance: {
+    all: ['balance'] as const,
+    current: () => [...queryKeys.balance.all, 'current'] as const,
+  },
+} as const
 
 export type QueryKeys = typeof queryKeys

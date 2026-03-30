@@ -7,7 +7,7 @@ import { Home, ShoppingBag, Trophy, Users, Settings, LogOut } from 'lucide-react
 import { signOut } from '@/modules/auth/index.client'
 import type { AuthUser } from '@/modules/auth/index.client'
 import { DevUserSwitcher } from '@/modules/dev-tools/components/DevUserSwitcher'
-import { CoinStatic } from '@/components/CoinBalance'
+import { CoinBalanceLive } from '@/components/CoinBalance'
 
 interface SidebarProps {
   user: AuthUser | null
@@ -129,7 +129,7 @@ export function Sidebar({ user, balance, showDevSwitcher }: SidebarProps) {
           <div className="text-[11px] font-medium mb-1.5" style={{ color: 'var(--apex-text-muted)' }}>
             На вашем счету
           </div>
-          <CoinStatic amount={balance} size="md" />
+          <CoinBalanceLive initialAmount={balance} size="md" />
         </div>
       </div>
 

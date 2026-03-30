@@ -34,6 +34,7 @@
 
 ## Actions
 
+- `getBalanceAction()` — возвращает баланс текущего пользователя. Используется для polling на клиенте (CoinBalanceLive). Не требует параметров — берёт wsUserId из сессии
 - `purchaseProduct(productId)` — покупка, доступна всем. RPC `purchase_product`. Revalidate: `/store`, `/profile`
 - `createCategory(input)` — создание категории. Только админ. Revalidate: `/admin/products`, `/store`
 - `updateCategory(input)` — обновление категории (name, slug, description, is_physical, is_active). Только админ
@@ -53,8 +54,13 @@
 - `getUserOrders(wsUserId)` — заказы пользователя с названием товара, emoji, image_url и суммой. supabaseAdmin
 - `getUserBalance(wsUserId)` — баланс пользователя из gamification_balances. supabaseAdmin
 
+## Hooks
+
+- `useBalance()` — polling баланса через `createSimpleCacheQuery`. Query key: `queryKeys.balance.current()`. staleTime: `realtime` (1 мин). Интервал polling: 30 сек (передаётся через `refetchInterval` в компоненте). Polling автоматически останавливается при неактивной вкладке (встроено в TanStack Query)
+
 ## Компоненты
 
+- `CoinBalanceLive` (`src/components/CoinBalance.tsx`) — клиентский компонент баланса с polling. Принимает `initialAmount` (SSR-значение) — показывает его до первого ответа polling. Используется в Sidebar
 - `StoreClient` — клиентский контейнер: фильтрация по категориям, optimistic update баланса при покупке, toast-уведомления (3 сек). Grid: 2 колонки → 3 на lg → 4 на xl
 - `ProductCard` — карточка товара: image_url (object-contain) / emoji / placeholder (?), фон emoji — var(--apex-emoji-bg), разделитель между картинкой и футером, футер с var(--apex-bg). Бейдж «мало» при stock ≤ 5 (физические), бейдж «нет в наличии». Staggered-анимация по index
 - `PurchaseButton` — кнопка покупки: проверка баланса и stock, динамический текст (покупаем/нет в наличии/ещё N баллов/получить за N баллов)

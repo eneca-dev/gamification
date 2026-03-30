@@ -38,7 +38,9 @@
       "Bash(ls -la d:/1work/gamification/gamification/src/app/\\\\\\(main\\\\\\)/admin/)",
       "Bash(find /d/1work/gamification-vps-scripts/src -name *.ts)",
       "Bash(find /d/1work/gamification/gamification -name *migration* -o -name *schema*)",
-      "Bash(ls \"d:/1work/gamification/gamification/src/app/\\(main\\)/admin/\")"
+      "Bash(ls \"d:/1work/gamification/gamification/src/app/\\(main\\)/admin/\")",
+      "Bash(find /d/1work/gamification -type d -name *sync* -o -type d -name *worksection*)",
+      "Bash(find \"D:\\\\1work\\\\gamification\\\\gamification\\\\src\\\\app\\\\\\(main\\)\" -type f -name \"*.tsx\" -o -name \"*.ts\")"
     ]
   },
   "enableAllProjectMcpServers": true,

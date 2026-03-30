@@ -1,18 +1,17 @@
-import { AlertsBanner } from "@/components/dashboard/AlertsBanner";
+import { AlarmsBanner } from "@/modules/alarms/components/AlarmsBanner";
 import { StreakPanel } from "@/components/dashboard/StreakPanel";
 import { TransactionFeed } from "@/components/dashboard/TransactionFeed";
 import { Leaderboard } from "@/components/dashboard/Leaderboard";
 import { DepartmentContest } from "@/components/dashboard/DepartmentContest";
 import {
-  wsAlerts,
   dailyTasks,
 } from "@/lib/data";
 import type { Transaction, DailyTask, DepartmentEntry } from "@/lib/data";
 import { getCurrentUser } from "@/modules/auth/queries";
 import {
   getRevitWidgetData,
-  getRevitTransactions,
 } from "@/modules/revit";
+import { getUserTransactions, getEventIcon } from "@/modules/transactions";
 import {
   getRevitPersonalRanking,
   getRevitTeamRanking,
@@ -29,7 +28,7 @@ import {
   getWsStreakData,
   getRevitStreakData,
 } from "@/modules/streak-panel";
-import { getUserGratitudes } from "@/modules/gratitudes";
+import { getActiveAlarms } from "@/modules/alarms";
 import type { CalendarDay, CalendarDayStatus, RedReason, StreakPanelData } from "@/modules/streak-panel";
 
 const DEPT_COLORS = [
@@ -148,7 +147,8 @@ export default async function DashboardPage() {
     revitPersonalRanking, wsPersonalRanking,
     revitTeamRanking, wsTeamRanking,
     revitDeptRanking, wsDeptRanking,
-    myGratitudes, revitTransactions,
+    recentTransactions,
+    activeAlarms,
   ] = await Promise.all([
       wsUserId ? getWsStreakData(wsUserId) : Promise.resolve({
         currentStreak: 0, longestStreak: 0, streakStartDate: null, completedCycles: 0,
@@ -174,8 +174,8 @@ export default async function DashboardPage() {
       getWsTeamRanking(100),
       getRevitDepartmentRanking(50),
       getWsDepartmentRanking(50),
-      userEmail ? getUserGratitudes(userEmail, 20) : Promise.resolve([]),
-      userEmail ? getRevitTransactions(userEmail, 10) : Promise.resolve([]),
+      userEmail ? getUserTransactions(userEmail, 5) : Promise.resolve([]),
+      wsUserId ? getActiveAlarms(wsUserId) : Promise.resolve([]),
     ]);
 
   // Грид: 4 месяца (1 назад + текущий + 2 вперёд)
@@ -223,46 +223,16 @@ export default async function DashboardPage() {
   };
   const allDailyTasks = [...dailyTasks, revitDailyTask];
 
-  // Транзакции: благодарности + ревит, сортируем по дате
-  const txItems: { sortKey: number; tx: Transaction }[] = [];
-
-  for (const [i, g] of myGratitudes.entries()) {
-    txItems.push({
-      sortKey: new Date(g.airtable_created_at).getTime(),
-      tx: {
-        id: i + 1,
-        source: "social" as const,
-        category: "gratitude_received" as const,
-        description: `${g.sender_name}: ${g.message.slice(0, 80)}${g.message.length > 80 ? "…" : ""}`,
-        amount: g.earned_coins,
-        date: new Date(g.airtable_created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
-        icon: "🤝",
-      },
-    });
-  }
-
-  for (const [i, rt] of revitTransactions.entries()) {
-    const desc = rt.pluginName
-      ? `${rt.pluginName}: ${rt.launchCount ?? 1} запусков`
-      : rt.description;
-    txItems.push({
-      sortKey: new Date(rt.createdAt).getTime(),
-      tx: {
-        id: 1000 + i,
-        source: "revit" as const,
-        category: "automation_run" as const,
-        description: desc,
-        amount: rt.coins,
-        date: new Date(rt.eventDate).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
-        icon: "⚡",
-      },
-    });
-  }
-
-  const allTransactions = txItems
-    .sort((a, b) => b.sortKey - a.sortKey)
-    .slice(0, 5)
-    .map((item) => item.tx);
+  // Транзакции из view_user_transactions (все источники)
+  const allTransactions: Transaction[] = recentTransactions.map((tx, i) => ({
+    id: i + 1,
+    source: tx.source as Transaction["source"],
+    category: "daily_green" as Transaction["category"],
+    description: tx.description,
+    amount: tx.coins,
+    date: new Date(tx.event_date + "T00:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
+    icon: getEventIcon(tx.event_type),
+  }));
 
   // Конвертируем RankingEntry[] в формат для Leaderboard
   const toLeaderboardEntries = (entries: typeof wsPersonalRanking) =>
@@ -294,19 +264,18 @@ export default async function DashboardPage() {
     }))
 
   const currentDept = wsDeptCode;
-  const hasAlerts = wsAlerts.length > 0;
 
   return (
     <div className="space-y-6">
-      {hasAlerts && (
-        <div className="animate-fade-in-up">
-          <AlertsBanner alerts={wsAlerts} />
-        </div>
-      )}
-
-      <div className="animate-fade-in-up stagger-1">
+      <div className="animate-fade-in-up">
         <StreakPanel streakData={streakPanelData} tasks={allDailyTasks} />
       </div>
+
+      {activeAlarms.length > 0 && (
+        <div className="animate-fade-in-up stagger-1">
+          <AlarmsBanner alarms={activeAlarms} />
+        </div>
+      )}
 
       <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-2">
         <div className="col-span-2">

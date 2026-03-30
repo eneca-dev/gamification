@@ -8,6 +8,8 @@ import { checkIsAdmin } from '@/modules/admin/checkIsAdmin'
 
 import { z } from 'zod'
 
+import type { ActionResult } from '@/modules/cache'
+
 import {
   createProductSchema,
   updateProductSchema,
@@ -17,6 +19,22 @@ import {
 import type { PurchaseResult } from './types'
 
 const productIdSchema = z.string().uuid()
+
+// --- Баланс (polling) ---
+
+export async function getBalanceAction(): Promise<ActionResult<number>> {
+  const user = await getCurrentUser()
+  if (!user?.wsUserId) return { success: false, error: 'Пользователь не найден' }
+
+  const supabase = createSupabaseAdminClient()
+  const { data } = await supabase
+    .from('gamification_balances')
+    .select('total_coins')
+    .eq('user_id', user.wsUserId)
+    .single()
+
+  return { success: true, data: data?.total_coins ?? 0 }
+}
 
 // --- Покупка (доступна всем авторизованным) ---
 
