@@ -217,7 +217,7 @@ export default async function DashboardPage() {
     id: 100,
     source: "revit",
     title: pluginCount > 0
-      ? "Автоматизация"
+      ? "Revit"
       : "Не забудьте использовать автоматизацию",
     description: pluginCount > 0
       ? `Вчера вы использовали ${pluginCount} плагинов, вам начислено ${coinsEarned} ПК`
@@ -340,6 +340,8 @@ export default async function DashboardPage() {
           automationDepartments={toDeptEntries(revitDeptRanking, currentDept)}
           daysLeft={daysLeft}
           currentEntityName={wsDeptCode}
+          wsTooltip="Формула: сумма баллов отдела за Worksection / количество людей в отделе. Сброс каждый месяц."
+          autoTooltip="Формула: сумма баллов по Revit в отделе × (кол-во людей, использующих плагины / общее кол-во людей в отделе). Сброс каждый месяц."
         />
       </div>
 
@@ -351,6 +353,8 @@ export default async function DashboardPage() {
           daysLeft={daysLeft}
           title="Соревнование команд"
           currentEntityName={wsTeam}
+          wsTooltip="Формула: сумма баллов команды за Worksection / количество людей в команде. Сброс каждый месяц."
+          autoTooltip="Формула: сумма баллов по Revit в команде × (кол-во людей, использующих плагины / общее кол-во людей в команде). Сброс каждый месяц."
         />
       </div>
     </div>
