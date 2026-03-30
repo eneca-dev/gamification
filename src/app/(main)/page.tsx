@@ -29,6 +29,8 @@ import {
   getRevitStreakData,
 } from "@/modules/streak-panel";
 import { getActiveAlarms } from "@/modules/alarms";
+import { getMyGratitudesNew, getSenderQuota, getGratitudeRecipients, getUserBalance } from "@/modules/gratitudes";
+import { GratitudeWidget } from "@/modules/gratitudes/components/GratitudeWidget";
 import type { CalendarDay, CalendarDayStatus, RedReason, StreakPanelData } from "@/modules/streak-panel";
 
 const DEPT_COLORS = [
@@ -178,6 +180,14 @@ export default async function DashboardPage() {
       wsUserId ? getActiveAlarms(wsUserId) : Promise.resolve([]),
     ]);
 
+  // Данные для блока благодарности
+  const [senderQuota, gratitudeRecipients, userBalance, myGratitudesNew] = await Promise.all([
+    wsUserId ? getSenderQuota(wsUserId) : Promise.resolve({ used: true, coins_per_gratitude: 0, period_start: '', period_end: '', next_quota_date: null }),
+    wsUserId ? getGratitudeRecipients(wsUserId) : Promise.resolve([]),
+    wsUserId ? getUserBalance(wsUserId) : Promise.resolve(0),
+    userEmail ? getMyGratitudesNew(userEmail, 30) : Promise.resolve([]),
+  ]);
+
   // Грид: 4 месяца (1 назад + текущий + 2 вперёд)
   const { rangeStart, rangeEnd } = getGridRange();
 
@@ -271,9 +281,23 @@ export default async function DashboardPage() {
         <StreakPanel streakData={streakPanelData} tasks={allDailyTasks} />
       </div>
 
-      {activeAlarms.length > 0 && (
-        <div className="animate-fade-in-up stagger-1">
-          <AlarmsBanner alarms={activeAlarms} />
+      {(activeAlarms.length > 0 || wsUserId) && (
+        <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-1">
+          <div className="col-span-2">
+            {activeAlarms.length > 0 && <AlarmsBanner alarms={activeAlarms} />}
+          </div>
+          <div className="col-span-3">
+            {wsUserId && (
+              <GratitudeWidget
+                senderId={wsUserId}
+                currentUserEmail={userEmail}
+                quota={senderQuota}
+                recipients={gratitudeRecipients}
+                balance={userBalance}
+                myGratitudes={myGratitudesNew}
+              />
+            )}
+          </div>
         </div>
       )}
 

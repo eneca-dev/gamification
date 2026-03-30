@@ -1,6 +1,6 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
 
-import type { AchievementProgress, RankingEntry } from './types'
+import type { AchievementProgress, RankingEntry, GratitudeAchProgress } from './types'
 
 export async function getAchievementProgress(
   wsUserId: string
@@ -71,6 +71,19 @@ async function fetchDepartmentRanking(viewName: string, limit: number): Promise<
     score: Number(r.contest_score),
     extra: `${r.users_earning}/${r.total_employees}`,
   }))
+}
+
+// --- Прогресс достижений по благодарностям ---
+export async function getGratitudeAchievementProgress(
+  wsUserId: string
+): Promise<GratitudeAchProgress[]> {
+  const supabase = createSupabaseAdminClient()
+  const { data, error } = await supabase.rpc('fn_ach_get_gratitude_progress', { p_user_id: wsUserId })
+  if (error) {
+    console.error('getGratitudeAchievementProgress:', error.message)
+    return []
+  }
+  return (data ?? []) as GratitudeAchProgress[]
 }
 
 // --- Revit ---

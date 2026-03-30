@@ -111,9 +111,9 @@ export function AlarmsBanner({ alarms: initialAlarms }: AlarmsBannerProps) {
         <AlertTriangle size={15} style={{ color: headerConfig.iconColor }} />
         <span className="text-[12px] font-semibold" style={{ color: headerConfig.iconColor }}>
           {activeCount === 0
-            ? 'Все предупреждения выполнены'
+            ? 'Все напоминания выполнены'
             : activeCount === 1
-              ? '1 предупреждение'
+              ? '1 напоминание'
               : `${activeCount} ${pluralize(activeCount)}`}
         </span>
       </div>
@@ -264,8 +264,8 @@ function AlarmDetails({ alarm }: { alarm: Alarm }) {
 function pluralize(count: number): string {
   const mod10 = count % 10
   const mod100 = count % 100
-  if (mod100 >= 11 && mod100 <= 14) return 'предупреждений'
-  if (mod10 === 1) return 'предупреждение'
-  if (mod10 >= 2 && mod10 <= 4) return 'предупреждения'
-  return 'предупреждений'
+  if (mod100 >= 11 && mod100 <= 14) return 'напоминаний'
+  if (mod10 === 1) return 'напоминание'
+  if (mod10 >= 2 && mod10 <= 4) return 'напоминания'
+  return 'напоминаний'
 }
