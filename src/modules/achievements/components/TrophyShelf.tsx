@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Zap, CheckCircle, Trophy, Users, Building2, ChevronRight, X } from 'lucide-react'
+import { Zap, CheckCircle, Heart, Trophy, Users, Building2, ChevronRight, X } from 'lucide-react'
 
 import type { AchievementAward, AchievementEntityType, AchievementArea } from '../types'
 import { ACHIEVEMENT_BONUSES } from '../types'
@@ -214,6 +214,11 @@ export function TrophyShelf({ awards }: TrophyShelfProps) {
   const quarterMonths = getQuarterMonths()
   const areas: AchievementArea[] = ['revit', 'ws']
   const entityTypes: AchievementEntityType[] = ['user', 'team', 'department']
+  const gratitudeCategories = [
+    { area: 'gratitude_help', label: 'Поддержка коллег', emoji: '🤝', color: 'var(--apex-primary)', bg: 'var(--apex-success-bg)' },
+    { area: 'gratitude_quality', label: 'Проф. признание', emoji: '⭐', color: 'var(--tag-orange-text)', bg: 'var(--tag-orange-bg)' },
+    { area: 'gratitude_mentoring', label: 'Наставничество', emoji: '📚', color: 'var(--tag-purple-text)', bg: 'var(--tag-purple-bg)' },
+  ]
 
   const quarterLabel = `Q${Math.floor(new Date().getMonth() / 3) + 1} ${new Date().getFullYear()}`
 
@@ -294,6 +299,52 @@ export function TrophyShelf({ awards }: TrophyShelfProps) {
               </div>
             )
           })}
+          {/* Благодарности — только личные, 3 категории */}
+          <div>
+            <div className="flex items-center gap-1.5 mb-2">
+              <Heart size={12} style={{ color: 'var(--tag-purple-text)' }} />
+              <span className="text-[11px] font-bold" style={{ color: 'var(--tag-purple-text)' }}>Благодарности</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              {gratitudeCategories.map((gc) => {
+                const now = new Date()
+                const currentMonth = now.getMonth()
+                const currentYear = now.getFullYear()
+
+                return (
+                  <div key={gc.area}>
+                    <div className="text-[10px] font-semibold mb-1.5 text-center" style={{ color: 'var(--text-muted)' }}>
+                      {gc.label}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {quarterMonths.map((qm) => {
+                        const award = awards.find((a) => {
+                          const p = periodToMonthIndex(a.period_start)
+                          return p.month === qm.month && p.year === qm.year && a.area === gc.area && a.entity_type === 'user'
+                        }) ?? null
+                        const isCurrent = qm.month === currentMonth && qm.year === currentYear
+                        const isFuture = qm.year > currentYear || (qm.year === currentYear && qm.month > currentMonth)
+
+                        return (
+                          <TrophyCell
+                            key={`${qm.month}-${qm.year}`}
+                            month={qm.month}
+                            year={qm.year}
+                            label={qm.label}
+                            area={'gratitude' as AchievementArea}
+                            entityType="user"
+                            award={award}
+                            isCurrent={isCurrent}
+                            isFuture={isFuture}
+                          />
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </div>
       </div>
 

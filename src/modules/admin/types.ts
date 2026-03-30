@@ -162,6 +162,44 @@ export const deleteCalendarDateSchema = z.object({
 
 export type DeleteCalendarDateInput = z.infer<typeof deleteCalendarDateSchema>
 
+// --- Achievement Ranking Settings ---
+
+export interface RankingSettingRow {
+  area: string
+  entity_type: string
+  threshold: number
+  is_active: boolean
+}
+
+export const updateRankingSettingSchema = z.object({
+  area: z.string().min(1),
+  entity_type: z.string().min(1),
+  threshold: z.number().int().min(1).max(31).optional(),
+  is_active: z.boolean().optional(),
+})
+
+export type UpdateRankingSettingInput = z.infer<typeof updateRankingSettingSchema>
+
+// --- Achievement Gratitude Settings ---
+
+export interface GratitudeSettingRow {
+  category: string
+  achievement_name: string
+  threshold: number
+  bonus_coins: number
+  is_active: boolean
+}
+
+export const updateGratitudeSettingSchema = z.object({
+  category: z.string().min(1),
+  achievement_name: z.string().min(1).optional(),
+  threshold: z.number().int().min(1).optional(),
+  bonus_coins: z.number().int().min(0).optional(),
+  is_active: z.boolean().optional(),
+})
+
+export type UpdateGratitudeSettingInput = z.infer<typeof updateGratitudeSettingSchema>
+
 // --- Форма товара (используется в ProductFormModal → ProductsClient) ---
 
 export interface ProductFormData {

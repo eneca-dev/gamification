@@ -91,3 +91,19 @@ export const ACHIEVEMENT_BONUSES: Record<AchievementEntityType, number> = {
   team: 150,
   department: 100,
 }
+
+// Прогресс достижения по благодарностям (пороговое, не рейтинговое)
+export interface GratitudeAchProgress {
+  category: string
+  achievement_name: string
+  current_count: number
+  threshold: number
+  bonus_coins: number
+  earned: boolean
+}
+
+// Полный прогресс с благодарностями
+export interface FullAchievementProgress {
+  ranking: AchievementProgress | null
+  gratitude: GratitudeAchProgress[]
+}

@@ -10,6 +10,7 @@ import { checkIsAdmin } from './checkIsAdmin'
 import {
   updateEventTypeSchema, updateOrderStatusSchema, cancelOrderSchema,
   addCalendarDateSchema, deleteCalendarDateSchema,
+  updateRankingSettingSchema, updateGratitudeSettingSchema,
 } from './types'
 import type { CancelResult } from '@/modules/shop'
 
@@ -44,6 +45,65 @@ export async function updateEventType(
   if (!data || data.length === 0) {
     return { success: false, error: 'Не удалось обновить: проверьте права доступа' }
   }
+
+  revalidatePath('/admin/events')
+  return { success: true }
+}
+
+export async function updateRankingSetting(
+  input: { area: string; entity_type: string; threshold?: number; is_active?: boolean }
+): Promise<{ success: true } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const parsed = updateRankingSettingSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: 'Невалидные данные' }
+
+  const { area, entity_type, ...fields } = parsed.data
+  const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (fields.threshold !== undefined) updateData.threshold = fields.threshold
+  if (fields.is_active !== undefined) updateData.is_active = fields.is_active
+
+  const supabase = createSupabaseAdminClient()
+  const { data, error } = await supabase
+    .from('ach_ranking_settings')
+    .update(updateData)
+    .eq('area', area)
+    .eq('entity_type', entity_type)
+    .select('area')
+
+  if (error) return { success: false, error: error.message }
+  if (!data || data.length === 0) return { success: false, error: 'Не удалось обновить' }
+
+  revalidatePath('/admin/events')
+  return { success: true }
+}
+
+export async function updateGratitudeSetting(
+  input: { category: string; achievement_name?: string; threshold?: number; bonus_coins?: number; is_active?: boolean }
+): Promise<{ success: true } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const parsed = updateGratitudeSettingSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: 'Невалидные данные' }
+
+  const { category, ...fields } = parsed.data
+  const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (fields.achievement_name !== undefined) updateData.achievement_name = fields.achievement_name
+  if (fields.threshold !== undefined) updateData.threshold = fields.threshold
+  if (fields.bonus_coins !== undefined) updateData.bonus_coins = fields.bonus_coins
+  if (fields.is_active !== undefined) updateData.is_active = fields.is_active
+
+  const supabase = createSupabaseAdminClient()
+  const { data, error } = await supabase
+    .from('ach_gratitude_settings')
+    .update(updateData)
+    .eq('category', category)
+    .select('category')
+
+  if (error) return { success: false, error: error.message }
+  if (!data || data.length === 0) return { success: false, error: 'Не удалось обновить' }
 
   revalidatePath('/admin/events')
   return { success: true }

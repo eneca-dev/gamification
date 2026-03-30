@@ -2,6 +2,7 @@ import { createSupabaseServerClient, createSupabaseAdminClient } from '@/config/
 
 import type {
   EventTypeRow, AdminUserRow, UserDetail, UserTransaction, AdminOrderRow,
+  RankingSettingRow, GratitudeSettingRow,
   CalendarHolidayRow, CalendarWorkdayRow,
 } from './types'
 
@@ -20,6 +21,27 @@ export async function getEventTypes(): Promise<EventTypeRow[]> {
     .select('key, name, coins, description, is_active')
     .order('coins', { ascending: false })
 
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+
+export async function getRankingSettings(): Promise<RankingSettingRow[]> {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('ach_ranking_settings')
+    .select('area, entity_type, threshold, is_active')
+    .order('area')
+    .order('entity_type')
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+
+export async function getGratitudeSettings(): Promise<GratitudeSettingRow[]> {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('ach_gratitude_settings')
+    .select('category, achievement_name, threshold, bonus_coins, is_active')
+    .order('category')
   if (error) throw new Error(error.message)
   return data ?? []
 }
