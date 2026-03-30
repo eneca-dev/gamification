@@ -3,8 +3,14 @@
 import { useState } from 'react'
 import { Zap, CheckCircle, Heart, Trophy, Users, Building2 } from 'lucide-react'
 
-import type { AreaProgress, AchievementEntityType, AchievementArea } from '../types'
+import type { AreaProgress, AchievementEntityType, AchievementArea, GratitudeAchProgress } from '../types'
 import { ACHIEVEMENT_BONUSES } from '../types'
+
+const GRATITUDE_CAT_CONFIG: Record<string, { emoji: string; label: string; color: string; bg: string }> = {
+  help: { emoji: '🤝', label: 'Надёжное плечо', color: 'var(--apex-primary)', bg: 'var(--apex-success-bg)' },
+  quality: { emoji: '⭐', label: 'Эксперт', color: 'var(--tag-orange-text)', bg: 'var(--tag-orange-bg)' },
+  mentoring: { emoji: '📚', label: 'Наставник', color: 'var(--tag-purple-text)', bg: 'var(--tag-purple-bg)' },
+}
 
 const AREA_CONFIG = {
   revit: { label: 'Revit', icon: Zap, color: 'var(--tag-orange-text)', bg: 'var(--tag-orange-bg)' },
@@ -42,9 +48,10 @@ interface ProgressCardProps {
   items: AreaProgress[]
   daysElapsed: number
   periodDays: number
+  gratitudeProgress?: GratitudeAchProgress[]
 }
 
-export function ProgressCard({ entityType, groupLabel, items, daysElapsed, periodDays }: ProgressCardProps) {
+export function ProgressCard({ entityType, groupLabel, items, daysElapsed, periodDays, gratitudeProgress }: ProgressCardProps) {
   const scope = SCOPE_CONFIG[entityType]
   const ScopeIcon = scope.icon
 
@@ -80,7 +87,20 @@ export function ProgressCard({ entityType, groupLabel, items, daysElapsed, perio
             periodDays={periodDays}
           />
         ))}
-        </div>
+
+        {/* Благодарности — только для личного */}
+        {entityType === 'user' && gratitudeProgress && gratitudeProgress.map((gp) => {
+          const catCfg = GRATITUDE_CAT_CONFIG[gp.category]
+          if (!catCfg) return null
+          return (
+            <GratitudeRow
+              key={gp.category}
+              item={gp}
+              cfg={catCfg}
+            />
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -177,5 +197,81 @@ function AreaRow({ item, entityType, daysElapsed, periodDays }: {
                   </span>
                 </div>
               </div>
+  )
+}
+
+function GratitudeRow({ item, cfg }: {
+  item: GratitudeAchProgress
+  cfg: { emoji: string; label: string; color: string; bg: string }
+}) {
+  const [showTip, setShowTip] = useState(false)
+  const pct = Math.min((item.current_count / item.threshold) * 100, 100)
+  const remaining = Math.max(item.threshold - item.current_count, 0)
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold cursor-help relative"
+            style={{ color: cfg.color, background: cfg.bg }}
+            onMouseEnter={() => setShowTip(true)}
+            onMouseLeave={() => setShowTip(false)}
+          >
+            <span className="text-sm">{cfg.emoji}</span>
+            {cfg.label}
+            {showTip && (
+              <div
+                className="absolute bottom-full left-0 mb-1.5 px-3 py-2 rounded-xl text-[11px] font-medium w-64 pointer-events-none"
+                style={{
+                  zIndex: 100,
+                  background: 'var(--surface-elevated)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                }}
+              >
+                <div className="font-bold mb-1">{item.achievement_name}</div>
+                <div className="text-[10px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                  Получите {item.threshold} подарков в категории &laquo;{cfg.label}&raquo; за месяц. Считаются только подарки с коинами.
+                </div>
+                <div className="text-[10px] font-semibold mt-1" style={{ color: cfg.color }}>
+                  Награда: +{item.bonus_coins} ПК
+                </div>
+                <div
+                  className="absolute top-full left-4 w-2 h-2 rotate-45"
+                  style={{ background: 'var(--surface-elevated)', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}
+                />
+              </div>
+            )}
+          </span>
+        </div>
+        <span className="text-[12px] font-bold" style={{ color: item.earned ? 'var(--apex-success-text)' : 'var(--text-secondary)' }}>
+          {item.current_count}/{item.threshold}
+        </span>
+      </div>
+
+      <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface)' }}>
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{
+            width: `${pct}%`,
+            background: item.earned ? 'var(--apex-primary)' : `linear-gradient(90deg, ${cfg.color}, ${cfg.color}88)`,
+            minWidth: item.current_count > 0 ? '4px' : '0px',
+          }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between mt-1">
+        <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
+          {item.earned
+            ? `Получено! +${item.bonus_coins} ПК`
+            : remaining > 0
+              ? `Осталось ${remaining} подарков`
+              : ''
+          }
+        </span>
+      </div>
+    </div>
   )
 }

@@ -1,10 +1,8 @@
-import { AlertsBanner } from "@/components/dashboard/AlertsBanner";
 import { StreakPanel } from "@/components/dashboard/StreakPanel";
 import { TransactionFeed } from "@/components/dashboard/TransactionFeed";
 import { Leaderboard } from "@/components/dashboard/Leaderboard";
 import { DepartmentContest } from "@/components/dashboard/DepartmentContest";
 import {
-  wsAlerts,
   dailyTasks,
 } from "@/lib/data";
 import type { Transaction, DailyTask, DepartmentEntry } from "@/lib/data";
@@ -29,7 +27,8 @@ import {
   getWsStreakData,
   getRevitStreakData,
 } from "@/modules/streak-panel";
-import { getUserGratitudes } from "@/modules/gratitudes";
+import { getUserGratitudes, getMyGratitudesNew, getSenderQuota, getGratitudeRecipients, getUserBalance } from "@/modules/gratitudes";
+import { GratitudeWidget } from "@/modules/gratitudes/components/GratitudeWidget";
 import type { CalendarDay, CalendarDayStatus, RedReason, StreakPanelData } from "@/modules/streak-panel";
 
 const DEPT_COLORS = [
@@ -178,6 +177,14 @@ export default async function DashboardPage() {
       userEmail ? getRevitTransactions(userEmail, 10) : Promise.resolve([]),
     ]);
 
+  // Данные для блока благодарности
+  const [senderQuota, gratitudeRecipients, userBalance, myGratitudesNew] = await Promise.all([
+    wsUserId ? getSenderQuota(wsUserId) : Promise.resolve({ used: true, coins_per_gratitude: 0, period_start: '', period_end: '', next_quota_date: null }),
+    wsUserId ? getGratitudeRecipients(wsUserId) : Promise.resolve([]),
+    wsUserId ? getUserBalance(wsUserId) : Promise.resolve(0),
+    userEmail ? getMyGratitudesNew(userEmail, 30) : Promise.resolve([]),
+  ]);
+
   // Грид: 4 месяца (1 назад + текущий + 2 вперёд)
   const { rangeStart, rangeEnd } = getGridRange();
 
@@ -294,13 +301,20 @@ export default async function DashboardPage() {
     }))
 
   const currentDept = wsDeptCode;
-  const hasAlerts = wsAlerts.length > 0;
 
   return (
     <div className="space-y-6">
-      {hasAlerts && (
+      {/* Блок благодарностей */}
+      {wsUserId && (
         <div className="animate-fade-in-up">
-          <AlertsBanner alerts={wsAlerts} />
+          <GratitudeWidget
+            senderId={wsUserId}
+            currentUserEmail={userEmail}
+            quota={senderQuota}
+            recipients={gratitudeRecipients}
+            balance={userBalance}
+            myGratitudes={myGratitudesNew}
+          />
         </div>
       )}
 

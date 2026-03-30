@@ -1,10 +1,13 @@
 export {
-  updateEventType, toggleAdmin, updateOrderStatus, cancelOrder,
+  updateEventType, updateRankingSetting, updateGratitudeSetting,
+  toggleAdmin, updateOrderStatus, cancelOrder,
   addCalendarHoliday, deleteCalendarHoliday, addCalendarWorkday, deleteCalendarWorkday,
 } from './actions'
 export { formatTransactionReason } from './types'
 export type {
   EventTypeRow, UpdateEventTypeInput,
+  RankingSettingRow, UpdateRankingSettingInput,
+  GratitudeSettingRow, UpdateGratitudeSettingInput,
   AdminUserRow, UserDetail, UserTransaction,
   AdminOrderRow, UpdateOrderStatusInput,
   CalendarHolidayRow, CalendarWorkdayRow,
