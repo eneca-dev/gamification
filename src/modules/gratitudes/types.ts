@@ -1,18 +1,5 @@
 import { z } from 'zod'
 
-// --- Старый тип для at_gratitudes (оставлен для совместимости) ---
-export interface GratitudeFeedItem {
-  id: string
-  sender_email: string
-  sender_name: string
-  recipient_email: string
-  recipient_name: string
-  message: string
-  airtable_created_at: string
-  week_start: string
-  earned_coins: number
-}
-
 // --- Категории благодарностей ---
 export const GRATITUDE_CATEGORIES = [
   { slug: 'help', label: 'Помощь и поддержка', emoji: '🤝' },

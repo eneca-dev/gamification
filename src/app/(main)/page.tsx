@@ -27,7 +27,7 @@ import {
   getWsStreakData,
   getRevitStreakData,
 } from "@/modules/streak-panel";
-import { getUserGratitudes, getMyGratitudesNew, getSenderQuota, getGratitudeRecipients, getUserBalance } from "@/modules/gratitudes";
+import { getMyGratitudesNew, getSenderQuota, getGratitudeRecipients, getUserBalance } from "@/modules/gratitudes";
 import { GratitudeWidget } from "@/modules/gratitudes/components/GratitudeWidget";
 import type { CalendarDay, CalendarDayStatus, RedReason, StreakPanelData } from "@/modules/streak-panel";
 
@@ -147,7 +147,7 @@ export default async function DashboardPage() {
     revitPersonalRanking, wsPersonalRanking,
     revitTeamRanking, wsTeamRanking,
     revitDeptRanking, wsDeptRanking,
-    myGratitudes, revitTransactions,
+    revitTransactions,
   ] = await Promise.all([
       wsUserId ? getWsStreakData(wsUserId) : Promise.resolve({
         currentStreak: 0, longestStreak: 0, streakStartDate: null, completedCycles: 0,
@@ -173,7 +173,6 @@ export default async function DashboardPage() {
       getWsTeamRanking(100),
       getRevitDepartmentRanking(50),
       getWsDepartmentRanking(50),
-      userEmail ? getUserGratitudes(userEmail, 20) : Promise.resolve([]),
       userEmail ? getRevitTransactions(userEmail, 10) : Promise.resolve([]),
     ]);
 
@@ -233,16 +232,16 @@ export default async function DashboardPage() {
   // Транзакции: благодарности + ревит, сортируем по дате
   const txItems: { sortKey: number; tx: Transaction }[] = [];
 
-  for (const [i, g] of myGratitudes.entries()) {
+  for (const [i, g] of myGratitudesNew.entries()) {
     txItems.push({
-      sortKey: new Date(g.airtable_created_at).getTime(),
+      sortKey: new Date(g.created_at).getTime(),
       tx: {
         id: i + 1,
         source: "social" as const,
         category: "gratitude_received" as const,
         description: `${g.sender_name}: ${g.message.slice(0, 80)}${g.message.length > 80 ? "…" : ""}`,
         amount: g.earned_coins,
-        date: new Date(g.airtable_created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
+        date: new Date(g.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
         icon: "🤝",
       },
     });

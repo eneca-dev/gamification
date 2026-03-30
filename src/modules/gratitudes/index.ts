@@ -1,4 +1,4 @@
-export { getUserGratitudes, getGratitudesFeedNew, getCompanyGratitudes, getMyGratitudesNew, getSenderQuota, getGratitudeRecipients, getUserBalance } from './queries'
+export { getGratitudesFeedNew, getCompanyGratitudes, getMyGratitudesNew, getSenderQuota, getGratitudeRecipients, getUserBalance } from './queries'
 export { sendGratitude } from './actions'
-export type { GratitudeFeedItem, GratitudeNew, SenderQuota, GratitudeRecipient, GratitudeCategory, SendGratitudeInput } from './types'
+export type { GratitudeNew, SenderQuota, GratitudeRecipient, GratitudeCategory, SendGratitudeInput } from './types'
 export { GRATITUDE_CATEGORIES } from './types'
