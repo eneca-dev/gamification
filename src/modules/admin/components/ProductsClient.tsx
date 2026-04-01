@@ -323,6 +323,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             category: categoryData,
+            effect: null,
           },
           ...list,
         ])
