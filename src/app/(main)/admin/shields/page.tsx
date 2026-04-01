@@ -65,7 +65,7 @@ export default async function AdminShieldsPage() {
                         color: entry.shieldType === 'ws' ? 'var(--apex-primary)' : 'var(--tag-orange-text)',
                       }}
                     >
-                      {typeLabels[entry.shieldType]}
+                      {typeLabels[entry.shieldType] ?? entry.shieldType}
                     </span>
                   </td>
                   <td className="py-2.5 pr-4" style={{ color: 'var(--apex-text)' }}>

@@ -38,6 +38,7 @@ export async function buyStreakShield(
   if (!streakRow?.pending_reset_date) return { success: false, error: 'Нет угрозы стрику' }
 
   // 2. Проверяем grace period
+  if (!streakRow.pending_reset_expires_at) return { success: false, error: 'Время на покупку истекло' }
   const expiresAt = new Date(streakRow.pending_reset_expires_at)
   if (expiresAt <= new Date()) return { success: false, error: 'Время на покупку истекло' }
 
@@ -65,7 +66,8 @@ export async function buyStreakShield(
     return { success: false, error: 'Ошибка при покупке' }
   }
 
-  const orderId = (purchaseData as { order_id: string }).order_id
+  const orderId = (purchaseData as { order_id?: string } | null)?.order_id
+  if (!orderId) return { success: false, error: 'Ошибка при покупке' }
 
   // 5. Очищаем pending в streak-таблице
   const clearFields = shieldType === 'ws'
