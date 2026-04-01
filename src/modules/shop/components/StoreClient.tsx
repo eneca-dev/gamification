@@ -5,16 +5,19 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 
 import { purchaseProduct } from '../actions'
+import { buyStreakShield } from '@/modules/streak-shield/index.client'
 import { ProductCard } from './ProductCard'
 import type { ShopProductWithCategory, ShopCategory } from '../types'
+import type { PendingReset } from '@/modules/streak-shield/index.client'
 
 interface StoreClientProps {
   products: ShopProductWithCategory[]
   categories: ShopCategory[]
   balance: number
+  pendingResets: PendingReset[]
 }
 
-export function StoreClient({ products, categories, balance }: StoreClientProps) {
+export function StoreClient({ products, categories, balance, pendingResets }: StoreClientProps) {
   const [activeFilter, setActiveFilter] = useState('all')
   const [purchasingId, setPurchasingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -27,6 +30,27 @@ export function StoreClient({ products, categories, balance }: StoreClientProps)
   const activeCategory = categories.find((c) => c.slug === activeFilter)
 
   function handlePurchase(productId: string, _price: number) {
+    const product = products.find((p) => p.id === productId)
+    const effect = product?.effect
+
+    // Щиты покупаются только через buyStreakShield — он очищает pending
+    if (effect === 'streak_shield_ws' || effect === 'streak_shield_revit') {
+      const shieldType = effect === 'streak_shield_ws' ? 'ws' : 'revit'
+      setPurchasingId(productId)
+      setNotification(null)
+      startTransition(async () => {
+        const result = await buyStreakShield(shieldType)
+        setPurchasingId(null)
+        if (!result.success) {
+          setNotification({ type: 'error', message: result.error })
+        } else {
+          setNotification({ type: 'success', message: 'Стрик спасён!' })
+        }
+        setTimeout(() => setNotification(null), 3000)
+      })
+      return
+    }
+
     setPurchasingId(productId)
     setNotification(null)
 
@@ -143,6 +167,7 @@ export function StoreClient({ products, categories, balance }: StoreClientProps)
               onPurchase={handlePurchase}
               isPurchasing={isPending && purchasingId === product.id}
               categoryDescription={activeFilter === 'all' ? categories.find((c) => c.slug === product.category.slug)?.description : null}
+              pendingResets={pendingResets}
             />
           ))}
         </div>

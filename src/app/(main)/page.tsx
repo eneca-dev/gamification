@@ -28,6 +28,8 @@ import {
   getRevitStreakData,
 } from "@/modules/streak-panel";
 import { getMyGratitudesNew, getSenderQuota, getGratitudeRecipients, getUserBalance } from "@/modules/gratitudes";
+import { getUserOrders } from "@/modules/shop";
+import { getPendingResets } from "@/modules/streak-shield";
 import { GratitudeWidget } from "@/modules/gratitudes/components/GratitudeWidget";
 import type { CalendarDay, CalendarDayStatus, RedReason, StreakPanelData } from "@/modules/streak-panel";
 
@@ -177,22 +179,24 @@ export default async function DashboardPage() {
     ]);
 
   // Данные для блока благодарности
-  const [senderQuota, gratitudeRecipients, userBalance, myGratitudesNew] = await Promise.all([
+  const [senderQuota, gratitudeRecipients, userBalance, myGratitudesNew, userOrders] = await Promise.all([
     wsUserId ? getSenderQuota(wsUserId) : Promise.resolve({ used: true, coins_per_gratitude: 0, period_start: '', period_end: '', next_quota_date: null }),
     wsUserId ? getGratitudeRecipients(wsUserId) : Promise.resolve([]),
     wsUserId ? getUserBalance(wsUserId) : Promise.resolve(0),
     userEmail ? getMyGratitudesNew(userEmail, 30) : Promise.resolve([]),
+    wsUserId ? getUserOrders(wsUserId) : Promise.resolve([]),
   ]);
 
   // Грид: 4 месяца (1 назад + текущий + 2 вперёд)
   const { rangeStart, rangeEnd } = getGridRange();
 
-  // Параллельно: статусы дней + автоматизация + праздники
-  const [dayStatuses, automationDates, holidays, workdays] = await Promise.all([
+  // Параллельно: статусы дней + автоматизация + праздники + pending resets
+  const [dayStatuses, automationDates, holidays, workdays, pendingResets] = await Promise.all([
     wsUserId ? getStreakDayStatuses(wsUserId, rangeStart, rangeEnd) : Promise.resolve([]),
     userEmail ? getAutomationDays(userEmail, rangeStart, rangeEnd) : Promise.resolve(new Set<string>()),
     getHolidays(rangeStart, rangeEnd),
     getWorkdays(rangeStart, rangeEnd),
+    wsUserId ? getPendingResets(wsUserId) : Promise.resolve([]),
   ]);
 
   // Собираем Map статусов для быстрого доступа
@@ -243,6 +247,21 @@ export default async function DashboardPage() {
         amount: g.earned_coins,
         date: new Date(g.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
         icon: "🤝",
+      },
+    });
+  }
+
+  for (const [i, order] of userOrders.entries()) {
+    txItems.push({
+      sortKey: new Date(order.created_at).getTime(),
+      tx: {
+        id: 2000 + i,
+        source: "social" as const,
+        category: "purchase" as const,
+        description: `${order.product.emoji ? order.product.emoji + ' ' : ''}${order.product.name}`,
+        amount: -order.coins_spent,
+        date: new Date(order.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
+        icon: "🛍️",
       },
     });
   }
@@ -318,7 +337,7 @@ export default async function DashboardPage() {
       )}
 
       <div className="animate-fade-in-up stagger-1">
-        <StreakPanel streakData={streakPanelData} tasks={allDailyTasks} />
+        <StreakPanel streakData={streakPanelData} tasks={allDailyTasks} pendingResets={pendingResets} userBalance={userBalance} />
       </div>
 
       <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-2">

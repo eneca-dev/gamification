@@ -4,6 +4,7 @@ import { CoinStatic } from '@/components/CoinBalance'
 
 import { PurchaseButton } from './PurchaseButton'
 import type { ShopProductWithCategory } from '../types'
+import type { PendingReset } from '@/modules/streak-shield/index.client'
 
 interface ProductCardProps {
   product: ShopProductWithCategory
@@ -12,12 +13,19 @@ interface ProductCardProps {
   onPurchase: (productId: string, price: number) => void
   isPurchasing: boolean
   categoryDescription?: string | null
+  pendingResets?: PendingReset[]
 }
 
-export function ProductCard({ product, balance, index, onPurchase, isPurchasing, categoryDescription }: ProductCardProps) {
+export function ProductCard({ product, balance, index, onPurchase, isPurchasing, categoryDescription, pendingResets = [] }: ProductCardProps) {
   const canAfford = balance >= product.price
   const outOfStock = product.category.is_physical && product.stock !== null && product.stock === 0
   const deficit = product.price - balance
+
+  // Для щитов: кнопка активна только при наличии соответствующего pending
+  const shieldEffect = product.effect
+  const isShield = shieldEffect === 'streak_shield_ws' || shieldEffect === 'streak_shield_revit'
+  const shieldType = shieldEffect === 'streak_shield_ws' ? 'ws' : 'revit'
+  const hasActivePending = isShield && pendingResets.some((p) => p.type === shieldType)
 
   return (
     <div
@@ -100,6 +108,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
           deficit={deficit}
           onPurchase={onPurchase}
           isPurchasing={isPurchasing}
+          shieldNoPending={isShield && !hasActivePending}
         />
       </div>
     </div>

@@ -145,6 +145,17 @@ function DisciplineColumn({
 
       {/* Department rows — scrollable */}
       <div className="space-y-1.5 max-h-[340px] overflow-y-auto scrollbar-hide">
+        {sorted.length === 0 ? (
+          <div
+            className="flex flex-col items-center justify-center py-8 gap-2 rounded-xl"
+            style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
+          >
+            <span className="text-lg">📅</span>
+            <div className="text-[12px] font-medium text-center" style={{ color: 'var(--apex-text-muted)' }}>
+              Топ сброшен в начале месяца.<br />Данные появятся завтра.
+            </div>
+          </div>
+        ) : null}
         {sorted.map((dept) => {
           const isFirst = dept.rank === 1;
           const isCurrent = dept.isCurrentDepartment;
