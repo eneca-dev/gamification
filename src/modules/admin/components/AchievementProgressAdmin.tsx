@@ -113,8 +113,14 @@ function AreaColumn({ config }: { config: ColumnConfig }) {
           <SubBlock key={sb.title} {...sb} />
         ))
       ) : (
-        <div className="text-[12px] font-medium py-3 text-center" style={{ color: 'var(--text-muted)' }}>
-          Нет данных
+        <div
+          className="flex flex-col items-center justify-center py-6 gap-2 rounded-xl"
+          style={{ background: 'var(--apex-bg)', border: '1px solid var(--border)' }}
+        >
+          <span className="text-lg">📅</span>
+          <div className="text-[12px] font-medium text-center" style={{ color: 'var(--text-muted)' }}>
+            Топ сброшен в начале месяца.<br />Данные появятся завтра.
+          </div>
         </div>
       )}
     </div>

@@ -8,6 +8,7 @@ interface PurchaseButtonProps {
   deficit: number
   onPurchase: (productId: string, price: number) => void
   isPurchasing: boolean
+  shieldNoPending?: boolean
 }
 
 export function PurchaseButton({
@@ -18,12 +19,14 @@ export function PurchaseButton({
   deficit,
   onPurchase,
   isPurchasing,
+  shieldNoPending = false,
 }: PurchaseButtonProps) {
-  const disabled = !canAfford || outOfStock || isPurchasing
+  const disabled = !canAfford || outOfStock || isPurchasing || shieldNoPending
 
   function getLabel() {
     if (isPurchasing) return 'Покупаем...'
     if (outOfStock) return 'Нет в наличии'
+    if (shieldNoPending) return 'Нет угрозы стрику'
     if (!canAfford) return `Ещё ${deficit.toLocaleString('ru-RU')} баллов`
     return `Получить за ${price.toLocaleString('ru-RU')} баллов`
   }

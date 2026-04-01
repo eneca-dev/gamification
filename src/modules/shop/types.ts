@@ -45,6 +45,7 @@ export interface ShopProduct {
   category_id: string
   image_url: string | null
   emoji: string | null
+  effect: string | null
   is_active: boolean
   stock: number | null
   sort_order: number
