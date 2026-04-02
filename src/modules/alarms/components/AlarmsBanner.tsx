@@ -108,8 +108,11 @@ export function AlarmsBanner({ alarms: initialAlarms, showAll = false }: AlarmsB
         className="rounded-2xl p-4 h-full flex flex-col"
         style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
       >
-        <div className="text-[12px] font-semibold uppercase tracking-wider mb-4" style={{ color: 'var(--apex-text-muted)' }}>
-          Напоминания
+        <div className="flex items-center gap-2 px-1 py-[7px] shrink-0 mb-4">
+          <Bell size={16} style={{ color: 'var(--apex-warning-text)' }} fill="var(--apex-warning-text)" />
+          <span className="text-[14px] font-extrabold" style={{ color: 'var(--text-primary)' }}>
+            Напоминания
+          </span>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center">
           <div
