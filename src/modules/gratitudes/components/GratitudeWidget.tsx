@@ -140,7 +140,7 @@ export function GratitudeWidget({
           <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
             Последние полученные
           </div>
-          <Link href="/activity/gratitudes" className="text-[12px] font-semibold" style={{ color: 'var(--apex-primary)' }}>
+          <Link href="/gratitudes" className="text-[12px] font-semibold" style={{ color: 'var(--apex-primary)' }}>
             Все благодарности →
           </Link>
         </div>
