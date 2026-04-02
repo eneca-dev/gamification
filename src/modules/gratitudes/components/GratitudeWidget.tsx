@@ -104,11 +104,11 @@ export function GratitudeWidget({
   return (
     <>
       <div
-        className="rounded-2xl overflow-hidden h-full flex flex-col"
+        className="rounded-2xl p-4 h-full flex flex-col"
         style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
       >
-        {/* Шапка */}
-        <div className="flex items-center justify-between px-5 py-3.5 shrink-0">
+        {/* Шапка — аналог AlarmsBanner */}
+        <div className="flex items-center justify-between px-1 min-h-[36px] shrink-0">
           <div className="flex items-center gap-2">
             <Heart size={16} style={{ color: 'var(--tag-purple-text)' }} fill="var(--tag-purple-text)" />
             <span className="text-[14px] font-extrabold" style={{ color: 'var(--text-primary)' }}>
@@ -135,42 +135,34 @@ export function GratitudeWidget({
           </button>
         </div>
 
-        {/* Контент */}
-        <div className="px-5 pb-4 flex-1 overflow-hidden">
-          {hasAny ? (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between mb-1">
-                <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                  Последние полученные
-                </div>
-                <Link
-                  href="/gratitudes"
-                  className="text-[12px] font-semibold"
-                  style={{ color: 'var(--apex-primary)' }}
-                >
-                  Все благодарности →
-                </Link>
-              </div>
-              {received.slice(0, 3).map((g) => (
-                <GratitudeCard key={g.id} item={g} isReceived />
-              ))}
-            </div>
-          ) : (
-            // Пустое состояние
-            <div
-              className="rounded-xl py-6 text-center"
-              style={{ background: 'var(--surface)' }}
-            >
-              <div className="text-2xl mb-2">💜</div>
-              <div className="text-[13px] font-bold mb-0.5" style={{ color: 'var(--text-primary)' }}>
-                Отправьте благодарность коллеге!
-              </div>
-              <div className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
-                Признайте вклад, поддержите команду
-              </div>
-            </div>
-          )}
+        {/* Подзаголовок с ссылкой — аналог AlarmsBanner */}
+        <div className="flex items-center justify-between shrink-0 mt-[10px]">
+          <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+            Последние полученные
+          </div>
+          <Link href="/activity/gratitudes" className="text-[12px] font-semibold" style={{ color: 'var(--apex-primary)' }}>
+            Все благодарности →
+          </Link>
         </div>
+
+        {/* Контент */}
+        {hasAny ? (
+          <div className="space-y-2 mt-1">
+            {received.slice(0, 3).map((g) => (
+              <GratitudeCard key={g.id} item={g} isReceived />
+            ))}
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="text-2xl mb-2">💜</div>
+            <div className="text-[13px] font-bold mb-0.5" style={{ color: 'var(--text-primary)' }}>
+              Отправьте благодарность коллеге!
+            </div>
+            <div className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
+              Признайте вклад, поддержите команду
+            </div>
+          </div>
+        )}
 
       </div>
 

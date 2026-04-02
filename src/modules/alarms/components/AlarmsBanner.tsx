@@ -139,8 +139,8 @@ export function AlarmsBanner({ alarms: initialAlarms, showAll = false }: AlarmsB
     >
       {!showAll && (
         <>
-          {/* Шапка — аналог шапки благодарностей по высоте */}
-          <div className="flex items-center justify-between px-1 py-[7px] shrink-0">
+          {/* Шапка */}
+          <div className="flex items-center justify-between px-1 min-h-[36px] shrink-0">
             <div className="flex items-center gap-2">
               <Bell size={16} style={{ color: 'var(--apex-warning-text)' }} fill="var(--apex-warning-text)" />
               <span className="text-[14px] font-extrabold" style={{ color: 'var(--text-primary)' }}>
