@@ -1,6 +1,7 @@
 "use client";
 
-import { Crown, Zap } from "lucide-react";
+import { useState } from "react";
+import { Crown, Zap, Info } from "lucide-react";
 import type { AutomationLeaderboardEntry } from "@/modules/revit";
 
 // ─── Внутренний тип для рендеринга строки панели ──────────────────────────────
@@ -34,6 +35,48 @@ function getInitials(name: string): string {
 
 // ─── Компоненты ───────────────────────────────────────────────────────────────
 
+function InfoTooltip({ text }: { text: string }) {
+  const [show, setShow] = useState(false);
+
+  return (
+    <span
+      className="relative inline-flex cursor-help"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      <span
+        className="w-4 h-4 rounded-full flex items-center justify-center"
+        style={{ background: "var(--surface)", border: "1px solid var(--apex-border)" }}
+      >
+        <Info size={10} style={{ color: "var(--apex-text-muted)" }} />
+      </span>
+      {show && (
+        <div
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2.5 rounded-xl text-[11px] font-medium w-64 pointer-events-none"
+          style={{
+            zIndex: 100,
+            background: "#ffffff",
+            color: "var(--text-primary)",
+            border: "1px solid var(--apex-border)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+          }}
+        >
+          <div className="text-[10px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+            {text}
+          </div>
+          <div className="text-[9px] mt-1.5 pt-1" style={{ color: "var(--text-muted)", borderTop: "1px solid var(--apex-border)" }}>
+            Сотрудники на больничном, в отпуске или отгуле не учитываются.
+          </div>
+          <div
+            className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 rotate-45"
+            style={{ background: "#ffffff", borderRight: "1px solid var(--apex-border)", borderBottom: "1px solid var(--apex-border)" }}
+          />
+        </div>
+      )}
+    </span>
+  );
+}
+
 function RankBadge({ rank }: { rank: number }) {
   const bg =
     rank === 1 ? "var(--rank-gold)"
@@ -60,6 +103,7 @@ function TopFivePanel({
   accentColor,
   unit = "б",
   currentUserRank,
+  tooltip,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -67,6 +111,7 @@ function TopFivePanel({
   accentColor: string;
   unit?: string;
   currentUserRank?: number | null;
+  tooltip?: string;
 }) {
   const sorted = [...entries].sort((a, b) => b.value - a.value).slice(0, 5);
 
@@ -84,6 +129,7 @@ function TopFivePanel({
           <div className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--apex-text-muted)" }}>
             {title}
           </div>
+          {tooltip && <InfoTooltip text={tooltip} />}
         </div>
         {currentUserRank != null ? (
           <span
@@ -107,6 +153,18 @@ function TopFivePanel({
           </span>
         )}
       </div>
+
+      {sorted.length === 0 ? (
+        <div
+          className="flex flex-col items-center justify-center py-8 gap-2 rounded-xl"
+          style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
+        >
+          <span className="text-lg">📅</span>
+          <div className="text-[12px] font-medium text-center" style={{ color: 'var(--apex-text-muted)' }}>
+            Топ сброшен в начале месяца.<br />Данные появятся завтра.
+          </div>
+        </div>
+      ) : null}
 
       <div className="space-y-1.5">
         {sorted.map((entry, idx) => {
@@ -205,14 +263,16 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         accentColor="var(--apex-primary)"
         unit="ПК"
         currentUserRank={findRank(entries)}
+        tooltip="Топ формируется по максимальному количеству баллов за Worksection, полученных за месяц. Сброс каждый месяц."
       />
       <TopFivePanel
-        title="Топ-5 Автоматизации"
+        title="Топ-5 Revit"
         icon={<Zap size={14} style={{ color: "var(--orange-500)" }} />}
         entries={toPanel(automationEntries ?? [])}
         unit="ПК"
         accentColor="var(--orange-500)"
         currentUserRank={findRank(automationEntries ?? [])}
+        tooltip="Топ формируется по максимальному количеству баллов за использование Revit-плагинов за месяц. Сброс каждый месяц."
       />
     </div>
   );

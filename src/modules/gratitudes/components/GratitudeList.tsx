@@ -126,12 +126,28 @@ export function GratitudeList({ items, currentUserEmail }: GratitudeListProps) {
                         {timeAgo(item.created_at)}
                       </span>
                       {item.type === 'gift' && item.earned_coins > 0 && (
-                        <span
-                          className="text-[11px] font-bold px-2 py-0.5 rounded-md"
-                          style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-success-text)' }}
-                        >
-                          {isReceived ? '+' : '-'}{item.earned_coins} ПК
-                        </span>
+                        isReceived ? (
+                          <span
+                            className="text-[11px] font-bold px-2 py-0.5 rounded-md"
+                            style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-success-text)' }}
+                          >
+                            +{item.earned_coins} ПК
+                          </span>
+                        ) : item.gift_source === 'quota' ? (
+                          <span
+                            className="text-[11px] font-medium px-2 py-0.5 rounded-md"
+                            style={{ background: 'var(--tag-purple-bg)', color: 'var(--tag-purple-text)' }}
+                          >
+                            квота
+                          </span>
+                        ) : (
+                          <span
+                            className="text-[11px] font-bold px-2 py-0.5 rounded-md"
+                            style={{ background: 'var(--apex-warning-bg)', color: 'var(--tag-orange-text)' }}
+                          >
+                            -{item.earned_coins} ПК
+                          </span>
+                        )
                       )}
                       {item.type === 'thanks' && (
                         <span

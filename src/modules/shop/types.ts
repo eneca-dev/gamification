@@ -45,6 +45,7 @@ export interface ShopProduct {
   category_id: string
   image_url: string | null
   emoji: string | null
+  effect: string | null
   is_active: boolean
   stock: number | null
   sort_order: number
@@ -64,6 +65,7 @@ export const createProductSchema = z.object({
   category_id: z.string().uuid(),
   image_url: z.string().url().nullable().optional(),
   emoji: z.string().max(10).nullable().optional(),
+  effect: z.string().max(100).nullable().optional(),
   stock: z.number().int().min(0).nullable().optional(),
   sort_order: z.number().int().min(0).default(0),
 })

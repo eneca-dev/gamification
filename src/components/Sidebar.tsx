@@ -19,7 +19,7 @@ const navItems = [
   { href: '/',            label: 'Главная',       icon: Home },
   { href: '/store',       label: 'Магазин',       icon: ShoppingBag },
   { href: '/achievements',label: 'Достижения',    icon: Trophy },
-  { href: '/activity',    label: 'Лента команды', icon: Users },
+  { href: '/activity',    label: 'Лента компании', icon: Users },
   { href: '/admin',       label: 'Админ-панель',  icon: Settings, adminOnly: true },
 ]
 

@@ -10,6 +10,7 @@ import type { Transaction, DailyTask, DepartmentEntry } from "@/lib/data";
 import { getCurrentUser } from "@/modules/auth/queries";
 import {
   getRevitWidgetData,
+  getRevitTransactions,
 } from "@/modules/revit";
 import { getUserTransactions, getEventIcon } from "@/modules/transactions";
 import {
@@ -30,6 +31,8 @@ import {
 } from "@/modules/streak-panel";
 import { getActiveAlarms } from "@/modules/alarms";
 import { getMyGratitudesNew, getSenderQuota, getGratitudeRecipients, getUserBalance } from "@/modules/gratitudes";
+import { getUserOrders } from "@/modules/shop";
+import { getPendingResets } from "@/modules/streak-shield";
 import { GratitudeWidget } from "@/modules/gratitudes/components/GratitudeWidget";
 import type { CalendarDay, CalendarDayStatus, RedReason, StreakPanelData } from "@/modules/streak-panel";
 
@@ -149,6 +152,7 @@ export default async function DashboardPage() {
     revitPersonalRanking, wsPersonalRanking,
     revitTeamRanking, wsTeamRanking,
     revitDeptRanking, wsDeptRanking,
+    revitTransactions,
     recentTransactions,
     activeAlarms,
   ] = await Promise.all([
@@ -176,27 +180,30 @@ export default async function DashboardPage() {
       getWsTeamRanking(100),
       getRevitDepartmentRanking(50),
       getWsDepartmentRanking(50),
+      userEmail ? getRevitTransactions(userEmail, 10) : Promise.resolve([]),
       userEmail ? getUserTransactions(userEmail, 5) : Promise.resolve([]),
       wsUserId ? getActiveAlarms(wsUserId) : Promise.resolve([]),
     ]);
 
   // Данные для блока благодарности
-  const [senderQuota, gratitudeRecipients, userBalance, myGratitudesNew] = await Promise.all([
+  const [senderQuota, gratitudeRecipients, userBalance, myGratitudesNew, userOrders] = await Promise.all([
     wsUserId ? getSenderQuota(wsUserId) : Promise.resolve({ used: true, coins_per_gratitude: 0, period_start: '', period_end: '', next_quota_date: null }),
     wsUserId ? getGratitudeRecipients(wsUserId) : Promise.resolve([]),
     wsUserId ? getUserBalance(wsUserId) : Promise.resolve(0),
     userEmail ? getMyGratitudesNew(userEmail, 30) : Promise.resolve([]),
+    wsUserId ? getUserOrders(wsUserId) : Promise.resolve([]),
   ]);
 
   // Грид: 4 месяца (1 назад + текущий + 2 вперёд)
   const { rangeStart, rangeEnd } = getGridRange();
 
-  // Параллельно: статусы дней + автоматизация + праздники
-  const [dayStatuses, automationDates, holidays, workdays] = await Promise.all([
+  // Параллельно: статусы дней + автоматизация + праздники + pending resets
+  const [dayStatuses, automationDates, holidays, workdays, pendingResets] = await Promise.all([
     wsUserId ? getStreakDayStatuses(wsUserId, rangeStart, rangeEnd) : Promise.resolve([]),
     userEmail ? getAutomationDays(userEmail, rangeStart, rangeEnd) : Promise.resolve(new Set<string>()),
     getHolidays(rangeStart, rangeEnd),
     getWorkdays(rangeStart, rangeEnd),
+    wsUserId ? getPendingResets(wsUserId) : Promise.resolve([]),
   ]);
 
   // Собираем Map статусов для быстрого доступа
@@ -220,7 +227,7 @@ export default async function DashboardPage() {
     id: 100,
     source: "revit",
     title: pluginCount > 0
-      ? "Автоматизация"
+      ? "Revit"
       : "Не забудьте использовать автоматизацию",
     description: pluginCount > 0
       ? `Вчера вы использовали ${pluginCount} плагинов, вам начислено ${coinsEarned} ПК`
@@ -278,7 +285,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="animate-fade-in-up">
-        <StreakPanel streakData={streakPanelData} tasks={allDailyTasks} />
+        <StreakPanel streakData={streakPanelData} tasks={allDailyTasks} pendingResets={pendingResets} userBalance={userBalance} />
       </div>
 
       <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-1">
@@ -317,6 +324,8 @@ export default async function DashboardPage() {
           automationDepartments={toDeptEntries(revitDeptRanking, currentDept)}
           daysLeft={daysLeft}
           currentEntityName={wsDeptCode}
+          wsTooltip="Формула: сумма баллов отдела за Worksection / количество людей в отделе. Сброс каждый месяц."
+          autoTooltip="Формула: сумма баллов по Revit в отделе × (кол-во людей, использующих плагины / общее кол-во людей в отделе). Сброс каждый месяц."
         />
       </div>
 
@@ -328,6 +337,8 @@ export default async function DashboardPage() {
           daysLeft={daysLeft}
           title="Соревнование команд"
           currentEntityName={wsTeam}
+          wsTooltip="Формула: сумма баллов команды за Worksection / количество людей в команде. Сброс каждый месяц."
+          autoTooltip="Формула: сумма баллов по Revit в команде × (кол-во людей, использующих плагины / общее кол-во людей в команде). Сброс каждый месяц."
         />
       </div>
     </div>

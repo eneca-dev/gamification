@@ -1,6 +1,9 @@
 export {
   getAchievementProgress,
   getGratitudeAchievementProgress,
+  getCompanyAwards,
+  getRankingProgressAll,
+  getGratitudeProgressAll,
   getRevitPersonalRanking,
   getRevitTeamRanking,
   getRevitDepartmentRanking,
@@ -19,6 +22,8 @@ export type {
   AchievementAreaConfig,
   GratitudeAchProgress,
   FullAchievementProgress,
+  CompanyAward,
+  CompanyProgressEntry,
 } from './types'
 
 export { ACHIEVEMENT_AREAS, ACHIEVEMENT_BONUSES } from './types'

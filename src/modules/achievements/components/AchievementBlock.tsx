@@ -41,14 +41,14 @@ const RANKING_EMOJIS: Record<string, Record<AchievementEntityType, string>> = {
 
 const RANKING_RULES: Record<string, Record<AchievementEntityType, string>> = {
   revit: {
-    user: 'Топ-10 по Revit-баллам, 10 дней за месяц',
-    team: 'Топ-5 команд по Revit, 10 дней за месяц',
-    department: 'Топ-5 отделов по Revit, 10 дней за месяц',
+    user: 'Продержитесь 10 дней в Топ-10 Revit на главной',
+    team: 'Команда должна 10 дней быть в Топ-5 Revit на главной',
+    department: 'Отдел должен 10 дней быть в Топ-5 Revit на главной',
   },
   ws: {
-    user: 'Топ-10 по WS-баллам, 10 дней за месяц',
-    team: 'Топ-5 команд по WS, 10 дней за месяц',
-    department: 'Топ-5 отделов по WS, 10 дней за месяц',
+    user: 'Продержитесь 10 дней в Топ-10 Worksection на главной',
+    team: 'Команда должна 10 дней быть в Топ-5 Worksection на главной',
+    department: 'Отдел должен 10 дней быть в Топ-5 Worksection на главной',
   },
 }
 
@@ -119,7 +119,6 @@ function RankingRow({
                 <div className="font-bold mb-1">{name}</div>
                 <div className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{rule}</div>
                 <div className="text-[10px] font-semibold mt-1" style={{ color }}>Награда: +{bonus} ПК</div>
-                <div className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Выдаётся 1 раз в месяц</div>
                 <div className="absolute top-full left-4 w-2 h-2 rotate-45" style={{ background: 'var(--surface-elevated)', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }} />
               </div>
             )}

@@ -5,6 +5,8 @@ import { Trophy, CheckCircle2 } from "lucide-react";
 import { sourceColors } from "@/lib/data";
 import type { DailyTask } from "@/lib/data";
 import type { CalendarDayStatus, CalendarDay, RedReason, StreakMilestone, StreakPanelData } from "@/modules/streak-panel";
+import { StreakShieldAlert } from "@/modules/streak-shield/components/StreakShieldAlert";
+import type { PendingReset } from "@/modules/streak-shield/types";
 
 // ─── Layout constants ────────────────────────────────────────────────────────
 const CELL = 18;
@@ -350,9 +352,11 @@ function InlineDailyQuests({ tasks }: { tasks: DailyTask[] }) {
 interface StreakPanelProps {
   streakData: StreakPanelData;
   tasks?: DailyTask[];
+  pendingResets?: PendingReset[];
+  userBalance?: number;
 }
 
-export function StreakPanel({ streakData, tasks = [] }: StreakPanelProps) {
+export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBalance = 0 }: StreakPanelProps) {
   const { calendarDays, completedCycles, ws, revit } = streakData;
   const { weeks, groups } = buildWeeksAndMonths(calendarDays);
   const DAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -360,7 +364,7 @@ export function StreakPanel({ streakData, tasks = [] }: StreakPanelProps) {
 
   return (
     <div
-      className="rounded-2xl p-5 card-hover"
+      className="rounded-2xl p-5"
       style={{
         background: "var(--apex-surface)",
         border: "1px solid var(--apex-border)",
@@ -403,6 +407,15 @@ export function StreakPanel({ streakData, tasks = [] }: StreakPanelProps) {
           </div>
         </div>
       </div>
+
+      {/* Streak shield alerts */}
+      {pendingResets.length > 0 && (
+        <div className="flex flex-col gap-2 mb-4">
+          {pendingResets.map((p) => (
+            <StreakShieldAlert key={p.type} pending={p} userBalance={userBalance} />
+          ))}
+        </div>
+      )}
 
       {/* Main layout: grid+streaks left, quests right */}
       <div className="flex gap-6">
