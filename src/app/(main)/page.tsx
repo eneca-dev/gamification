@@ -281,25 +281,23 @@ export default async function DashboardPage() {
         <StreakPanel streakData={streakPanelData} tasks={allDailyTasks} />
       </div>
 
-      {(activeAlarms.length > 0 || wsUserId) && (
-        <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-1">
-          <div className="col-span-2">
-            {activeAlarms.length > 0 && <AlarmsBanner alarms={activeAlarms} />}
-          </div>
-          <div className="col-span-3">
-            {wsUserId && (
-              <GratitudeWidget
-                senderId={wsUserId}
-                currentUserEmail={userEmail}
-                quota={senderQuota}
-                recipients={gratitudeRecipients}
-                balance={userBalance}
-                myGratitudes={myGratitudesNew}
-              />
-            )}
-          </div>
+      <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-1">
+        <div className="col-span-2">
+          <AlarmsBanner alarms={activeAlarms} />
         </div>
-      )}
+        <div className="col-span-3">
+          {wsUserId && (
+            <GratitudeWidget
+              senderId={wsUserId}
+              currentUserEmail={userEmail}
+              quota={senderQuota}
+              recipients={gratitudeRecipients}
+              balance={userBalance}
+              myGratitudes={myGratitudesNew}
+            />
+          )}
+        </div>
+      </div>
 
       <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-2">
         <div className="col-span-2">

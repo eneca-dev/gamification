@@ -110,63 +110,63 @@ function TopFivePanel({
 
       <div className="space-y-1.5">
         {sorted.map((entry, idx) => {
-          const rank = idx + 1;
+            const rank = idx + 1;
 
-          return (
-            <div
-              key={entry.name}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-              style={{
-                background: entry.isCurrentUser
-                  ? "var(--apex-success-bg)"
-                  : rank === 1
-                    ? "var(--orange-50)"
-                    : "transparent",
-                border: entry.isCurrentUser
-                  ? `1px solid rgba(var(--apex-primary-rgb), 0.15)`
-                  : rank === 1
-                    ? `1px solid rgba(var(--orange-500-rgb), 0.15)`
-                    : "1px solid transparent",
-              }}
-            >
-              <RankBadge rank={rank} />
-
+            return (
               <div
-                className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
-                style={{ background: entry.avatarColor }}
+                key={entry.name}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                style={{
+                  background: entry.isCurrentUser
+                    ? "var(--apex-success-bg)"
+                    : rank === 1
+                      ? "var(--orange-50)"
+                      : "transparent",
+                  border: entry.isCurrentUser
+                    ? `1px solid rgba(var(--apex-primary-rgb), 0.15)`
+                    : rank === 1
+                      ? `1px solid rgba(var(--orange-500-rgb), 0.15)`
+                      : "1px solid transparent",
+                }}
               >
-                {entry.avatar}
-              </div>
+                <RankBadge rank={rank} />
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[12px] font-semibold truncate" style={{ color: "var(--apex-text)" }}>
-                    {entry.name}
-                  </span>
-                  {entry.isCurrentUser && (
-                    <span
-                      className="text-[9px] font-semibold px-2 py-0.5 rounded-full shrink-0"
-                      style={{
-                        background: "var(--apex-success-bg)",
-                        color: "var(--apex-primary)",
-                        border: `1px solid rgba(var(--apex-primary-rgb), 0.2)`,
-                      }}
-                    >
-                      Вы
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+                  style={{ background: entry.avatarColor }}
+                >
+                  {entry.avatar}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[12px] font-semibold truncate" style={{ color: "var(--apex-text)" }}>
+                      {entry.name}
                     </span>
-                  )}
+                    {entry.isCurrentUser && (
+                      <span
+                        className="text-[9px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                        style={{
+                          background: "var(--apex-success-bg)",
+                          color: "var(--apex-primary)",
+                          border: `1px solid rgba(var(--apex-primary-rgb), 0.2)`,
+                        }}
+                      >
+                        Вы
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div className="text-right shrink-0">
-                <div className="text-[14px] font-bold" style={{ color: accentColor }}>
-                  {entry.value.toLocaleString("ru-RU")}
+                <div className="text-right shrink-0">
+                  <div className="text-[14px] font-bold" style={{ color: accentColor }}>
+                    {entry.value.toLocaleString("ru-RU")}
+                  </div>
+                  <div className="text-[9px]" style={{ color: "var(--apex-text-muted)" }}>{unit}</div>
                 </div>
-                <div className="text-[9px]" style={{ color: "var(--apex-text-muted)" }}>{unit}</div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
     </div>
   );

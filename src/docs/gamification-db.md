@@ -51,7 +51,8 @@ WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-co
 | `my_email()`                            | Email текущего пользователя из JWT, нижний регистр                                                                            |
 | `my_ws_user_id()`                       | UUID из `ws_users` по email из JWT                                                                                            |
 | `get_user_id_by_email(email)`           | UUID из `auth.users` по email                                                                                                 |
-| `increment_balance(p_user_id, p_coins)` | Атомарный UPSERT баланса в `gamification_balances`. Существует, но не используется триггерами — триггеры делают inline UPSERT |
+| `increment_balance(p_user_id, p_coins)` | Атомарный UPSERT баланса в `gamification_balances`. Устаревшая — заменена `process_gamification_event`. Триггеры делают inline UPSERT |
+| `process_gamification_event(...)` | Атомарная функция для VPS-скрипта: INSERT event + INSERT transaction + UPSERT balance в одной транзакции. Дубли по idempotency_key пропускаются. SECURITY DEFINER, доступ только service_role |
 | `link_ws_user_on_profile_insert()`      | Триггер: при создании `profiles` связывает с `ws_users.user_id`                                                               |
 | `custom_access_token_hook(event)`       | Auth Hook: добавляет `is_admin` и `ws_user_id` из `ws_users` в JWT claims при каждом выпуске/рефреше токена                   |
 | `fn_award_department_contest()`         | Ежемесячное начисление бонуса отделу-победителю по ревит-баллам                                                               |

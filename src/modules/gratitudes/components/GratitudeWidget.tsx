@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Heart, ChevronRight, ArrowDownLeft, ArrowUpRight } from 'lucide-react'
+import { Heart, ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 
 import { SendGratitudeModal } from './SendGratitudeModal'
 import { GRATITUDE_CATEGORIES } from '../types'
@@ -98,18 +98,17 @@ export function GratitudeWidget({
 }: GratitudeWidgetProps) {
   const [showSendModal, setShowSendModal] = useState(false)
 
-  const lastReceived = myGratitudes.find((g) => g.recipient_email === currentUserEmail) ?? null
-  const lastSent = myGratitudes.find((g) => g.sender_email === currentUserEmail) ?? null
-  const hasAny = lastReceived !== null || lastSent !== null
+  const received = myGratitudes.filter((g) => g.recipient_email === currentUserEmail)
+  const hasAny = received.length > 0
 
   return (
     <>
       <div
-        className="rounded-2xl overflow-hidden"
+        className="rounded-2xl overflow-hidden h-full flex flex-col"
         style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
       >
         {/* Шапка */}
-        <div className="flex items-center justify-between px-5 py-3.5">
+        <div className="flex items-center justify-between px-5 py-3.5 shrink-0">
           <div className="flex items-center gap-2">
             <Heart size={16} style={{ color: 'var(--tag-purple-text)' }} fill="var(--tag-purple-text)" />
             <span className="text-[14px] font-extrabold" style={{ color: 'var(--text-primary)' }}>
@@ -137,25 +136,24 @@ export function GratitudeWidget({
         </div>
 
         {/* Контент */}
-        <div className="px-5 pb-4">
+        <div className="px-5 pb-4 flex-1 overflow-hidden">
           {hasAny ? (
             <div className="space-y-2">
-              {lastReceived && (
-                <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
-                    Последняя полученная
-                  </div>
-                  <GratitudeCard item={lastReceived} isReceived />
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                  Последние полученные
                 </div>
-              )}
-              {lastSent && (
-                <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
-                    Последняя отправленная
-                  </div>
-                  <GratitudeCard item={lastSent} isReceived={false} />
-                </div>
-              )}
+                <Link
+                  href="/gratitudes"
+                  className="text-[12px] font-semibold"
+                  style={{ color: 'var(--apex-primary)' }}
+                >
+                  Все благодарности →
+                </Link>
+              </div>
+              {received.slice(0, 3).map((g) => (
+                <GratitudeCard key={g.id} item={g} isReceived />
+              ))}
             </div>
           ) : (
             // Пустое состояние
@@ -174,22 +172,6 @@ export function GratitudeWidget({
           )}
         </div>
 
-        {/* Ссылка "Все благодарности" */}
-        {hasAny && (
-          <div
-            className="px-5 py-2.5"
-            style={{ borderTop: '1px solid var(--border)' }}
-          >
-            <Link
-              href="/gratitudes"
-              className="flex items-center gap-1 text-[12px] font-bold transition-colors hover:opacity-80"
-              style={{ color: 'var(--apex-primary)' }}
-            >
-              Все благодарности
-              <ChevronRight size={14} />
-            </Link>
-          </div>
-        )}
       </div>
 
       <SendGratitudeModal

@@ -28,7 +28,7 @@ export function SendGratitudeButton({ senderId, quota, recipients, balance }: Se
         }}
       >
         <Heart size={14} fill="white" />
-        Благодарность
+        Поблагодарить
         {!quota.used && (
           <span
             className="w-2 h-2 rounded-full flex-shrink-0"

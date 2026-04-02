@@ -40,7 +40,11 @@
       "Bash(find /d/1work/gamification/gamification -name *migration* -o -name *schema*)",
       "Bash(ls \"d:/1work/gamification/gamification/src/app/\\(main\\)/admin/\")",
       "Bash(find /d/1work/gamification -type d -name *sync* -o -type d -name *worksection*)",
-      "Bash(find \"D:\\\\1work\\\\gamification\\\\gamification\\\\src\\\\app\\\\\\(main\\)\" -type f -name \"*.tsx\" -o -name \"*.ts\")"
+      "Bash(find \"D:\\\\1work\\\\gamification\\\\gamification\\\\src\\\\app\\\\\\(main\\)\" -type f -name \"*.tsx\" -o -name \"*.ts\")",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "Bash(find /d/1work/gamification-vps-scripts -name crontab -o -name *cron*)",
+      "Bash(find ./supabase -name *.ts -o -name *.js)"
     ]
   },
   "enableAllProjectMcpServers": true,

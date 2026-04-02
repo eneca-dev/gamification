@@ -44,15 +44,21 @@
 
 ## Queries
 
-- `getActiveAlarms(wsUserId)` — нерешённые алармы за сегодня. Параметр — `ws_users.id`, не `auth.users.id`
+- `getActiveAlarms(wsUserId)` — алармы за вчера по Минску (alarm_date = вчера, т.к. синк в 00:00). Параметр — `ws_users.id`, не `auth.users.id`
+- `getAllAlarms(wsUserId)` — все алармы пользователя за всё время, сортировка по дате desc
 
 ## UI
 
 - Компонент: `src/modules/alarms/components/AlarmsBanner.tsx` (клиентский)
-- Расположение: дашборд, под стрик-панелью
-- Каждый аларм: иконка severity, title, description, ссылка на задачу в WS, чекбокс resolve
-- Сворачивание при > 3 алармов
-- Optimistic update при resolve
+- Prop `showAll`: false — виджет на дашборде (шапка + подзаголовок + до 3 алармов), true — полный список без обёртки (для страницы `/alarms`)
+- Шапка виджета: иконка Bell (filled, warning), заголовок «Напоминания», счётчик resolved/total
+- Подзаголовок «Напоминания на сегодня» + ссылка «Все напоминания →» на одной строке
+- Пустое состояние: иконка CircleCheckBig, текст «Нет напоминаний на сегодня»
+- Каждый аларм: иконка severity, title, ссылка на задачу в WS, пиллы (бюджет/чекпоинт), кнопка resolve/unresolve
+- На дашборде сворачивание при > 3 алармов
+- Resolved-алармы: серый фон, opacity 0.55, line-through на тексте, пиллы серые
+- Optimistic update при resolve/unresolve с per-item pending state
+- Страница `/alarms`: шапка с Bell + «Все напоминания» + счётчик resolved/total, передаёт `showAll` в AlarmsBanner
 
 ## Ограничения
 
@@ -60,3 +66,4 @@
 - Внутри дня аларм убирается только вручную (чекбокс)
 - Решённый вручную аларм может появиться снова на следующий день, если условие сохраняется
 - RLS: маппинг `auth.uid()` → `ws_users.id` через `profiles.email`
+- Unique partial index `idx_alarms_unique_per_day` на `(user_id, alarm_type, COALESCE(ws_task_id, ''), alarm_date) WHERE NOT is_resolved` — защита от дублей при параллельном запуске скрипта

@@ -11,6 +11,7 @@
 3. Баланс обновляется атомарно через inline UPSERT в `gamification_balances` (триггеры не используют RPC `increment_balance`).
 4. Суммы коинов читаются из `gamification_event_types` — не хардкодятся.
 5. Резолвинг email → `ws_users.id`: `SELECT id FROM ws_users WHERE email = lower(?) AND is_active = true`. Если не найден — событие пропускается без ошибки.
+6. VPS-скрипт `compute-gamification` использует атомарную SQL-функцию `process_gamification_event` — event + transaction + balance в одной PostgreSQL-транзакции. Защита от осиротевших записей при crash.
 
 ---
 
