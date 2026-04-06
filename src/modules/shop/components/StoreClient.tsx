@@ -7,17 +7,33 @@ import { ArrowRight } from 'lucide-react'
 import { purchaseProduct } from '../actions'
 import { buyStreakShield } from '@/modules/streak-shield/index.client'
 import { ProductCard } from './ProductCard'
+import { LotteryBanner } from '@/modules/lottery/components/LotteryBanner'
+import { LotteryWinners } from '@/modules/lottery/components/LotteryWinners'
 import type { ShopProductWithCategory, ShopCategory } from '../types'
 import type { PendingReset } from '@/modules/streak-shield/index.client'
+import type { LotteryWithStats, UserTicketInfo } from '@/modules/lottery/index.client'
 
 interface StoreClientProps {
   products: ShopProductWithCategory[]
   categories: ShopCategory[]
   balance: number
   pendingResets: PendingReset[]
+  activeLottery?: LotteryWithStats | null
+  ticketInfo?: UserTicketInfo | null
+  lotteryHistory?: LotteryWithStats[]
+  serverTime?: number
 }
 
-export function StoreClient({ products, categories, balance, pendingResets }: StoreClientProps) {
+export function StoreClient({
+  products,
+  categories,
+  balance,
+  pendingResets,
+  activeLottery = null,
+  ticketInfo = null,
+  lotteryHistory = [],
+  serverTime = Date.now(),
+}: StoreClientProps) {
   const [activeFilter, setActiveFilter] = useState('all')
   const [purchasingId, setPurchasingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -155,8 +171,38 @@ export function StoreClient({ products, categories, balance, pendingResets }: St
         </div>
       ) : null}
 
-      {/* Грид товаров */}
-      {filtered.length > 0 ? (
+      {/* Контент категории */}
+      {activeFilter === 'draw' ? (
+        <div className="space-y-6 animate-fade-in-up stagger-3">
+          {/* Активная лотерея */}
+          {activeLottery && (
+            <LotteryBanner
+              lottery={activeLottery}
+              ticketInfo={ticketInfo}
+              balance={balance}
+              serverTime={serverTime}
+            />
+          )}
+
+          {!activeLottery && (
+            <div
+              className="text-center py-12 rounded-2xl"
+              style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
+            >
+              <div className="text-4xl mb-3">🎰</div>
+              <p className="text-[14px] font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                Сейчас нет активного розыгрыша
+              </p>
+              <p className="text-[12px] mt-1" style={{ color: 'var(--text-secondary)' }}>
+                Следующий розыгрыш будет объявлен в начале месяца
+              </p>
+            </div>
+          )}
+
+          {/* Победители */}
+          <LotteryWinners lotteries={lotteryHistory} />
+        </div>
+      ) : filtered.length > 0 ? (
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fade-in-up stagger-3">
           {filtered.map((product, i) => (
             <ProductCard

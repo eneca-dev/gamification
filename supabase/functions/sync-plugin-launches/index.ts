@@ -176,6 +176,16 @@ Deno.serve(async (req) => {
 
   const totalSynced = results.reduce((acc, r) => acc + r.synced, 0);
 
+  // Финализация просроченных revit pending (сброс стриков, у которых истёк grace period)
+  let finalizeResult = null;
+  try {
+    const { data, error } = await supabase.rpc('fn_finalize_expired_revit_pendings');
+    if (error) throw error;
+    finalizeResult = data;
+  } catch (e) {
+    finalizeResult = { error: String(e) };
+  }
+
   // Снапшот рейтингов для достижений (обновляет materialized views + записывает топы дня)
   let snapshotResult = null;
   try {
@@ -202,6 +212,7 @@ Deno.serve(async (req) => {
       days,
       totalSynced,
       results,
+      finalizedPendings: finalizeResult,
       achievements: { snapshot: snapshotResult, gratitude: gratitudeAchResult },
     }),
     { headers: { 'Content-Type': 'application/json' } },

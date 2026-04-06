@@ -45,6 +45,7 @@ export function SendGratitudeModal({
   const [message, setMessage] = useState('')
   const [showBalanceInput, setShowBalanceInput] = useState(false)
   const [coinsAmount, setCoinsAmount] = useState(10)
+  const [customInput, setCustomInput] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -68,6 +69,7 @@ export function SendGratitudeModal({
     setMessage('')
     setShowBalanceInput(false)
     setCoinsAmount(10)
+    setCustomInput(false)
     setSearchQuery('')
     setShowDropdown(false)
     setError(null)
@@ -302,24 +304,58 @@ export function SendGratitudeModal({
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {[10, 20, 50, 100].map((amount) => (
-                    <button
-                      key={amount}
-                      onClick={() => setCoinsAmount(amount)}
-                      className="flex-1 py-2 rounded-lg text-[12px] font-bold transition-all"
-                      style={{
-                        background: coinsAmount === amount ? 'var(--apex-success-bg)' : 'var(--surface-elevated)',
-                        border: coinsAmount === amount ? '1.5px solid var(--teal-100)' : '1.5px solid var(--border)',
-                        color: coinsAmount === amount ? 'var(--apex-success-text)' : 'var(--text-secondary)',
-                      }}
-                    >
-                      {amount}
-                    </button>
-                  ))}
+                  {[10, 20, 50, 100].map((amount) => {
+                    const isPreset = coinsAmount === amount && !customInput
+                    return (
+                      <button
+                        key={amount}
+                        onClick={() => { setCoinsAmount(amount); setCustomInput(false) }}
+                        className="flex-1 py-2 rounded-lg text-[12px] font-bold transition-all"
+                        style={{
+                          background: isPreset ? 'var(--apex-success-bg)' : 'var(--surface-elevated)',
+                          border: isPreset ? '1.5px solid var(--teal-100)' : '1.5px solid var(--border)',
+                          color: isPreset ? 'var(--apex-success-text)' : 'var(--text-secondary)',
+                        }}
+                      >
+                        {amount}
+                      </button>
+                    )
+                  })}
+                  <button
+                    onClick={() => { setCustomInput(true); setCoinsAmount(0) }}
+                    className="flex-1 py-2 rounded-lg text-[12px] font-bold transition-all"
+                    style={{
+                      background: customInput ? 'var(--apex-success-bg)' : 'var(--surface-elevated)',
+                      border: customInput ? '1.5px solid var(--teal-100)' : '1.5px solid var(--border)',
+                      color: customInput ? 'var(--apex-success-text)' : 'var(--text-secondary)',
+                    }}
+                  >
+                    Своя
+                  </button>
                 </div>
+                {customInput && (
+                  <div className="mt-2">
+                    <input
+                      type="number"
+                      value={coinsAmount || ''}
+                      onChange={(e) => setCoinsAmount(Math.max(0, Number(e.target.value)))}
+                      min={1}
+                      max={balance}
+                      autoFocus
+                      className="w-full px-3 py-2 rounded-lg text-[13px] font-medium outline-none"
+                      style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                      placeholder="Введите сумму"
+                    />
+                  </div>
+                )}
+                {coinsAmount > balance && (
+                  <p className="text-[11px] font-medium mt-1" style={{ color: 'var(--apex-danger)' }}>
+                    Недостаточно баллов (баланс: {balance} ПК)
+                  </p>
+                )}
                 <button
                   onClick={handleSendBalanceGift}
-                  disabled={isPending}
+                  disabled={isPending || coinsAmount < 1 || coinsAmount > balance}
                   className="w-full mt-3 flex items-center justify-center gap-2 py-2.5 rounded-full text-[12px] font-bold transition-all disabled:opacity-40"
                   style={{ background: 'var(--apex-primary)', color: 'white' }}
                 >
@@ -329,6 +365,13 @@ export function SendGratitudeModal({
                       Отправить подарок за {coinsAmount} ПК
                     </>
                   )}
+                </button>
+                <button
+                  onClick={() => setShowBalanceInput(false)}
+                  className="w-full mt-1.5 py-2 rounded-full text-[11px] font-medium transition-colors"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  Назад
                 </button>
               </div>
             )}
@@ -343,62 +386,68 @@ export function SendGratitudeModal({
               </div>
             )}
 
-            {/* Две основные кнопки */}
+            {/* Кнопки действий */}
             {!showBalanceInput && (
               <div className="space-y-2">
-                {/* Кнопка "Сказать спасибо" */}
+                {/* Сказать спасибо — 0 ПК */}
                 <button
                   onClick={handleSendThanks}
                   disabled={isPending}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-full text-[13px] font-bold transition-all disabled:opacity-40"
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-full text-[13px] font-bold transition-all disabled:opacity-40"
                   style={{ background: 'var(--surface)', color: 'var(--text-primary)', border: '1.5px solid var(--border)' }}
                 >
-                  {isPending ? 'Отправляется...' : (
-                    <>
-                      <Heart size={14} style={{ color: 'var(--tag-purple-text)' }} />
-                      Сказать спасибо
-                    </>
-                  )}
+                  <span className="flex items-center gap-2">
+                    <Heart size={14} style={{ color: 'var(--tag-purple-text)' }} />
+                    {isPending ? 'Отправляется...' : 'Сказать спасибо'}
+                  </span>
+                  <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>0 ПК</span>
                 </button>
 
-                {/* Кнопка "Подарок" */}
-                {!quota.used ? (
-                  // Квота доступна
+                {/* Подарок по квоте (если доступна) */}
+                {!quota.used && (
                   <div>
                     <button
                       onClick={handleSendQuotaGift}
                       disabled={isPending}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-full text-[13px] font-bold transition-all disabled:opacity-40"
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-full text-[13px] font-bold transition-all disabled:opacity-40"
                       style={{ background: 'var(--apex-primary)', color: 'white' }}
                     >
-                      {isPending ? 'Отправляется...' : (
-                        <>
-                          <Gift size={14} />
-                          Подарить +{quota.coins_per_gratitude} ПК (бесплатно)
-                        </>
-                      )}
+                      <span className="flex items-center gap-2">
+                        <Gift size={14} />
+                        {isPending ? 'Отправляется...' : 'Подарить (бесплатная квота)'}
+                      </span>
+                      <span className="text-[11px] font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                        +{quota.coins_per_gratitude} ПК
+                      </span>
                     </button>
                     <div className="text-center text-[11px] font-medium mt-1.5" style={{ color: 'var(--text-muted)' }}>
-                      Бесплатная квота на 2 недели — осталось {daysLeft} {pluralizeDays(daysLeft)}
-                    </div>
-                  </div>
-                ) : (
-                  // Квота использована
-                  <div>
-                    <button
-                      onClick={() => setShowBalanceInput(true)}
-                      disabled={isPending}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-full text-[13px] font-bold transition-all disabled:opacity-40"
-                      style={{ background: 'var(--surface)', color: 'var(--apex-primary)', border: '1.5px solid var(--apex-primary)' }}
-                    >
-                      <Gift size={14} />
-                      Подарить за свой счёт
-                    </button>
-                    <div className="text-center text-[11px] font-medium mt-1.5" style={{ color: 'var(--text-muted)' }}>
-                      Квота использована. Новая через {nextDays} {pluralizeDays(nextDays)}
+                      Квота на 2 недели — осталось {daysLeft} {pluralizeDays(daysLeft)}
                     </div>
                   </div>
                 )}
+
+                {/* Подарить за свой счёт — всегда видна */}
+                <div>
+                  <button
+                    onClick={() => setShowBalanceInput(true)}
+                    disabled={isPending || balance < 1}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-full text-[13px] font-bold transition-all disabled:opacity-40"
+                    style={{ background: 'var(--surface)', color: 'var(--apex-primary)', border: '1.5px solid var(--apex-primary)' }}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Coins size={14} />
+                      Подарить за свой счёт
+                    </span>
+                    <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
+                      Выбрать кол-во коинов
+                    </span>
+                  </button>
+                  {quota.used && (
+                    <div className="text-center text-[11px] font-medium mt-1.5" style={{ color: 'var(--text-muted)' }}>
+                      Квота использована. Новая через {nextDays} {pluralizeDays(nextDays)}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
