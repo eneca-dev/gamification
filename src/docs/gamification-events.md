@@ -148,6 +148,8 @@ View `view_daily_statuses` агрегирует эту логику.
 
 Обновляется в `ws_user_streaks` скриптом `compute-gamification`, step 3.
 
+**Подсчёт:** `current_streak = календарные дни от streak_start_date до вчера − дни отсутствий в этом диапазоне`. Выходные и праздники увеличивают стрик (календарные дни тикают). Отсутствия (отпуск, больничный, сик-дей) замораживают стрик — не увеличивают и не сбрасывают.
+
 **Бонусы за milestones:**
 
 | current_streak | event_type | Коины | idempotency_key |
@@ -222,6 +224,7 @@ idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 | `gratitude_recipient_points` | +20 | airtable | PG-триггер |
 | `revit_using_plugins` | +5 | revit | PG-триггер |
 | `budget_ok_l3_lead_bonus` | +5 | ws | compute-gamification |
+| `green_day` | +3 | ws | compute-gamification |
 | `budget_revoked_l3_lead` | -5 | ws | compute-gamification |
 | `budget_revoked_l3` | -50 | ws | compute-gamification |
 | `budget_revoked_l2` | -200 | ws | compute-gamification |
@@ -230,7 +233,6 @@ idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 
 | event_type | Источник | Механизм |
 |---|---|---|
-| `green_day` | ws | compute-gamification |
 | `red_day` | ws | compute-gamification |
 | `task_dynamics_violation` | ws | compute-gamification |
 | `section_red` | ws | compute-gamification |
@@ -306,6 +308,7 @@ idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 - Если email не найден в `ws_users` — событие молча пропускается
 - `at_gratitudes` с `deleted_in_airtable = true` — начисленные баллы не отзываются автоматически
 - Отрицательный баланс допустим (штрафы, clawback). Запрет только при покупке (будущий этап)
-- Информационные события (green_day, red_day, violations, resets) имеют coins=0 в `gamification_event_types` — записываются в `gamification_event_logs`, но не создают транзакций в `gamification_transactions`
+- Информационные события (red_day, violations, resets) имеют coins=0 в `gamification_event_types` — записываются в `gamification_event_logs`, но не создают транзакций в `gamification_transactions`
+- `green_day` начисляет +3 коина (обновлено миграцией 011)
 - Триггеры срабатывают на UPDATE тоже — idempotency_key защищает от повторных начислений при повторных синках
 - Благодарности: лимит 1 начисление от одного отправителя за `week_start` — проверяется в триггере через JOIN `gamification_event_logs` + `at_gratitudes`

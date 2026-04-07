@@ -44,7 +44,9 @@
       "mcp__playwright__browser_navigate",
       "mcp__playwright__browser_take_screenshot",
       "Bash(find /d/1work/gamification-vps-scripts -name crontab -o -name *cron*)",
-      "Bash(find ./supabase -name *.ts -o -name *.js)"
+      "Bash(find ./supabase -name *.ts -o -name *.js)",
+      "Bash(find /d/1work/gamification-vps-scripts/src/scripts -name \"*.ts\" -exec basename {} \\\\;)",
+      "Bash(xargs head:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
