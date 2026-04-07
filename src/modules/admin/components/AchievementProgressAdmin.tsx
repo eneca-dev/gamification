@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useMemo } from 'react'
 import { Search, Zap, CheckCircle, Heart, Trophy, Users, Building2, X, Loader2 } from 'lucide-react'
+import { CoinIcon } from '@/components/CoinIcon'
 
 import { getUserFullProgress } from '@/modules/achievements/actions'
 import { ACHIEVEMENT_BONUSES } from '@/modules/achievements/types'
@@ -170,8 +171,8 @@ function UserProgressDetail({ progress }: { progress: FullAchievementProgress })
                         </span>
                       )}
                       {p.earned && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-primary)' }}>
-                          +{ACHIEVEMENT_BONUSES.user} ПК
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5" style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-primary)' }}>
+                          +{ACHIEVEMENT_BONUSES.user} <CoinIcon size={10} />
                         </span>
                       )}
                     </div>
@@ -202,8 +203,8 @@ function UserProgressDetail({ progress }: { progress: FullAchievementProgress })
                         {p.days_in_top}/{p.threshold} дн.
                       </span>
                       {p.earned && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-primary)' }}>
-                          +{ACHIEVEMENT_BONUSES.team} ПК
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5" style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-primary)' }}>
+                          +{ACHIEVEMENT_BONUSES.team} <CoinIcon size={10} />
                         </span>
                       )}
                     </div>
@@ -234,8 +235,8 @@ function UserProgressDetail({ progress }: { progress: FullAchievementProgress })
                         {p.days_in_top}/{p.threshold} дн.
                       </span>
                       {p.earned && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-primary)' }}>
-                          +{ACHIEVEMENT_BONUSES.department} ПК
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5" style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-primary)' }}>
+                          +{ACHIEVEMENT_BONUSES.department} <CoinIcon size={10} />
                         </span>
                       )}
                     </div>
@@ -267,8 +268,8 @@ function UserProgressDetail({ progress }: { progress: FullAchievementProgress })
                     {g.current_count}/{g.threshold}
                   </span>
                   {g.earned && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-primary)' }}>
-                      +{g.bonus_coins} ПК
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5" style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-primary)' }}>
+                      +{g.bonus_coins} <CoinIcon size={10} />
                     </span>
                   )}
                 </div>

@@ -3,6 +3,7 @@
 import type { DailyTask } from "@/lib/data";
 import { sourceColors } from "@/lib/data";
 import { CheckCircle2 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 
 interface DailyQuestsProps {
   tasks: DailyTask[];
@@ -34,7 +35,7 @@ export function DailyQuests({ tasks }: DailyQuestsProps) {
               border: `1px solid rgba(var(--orange-500-rgb), 0.2)`,
             }}
           >
-            +{totalReward} баллов
+            <span className="inline-flex items-center gap-0.5">+{totalReward} <CoinIcon size={10} /></span>
           </span>
         </div>
         <span

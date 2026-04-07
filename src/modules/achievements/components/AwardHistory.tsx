@@ -1,6 +1,7 @@
 'use client'
 
 import { Trophy, Users, Building2 } from 'lucide-react'
+import { CoinIcon } from '@/components/CoinIcon'
 
 import type { AchievementAward } from '../types'
 import { ACHIEVEMENT_BONUSES } from '../types'
@@ -62,8 +63,8 @@ export function AwardHistory({ awards }: AwardHistoryProps) {
                   {formatPeriod(award.period_start)} ({award.days_in_top} дней в топе)
                 </div>
               </div>
-              <span className="text-[13px] font-extrabold flex-shrink-0" style={{ color: 'var(--apex-success-text)' }}>
-                +{bonus} ПК
+              <span className="text-[13px] font-extrabold flex-shrink-0 inline-flex items-center gap-1" style={{ color: 'var(--apex-success-text)' }}>
+                +{bonus} <CoinIcon size={13} />
               </span>
             </div>
           )

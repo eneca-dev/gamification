@@ -1,5 +1,7 @@
 'use client'
 
+import { CoinIcon } from '@/components/CoinIcon'
+
 interface PurchaseButtonProps {
   productId: string
   price: number
@@ -27,8 +29,8 @@ export function PurchaseButton({
     if (isPurchasing) return 'Покупаем...'
     if (outOfStock) return 'Нет в наличии'
     if (shieldNoPending) return 'Нет угрозы стрику'
-    if (!canAfford) return `Ещё ${deficit.toLocaleString('ru-RU')} баллов`
-    return `Получить за ${price.toLocaleString('ru-RU')} баллов`
+    if (!canAfford) return <span className="inline-flex items-center gap-1">Ещё {deficit.toLocaleString('ru-RU')} <CoinIcon size={12} /></span>
+    return <span className="inline-flex items-center gap-1">Получить за {price.toLocaleString('ru-RU')} <CoinIcon size={12} /></span>
   }
 
   return (

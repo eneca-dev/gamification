@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Trophy, Users, Building2, Zap, Star, Target, Award, Crown, Shield } from 'lucide-react'
+import { CoinIcon } from '@/components/CoinIcon'
 
 import type { AchievementProgress, AchievementEntityType, AchievementAward } from '@/modules/achievements/index.client'
 import { ACHIEVEMENT_BONUSES } from '@/modules/achievements/index.client'
@@ -168,7 +169,7 @@ function AchievementBadge({
             {currentRank && <div>Сейчас: #{currentRank} в рейтинге</div>}
             {!currentRank && <div>Сейчас: не в топе</div>}
             <div>Прогресс: {progress} из {threshold} дней в топе</div>
-            <div className="mt-1">Награда: +{bonus} ПК{entityType !== 'user' ? ' каждому' : ''}</div>
+            <div className="mt-1 inline-flex items-center gap-0.5">Награда: +{bonus} <CoinIcon size={10} />{entityType !== 'user' ? ' каждому' : ''}</div>
             {earned
               ? <div className="font-bold mt-1 text-[11px]">Получено!</div>
               : <div className="mt-1 opacity-70">Выдаётся 1 раз в месяц</div>

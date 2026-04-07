@@ -1,4 +1,5 @@
 import { Trophy, Users, Building2, Zap, CheckCircle, Heart } from 'lucide-react'
+import { CoinIcon } from '@/components/CoinIcon'
 
 import type { CompanyAward, AchievementArea, AchievementEntityType } from '../types'
 import { ACHIEVEMENT_BONUSES } from '../types'
@@ -69,7 +70,7 @@ export function CompanyAwardCard({ award }: CompanyAwardCardProps) {
           className="text-[11px] font-bold px-2 py-0.5 rounded-md"
           style={{ background: area.bg, color: area.color }}
         >
-          +{bonus} ПК
+          <span className="inline-flex items-center gap-0.5">+{bonus} <CoinIcon size={11} /></span>
         </span>
       </div>
     </div>

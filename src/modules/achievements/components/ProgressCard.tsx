@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Zap, CheckCircle, Heart, Trophy, Users, Building2 } from 'lucide-react'
+import { CoinIcon } from '@/components/CoinIcon'
 
 import type { AreaProgress, AchievementEntityType, AchievementArea, GratitudeAchProgress } from '../types'
 import { ACHIEVEMENT_BONUSES } from '../types'
@@ -146,8 +147,8 @@ function AreaRow({ item, entityType, daysElapsed, periodDays }: {
                           <div className="text-[10px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                             {rule}
                           </div>
-                          <div className="text-[10px] font-semibold mt-1" style={{ color: cfg.color }}>
-                            Награда: +{bonus} ПК
+                          <div className="text-[10px] font-semibold mt-1 inline-flex items-center gap-0.5" style={{ color: cfg.color }}>
+                            Награда: +{bonus} <CoinIcon size={10} />
                           </div>
                           <div
                             className="absolute top-full left-4 w-2 h-2 rotate-45"
@@ -184,9 +185,9 @@ function AreaRow({ item, entityType, daysElapsed, periodDays }: {
                 </div>
 
                 <div className="flex items-center justify-between mt-1">
-                  <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
+                  <span className="text-[10px] font-medium inline-flex items-center gap-0.5" style={{ color: 'var(--text-muted)' }}>
                     {item.earned
-                      ? `Получено! +${bonus} ПК`
+                      ? <>Получено! +{bonus} <CoinIcon size={10} /></>
                       : remaining > 0
                         ? `Осталось ${remaining} дней в топе`
                         : ''
@@ -235,8 +236,8 @@ function GratitudeRow({ item, cfg }: {
                 <div className="text-[10px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                   Получите {item.threshold} подарков в категории &laquo;{cfg.label}&raquo; за месяц. Считаются только подарки с коинами.
                 </div>
-                <div className="text-[10px] font-semibold mt-1" style={{ color: cfg.color }}>
-                  Награда: +{item.bonus_coins} ПК
+                <div className="text-[10px] font-semibold mt-1 inline-flex items-center gap-0.5" style={{ color: cfg.color }}>
+                  Награда: +{item.bonus_coins} <CoinIcon size={10} />
                 </div>
                 <div
                   className="absolute top-full left-4 w-2 h-2 rotate-45"
@@ -263,9 +264,9 @@ function GratitudeRow({ item, cfg }: {
       </div>
 
       <div className="flex items-center justify-between mt-1">
-        <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
+        <span className="text-[10px] font-medium inline-flex items-center gap-0.5" style={{ color: 'var(--text-muted)' }}>
           {item.earned
-            ? `Получено! +${item.bonus_coins} ПК`
+            ? <>Получено! +{item.bonus_coins} <CoinIcon size={10} /></>
             : remaining > 0
               ? `Осталось ${remaining} подарков`
               : ''

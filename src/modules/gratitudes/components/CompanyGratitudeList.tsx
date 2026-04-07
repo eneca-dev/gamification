@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { ArrowRight, Search } from 'lucide-react'
+import { CoinIcon } from '@/components/CoinIcon'
 
 import { GRATITUDE_CATEGORIES } from '../types'
 import type { GratitudeNew } from '../types'
@@ -166,7 +167,7 @@ export function CompanyGratitudeList({
                         className="text-[11px] font-bold px-2 py-0.5 rounded-md"
                         style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-success-text)' }}
                       >
-                        +{item.earned_coins} ПК
+                        <span className="inline-flex items-center gap-0.5">+{item.earned_coins} <CoinIcon size={11} /></span>
                       </span>
                     )}
                     {item.type === 'thanks' && (

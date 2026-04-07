@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Heart, ArrowDownLeft, ArrowUpRight } from 'lucide-react'
+import { CoinIcon } from '@/components/CoinIcon'
 
 import { SendGratitudeModal } from './SendGratitudeModal'
 import { GRATITUDE_CATEGORIES } from '../types'
@@ -84,7 +85,7 @@ function GratitudeCard({
               className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
               style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-success-text)' }}
             >
-              {isReceived ? '+' : '-'}{item.earned_coins} ПК
+              <span className="inline-flex items-center gap-0.5">{isReceived ? '+' : '-'}{item.earned_coins} <CoinIcon size={10} /></span>
             </span>
           )}
         </div>

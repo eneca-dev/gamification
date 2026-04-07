@@ -2,6 +2,7 @@
 
 import { Fragment } from "react";
 import { Trophy, CheckCircle2 } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import { sourceColors } from "@/lib/data";
 import type { DailyTask } from "@/lib/data";
 import type { CalendarDayStatus, CalendarDay, RedReason, StreakMilestone, StreakPanelData } from "@/modules/streak-panel";
@@ -198,8 +199,8 @@ function CompactStreakRow({
                 style={{ width: `${pct}%`, background: fill }}
               />
             </div>
-            <span className="text-[10px] font-semibold shrink-0" style={{ color: accent }}>
-              +{next.reward} б
+            <span className="text-[10px] font-semibold shrink-0 inline-flex items-center gap-0.5" style={{ color: accent }}>
+              +{next.reward} <CoinIcon size={10} />
             </span>
           </>
         )}
@@ -252,7 +253,7 @@ function InlineDailyQuests({ tasks }: { tasks: DailyTask[] }) {
             border: "1px solid rgba(var(--orange-500-rgb), 0.2)",
           }}
         >
-          +{totalReward} б
+          <span className="inline-flex items-center gap-0.5">+{totalReward} <CoinIcon size={10} /></span>
         </span>
         <span
           className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold ml-auto"

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Zap, CheckCircle, Heart, Trophy, Users, Building2, ChevronRight, X } from 'lucide-react'
+import { CoinIcon } from '@/components/CoinIcon'
 
 import type { AchievementAward, AchievementEntityType, AchievementArea } from '../types'
 import { ACHIEVEMENT_BONUSES } from '../types'
@@ -115,7 +116,7 @@ function TrophyCell({
           {earned ? (
             <div className="text-[10px] mt-1 space-y-0.5" style={{ color: 'var(--text-secondary)' }}>
               <div>Дней в топе: {award.days_in_top}</div>
-              <div className="font-semibold" style={{ color: areaCfg.color }}>Награда: +{bonus} ПК</div>
+              <div className="font-semibold inline-flex items-center gap-0.5" style={{ color: areaCfg.color }}>Награда: +{bonus} <CoinIcon size={10} /></div>
             </div>
           ) : isCurrent ? (
             <div className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>В процессе...</div>
@@ -188,7 +189,7 @@ function AllAwardsModal({ awards, onClose }: { awards: AchievementAward[]; onClo
                             {areaCfg.label}
                           </span>
                           <span className="text-[10px] font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                            {award.days_in_top} дней &middot; +{bonus} ПК
+                            <span className="inline-flex items-center gap-0.5">{award.days_in_top} дней &middot; +{bonus} <CoinIcon size={10} /></span>
                           </span>
                         </div>
                       )

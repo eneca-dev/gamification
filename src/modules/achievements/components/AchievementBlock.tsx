@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Zap, CheckCircle, Heart } from 'lucide-react'
+import { CoinIcon } from '@/components/CoinIcon'
 
 import type { AreaProgress, AchievementEntityType, GratitudeAchProgress } from '../types'
 import { ACHIEVEMENT_BONUSES } from '../types'
@@ -118,7 +119,7 @@ function RankingRow({
               >
                 <div className="font-bold mb-1">{name}</div>
                 <div className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{rule}</div>
-                <div className="text-[10px] font-semibold mt-1" style={{ color }}>Награда: +{bonus} ПК</div>
+                <div className="text-[10px] font-semibold mt-1 inline-flex items-center gap-0.5" style={{ color }}>Награда: +{bonus} <CoinIcon size={10} /></div>
                 <div className="absolute top-full left-4 w-2 h-2 rotate-45" style={{ background: 'var(--surface-elevated)', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }} />
               </div>
             )}
@@ -143,7 +144,7 @@ function RankingRow({
 
       <div className="flex items-center justify-between mt-0.5">
         <span className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>
-          {earned ? `Получено! +${bonus} ПК` : remaining > 0 ? `ещё ${remaining} дней` : ''}
+          {earned ? <span className="inline-flex items-center gap-0.5">Получено! +{bonus} <CoinIcon size={9} /></span> : remaining > 0 ? `ещё ${remaining} дней` : ''}
         </span>
         <span className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>
           {daysElapsed}/{periodDays}
@@ -182,7 +183,7 @@ function GratitudeRow({ item }: { item: GratitudeAchProgress }) {
                 <div className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
                   Получите {item.threshold} подарков в этой категории за месяц. Считаются только подарки с коинами.
                 </div>
-                <div className="text-[10px] font-semibold mt-1" style={{ color: 'var(--tag-purple-text)' }}>Награда: +{item.bonus_coins} ПК</div>
+                <div className="text-[10px] font-semibold mt-1 inline-flex items-center gap-0.5" style={{ color: 'var(--tag-purple-text)' }}>Награда: +{item.bonus_coins} <CoinIcon size={10} /></div>
                 <div className="absolute top-full left-4 w-2 h-2 rotate-45" style={{ background: 'var(--surface-elevated)', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }} />
               </div>
             )}
@@ -199,7 +200,7 @@ function GratitudeRow({ item }: { item: GratitudeAchProgress }) {
 
       <div className="flex items-center justify-between mt-0.5">
         <span className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>
-          {item.earned ? `Получено! +${item.bonus_coins} ПК` : remaining > 0 ? `ещё ${remaining} подарков` : ''}
+          {item.earned ? <span className="inline-flex items-center gap-0.5">Получено! +{item.bonus_coins} <CoinIcon size={9} /></span> : remaining > 0 ? `ещё ${remaining} подарков` : ''}
         </span>
       </div>
     </div>

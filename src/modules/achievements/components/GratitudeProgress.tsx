@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Heart, Gift, BookOpen } from 'lucide-react'
+import { CoinIcon } from '@/components/CoinIcon'
 
 import type { GratitudeAchProgress } from '../types'
 
@@ -101,8 +102,8 @@ function GratitudeAchItem({
                 <div className="text-[10px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                   Получите {item.threshold} подарков в категории "{cfg.label}" за месяц. Считаются только подарки (с коинами), бесплатные благодарности не учитываются.
                 </div>
-                <div className="text-[10px] font-semibold mt-1" style={{ color: cfg.color }}>
-                  Награда: +{item.bonus_coins} ПК
+                <div className="text-[10px] font-semibold mt-1 inline-flex items-center gap-0.5" style={{ color: cfg.color }}>
+                  Награда: +{item.bonus_coins} <CoinIcon size={10} />
                 </div>
                 <div
                   className="absolute top-full left-4 w-2 h-2 rotate-45"
@@ -130,9 +131,9 @@ function GratitudeAchItem({
       </div>
 
       <div className="flex items-center justify-between mt-1">
-        <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
+        <span className="text-[10px] font-medium inline-flex items-center gap-0.5" style={{ color: 'var(--text-muted)' }}>
           {item.earned
-            ? `Получено! +${item.bonus_coins} ПК`
+            ? <>Получено! +{item.bonus_coins} <CoinIcon size={10} /></>
             : remaining > 0
               ? `Осталось ${remaining} подарков`
               : ''

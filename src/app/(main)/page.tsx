@@ -1,3 +1,4 @@
+import { CoinIcon } from "@/components/CoinIcon";
 import { AlarmsBanner } from "@/modules/alarms/components/AlarmsBanner";
 import { StreakPanel } from "@/components/dashboard/StreakPanel";
 import { TransactionFeed } from "@/components/dashboard/TransactionFeed";
@@ -226,7 +227,7 @@ export default async function DashboardPage() {
       ? "Revit"
       : "Не забудьте использовать автоматизацию",
     description: pluginCount > 0
-      ? `Вчера вы использовали ${pluginCount} плагинов, вам начислено ${coinsEarned} ПК`
+      ? <span className="inline-flex items-center gap-0.5">Вчера вы использовали {pluginCount} плагинов, вам начислено {coinsEarned} <CoinIcon size={11} /></span>
       : "Используйте плагины Revit для начисления баллов",
     reward: coinsEarned,
     icon: "⚡",
