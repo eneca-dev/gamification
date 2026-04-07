@@ -6,7 +6,7 @@ import { getAchievementProgress, getGratitudeAchievementProgress } from './queri
 
 import type { FullAchievementProgress } from './types'
 
-const EMPTY_PROGRESS: FullAchievementProgress = { ranking: [], gratitude: [] }
+const EMPTY_PROGRESS: FullAchievementProgress = { ranking: null, gratitude: [] }
 
 export async function getUserFullProgress(
   wsUserId: string
