@@ -7,6 +7,7 @@ import { getCurrentUser } from '@/modules/auth/queries'
 
 import { sendGratitudeSchema } from './types'
 import type { SendGratitudeInput } from './types'
+import { getSenderQuota } from './queries'
 
 export async function sendGratitude(
   senderId: string,
@@ -57,7 +58,15 @@ export async function sendGratitude(
     return { success: false, error: 'Получатель не найден или неактивен' }
   }
 
-  // 5. Для подарка за свой счёт — предварительная проверка баланса
+  // 5a. Для подарка по квоте — проверка что квота не использована
+  if (type === 'gift' && gift_source === 'quota') {
+    const quota = await getSenderQuota(senderId)
+    if (quota.used) {
+      return { success: false, error: 'Бесплатная квота уже использована. Следующая доступна ' + (quota.next_quota_date ?? 'позже') }
+    }
+  }
+
+  // 5b. Для подарка за свой счёт — предварительная проверка баланса
   // Атомарная защита от race condition в триггере (RAISE EXCEPTION если недостаточно)
   if (type === 'gift' && gift_source === 'balance') {
     if (coins_amount <= 0) {

@@ -34,6 +34,7 @@ export async function getAllAlarms(userId: string): Promise<Alarm[]> {
     .order('alarm_date', { ascending: false })
     .order('is_resolved', { ascending: true })
     .order('severity', { ascending: true })
+    .limit(100)
 
   if (error) throw new Error(error.message)
 

@@ -5,11 +5,18 @@ import { createSupabaseServerClient } from '@/config/supabase'
  * Используется в Server Actions для защиты админских мутаций.
  * Custom claims из hook доступны только через декодирование JWT —
  * ни getUser(), ни getSession().user.app_metadata их не содержат.
+ *
+ * Важно: сначала валидируем сессию через getUser() (проверка подписи JWT на сервере),
+ * и только потом декодируем claims из access_token.
  */
 export async function checkIsAdmin(): Promise<boolean> {
   const supabase = await createSupabaseServerClient()
-  const { data: { session } } = await supabase.auth.getSession()
 
+  // Валидация JWT на сервере Supabase Auth — защита от подделанных/просроченных токенов
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+
+  const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) return false
 
   try {

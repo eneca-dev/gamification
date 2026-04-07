@@ -3,6 +3,7 @@ import { worksectionConfig } from '@/config/worksection'
 import type { WorksectionTokenRow } from '@/lib/types'
 
 import { getWorksectionTokens } from './queries'
+import { wsTokenResponseSchema } from './types'
 
 // Внутренняя серверная утилита — не Server Action, бросает исключения
 export async function refreshWorksectionToken(userId: string): Promise<string> {
@@ -22,7 +23,9 @@ export async function refreshWorksectionToken(userId: string): Promise<string> {
 
   if (!res.ok) throw new Error('Failed to refresh Worksection token')
 
-  const { access_token, refresh_token, expires_in } = await res.json()
+  const parsed = wsTokenResponseSchema.safeParse(await res.json())
+  if (!parsed.success) throw new Error('Invalid Worksection token response')
+  const { access_token, refresh_token, expires_in } = parsed.data
 
   const admin = createSupabaseAdminClient()
   const expiresAt = new Date(Date.now() + expires_in * 1000).toISOString()
