@@ -58,41 +58,22 @@
 
 ---
 
-## 7. Таймтрекинг: окно для внесения отчётов
+## ~~7. Таймтрекинг: окно для внесения отчётов~~ ✅ ГОТОВО
 
-**Текущее поведение:** скрипт проверяет наличие записи в `ws_daily_reports` за вчера. Если sync подтянул отчёт до запуска compute-gamification — нарушения нет.
+Проверено: `sync-ws-costs` запрашивает WS API строго за вчерашний день (`datestart=yesterday&dateend=yesterday`). Отчёты за позавчера и раньше не синхронизируются — задним числом закрыть красный день невозможно.
 
-**Уточнение:** это ок — окно ~10 минут между sync и compute-gamification. Но нужно убедиться, что sync не подтягивает отчёты за даты раньше вчерашнего дня (иначе задним числом можно закрыть красный день за позавчера).
-
-**Что проверить:**
-- Как работает sync ws_daily_reports — подтягивает ли он отчёты только за вчера или за произвольный период?
-- Если sync может подтянуть отчёт за позавчера → compute-gamification уже создал red_day с idempotency_key, так что повторного запуска не будет, но стрик уже сброшен — это корректное поведение
-
-**Что сделать:**
-- Уточнить в `business-logic.md`: у сотрудника есть время до момента синхронизации (утро следующего дня) чтобы заполнить отчёт за вчера
+**Исправлено:**
+- `business-logic.md` — уточнена формулировка: скрипт запускается в 00:00, у сотрудника есть время до полуночи
 
 ---
 
-## 8. section_red: записывать всех нарушителей в details
+## ~~8. section_red: записывать всех нарушителей в details~~ ✅ ГОТОВО
 
-**Проблема:** код берёт `firstViolation = violations[0]` и записывает в details только одного нарушителя (`compute-gamification.ts:193`). Если у L2-раздела несколько L3-задач с нарушениями динамики от разных исполнителей — тимлид видит только первого.
-
-**Что сделать в `compute-gamification.ts`, функция `checkSections`:**
-- Вместо `firstViolation = violations[0]` записывать массив `violations` целиком в details
-- Структура details:
-  ```json
-  {
-    "ws_task_id": "l2_id",
-    "ws_task_name": "L2 name",
-    "ws_project_id": "project_id",
-    "violations": [
-      { "violator_email": "...", "ws_task_id": "l3_id", "ws_task_name": "...", "ws_project_id": "..." },
-      { "violator_email": "...", "ws_task_id": "l3_id", "ws_task_name": "...", "ws_project_id": "..." }
-    ],
-    "violation_type": "task_dynamics_violation"
-  }
-  ```
-- Обновить фронтенд: компонент отображения red_reasons для section_red должен показывать список нарушителей, а не одного
+**Исправлено:**
+- `compute-gamification.ts` (`checkSections`) — details теперь содержит массив `violations` со всеми нарушителями
+- `compute-gamification.ts` (`computeDayStatus`) — red_reasons для section_red разворачивает массив violations в отдельные записи (с fallback для старого формата)
+- `transactions/queries.ts` — `enrichTransaction` для section_red показывает список всех нарушителей с именами задач и ссылками (с fallback для старых данных)
+- `gamification-events.md` — обновлена структура details для section_red
 
 ---
 

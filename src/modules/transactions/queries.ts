@@ -189,6 +189,20 @@ function enrichTransaction(
       }
     }
     case 'section_red': {
+      const violations = details?.violations as Record<string, unknown>[] | undefined
+      if (violations && violations.length > 0) {
+        const subItems: TransactionSubItem[] = violations.map((v) => {
+          const name = v.ws_task_name as string | undefined
+          const url = v.ws_project_id && v.ws_task_id
+            ? buildTaskUrl(v.ws_project_id as string, v.ws_task_id as string)
+            : undefined
+          const email = v.violator_email as string | undefined
+          const text = [name, email].filter(Boolean).join(' — ')
+          return { text: text || 'Нарушение динамики', url }
+        })
+        return { description: 'Нарушение динамики в секции', subItems }
+      }
+      // Fallback для старого формата
       const name = details?.ws_task_name as string | undefined
       const url = details?.ws_project_id && details?.ws_task_id
         ? buildTaskUrl(details.ws_project_id as string, details.ws_task_id as string)
