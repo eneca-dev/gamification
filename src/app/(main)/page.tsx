@@ -146,7 +146,10 @@ export default async function DashboardPage() {
     wsTeam = wsUser?.team ?? null;
   }
 
-  // Параллельно: данные стриков + ревит + благодарности + транзакции + отделы
+  // Грид: 4 месяца (1 назад + текущий + 2 вперёд) — синхронный, вычисляем сразу
+  const { rangeStart, rangeEnd } = getGridRange();
+
+  // Все запросы параллельно в одном Promise.all (PERF-01)
   const [
     wsStreak, revitStreak, revitData,
     revitPersonalRanking, wsPersonalRanking,
@@ -155,6 +158,8 @@ export default async function DashboardPage() {
     revitTransactions,
     recentTransactions,
     activeAlarms,
+    senderQuota, gratitudeRecipients, userBalance, myGratitudesNew, userOrders,
+    dayStatuses, automationDates, holidays, workdays, pendingResets,
   ] = await Promise.all([
       wsUserId ? getWsStreakData(wsUserId) : Promise.resolve({
         currentStreak: 0, longestStreak: 0, streakStartDate: null, completedCycles: 0,
@@ -183,28 +188,19 @@ export default async function DashboardPage() {
       userEmail ? getRevitTransactions(userEmail, 10) : Promise.resolve([]),
       userEmail ? getUserTransactions(userEmail, 5) : Promise.resolve([]),
       wsUserId ? getActiveAlarms(wsUserId) : Promise.resolve([]),
+      // Благодарности
+      wsUserId ? getSenderQuota(wsUserId) : Promise.resolve({ used: true, coins_per_gratitude: 0, period_start: '', period_end: '', next_quota_date: null }),
+      wsUserId ? getGratitudeRecipients(wsUserId) : Promise.resolve([]),
+      wsUserId ? getUserBalance(wsUserId) : Promise.resolve(0),
+      userEmail ? getMyGratitudesNew(userEmail, 30) : Promise.resolve([]),
+      wsUserId ? getUserOrders(wsUserId) : Promise.resolve([]),
+      // Календарь
+      wsUserId ? getStreakDayStatuses(wsUserId, rangeStart, rangeEnd) : Promise.resolve([]),
+      userEmail ? getAutomationDays(userEmail, rangeStart, rangeEnd) : Promise.resolve(new Set<string>()),
+      getHolidays(rangeStart, rangeEnd),
+      getWorkdays(rangeStart, rangeEnd),
+      wsUserId ? getPendingResets(wsUserId) : Promise.resolve([]),
     ]);
-
-  // Данные для блока благодарности
-  const [senderQuota, gratitudeRecipients, userBalance, myGratitudesNew, userOrders] = await Promise.all([
-    wsUserId ? getSenderQuota(wsUserId) : Promise.resolve({ used: true, coins_per_gratitude: 0, period_start: '', period_end: '', next_quota_date: null }),
-    wsUserId ? getGratitudeRecipients(wsUserId) : Promise.resolve([]),
-    wsUserId ? getUserBalance(wsUserId) : Promise.resolve(0),
-    userEmail ? getMyGratitudesNew(userEmail, 30) : Promise.resolve([]),
-    wsUserId ? getUserOrders(wsUserId) : Promise.resolve([]),
-  ]);
-
-  // Грид: 4 месяца (1 назад + текущий + 2 вперёд)
-  const { rangeStart, rangeEnd } = getGridRange();
-
-  // Параллельно: статусы дней + автоматизация + праздники + pending resets
-  const [dayStatuses, automationDates, holidays, workdays, pendingResets] = await Promise.all([
-    wsUserId ? getStreakDayStatuses(wsUserId, rangeStart, rangeEnd) : Promise.resolve([]),
-    userEmail ? getAutomationDays(userEmail, rangeStart, rangeEnd) : Promise.resolve(new Set<string>()),
-    getHolidays(rangeStart, rangeEnd),
-    getWorkdays(rangeStart, rangeEnd),
-    wsUserId ? getPendingResets(wsUserId) : Promise.resolve([]),
-  ]);
 
   // Собираем Map статусов для быстрого доступа
   const statusMap = new Map<string, { status: string; absence_type: string | null; red_reasons: RedReason[] | null }>();

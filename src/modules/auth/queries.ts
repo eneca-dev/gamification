@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { cookies } from 'next/headers'
 
 import { createSupabaseServerClient } from '@/config/supabase'
@@ -23,7 +24,7 @@ export async function getWorksectionTokens(
   return data as WorksectionTokenRow
 }
 
-export async function getCurrentUser(): Promise<AuthUser | null> {
+export const getCurrentUser = cache(async function getCurrentUser(): Promise<AuthUser | null> {
   const supabase = await createSupabaseServerClient()
   const {
     data: { user },
@@ -88,4 +89,4 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     isAdmin,
     wsUserId,
   }
-}
+})

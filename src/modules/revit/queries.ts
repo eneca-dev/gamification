@@ -85,6 +85,7 @@ export async function getTopAutomationUsers(
       .select('user_email, coins')
       .eq('source', 'revit')
       .gte('event_date', monthStartStr)
+      .limit(2000)
 
     if (!rows?.length) return []
 
