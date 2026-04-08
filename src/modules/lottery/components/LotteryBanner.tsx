@@ -214,7 +214,7 @@ export function LotteryBanner({ lottery, ticketInfo: initialTicketInfo, balance,
             </button>
             {hasTickets && (
               <p className="text-center text-xs mt-2" style={{ color: 'var(--apex-text-secondary)' }}>
-                Билетов нет лимита — больше билетов = больше шанс
+                На покупку билетов нет лимита — больше билетов = больше шанс
               </p>
             )}
           </div>

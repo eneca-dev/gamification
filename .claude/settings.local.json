@@ -46,7 +46,8 @@
       "Bash(find /d/1work/gamification-vps-scripts -name crontab -o -name *cron*)",
       "Bash(find ./supabase -name *.ts -o -name *.js)",
       "Bash(find /d/1work/gamification-vps-scripts/src/scripts -name \"*.ts\" -exec basename {} \\\\;)",
-      "Bash(xargs head:*)"
+      "Bash(xargs head:*)",
+      "Bash(find /d/1work/gamification/gamification -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" \\\\\\) -exec grep -l \"ws_tasks_l3\\\\|ws_tasks_l2\\\\|ws_projects\" {} \\\\;)"
     ]
   },
   "enableAllProjectMcpServers": true,
