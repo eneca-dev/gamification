@@ -3,10 +3,7 @@ import { StreakPanel } from "@/components/dashboard/StreakPanel";
 import { TransactionFeed } from "@/components/dashboard/TransactionFeed";
 import { Leaderboard } from "@/components/dashboard/Leaderboard";
 import { DepartmentContest } from "@/components/dashboard/DepartmentContest";
-import {
-  dailyTasks,
-} from "@/lib/data";
-import type { Transaction, DailyTask, DepartmentEntry } from "@/lib/data";
+import type { Transaction, DepartmentEntry } from "@/lib/data";
 import { getCurrentUser } from "@/modules/auth/queries";
 import {
   getRevitWidgetData,
@@ -33,6 +30,7 @@ import { getActiveAlarms } from "@/modules/alarms";
 import { getMyGratitudesNew, getSenderQuota, getGratitudeRecipients, getUserBalance } from "@/modules/gratitudes";
 import { getUserOrders } from "@/modules/shop";
 import { getPendingResets } from "@/modules/streak-shield";
+import { getMasterPlannerPanel } from "@/modules/master-planner";
 import { GratitudeWidget } from "@/modules/gratitudes/components/GratitudeWidget";
 import type { CalendarDay, CalendarDayStatus, RedReason, StreakPanelData } from "@/modules/streak-panel";
 
@@ -160,6 +158,7 @@ export default async function DashboardPage() {
     activeAlarms,
     senderQuota, gratitudeRecipients, userBalance, myGratitudesNew, userOrders,
     dayStatuses, automationDates, holidays, workdays, pendingResets,
+    masterPlannerData,
   ] = await Promise.all([
       wsUserId ? getWsStreakData(wsUserId) : Promise.resolve({
         currentStreak: 0, longestStreak: 0, streakStartDate: null, completedCycles: 0,
@@ -200,6 +199,7 @@ export default async function DashboardPage() {
       getHolidays(rangeStart, rangeEnd),
       getWorkdays(rangeStart, rangeEnd),
       wsUserId ? getPendingResets(wsUserId) : Promise.resolve([]),
+      wsUserId ? getMasterPlannerPanel(wsUserId) : Promise.resolve(null),
     ]);
 
   // Собираем Map статусов для быстрого доступа
@@ -216,25 +216,6 @@ export default async function DashboardPage() {
     ws: wsStreak,
     revit: revitStreak,
   };
-
-  // Ежедневное задание по автоматизации
-  const { pluginCount, coinsEarned } = revitData.yesterdaySummary;
-  const revitDailyTask: DailyTask = {
-    id: 100,
-    source: "revit",
-    title: pluginCount > 0
-      ? "Revit"
-      : "Не забудьте использовать автоматизацию",
-    description: pluginCount > 0
-      ? `Вчера вы использовали ${pluginCount} плагинов, вам начислено ${coinsEarned} ПК`
-      : "Используйте плагины Revit для начисления баллов",
-    reward: coinsEarned,
-    icon: "⚡",
-    progress: pluginCount,
-    total: Math.max(pluginCount, 1),
-    completed: pluginCount > 0,
-  };
-  const allDailyTasks = [...dailyTasks, revitDailyTask];
 
   // Транзакции из view_user_transactions (все источники)
   const allTransactions: Transaction[] = recentTransactions.map((tx, i) => ({
@@ -281,7 +262,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="animate-fade-in-up">
-        <StreakPanel streakData={streakPanelData} tasks={allDailyTasks} pendingResets={pendingResets} userBalance={userBalance} />
+        <StreakPanel streakData={streakPanelData} masterPlannerData={masterPlannerData ?? undefined} pendingResets={pendingResets} userBalance={userBalance} />
       </div>
 
       <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-1">

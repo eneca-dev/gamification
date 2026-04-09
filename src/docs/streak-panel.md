@@ -12,6 +12,8 @@
 
 Под гридом — два стрика: Worksection (из `ws_user_streaks`) и Автоматизации (из `revit_user_streaks`). Milestones берутся из `gamification_event_types`.
 
+Правая колонка — блок «Мастер планирования»: два стрика по бюджету задач (L3/L2), pending-задачи, последние события. Данные из модуля `master-planner` (см. `src/docs/master-planner.md`).
+
 ## Зависимости
 
 - `ws_daily_statuses` — статусы дней (заполняется VPS-скриптом compute-gamification)

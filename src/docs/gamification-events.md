@@ -221,6 +221,7 @@ idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 | event_type | Коины | Источник | Механизм |
 |---|---|---|---|
 | `master_planner` | +450 | ws | compute-gamification |
+| `master_planner_l2` | +400 | ws | compute-gamification |
 | `ws_streak_90` | +300 | ws | compute-gamification |
 | `budget_ok_l2` | +200 | ws | compute-gamification |
 | `team_contest_top1_bonus` | +200 | contest | PG-функция + pg_cron (1 число месяца) |
@@ -236,6 +237,8 @@ idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 | `budget_revoked_l3_lead` | -5 | ws | compute-gamification |
 | `budget_revoked_l3` | -50 | ws | compute-gamification |
 | `budget_revoked_l2` | -200 | ws | compute-gamification |
+| `master_planner_l2_revoked` | -400 | ws | compute-gamification |
+| `master_planner_revoked` | -450 | ws | compute-gamification |
 
 **Информационные (0 коинов, фиксируют факт события):**
 
@@ -250,6 +253,7 @@ idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 | `streak_reset_dynamics` | ws | compute-gamification |
 | `streak_reset_section` | ws | compute-gamification |
 | `master_planner_reset` | ws | compute-gamification |
+| `master_planner_l2_reset` | ws | compute-gamification |
 
 ---
 
