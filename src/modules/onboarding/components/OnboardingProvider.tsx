@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 
 import { OnboardingSpotlight } from './OnboardingSpotlight'
@@ -70,7 +70,6 @@ export function OnboardingProvider({ userId, children }: OnboardingProviderProps
   const pathname = usePathname()
   const [activeTour, setActiveTour] = useState<OnboardingTour | null>(null)
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
-  const startedRef = useRef(false)
 
   // Dev mode: обработка URL параметров ?onboarding=reset / reset:slug / start:slug
   useEffect(() => {
@@ -78,6 +77,13 @@ export function OnboardingProvider({ userId, children }: OnboardingProviderProps
     const params = new URLSearchParams(window.location.search)
     const param = params.get('onboarding')
     if (!param) return
+
+    // Очищаем URL чтобы параметр не сработал повторно
+    params.delete('onboarding')
+    const newUrl = params.toString()
+      ? `${window.location.pathname}?${params.toString()}`
+      : window.location.pathname
+    window.history.replaceState({}, '', newUrl)
 
     if (param === 'reset') {
       resetAllTours(userId)
@@ -90,7 +96,6 @@ export function OnboardingProvider({ userId, children }: OnboardingProviderProps
       if (tour) {
         setActiveTour(tour)
         setCurrentStepIndex(0)
-        startedRef.current = false
       }
     }
   }, [pathname, userId])
@@ -114,7 +119,6 @@ export function OnboardingProvider({ userId, children }: OnboardingProviderProps
       markTourSeen(userId, slug)
       setActiveTour(tour)
       setCurrentStepIndex(0)
-      startedRef.current = true
     }, START_DELAY)
 
     return () => clearTimeout(timer)

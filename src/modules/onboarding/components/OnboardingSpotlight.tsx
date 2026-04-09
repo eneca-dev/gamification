@@ -28,6 +28,8 @@ const HIGHLIGHT_PADDING = 8
 const TARGET_WAIT_TIMEOUT = 3000
 /** Интервал проверки target */
 const TARGET_POLL_INTERVAL = 200
+/** Таймаут завершения скролла */
+const SCROLL_SETTLE_TIMEOUT = 600
 
 export function OnboardingSpotlight({
   step,
@@ -82,15 +84,13 @@ export function OnboardingSpotlight({
   useLayoutEffect(() => {
     if (isModal || !targetEl) return
 
-    // Скролл к элементу
     targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
-    // Даём скроллу завершиться
     const timer = setTimeout(() => {
       const rect = targetEl.getBoundingClientRect()
       setTargetRect(rect)
       setReady(true)
-    }, 400)
+    }, SCROLL_SETTLE_TIMEOUT)
 
     return () => clearTimeout(timer)
   }, [targetEl, isModal])
@@ -133,11 +133,12 @@ export function OnboardingSpotlight({
     }
   }, [targetEl, isModal])
 
-  // Блокировка скролла body
+  // Блокировка скролла body (сохраняем оригинальное значение)
   useEffect(() => {
+    const originalOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
-      document.body.style.overflow = ''
+      document.body.style.overflow = originalOverflow
     }
   }, [])
 
@@ -152,7 +153,6 @@ export function OnboardingSpotlight({
 
   const handleOverlayClick = useCallback(
     (e: React.MouseEvent) => {
-      // Клик по overlay (не по tooltip и не по target) — следующий шаг
       if (e.target === e.currentTarget) {
         onNext()
       }
@@ -170,6 +170,9 @@ export function OnboardingSpotlight({
         <AnimatePresence mode="wait">
           <motion.div
             key={step.id}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`onboarding-title-${step.id}`}
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -184,13 +187,14 @@ export function OnboardingSpotlight({
           >
             <button
               onClick={onSkip}
+              aria-label="Закрыть подсказку"
               className="absolute top-3 right-3 p-1.5 rounded-full transition-colors hover:bg-black/5"
               style={{ color: 'var(--text-muted)' }}
             >
               <X size={16} />
             </button>
 
-            <div className="text-base font-bold mb-2" style={{ color: 'var(--apex-text)' }}>
+            <div id={`onboarding-title-${step.id}`} className="text-base font-bold mb-2" style={{ color: 'var(--apex-text)' }}>
               {step.title}
             </div>
             <div className="text-[13px] leading-relaxed mb-5" style={{ color: 'var(--text-secondary)' }}>
@@ -252,6 +256,9 @@ export function OnboardingSpotlight({
         <motion.div
           key={step.id}
           ref={tooltipRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={`onboarding-title-${step.id}`}
           initial={{ opacity: 0, y: tooltipPos?.placement === 'top' ? 8 : -8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
@@ -269,13 +276,14 @@ export function OnboardingSpotlight({
         >
           <button
             onClick={onSkip}
+            aria-label="Закрыть подсказку"
             className="absolute top-2.5 right-2.5 p-1 rounded-full transition-colors hover:bg-black/5"
             style={{ color: 'var(--text-muted)' }}
           >
             <X size={14} />
           </button>
 
-          <div className="text-[14px] font-bold mb-1.5 pr-6" style={{ color: 'var(--apex-text)' }}>
+          <div id={`onboarding-title-${step.id}`} className="text-[14px] font-bold mb-1.5 pr-6" style={{ color: 'var(--apex-text)' }}>
             {step.title}
           </div>
           <div className="text-[12px] leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>
