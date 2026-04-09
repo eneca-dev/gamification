@@ -126,7 +126,7 @@ export function StoreClient({
       </div>
 
       {/* Фильтры категорий */}
-      <div className="animate-fade-in-up stagger-2 flex gap-2 flex-wrap">
+      <div className="animate-fade-in-up stagger-2 flex gap-2 flex-wrap" data-onboarding="store-category-filters">
         <button
           onClick={() => setActiveFilter('all')}
           className="px-4 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"

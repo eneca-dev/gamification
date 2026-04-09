@@ -113,6 +113,7 @@ export function LotteryBanner({ lottery, ticketInfo: initialTicketInfo, balance,
   return (
     <div
       className="rounded-2xl overflow-hidden animate-fade-in-up"
+      data-onboarding="lottery-banner"
       style={{ border: '1px solid var(--apex-border)' }}
     >
       {/* Заголовок */}

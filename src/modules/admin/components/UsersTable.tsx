@@ -220,6 +220,7 @@ export function UsersTable({ users }: UsersTableProps) {
       {/* Column headers */}
       <div
         className="flex items-center text-[11px] font-semibold uppercase tracking-wider"
+        data-onboarding="admin-users-table"
         style={{
           paddingLeft: '2.5rem',
           borderBottom: '1px solid var(--apex-border)',
@@ -228,7 +229,7 @@ export function UsersTable({ users }: UsersTableProps) {
       >
         <div className="flex-1 min-w-0 px-3 py-2">Сотрудник</div>
         <div className="w-28 px-3 py-2 shrink-0 text-right">Баланс</div>
-        <div className="w-24 px-3 py-2 shrink-0 text-center">Админ</div>
+        <div className="w-24 px-3 py-2 shrink-0 text-center" data-onboarding="admin-users-toggle">Админ</div>
         <div className="w-8 shrink-0" />
       </div>
 

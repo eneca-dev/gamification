@@ -374,6 +374,7 @@ export function AchievementProgressAdmin({
       {/* Блок: Прогресс к достижениям */}
       <div
         className="rounded-2xl p-5"
+        data-onboarding="achievements-progress-card"
         style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
       >
         <div className="flex items-center gap-2 mb-4">

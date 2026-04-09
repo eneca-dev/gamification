@@ -227,6 +227,7 @@ export function TrophyShelf({ awards }: TrophyShelfProps) {
     <>
       <div
         className="rounded-2xl p-5"
+        data-onboarding="trophy-shelf"
         style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
       >
         <div className="flex items-center justify-between mb-4">

@@ -421,7 +421,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
       {/* Main layout: grid+streaks left, quests right */}
       <div className="flex gap-6">
         {/* Left: grid + legend + streaks */}
-        <div className="shrink-0">
+        <div className="shrink-0" data-onboarding="streak-calendar">
           {/* Month labels */}
           <div className="flex mb-1" style={{ paddingLeft: headerOffset }}>
             {groups.map((group, gIdx) => (
@@ -566,7 +566,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
           </div>
 
           {/* Streaks stacked vertically */}
-          <div className="flex flex-col gap-3 pt-3" style={{ borderTop: "1px solid var(--apex-border)" }}>
+          <div className="flex flex-col gap-3 pt-3" data-onboarding="streak-milestones" style={{ borderTop: "1px solid var(--apex-border)" }}>
             <CompactStreakRow
               label="Worksection"
               currentDays={ws.currentStreak}
@@ -586,6 +586,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
         {tasks.length > 0 && (
           <div
             className="flex-1 min-w-0 pl-6"
+            data-onboarding="daily-quests"
             style={{ borderLeft: "1px solid var(--apex-border)" }}
           >
             <InlineDailyQuests tasks={tasks} />

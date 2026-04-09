@@ -44,18 +44,20 @@ export default async function AchievementsPage() {
       </div>
 
       {/* 3 блока: Revit / WS / Благодарности */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-fade-in-up stagger-1">
-        <RankingBlock
-          area="revit"
-          title="Revit"
-          personalProgress={progress?.personal.find((p) => p.area === 'revit') ?? null}
-          teamProgress={progress?.team_progress.find((p) => p.area === 'revit') ?? null}
-          deptProgress={progress?.department_progress.find((p) => p.area === 'revit') ?? null}
-          teamName={teamName}
-          deptName={deptName}
-          daysElapsed={daysElapsed}
-          periodDays={totalDays}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-fade-in-up stagger-1" data-onboarding="achievement-grid">
+        <div data-onboarding="ranking-block-first">
+          <RankingBlock
+            area="revit"
+            title="Revit"
+            personalProgress={progress?.personal.find((p) => p.area === 'revit') ?? null}
+            teamProgress={progress?.team_progress.find((p) => p.area === 'revit') ?? null}
+            deptProgress={progress?.department_progress.find((p) => p.area === 'revit') ?? null}
+            teamName={teamName}
+            deptName={deptName}
+            daysElapsed={daysElapsed}
+            periodDays={totalDays}
+          />
+        </div>
 
         <RankingBlock
           area="ws"
@@ -69,7 +71,9 @@ export default async function AchievementsPage() {
           periodDays={totalDays}
         />
 
-        <GratitudeBlock items={gratitudeProgress} />
+        <div data-onboarding="gratitude-block">
+          <GratitudeBlock items={gratitudeProgress} />
+        </div>
       </div>
 
       {/* Стенд кубков */}

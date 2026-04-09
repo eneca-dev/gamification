@@ -30,6 +30,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
   return (
     <div
       className={`rounded-2xl overflow-hidden card-hover stagger-${Math.min(index + 1, 6)}`}
+      {...(index === 0 ? { 'data-onboarding': 'product-card-first' } : {})}
       style={{
         background: 'var(--surface-elevated)',
         border: '1px solid var(--border)',

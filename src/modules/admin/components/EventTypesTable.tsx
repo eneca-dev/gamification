@@ -75,6 +75,7 @@ export function EventTypesTable({ eventTypes }: EventTypesTableProps) {
   return (
     <div
       className="rounded-2xl overflow-hidden"
+      data-onboarding="admin-events-types"
       style={{
         background: 'var(--apex-surface)',
         border: '1px solid var(--apex-border)',

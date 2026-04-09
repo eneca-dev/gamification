@@ -11,17 +11,26 @@ export function CoinIcon({ size = 20, className }: CoinIconProps) {
       viewBox="0 0 100 100"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      style={{ verticalAlign: 'middle' }}
       aria-hidden="true"
     >
-      {/* Нижняя часть — 4 грани */}
-      <polygon points="8,38 50,38 30,95" fill="#155547" />
-      <polygon points="50,38 92,38 70,95" fill="#0D4F40" />
-      <polygon points="50,38 30,95 50,95" fill="#1B6B58" />
-      <polygon points="50,38 70,95 50,95" fill="#134E3E" />
-      {/* Верхняя часть — 3 грани */}
-      <polygon points="8,38 50,5 50,38" fill="#26A69A" />
-      <polygon points="50,5 92,38 50,38" fill="#1E8C7A" />
-      <polygon points="30,12 50,5 50,38 8,38" fill="#FFD54F" opacity="0.5" />
+      {/* Верхняя корона — трапеция */}
+      <polygon points="8,41 78,41 63,19 23,19" fill="#4FC3F7" />
+      {/* Разделительные линии короны */}
+      <line x1="23" y1="19" x2="31" y2="41" stroke="#29B6F6" strokeWidth="1.5" />
+      <line x1="43" y1="19" x2="43" y2="41" stroke="#29B6F6" strokeWidth="1.5" />
+      <line x1="63" y1="19" x2="55" y2="41" stroke="#29B6F6" strokeWidth="1.5" />
+      {/* Левая грань короны — чуть темнее */}
+      <polygon points="8,41 23,19 31,41" fill="#29B6F6" opacity="0.4" />
+      {/* Нижний треугольник */}
+      <polygon points="8,41 78,41 43,75" fill="#039BE5" />
+      {/* Центральная линия треугольника */}
+      <line x1="43" y1="41" x2="43" y2="75" stroke="#0288D1" strokeWidth="1.5" />
+      {/* Боковые линии треугольника */}
+      <line x1="31" y1="41" x2="43" y2="75" stroke="#0288D1" strokeWidth="1" opacity="0.5" />
+      <line x1="55" y1="41" x2="43" y2="75" stroke="#0288D1" strokeWidth="1" opacity="0.5" />
+      {/* Блик на верхней грани */}
+      <polygon points="23,19 43,19 31,41 8,41" fill="white" opacity="0.25" />
     </svg>
   );
 }
