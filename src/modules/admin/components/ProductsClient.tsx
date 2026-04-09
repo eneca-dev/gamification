@@ -390,6 +390,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
       {/* === КАТЕГОРИИ === */}
       <div
         className="rounded-2xl overflow-hidden"
+        data-onboarding="admin-products-categories"
         style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
       >
         <div
@@ -630,6 +631,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
       {/* === ТОВАРЫ === */}
       <div
         className="rounded-2xl overflow-hidden"
+        data-onboarding="admin-products-table"
         style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
       >
         {/* Заголовок товаров */}

@@ -121,6 +121,7 @@ export function Sidebar({ user, balance, showDevSwitcher }: SidebarProps) {
       <div className="px-4 pb-3">
         <div
           className="p-3 rounded-xl"
+          data-onboarding="sidebar-balance"
           style={{
             background: 'var(--apex-success-bg)',
             border: '1px solid var(--apex-border)',

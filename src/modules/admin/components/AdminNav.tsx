@@ -20,7 +20,7 @@ export function AdminNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="flex gap-1.5 flex-wrap">
+    <nav className="flex gap-1.5 flex-wrap" data-onboarding="admin-nav">
       {navItems.map((item) => {
         const isActive = item.exact
           ? pathname === item.href

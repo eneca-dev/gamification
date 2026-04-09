@@ -30,7 +30,7 @@ export function CoinStatic({ amount, size = "md" }: CoinBalanceProps) {
 
   return (
     <span className={`inline-flex items-center gap-1.5 font-bold ${sizeClasses[size]}`}>
-      <span style={{ color: "var(--apex-text)" }}>{formatted}</span>
+      <span style={{ color: "inherit" }}>{formatted}</span>
       <CoinIcon size={coinSizes[size]} className="flex-shrink-0" />
     </span>
   );

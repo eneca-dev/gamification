@@ -106,6 +106,7 @@ export function GratitudeWidget({
     <>
       <div
         className="rounded-2xl p-4 h-full flex flex-col"
+        data-onboarding="gratitude-widget"
         style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
       >
         {/* Шапка — аналог AlarmsBanner */}

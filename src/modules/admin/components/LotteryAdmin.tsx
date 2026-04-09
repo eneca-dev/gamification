@@ -131,7 +131,7 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
 
       {/* Текущая лотерея */}
       <section>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4" data-onboarding="lottery-current-section">
           <h2 className="text-lg font-semibold" style={{ color: 'var(--apex-text-primary)' }}>
             Текущая лотерея
           </h2>
