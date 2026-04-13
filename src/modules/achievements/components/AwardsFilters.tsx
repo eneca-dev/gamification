@@ -18,9 +18,10 @@ function getMonthLabel(periodStart: string): string {
 
 interface AwardsFiltersProps {
   awards: CompanyAward[]
+  hideMonthGroups?: boolean
 }
 
-export function AwardsFilters({ awards }: AwardsFiltersProps) {
+export function AwardsFilters({ awards, hideMonthGroups = false }: AwardsFiltersProps) {
   const [area, setArea] = useState<AchievementArea | 'all'>('all')
   const [entityType, setEntityType] = useState<AchievementEntityType | 'all'>('all')
 
@@ -51,7 +52,7 @@ export function AwardsFilters({ awards }: AwardsFiltersProps) {
     { value: 'all', label: 'Все уровни' },
     { value: 'user', label: 'Личные' },
     { value: 'team', label: 'Командные' },
-    { value: 'department', label: 'Отдельские' },
+    { value: 'department', label: 'Отдел' },
   ]
 
   return (
@@ -92,10 +93,10 @@ export function AwardsFilters({ awards }: AwardsFiltersProps) {
       </div>
 
       {/* Результаты */}
-      {grouped.length === 0 ? (
+      {filtered.length === 0 ? (
         <div
-          className="rounded-2xl py-12 text-center"
-          style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
+          className={hideMonthGroups ? 'py-8 text-center' : 'rounded-2xl py-12 text-center'}
+          style={hideMonthGroups ? undefined : { background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
         >
           <div className="text-3xl mb-3">🏆</div>
           <div className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>
@@ -104,6 +105,12 @@ export function AwardsFilters({ awards }: AwardsFiltersProps) {
           <div className="text-[12px] font-medium mt-1" style={{ color: 'var(--text-muted)' }}>
             Достижения появятся здесь, когда кто-то проведёт достаточно дней в топе
           </div>
+        </div>
+      ) : hideMonthGroups ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          {filtered.map((award) => (
+            <CompanyAwardCard key={award.id} award={award} />
+          ))}
         </div>
       ) : (
         <div className="space-y-6">
@@ -115,7 +122,7 @@ export function AwardsFilters({ awards }: AwardsFiltersProps) {
               >
                 {getMonthLabel(monthAwards[0].period_start)}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 {monthAwards.map((award) => (
                   <CompanyAwardCard key={award.id} award={award} />
                 ))}
