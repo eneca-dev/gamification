@@ -1,9 +1,9 @@
-import { createSupabaseServerClient } from '@/config/supabase'
+import { createSupabaseAdminClient } from '@/config/supabase'
 
 import type { Alarm } from './types'
 
 export async function getActiveAlarms(userId: string): Promise<Alarm[]> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
   // Синк данных из WS происходит в 00:00 по Минску — alarm_date = вчера по Минску
   const now = new Date()
   const minskNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Minsk' }))
@@ -25,7 +25,7 @@ export async function getActiveAlarms(userId: string): Promise<Alarm[]> {
 }
 
 export async function getAllAlarms(userId: string): Promise<Alarm[]> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
 
   const { data, error } = await supabase
     .from('alarms')

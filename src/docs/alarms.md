@@ -41,6 +41,7 @@
 ## Actions
 
 - `resolveAlarm(alarmId)` — отмечает аларм как решённый. Использует `wsUserId` для авторизации. Revalidate: `/`
+- `unresolveAlarm(alarmId)` — возвращает аларм в активные. Использует `wsUserId` для авторизации. Revalidate: `/`
 
 ## Queries
 
@@ -65,5 +66,5 @@
 - Расчёт и синк данных из WS — 1 раз в сутки, нет realtime
 - Внутри дня аларм убирается только вручную (чекбокс)
 - Решённый вручную аларм может появиться снова на следующий день, если условие сохраняется
-- RLS: маппинг `auth.uid()` → `ws_users.id` через `profiles.email`
+- RLS включён на таблице, но queries и actions используют admin-клиент (обходят RLS), т.к. доступ контролируется на уровне приложения через `wsUserId` в WHERE. Причина: RLS-политика завязана на `profiles.email`, но не все `ws_users` имеют auth-аккаунт и запись в `profiles`
 - Unique partial index `idx_alarms_unique_per_day` на `(user_id, alarm_type, COALESCE(ws_task_id, ''), alarm_date) WHERE NOT is_resolved` — защита от дублей при параллельном запуске скрипта

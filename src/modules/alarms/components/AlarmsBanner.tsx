@@ -198,20 +198,19 @@ export function AlarmsBanner({ alarms: initialAlarms, showAll = false }: AlarmsB
               </div>
 
               {alarm.ws_task_name && (
-                <div className="text-[12px] font-medium mt-0.5 flex items-center gap-1">
+                <div className="text-[12px] font-medium mt-0.5">
                   {alarm.ws_task_url ? (
                     <a
                       href={alarm.ws_task_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="hover:underline flex items-center gap-1"
+                      className={`inline-flex items-center gap-0.5 ${isResolved ? 'line-through' : 'hover:underline'}`}
                       style={{
                         color: isResolved ? 'var(--apex-text-muted)' : 'var(--apex-text)',
-                        textDecoration: isResolved ? 'line-through' : 'none',
                       }}
                     >
                       {alarm.ws_task_name}
-                      {!isResolved && <ExternalLink size={11} style={{ color: 'var(--apex-text-muted)' }} />}
+                      <ExternalLink size={12} className="shrink-0" style={{ color: 'var(--apex-text-muted)' }} />
                     </a>
                   ) : (
                     <span style={{

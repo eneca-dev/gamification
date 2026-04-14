@@ -1,6 +1,6 @@
 'use server'
 
-import { createSupabaseServerClient } from '@/config/supabase'
+import { createSupabaseAdminClient } from '@/config/supabase'
 import { getCurrentUser } from '@/modules/auth/queries'
 import { revalidatePath } from 'next/cache'
 
@@ -11,7 +11,7 @@ export async function resolveAlarm(alarmId: number): Promise<{ success: true } |
   const wsUserId = user.wsUserId
   if (!wsUserId) return { success: false, error: 'Не привязан к WS' }
 
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
 
   const { error } = await supabase
     .from('alarms')
@@ -32,7 +32,7 @@ export async function unresolveAlarm(alarmId: number): Promise<{ success: true }
   const wsUserId = user.wsUserId
   if (!wsUserId) return { success: false, error: 'Не привязан к WS' }
 
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
 
   const { error } = await supabase
     .from('alarms')
