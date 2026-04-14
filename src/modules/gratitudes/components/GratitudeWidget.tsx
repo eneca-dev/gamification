@@ -99,7 +99,9 @@ export function GratitudeWidget({
   const [showSendModal, setShowSendModal] = useState(false)
 
   const received = myGratitudes.filter((g) => g.recipient_email === currentUserEmail)
-  const hasAny = received.length > 0
+  const sent = myGratitudes.filter((g) => g.sender_email === currentUserEmail)
+  const showReceived = received.length > 0
+  const displayList = showReceived ? received : sent
 
   return (
     <>
@@ -138,7 +140,7 @@ export function GratitudeWidget({
         {/* Подзаголовок с ссылкой — аналог AlarmsBanner */}
         <div className="flex items-center justify-between shrink-0 mt-[10px]">
           <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-            Последние полученные
+            {showReceived ? 'Последние полученные' : 'Последние отправленные'}
           </div>
           <Link href="/gratitudes" className="text-[12px] font-semibold" style={{ color: 'var(--apex-primary)' }}>
             Все благодарности →
@@ -146,10 +148,10 @@ export function GratitudeWidget({
         </div>
 
         {/* Контент */}
-        {hasAny ? (
+        {displayList.length > 0 ? (
           <div className="space-y-2 mt-1">
-            {received.slice(0, 3).map((g) => (
-              <GratitudeCard key={g.id} item={g} isReceived />
+            {displayList.slice(0, 3).map((g) => (
+              <GratitudeCard key={g.id} item={g} isReceived={showReceived} />
             ))}
           </div>
         ) : (
