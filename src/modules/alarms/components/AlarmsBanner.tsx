@@ -2,51 +2,48 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, Bell, Clock, Info, Check, ExternalLink, Undo2, CircleCheckBig } from 'lucide-react'
+import { Bell, Check, ExternalLink, Undo2, CircleCheckBig } from 'lucide-react'
 import { resolveAlarm, unresolveAlarm } from '@/modules/alarms/index.client'
 
-import type { Alarm, AlarmSeverity } from '../types'
+import type { Alarm } from '../types'
 
 interface AlarmsBannerProps {
   alarms: Alarm[]
   showAll?: boolean
 }
 
-const SEVERITY_ORDER: Record<AlarmSeverity, number> = { critical: 0, warning: 1, info: 2 }
+const SEVERITY_ORDER: Record<string, number> = { critical: 0, warning: 1, info: 2 }
 
-const SEVERITY_CONFIG: Record<AlarmSeverity, {
-  bg: string
-  border: string
-  iconBg: string
-  iconColor: string
-  titleColor: string
-  icon: typeof AlertTriangle
+const ALARM_TYPE_CONFIG: Record<string, {
+  level: string
+  badgeBg: string
+  badgeColor: string
+  badgeBorder: string
+  rowBg: string
+  rowBorder: string
+  actionText: string
 }> = {
-  critical: {
-    bg: 'var(--apex-error-bg)',
-    border: '1px solid rgba(220, 38, 38, 0.2)',
-    iconBg: 'var(--apex-error-bg)',
-    iconColor: 'var(--apex-error-text)',
-    titleColor: 'var(--apex-error-text)',
-    icon: AlertTriangle,
+  label_change_soon: {
+    level: 'L3',
+    badgeBg: 'var(--teal-100)',
+    badgeColor: 'var(--apex-primary)',
+    badgeBorder: '1px solid rgba(var(--apex-primary-rgb), 0.2)',
+    rowBg: 'rgba(var(--apex-primary-rgb), 0.04)',
+    rowBorder: '1px solid rgba(var(--apex-primary-rgb), 0.1)',
+    actionText: 'Смените метку',
   },
-  warning: {
-    bg: 'var(--apex-warning-bg)',
-    border: '1px solid rgba(217, 119, 6, 0.2)',
-    iconBg: 'var(--apex-warning-bg)',
-    iconColor: 'var(--apex-warning-text)',
-    titleColor: 'var(--apex-warning-dark)',
-    icon: Clock,
-  },
-  info: {
-    bg: 'var(--apex-info-bg)',
-    border: '1px solid rgba(37, 99, 235, 0.2)',
-    iconBg: 'var(--apex-info-bg)',
-    iconColor: 'var(--apex-info-text)',
-    titleColor: 'var(--apex-info-text)',
-    icon: Info,
+  team_label_change_soon: {
+    level: 'L2',
+    badgeBg: 'var(--orange-50)',
+    badgeColor: 'var(--orange-500)',
+    badgeBorder: '1px solid rgba(var(--orange-500-rgb), 0.2)',
+    rowBg: 'rgba(var(--orange-500-rgb), 0.04)',
+    rowBorder: '1px solid rgba(var(--orange-500-rgb), 0.1)',
+    actionText: 'Проверьте метку L3',
   },
 }
+
+const DEFAULT_TYPE_CONFIG = ALARM_TYPE_CONFIG['label_change_soon']
 
 const RESOLVED_STYLE = {
   bg: 'var(--apex-surface)',
@@ -166,89 +163,139 @@ export function AlarmsBanner({ alarms: initialAlarms, showAll = false }: AlarmsB
       <div className={`space-y-2 ${showAll ? '' : 'flex-1 flex flex-col justify-end mt-1'}`}>
       {visible.map((alarm) => {
         const isResolved = resolvedIds.has(alarm.id)
-        const config = SEVERITY_CONFIG[alarm.severity]
-        const Icon = isResolved ? Check : config.icon
+        const config = ALARM_TYPE_CONFIG[alarm.alarm_type] ?? DEFAULT_TYPE_CONFIG
+        const d = alarm.details as Record<string, unknown>
+        const budgetPercent = d.budget_percent as number | undefined
+        const nextCheckpoint = d.next_checkpoint as number | undefined
+        const assigneeName = d.assignee_name as string | undefined
 
         return (
           <div
             key={alarm.id}
-            className="flex items-start gap-3 p-3 rounded-xl transition-all duration-300"
+            className={`flex flex-col gap-1 px-2.5 rounded-lg transition-all duration-300 ${showAll ? 'py-1.5' : 'py-2.5'}`}
             style={{
-              background: isResolved ? RESOLVED_STYLE.bg : config.bg,
-              border: isResolved ? RESOLVED_STYLE.border : config.border,
+              background: isResolved ? RESOLVED_STYLE.bg : config.rowBg,
+              border: isResolved ? RESOLVED_STYLE.border : config.rowBorder,
               opacity: isResolved ? 0.55 : pendingIds.has(alarm.id) ? 0.7 : 1,
             }}
           >
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: isResolved ? RESOLVED_STYLE.iconBg : config.iconBg }}
-            >
-              <Icon size={15} style={{ color: isResolved ? 'var(--apex-text-muted)' : config.iconColor }} />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div
-                className="text-[13px] font-semibold"
+            {/* Первая строка: бейдж + действие + имя + проценты + кнопка */}
+            <div className="flex items-center gap-2">
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0"
                 style={{
-                  color: isResolved ? 'var(--apex-text-muted)' : config.titleColor,
+                  background: isResolved ? RESOLVED_STYLE.pillBg : config.badgeBg,
+                  color: isResolved ? RESOLVED_STYLE.pillColor : config.badgeColor,
+                  border: isResolved ? RESOLVED_STYLE.border : config.badgeBorder,
+                }}
+              >
+                {config.level}
+              </span>
+
+              <span
+                className="text-[11px] font-semibold shrink-0"
+                style={{
+                  color: isResolved ? 'var(--apex-text-muted)' : config.badgeColor,
                   textDecoration: isResolved ? 'line-through' : 'none',
                 }}
               >
-                {alarm.title}
-              </div>
+                {config.actionText}
+              </span>
 
-              {alarm.ws_task_name && (
-                <div className="text-[12px] font-medium mt-0.5">
-                  {alarm.ws_task_url ? (
+              {alarm.alarm_type === 'team_label_change_soon' && assigneeName && (
+                <span
+                  className="px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0"
+                  style={{
+                    background: isResolved ? RESOLVED_STYLE.pillBg : 'var(--tag-teal-bg)',
+                    color: isResolved ? RESOLVED_STYLE.pillColor : 'var(--tag-teal-text)',
+                  }}
+                >
+                  {assigneeName}
+                </span>
+              )}
+
+              {budgetPercent !== undefined && nextCheckpoint !== undefined && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <span
+                    className="px-1.5 py-0.5 rounded text-[10px] font-semibold cursor-default"
+                    title="Текущий расход бюджета задачи"
+                    style={{
+                      background: isResolved ? RESOLVED_STYLE.pillBg : 'var(--apex-warning-muted)',
+                      color: isResolved ? RESOLVED_STYLE.pillColor : 'var(--apex-warning-dark)',
+                    }}
+                  >
+                    {budgetPercent}%
+                  </span>
+                  <span className="text-[10px]" style={{ color: 'var(--apex-text-muted)' }}>→</span>
+                  <span
+                    className="px-1.5 py-0.5 rounded text-[10px] font-semibold cursor-default"
+                    title="Ближайший чекпоинт — нужно сменить метку до его достижения"
+                    style={{
+                      background: isResolved ? RESOLVED_STYLE.pillBg : 'var(--apex-error-bg)',
+                      color: isResolved ? RESOLVED_STYLE.pillColor : 'var(--apex-error-text)',
+                    }}
+                  >
+                    {nextCheckpoint}%
+                  </span>
+                </div>
+              )}
+
+            </div>
+
+            {/* Вторая строка: название задачи + кнопка */}
+            <div className="flex items-end gap-2 pl-[30px]">
+              <div className="flex-1 min-w-0">
+                {alarm.ws_task_name && (
+                  alarm.ws_task_url ? (
                     <a
                       href={alarm.ws_task_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`inline-flex items-center gap-0.5 ${isResolved ? 'line-through' : 'hover:underline'}`}
+                      className={`text-[11px] inline items-start gap-1 ${isResolved ? 'line-through' : 'hover:underline'}`}
+                      style={{ color: isResolved ? 'var(--apex-text-muted)' : 'var(--apex-text)' }}
+                    >
+                      <span className="break-words">{alarm.ws_task_name}</span>
+                      {' '}
+                      <ExternalLink size={9} className="inline shrink-0" style={{ marginTop: '-2px' }} />
+                    </a>
+                  ) : (
+                    <span
+                      className="text-[11px] break-words"
                       style={{
                         color: isResolved ? 'var(--apex-text-muted)' : 'var(--apex-text)',
+                        textDecoration: isResolved ? 'line-through' : 'none',
                       }}
                     >
                       {alarm.ws_task_name}
-                      <ExternalLink size={12} className="shrink-0" style={{ color: 'var(--apex-text-muted)' }} />
-                    </a>
-                  ) : (
-                    <span style={{
-                      color: isResolved ? 'var(--apex-text-muted)' : 'var(--apex-text)',
-                      textDecoration: isResolved ? 'line-through' : 'none',
-                    }}>
-                      {alarm.ws_task_name}
                     </span>
-                  )}
-                </div>
+                  )
+                )}
+              </div>
+
+              {isResolved ? (
+                <button
+                  type="button"
+                  onClick={() => handleUnresolve(alarm.id)}
+                  disabled={pendingIds.has(alarm.id)}
+                  className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border transition-colors hover:bg-[var(--apex-warning-bg)]"
+                  style={{ borderColor: 'var(--apex-border)' }}
+                  title="Вернуть в активные"
+                >
+                  <Undo2 size={11} style={{ color: 'var(--apex-text-muted)' }} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleResolve(alarm.id)}
+                  disabled={pendingIds.has(alarm.id)}
+                  className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border transition-colors hover:bg-[var(--apex-success-bg)]"
+                  style={{ borderColor: 'var(--apex-border)' }}
+                  title="Отметить как выполненное"
+                >
+                  <Check size={12} style={{ color: 'var(--apex-text-muted)' }} />
+                </button>
               )}
-
-              <AlarmDetails alarm={alarm} isResolved={isResolved} />
             </div>
-
-            {isResolved ? (
-              <button
-                type="button"
-                onClick={() => handleUnresolve(alarm.id)}
-                disabled={pendingIds.has(alarm.id)}
-                className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0 border transition-colors hover:bg-[var(--apex-warning-bg)]"
-                style={{ borderColor: 'var(--apex-border)' }}
-                title="Вернуть в активные"
-              >
-                <Undo2 size={13} style={{ color: 'var(--apex-text-muted)' }} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => handleResolve(alarm.id)}
-                disabled={pendingIds.has(alarm.id)}
-                className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0 border transition-colors hover:bg-[var(--apex-success-bg)]"
-                style={{ borderColor: 'var(--apex-border)' }}
-                title="Отметить как выполненное"
-              >
-                <Check size={14} style={{ color: 'var(--apex-text-muted)' }} />
-              </button>
-            )}
           </div>
         )
       })}
@@ -258,47 +305,4 @@ export function AlarmsBanner({ alarms: initialAlarms, showAll = false }: AlarmsB
   )
 }
 
-function AlarmDetails({ alarm, isResolved }: { alarm: Alarm; isResolved: boolean }) {
-  const d = alarm.details as Record<string, unknown>
-  const budgetPercent = d.budget_percent as number | undefined
-  const nextCheckpoint = d.next_checkpoint as number | undefined
-  const assigneeName = d.assignee_name as string | undefined
-
-  if (budgetPercent === undefined || nextCheckpoint === undefined) return null
-
-  return (
-    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-      {alarm.alarm_type === 'team_label_change_soon' && assigneeName && (
-        <span
-          className="px-2 py-0.5 rounded-full text-[10px] font-medium"
-          style={{
-            background: isResolved ? RESOLVED_STYLE.pillBg : 'var(--tag-teal-bg)',
-            color: isResolved ? RESOLVED_STYLE.pillColor : 'var(--tag-teal-text)',
-          }}
-        >
-          {assigneeName}
-        </span>
-      )}
-      <span
-        className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-        style={{
-          background: isResolved ? RESOLVED_STYLE.pillBg : 'var(--apex-warning-muted)',
-          color: isResolved ? RESOLVED_STYLE.pillColor : 'var(--apex-warning-dark)',
-        }}
-      >
-        бюджет {budgetPercent}%
-      </span>
-      <span className="text-[10px]" style={{ color: 'var(--apex-text-muted)' }}>→</span>
-      <span
-        className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-        style={{
-          background: isResolved ? RESOLVED_STYLE.pillBg : 'var(--apex-error-bg)',
-          color: isResolved ? RESOLVED_STYLE.pillColor : 'var(--apex-error-text)',
-        }}
-      >
-        чекпоинт {nextCheckpoint}%
-      </span>
-    </div>
-  )
-}
 

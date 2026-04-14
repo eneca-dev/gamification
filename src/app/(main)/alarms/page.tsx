@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Bell } from "lucide-react";
 import { getCurrentUser } from "@/modules/auth/queries";
 import { createSupabaseServerClient } from "@/config/supabase";
-import { getAllAlarms } from "@/modules/alarms";
+import { getActiveAlarms } from "@/modules/alarms";
 import { AlarmsBanner } from "@/modules/alarms/components/AlarmsBanner";
 
 export default async function AlarmsPage() {
@@ -21,7 +21,7 @@ export default async function AlarmsPage() {
     wsUserId = wsUser?.id ?? null;
   }
 
-  const alarms = wsUserId ? await getAllAlarms(wsUserId) : [];
+  const alarms = wsUserId ? await getActiveAlarms(wsUserId) : [];
 
   return (
     <div className="space-y-6">
@@ -43,7 +43,7 @@ export default async function AlarmsPage() {
             <div className="flex items-center gap-2">
               <Bell size={18} style={{ color: "var(--apex-warning-text)" }} fill="var(--apex-warning-text)" />
               <h1 className="text-[18px] font-bold" style={{ color: "var(--apex-text)" }}>
-                Все напоминания
+                Все напоминания за сегодня
               </h1>
             </div>
             <span className="text-[12px] font-semibold" style={{ color: "var(--apex-text-muted)" }}>

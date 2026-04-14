@@ -35,7 +35,6 @@
 ## Типы
 
 - `AlarmType`: `label_change_soon` | `team_label_change_soon`
-- `AlarmSeverity`: `info` | `warning` | `critical`
 - `Alarm`: строка таблицы `alarms`
 
 ## Actions
@@ -45,8 +44,7 @@
 
 ## Queries
 
-- `getActiveAlarms(wsUserId)` — алармы за вчера по Минску (alarm_date = вчера, т.к. синк в 00:00). Параметр — `ws_users.id`, не `auth.users.id`
-- `getAllAlarms(wsUserId)` — все алармы пользователя за всё время, сортировка по дате desc
+- `getActiveAlarms(wsUserId)` — алармы за вчера по Минску (alarm_date = вчера, т.к. синк в 00:00). Параметр — `ws_users.id`, не `auth.users.id`. Используется и на дашборде, и на странице `/alarms`
 
 ## UI
 
@@ -55,11 +53,12 @@
 - Шапка виджета: иконка Bell (filled, warning), заголовок «Напоминания», счётчик resolved/total
 - Подзаголовок «Напоминания на сегодня» + ссылка «Все напоминания →» на одной строке
 - Пустое состояние: иконка CircleCheckBig, текст «Нет напоминаний на сегодня»
-- Каждый аларм: иконка severity, title, ссылка на задачу в WS, пиллы (бюджет/чекпоинт), кнопка resolve/unresolve
+- Стилизация по типу аларма (alarm_type), не по severity: `label_change_soon` — бейдж L3 (teal), `team_label_change_soon` — бейдж L2 (orange) с именем исполнителя
+- Двухстрочная раскладка: первая строка — бейдж уровня + действие + имя + проценты бюджета/чекпоинта; вторая — название задачи WS + кнопка resolve/unresolve
 - На дашборде сворачивание при > 3 алармов
 - Resolved-алармы: серый фон, opacity 0.55, line-through на тексте, пиллы серые
 - Optimistic update при resolve/unresolve с per-item pending state
-- Страница `/alarms`: шапка с Bell + «Все напоминания» + счётчик resolved/total, передаёт `showAll` в AlarmsBanner
+- Страница `/alarms`: шапка с Bell + «Все напоминания за сегодня» + счётчик resolved/total, показывает только активные алармы (getActiveAlarms)
 
 ## Ограничения
 
