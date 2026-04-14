@@ -31,6 +31,7 @@ import { getMyGratitudesNew, getSenderQuota, getGratitudeRecipients, getUserBala
 import { getUserOrders } from "@/modules/shop";
 import { getPendingResets } from "@/modules/streak-shield";
 import { getMasterPlannerPanel } from "@/modules/master-planner";
+import { MasterPlannerPanel } from "@/modules/master-planner/components/MasterPlannerPanel";
 import { GratitudeWidget } from "@/modules/gratitudes/components/GratitudeWidget";
 import type { CalendarDay, CalendarDayStatus, RedReason, StreakPanelData } from "@/modules/streak-panel";
 
@@ -261,8 +262,21 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="animate-fade-in-up">
-        <StreakPanel streakData={streakPanelData} masterPlannerData={masterPlannerData ?? undefined} pendingResets={pendingResets} userBalance={userBalance} />
+      <div className="flex gap-5 animate-fade-in-up">
+        <div className="shrink-0">
+          <StreakPanel streakData={streakPanelData} pendingResets={pendingResets} userBalance={userBalance} />
+        </div>
+        {masterPlannerData && (
+          <div
+            className="flex-1 min-w-0 rounded-2xl p-5"
+            style={{
+              background: "var(--apex-surface)",
+              border: "1px solid var(--apex-border)",
+            }}
+          >
+            <MasterPlannerPanel data={masterPlannerData} />
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-1">

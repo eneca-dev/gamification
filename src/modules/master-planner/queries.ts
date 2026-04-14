@@ -109,14 +109,52 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
   }
 }
 
+// ─── Все pending-задачи (для страницы истории) ─────────────────────────────
+
+export async function getAllPendingTasks(
+  userId: string,
+  level?: 'L3' | 'L2',
+): Promise<PendingBudgetTask[]> {
+  const supabase = await createSupabaseServerClient()
+
+  let query = supabase
+    .from('view_budget_pending_status')
+    .select('level, task_name, ws_project_id, ws_l1_id, ws_task_l3_id, ws_task_l2_id, days_remaining')
+    .eq('user_id', userId)
+    .eq('status', 'pending')
+    .order('eligible_date', { ascending: true })
+
+  if (level) {
+    query = query.eq('level', level)
+  }
+
+  const { data: rows } = await query
+
+  return (rows ?? []).map((r) => ({
+    level: r.level as 'L3' | 'L2',
+    taskName: r.task_name ?? '',
+    taskUrl: buildTaskUrl(r.ws_project_id, r.ws_l1_id, r.ws_task_l3_id ?? r.ws_task_l2_id),
+    daysRemaining: r.days_remaining ?? 0,
+  }))
+}
+
 // ─── Страница истории ───────────────────────────────────────────────────────
 
 const PAGE_SIZE = 20
+
+export type HistoryStatusFilter = 'ok' | 'exceeded' | 'revoked'
+
+const STATUS_FILTER_PATTERNS: Record<HistoryStatusFilter, string> = {
+  ok: 'budget_ok%',
+  exceeded: 'budget_exceeded%',
+  revoked: 'budget_revoked%',
+}
 
 export async function getMasterPlannerHistory(
   userId: string,
   page: number,
   level?: 'L3' | 'L2',
+  status?: HistoryStatusFilter,
 ): Promise<MasterPlannerHistoryData> {
   const supabase = await createSupabaseServerClient()
   const offset = (page - 1) * PAGE_SIZE
@@ -132,6 +170,9 @@ export async function getMasterPlannerHistory(
 
   if (level) {
     query = query.eq('level', level)
+  }
+  if (status) {
+    query = query.like('event_type', STATUS_FILTER_PATTERNS[status])
   }
 
   const { data: rows, count } = await query
@@ -152,6 +193,9 @@ export async function getMasterPlannerHistory(
 
     if (level) {
       tailQuery = tailQuery.eq('level', level)
+    }
+    if (status) {
+      tailQuery = tailQuery.like('event_type', STATUS_FILTER_PATTERNS[status])
     }
 
     const { data: tailRows } = await tailQuery

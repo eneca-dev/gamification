@@ -5,8 +5,6 @@ import { Trophy } from "lucide-react";
 import type { CalendarDayStatus, CalendarDay, RedReason, StreakMilestone, StreakPanelData } from "@/modules/streak-panel";
 import { StreakShieldAlert } from "@/modules/streak-shield/components/StreakShieldAlert";
 import type { PendingReset } from "@/modules/streak-shield/types";
-import { MasterPlannerPanel } from "@/modules/master-planner/components/MasterPlannerPanel";
-import type { MasterPlannerPanelData } from "@/modules/master-planner";
 
 // ─── Layout constants ────────────────────────────────────────────────────────
 const CELL = 18;
@@ -179,13 +177,35 @@ function CompactStreakRow({
 
   return (
     <div>
-      <div
-        className="text-[10px] font-semibold uppercase tracking-wider mb-1.5"
-        style={{ color: "var(--apex-text-muted)" }}
-      >
-        {label}
+      <div className="flex items-center justify-between mb-1.5">
+        <div
+          className="text-[10px] font-semibold uppercase tracking-wider"
+          style={{ color: "var(--apex-text-muted)" }}
+        >
+          {label}
+        </div>
+        <div className="flex gap-1">
+          {milestones.map((m) => (
+            <div
+              key={m.days}
+              className="flex items-center px-1.5 py-0.5 rounded-full"
+              style={{
+                background: m.reached ? reachedBg : "var(--apex-bg)",
+                border: `1px solid ${reachedBorder}`,
+                opacity: m.reached ? 1 : 0.55,
+              }}
+            >
+              <span
+                className="text-[9px] font-semibold"
+                style={{ color: m.reached ? accent : "var(--apex-text-muted)" }}
+              >
+                {m.reached ? "✓ " : ""}{m.days}д
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2">
         <span className="text-[20px] font-bold leading-none shrink-0" style={{ color: "var(--apex-text)" }}>
           {currentDays}
           <span className="text-[11px] font-medium ml-0.5" style={{ color: "var(--apex-text-secondary)" }}>д</span>
@@ -204,26 +224,6 @@ function CompactStreakRow({
           </>
         )}
       </div>
-      <div className="flex gap-1 flex-wrap">
-        {milestones.map((m) => (
-          <div
-            key={m.days}
-            className="flex items-center px-1.5 py-0.5 rounded-full"
-            style={{
-              background: m.reached ? reachedBg : "var(--apex-bg)",
-              border: `1px solid ${reachedBorder}`,
-              opacity: m.reached ? 1 : 0.55,
-            }}
-          >
-            <span
-              className="text-[9px] font-semibold"
-              style={{ color: m.reached ? accent : "var(--apex-text-muted)" }}
-            >
-              {m.reached ? "✓ " : ""}{m.days}д
-            </span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -232,12 +232,11 @@ function CompactStreakRow({
 
 interface StreakPanelProps {
   streakData: StreakPanelData;
-  masterPlannerData?: MasterPlannerPanelData;
   pendingResets?: PendingReset[];
   userBalance?: number;
 }
 
-export function StreakPanel({ streakData, masterPlannerData, pendingResets = [], userBalance = 0 }: StreakPanelProps) {
+export function StreakPanel({ streakData, pendingResets = [], userBalance = 0 }: StreakPanelProps) {
   const { calendarDays, completedCycles, ws, revit } = streakData;
   const { weeks, groups } = buildWeeksAndMonths(calendarDays);
   const DAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -255,13 +254,13 @@ export function StreakPanel({ streakData, masterPlannerData, pendingResets = [],
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <div
-            className="w-6 h-6 rounded-lg flex items-center justify-center"
+            className="w-6 h-6 rounded-lg flex items-center justify-center relative -top-[7px]"
             style={{ background: "var(--apex-success-bg)" }}
           >
             <Trophy size={14} style={{ color: "var(--apex-primary)" }} />
           </div>
           <span
-            className="text-[12px] font-semibold uppercase tracking-wider"
+            className="text-[12px] font-semibold uppercase tracking-wider relative -top-[7px]"
             style={{ color: "var(--apex-text-muted)" }}
           >
             Worksection и автоматизации
@@ -298,10 +297,8 @@ export function StreakPanel({ streakData, masterPlannerData, pendingResets = [],
         </div>
       )}
 
-      {/* Main layout: grid+streaks left, quests right */}
-      <div className="flex gap-6">
-        {/* Left: grid + legend + streaks */}
-        <div className="shrink-0">
+      {/* Calendar grid + streaks */}
+      <div>
           {/* Month labels */}
           <div className="flex mb-1" style={{ paddingLeft: headerOffset }}>
             {groups.map((group, gIdx) => (
@@ -460,17 +457,6 @@ export function StreakPanel({ streakData, masterPlannerData, pendingResets = [],
               variant="orange"
             />
           </div>
-        </div>
-
-        {/* Right: master planner */}
-        {masterPlannerData && (
-          <div
-            className="flex-1 min-w-0 pl-6"
-            style={{ borderLeft: "1px solid var(--apex-border)" }}
-          >
-            <MasterPlannerPanel data={masterPlannerData} />
-          </div>
-        )}
       </div>
     </div>
   );

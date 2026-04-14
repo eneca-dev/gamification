@@ -10,9 +10,9 @@
 
 Выходные/праздники/переносы: Сб/Вс → `gray` по умолчанию. Даты из `calendar_holidays` → `gray` (праздник = выходной). Даты из `calendar_workdays` → рабочий день (перенос, суббота = рабочая). Приоритет: `calendar_workdays` перекрывает выходной, `calendar_holidays` перекрывает будний.
 
-Под гридом — два стрика: Worksection (из `ws_user_streaks`) и Автоматизации (из `revit_user_streaks`). Milestones берутся из `gamification_event_types`.
+Под гридом — два стрика: Worksection (из `ws_user_streaks`) и Автоматизации (из `revit_user_streaks`). Milestones отображаются inline рядом с лейблом стрика. Данные milestones берутся из `gamification_event_types`.
 
-Правая колонка — блок «Мастер планирования»: два стрика по бюджету задач (L3/L2), pending-задачи, последние события. Данные из модуля `master-planner` (см. `src/docs/master-planner.md`).
+На дашборде StreakPanel и MasterPlannerPanel располагаются рядом в flex-контейнере (не вложены друг в друга). MasterPlannerPanel — отдельный модуль (см. `src/docs/master-planner.md`).
 
 ## Зависимости
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, XCircle, Trophy } from "lucide-react";
+import { CheckCircle2, XCircle, Trophy, ExternalLink } from "lucide-react";
 
 import type { MasterPlannerEvent } from "../types";
 
@@ -48,13 +48,6 @@ function getEventStyle(type: string): EventStyle {
       label: "Бонус отозван",
     };
   }
-  if (type.includes("reset")) {
-    return {
-      bg: "var(--apex-bg)",
-      icon: <XCircle size={15} style={{ color: "var(--apex-text-muted)" }} />,
-      label: "Серия сброшена",
-    };
-  }
   return { bg: "transparent", icon: null, label: type };
 }
 
@@ -71,7 +64,7 @@ function computePositions(events: MasterPlannerEvent[], startPosition: number): 
     if (type.startsWith("budget_ok")) {
       pos++;
       positions[i] = String(pos);
-    } else if (type.startsWith("budget_exceeded") || type.includes("reset")) {
+    } else if (type.startsWith("budget_exceeded")) {
       pos = 0;
       positions[i] = "Сброс";
     } else if (type.startsWith("budget_revoked")) {
@@ -98,6 +91,19 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
 
   return (
     <div className="space-y-0.5">
+      {/* Заголовки колонок */}
+      <div
+        className="flex items-center gap-3 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider"
+        style={{ color: "var(--apex-text-muted)", borderBottom: "1px solid var(--apex-border)" }}
+      >
+        <div className="w-8 shrink-0" />
+        <span className="shrink-0 w-6" />
+        <div className="flex-1 min-w-0">Задача</div>
+        <span className="shrink-0 w-14 text-center">Серия</span>
+        <span className="shrink-0 w-14 text-right">Коины</span>
+        <span className="shrink-0 w-12 text-right">Дата</span>
+      </div>
+
       {events.map((evt, i) => {
         const style = getEventStyle(evt.type);
         const dateFormatted = new Date(evt.date + "T00:00:00").toLocaleDateString("ru-RU", {
@@ -138,10 +144,11 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
                       href={evt.taskUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="hover:underline"
+                      className="hover:underline inline-flex items-center gap-1"
                       style={{ color: "var(--apex-primary)" }}
                     >
                       {evt.taskName}
+                      <ExternalLink size={10} className="shrink-0" />
                     </a>
                   ) : (
                     evt.taskName
@@ -153,11 +160,6 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
               {evt.maxTime != null && evt.actualTime != null && (
                 <div className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>
                   {evt.actualTime} / {evt.maxTime} ч
-                </div>
-              )}
-              {evt.streakWas != null && (
-                <div className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>
-                  было {evt.streakWas} задач
                 </div>
               )}
             </div>
@@ -181,7 +183,7 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
                     : "var(--apex-text-muted)",
               }}
             >
-              {evt.coins != null ? (evt.coins > 0 ? `+${evt.coins}` : evt.coins) : "—"}
+              {evt.coins != null && evt.coins > 0 ? `+${evt.coins}` : evt.coins ?? 0}
             </span>
 
             {/* Дата */}
