@@ -60,7 +60,7 @@ export function Sidebar({ user, balance, showDevSwitcher }: SidebarProps) {
         style={{ borderBottom: '1px solid var(--apex-border)' }}
       >
         <div className="flex items-center gap-1.5">
-          <img src="/logo.svg" width={32} height={32} alt="" className="flex-shrink-0" />
+          <img src="/logo.svg" width={40} height={40} alt="" className="flex-shrink-0" />
           <div className="font-bold text-[14px]" style={{ color: 'var(--apex-text)' }}>
             Геймификация
           </div>
