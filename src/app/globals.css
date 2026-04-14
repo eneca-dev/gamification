@@ -266,3 +266,72 @@ button, a[role="button"] { border-radius: 9999px; }
   font-family: 'Nunito', sans-serif !important;
   background: var(--apex-surface) !important;
 }
+
+/* ── Help content (markdown) ─────────────────────────────── */
+.help-content h2 {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-top: 20px;
+  margin-bottom: 6px;
+}
+.help-content h2:first-child {
+  margin-top: 0;
+}
+.help-content h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 14px;
+  margin-bottom: 4px;
+}
+.help-content p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.help-content strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+.help-content ul,
+.help-content ol {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  padding-left: 18px;
+}
+.help-content li {
+  margin-bottom: 2px;
+}
+.help-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+.help-content th {
+  text-align: left;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 6px 10px;
+  border-bottom: 2px solid var(--border);
+}
+.help-content td {
+  padding: 6px 10px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+.help-content tr:last-child td {
+  border-bottom: none;
+}
+.help-content hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
