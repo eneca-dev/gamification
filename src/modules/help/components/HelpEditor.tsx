@@ -16,7 +16,6 @@ interface HelpEditorProps {
     content: string
     folder: string
     folder_label: string
-    sort_order: number
     is_published: boolean
   } | null
   isNew: boolean
@@ -28,13 +27,13 @@ export function HelpEditor({ article, isNew }: HelpEditorProps) {
   const [showPreview, setShowPreview] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const [slug, setSlug] = useState(article?.slug ?? '')
   const [title, setTitle] = useState(article?.title ?? '')
   const [content, setContent] = useState(article?.content ?? '')
   const [folder, setFolder] = useState(article?.folder ?? 'general')
   const [folderLabel, setFolderLabel] = useState(article?.folder_label ?? 'Общее')
-  const [sortOrder, setSortOrder] = useState(article?.sort_order ?? 0)
   const [isPublished, setIsPublished] = useState(article?.is_published ?? true)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -72,7 +71,6 @@ export function HelpEditor({ article, isNew }: HelpEditorProps) {
         content,
         folder,
         folder_label: folderLabel,
-        sort_order: sortOrder,
         is_published: isPublished,
       }
 
@@ -93,8 +91,6 @@ export function HelpEditor({ article, isNew }: HelpEditorProps) {
   }
 
   function handleDelete() {
-    if (!confirm('Удалить статью? Это действие нельзя отменить.')) return
-
     startTransition(async () => {
       const result = await deleteHelpArticle(slug)
       if (!result.success) {
@@ -103,6 +99,7 @@ export function HelpEditor({ article, isNew }: HelpEditorProps) {
         router.push('/admin/help')
       }
     })
+    setShowDeleteConfirm(false)
   }
 
   return (
@@ -120,7 +117,7 @@ export function HelpEditor({ article, isNew }: HelpEditorProps) {
         <div className="flex items-center gap-2">
           {!isNew && (
             <button
-              onClick={handleDelete}
+              onClick={() => setShowDeleteConfirm(true)}
               disabled={isPending}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors"
               style={{
@@ -223,39 +220,18 @@ export function HelpEditor({ article, isNew }: HelpEditorProps) {
             ))}
           </select>
         </div>
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="block text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
-              Порядок
-            </label>
+        <div className="flex items-end pb-1">
+          <label className="flex items-center gap-2 cursor-pointer">
             <input
-              type="number"
-              value={sortOrder}
-              onChange={(e) => {
-                const val = parseInt(e.target.value, 10)
-                setSortOrder(Number.isNaN(val) ? 0 : val)
-              }}
-              className="w-full px-3 py-2 rounded-xl text-[13px] outline-none"
-              style={{
-                background: 'var(--surface-elevated)',
-                border: '1px solid var(--border)',
-                color: 'var(--text-primary)',
-              }}
+              type="checkbox"
+              checked={isPublished}
+              onChange={(e) => setIsPublished(e.target.checked)}
+              className="w-4 h-4 rounded"
             />
-          </div>
-          <div className="flex items-end pb-1">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isPublished}
-                onChange={(e) => setIsPublished(e.target.checked)}
-                className="w-4 h-4 rounded"
-              />
-              <span className="text-[12px] font-medium" style={{ color: 'var(--text-secondary)' }}>
-                Опубликована
-              </span>
-            </label>
-          </div>
+            <span className="text-[12px] font-medium" style={{ color: 'var(--text-secondary)' }}>
+              Опубликована
+            </span>
+          </label>
         </div>
       </div>
 
@@ -282,6 +258,49 @@ export function HelpEditor({ article, isNew }: HelpEditorProps) {
           />
         )}
       </div>
+
+      {/* Модалка подтверждения удаления */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+        >
+          <div
+            className="rounded-2xl p-6 w-full max-w-sm"
+            style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Trash2 size={18} style={{ color: 'var(--apex-danger)' }} />
+              <h3 className="text-[15px] font-extrabold" style={{ color: 'var(--text-primary)' }}>
+                Удалить статью?
+              </h3>
+            </div>
+            <p className="text-[13px] font-medium mb-5" style={{ color: 'var(--text-secondary)' }}>
+              Статья «{title}» будет удалена безвозвратно.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 rounded-full text-[12px] font-bold transition-colors"
+                style={{
+                  background: 'var(--surface)',
+                  color: 'var(--text-secondary)',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isPending}
+                className="px-4 py-2 rounded-full text-[12px] font-bold text-white transition-colors disabled:opacity-50"
+                style={{ background: 'var(--apex-danger)' }}
+              >
+                {isPending ? 'Удаление…' : 'Удалить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

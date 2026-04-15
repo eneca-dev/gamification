@@ -17,12 +17,14 @@ import { adminEventsTour } from '../tours/admin-events'
 import { adminCalendarTour } from '../tours/admin-calendar'
 import { adminAchievementsTour } from '../tours/admin-achievements'
 import { adminLotteryTour } from '../tours/admin-lottery'
+import { helpTour } from '../tours/help'
 import type { OnboardingStep, OnboardingTour } from '../types'
 
 const TOURS: OnboardingTour[] = [
   dashboardTour, achievementsTour, storeTour, activityTour,
   adminTour, adminUsersTour, adminProductsTour, adminOrdersTour,
   adminEventsTour, adminCalendarTour, adminAchievementsTour, adminLotteryTour,
+  helpTour,
 ]
 
 /** Маппинг pathname → pageSlug */
@@ -39,6 +41,7 @@ const PAGE_SLUG_MAP: Record<string, string> = {
   '/admin/calendar': 'admin-calendar',
   '/admin/achievements': 'admin-achievements',
   '/admin/lottery': 'admin-lottery',
+  '/help': 'help',
 }
 
 function getPageSlug(pathname: string): string | null {

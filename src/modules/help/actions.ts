@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
-import { createSupabaseServerClient } from '@/config/supabase'
+import { createSupabaseAdminClient } from '@/config/supabase'
 import { checkIsAdmin } from '@/modules/admin/checkIsAdmin'
 
 const RESERVED_SLUGS = ['new']
@@ -13,7 +13,6 @@ interface UpdateArticleInput {
   content: string
   folder: string
   folder_label: string
-  sort_order: number
   is_published: boolean
 }
 
@@ -21,7 +20,7 @@ export async function updateHelpArticle(input: UpdateArticleInput) {
   const isAdmin = await checkIsAdmin()
   if (!isAdmin) return { success: false as const, error: 'Нет доступа' }
 
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
 
   const { error, data } = await supabase
     .from('help_articles')
@@ -30,7 +29,6 @@ export async function updateHelpArticle(input: UpdateArticleInput) {
       content: input.content,
       folder: input.folder,
       folder_label: input.folder_label,
-      sort_order: input.sort_order,
       is_published: input.is_published,
     })
     .eq('slug', input.slug)
@@ -55,7 +53,6 @@ interface CreateArticleInput {
   content: string
   folder: string
   folder_label: string
-  sort_order: number
   is_published?: boolean
 }
 
@@ -67,7 +64,18 @@ export async function createHelpArticle(input: CreateArticleInput) {
     return { success: false as const, error: 'Slug "new" зарезервирован' }
   }
 
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
+
+  // Автоматический sort_order: максимальный в папке + 1
+  const { data: maxRow } = await supabase
+    .from('help_articles')
+    .select('sort_order')
+    .eq('folder', input.folder)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .single()
+
+  const sortOrder = (maxRow?.sort_order ?? 0) + 1
 
   const { error } = await supabase
     .from('help_articles')
@@ -77,7 +85,7 @@ export async function createHelpArticle(input: CreateArticleInput) {
       content: input.content,
       folder: input.folder,
       folder_label: input.folder_label,
-      sort_order: input.sort_order,
+      sort_order: sortOrder,
       is_published: input.is_published ?? false,
     })
 
@@ -94,7 +102,7 @@ export async function deleteHelpArticle(slug: string) {
   const isAdmin = await checkIsAdmin()
   if (!isAdmin) return { success: false as const, error: 'Нет доступа' }
 
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
 
   const { error, data } = await supabase
     .from('help_articles')
