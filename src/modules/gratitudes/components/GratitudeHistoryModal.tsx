@@ -127,7 +127,7 @@ export function GratitudeHistoryModal({ isOpen, onClose, items, currentUserEmail
                           </span>
                         </div>
                         <div
-                          className="text-[12px] font-medium mt-0.5 line-clamp-2"
+                          className="text-[12px] font-medium mt-0.5 line-clamp-2 break-all"
                           style={{ color: 'var(--text-secondary)' }}
                         >
                           {item.message}

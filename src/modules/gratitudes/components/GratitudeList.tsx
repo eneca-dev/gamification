@@ -117,7 +117,7 @@ export function GratitudeList({ items, currentUserEmail }: GratitudeListProps) {
                       </span>
                     </div>
                     <div
-                      className="text-[13px] font-medium mt-1.5 leading-relaxed"
+                      className="text-[13px] font-medium mt-1.5 leading-relaxed break-all"
                       style={{ color: 'var(--text-secondary)' }}
                     >
                       {item.message}

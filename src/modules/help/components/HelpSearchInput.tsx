@@ -11,6 +11,7 @@ export function HelpSearchInput() {
 
   return (
     <div
+      data-onboarding="help-search"
       className="flex items-center gap-2 px-3 py-2 rounded-xl"
       style={{
         background: 'var(--surface)',
