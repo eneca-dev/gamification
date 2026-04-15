@@ -89,22 +89,38 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
                 Мастер планирования
               </h1>
               <div className="flex items-center gap-4 mt-1">
-                <span className="text-[12px]" style={{ color: "var(--apex-text-muted)" }}>
-                  L3: {panelData.l3.currentStreak % 10}/10
+                <span className="flex items-center gap-1.5 text-[12px]" title="Задачи 3-го уровня">
+                  <span
+                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded cursor-default"
+                    style={{ background: "var(--teal-100)", color: "var(--apex-primary)" }}
+                  >
+                    L3
+                  </span>
+                  <span style={{ color: "var(--apex-text)" }}>
+                    {panelData.l3.currentStreak % 10}/10
+                  </span>
                   {panelData.l3.completedCycles > 0 && (
                     <span
-                      className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+                      className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
                       style={{ background: "var(--apex-success-bg)", color: "var(--apex-primary)" }}
                     >
                       {panelData.l3.completedCycles}x +{panelData.l3.reward}
                     </span>
                   )}
                 </span>
-                <span className="text-[12px]" style={{ color: "var(--apex-text-muted)" }}>
-                  L2: {panelData.l2.currentStreak % 10}/10
+                <span className="flex items-center gap-1.5 text-[12px]" title="Задачи 2-го уровня">
+                  <span
+                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded cursor-default"
+                    style={{ background: "var(--orange-50)", color: "var(--orange-500)" }}
+                  >
+                    L2
+                  </span>
+                  <span style={{ color: "var(--apex-text)" }}>
+                    {panelData.l2.currentStreak % 10}/10
+                  </span>
                   {panelData.l2.completedCycles > 0 && (
                     <span
-                      className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+                      className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
                       style={{ background: "var(--orange-50)", color: "var(--orange-500)" }}
                     >
                       {panelData.l2.completedCycles}x +{panelData.l2.reward}
@@ -237,8 +253,19 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-[13px]" style={{ color: "var(--apex-text-muted)" }}>
-                Нет задач, ожидающих проверки
+              <div className="flex flex-col items-center justify-center py-8">
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
+                  style={{ background: "var(--apex-success-bg)" }}
+                >
+                  <Clock size={24} style={{ color: "var(--apex-primary)" }} />
+                </div>
+                <span className="text-[13px] font-semibold" style={{ color: "var(--apex-text)" }}>
+                  Нет задач, ожидающих проверки
+                </span>
+                <span className="text-[11px] mt-1" style={{ color: "var(--apex-text-muted)" }}>
+                  Когда появятся задачи — они отобразятся здесь
+                </span>
               </div>
             )
           ) : historyData.events.length > 0 ? (
@@ -247,8 +274,19 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
               startPosition={historyData.startPosition}
             />
           ) : (
-            <div className="text-center py-8 text-[13px]" style={{ color: "var(--apex-text-muted)" }}>
-              Нет событий
+            <div className="flex flex-col items-center justify-center py-8">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
+                style={{ background: "var(--apex-success-bg)" }}
+              >
+                <Trophy size={24} style={{ color: "var(--apex-primary)" }} />
+              </div>
+              <span className="text-[13px] font-semibold" style={{ color: "var(--apex-text)" }}>
+                Нет событий
+              </span>
+              <span className="text-[11px] mt-1" style={{ color: "var(--apex-text-muted)" }}>
+                История событий появится после первых задач
+              </span>
             </div>
           )}
 

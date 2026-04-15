@@ -26,11 +26,14 @@ function StreakRow({
   const trackBg = isTeal ? "var(--teal-100)" : "var(--orange-50)";
   const fill = isTeal ? "var(--apex-primary)" : "var(--orange-500)";
 
+  const tooltipText = label === "L3" ? "Задачи 3-го уровня" : "Задачи 2-го уровня";
+
   return (
     <div className="flex items-center gap-2">
       <span
-        className="text-[10px] font-semibold uppercase tracking-wider shrink-0"
-        style={{ color: "var(--apex-text-muted)" }}
+        className="text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 cursor-default"
+        style={{ background: trackBg, color: accent }}
+        title={tooltipText}
       >
         {label}
       </span>
@@ -263,7 +266,6 @@ export function MasterPlannerPanel({ data }: MasterPlannerPanelProps) {
       {data.pendingTasks.length === 0 && data.recentEvents.length === 0 && (
         <div
           className="flex flex-col items-center justify-center flex-1 py-6 rounded-xl mt-2"
-          style={{ background: "var(--apex-bg)" }}
         >
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
@@ -275,7 +277,7 @@ export function MasterPlannerPanel({ data }: MasterPlannerPanelProps) {
             className="text-[13px] font-semibold mb-1"
             style={{ color: "var(--apex-text-secondary)" }}
           >
-            Кажется, у вас нет задач в Worksection
+            Кажется, у вас пока что нет задач
           </span>
           <span
             className="text-[11px] text-center max-w-[220px]"

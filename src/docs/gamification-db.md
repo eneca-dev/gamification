@@ -270,7 +270,9 @@ OAuth-токены Worksection для пользователей.
 | `event_date`       | date NOT NULL  |                              |
 | `synced_at`        | timestamptz    |                              |
 
-**Частота обновления:** ежедневно. Скрипт `sync-task-events` парсит теги «Система планирования» из WS API `get_events`.
+UNIQUE по `(ws_task_id, changed_at)` — защита от дублей при повторном запуске.
+
+**Частота обновления:** ежедневно. Скрипт `sync-task-events` парсит теги «Система планирования» из WS API `get_events`. Upsert с `ignoreDuplicates` — повторный запуск безопасен.
 
 #### `ws_daily_report_tasks`
 
