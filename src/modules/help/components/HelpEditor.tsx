@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Save, Eye, Pencil, Trash2, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -36,6 +36,13 @@ export function HelpEditor({ article, isNew }: HelpEditorProps) {
   const [folderLabel, setFolderLabel] = useState(article?.folder_label ?? 'Общее')
   const [sortOrder, setSortOrder] = useState(article?.sort_order ?? 0)
   const [isPublished, setIsPublished] = useState(article?.is_published ?? true)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [])
 
   const FOLDERS = [
     { value: 'general', label: 'Общее' },
@@ -80,7 +87,7 @@ export function HelpEditor({ article, isNew }: HelpEditorProps) {
         if (isNew) {
           router.push('/admin/help')
         }
-        setTimeout(() => setSuccess(false), 3000)
+        timeoutRef.current = setTimeout(() => setSuccess(false), 3000)
       }
     })
   }
@@ -224,7 +231,10 @@ export function HelpEditor({ article, isNew }: HelpEditorProps) {
             <input
               type="number"
               value={sortOrder}
-              onChange={(e) => setSortOrder(Number(e.target.value))}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10)
+                setSortOrder(Number.isNaN(val) ? 0 : val)
+              }}
               className="w-full px-3 py-2 rounded-xl text-[13px] outline-none"
               style={{
                 background: 'var(--surface-elevated)',

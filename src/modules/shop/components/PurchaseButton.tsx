@@ -24,7 +24,7 @@ export function PurchaseButton({
   shieldNoPending = false,
 }: PurchaseButtonProps) {
   const disabled = !canAfford || outOfStock || isPurchasing || shieldNoPending
-  const showDeficit = !canAfford && !outOfStock && !shieldNoPending
+  const showDeficit = !canAfford && !outOfStock && !shieldNoPending && !isPurchasing
 
   function getLabel() {
     if (isPurchasing) return 'Покупаем...'
