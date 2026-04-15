@@ -23,7 +23,7 @@ export default async function AdminHelpPage() {
             Управление справкой
           </h2>
           <p className="text-[12px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {articles.length} статей
+            {articles.length} {articles.length === 1 ? 'статья' : articles.length >= 2 && articles.length <= 4 ? 'статьи' : 'статей'}
           </p>
         </div>
         <Link

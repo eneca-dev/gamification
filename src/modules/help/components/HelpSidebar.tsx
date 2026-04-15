@@ -79,7 +79,7 @@ export function HelpSidebar({ folders }: HelpSidebarProps) {
               {isOpen ? (
                 <FolderOpen size={15} className="shrink-0" style={{ color: 'var(--apex-primary)' }} />
               ) : (
-                <FolderClosed size={15} className="shrink-0" style={{ color: 'var(--text-muted)' }} />
+                <FolderClosed size={15} className="shrink-0" style={{ color: 'var(--apex-primary)' }} />
               )}
               {folder.folder_label}
             </button>
@@ -99,7 +99,7 @@ export function HelpSidebar({ folders }: HelpSidebarProps) {
                         color: isActive ? 'var(--apex-primary)' : 'var(--text-secondary)',
                       }}
                     >
-                      <FileText size={13} className="shrink-0" />
+                      <FileText size={13} className="shrink-0" style={{ color: 'var(--apex-primary)' }} />
                       <span className="truncate">{article.title}</span>
                     </Link>
                   )

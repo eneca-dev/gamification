@@ -23,7 +23,10 @@ export async function getHelpArticle(slug: string): Promise<HelpArticle | null> 
     .eq('is_published', true)
     .single()
 
-  if (error) return null
+  if (error) {
+    if (error.code === 'PGRST116') return null
+    throw error
+  }
   return data
 }
 
