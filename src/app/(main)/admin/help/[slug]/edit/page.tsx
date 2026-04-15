@@ -35,7 +35,6 @@ export default async function AdminHelpEditPage({ params }: AdminHelpEditPagePro
         content: article.content,
         folder: article.folder,
         folder_label: article.folder_label,
-        sort_order: article.sort_order,
         is_published: article.is_published,
       } : null}
       isNew={isNew}
