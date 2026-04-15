@@ -1,6 +1,8 @@
 import { Trophy, CheckCircle2, XCircle, Clock, ExternalLink, ClipboardList } from "lucide-react";
 import Link from "next/link";
 
+import { CoinIcon } from "@/components/CoinIcon";
+
 import type { MasterPlannerPanelData, MasterPlannerEvent, PendingBudgetTask } from "../types";
 
 // ─── Streak row (аналогично CompactStreakRow) ───────────────────────────────
@@ -59,8 +61,8 @@ function StreakRow({
           style={{ width: `${pct}%`, background: fill }}
         />
       </div>
-      <span className="text-[10px] font-semibold shrink-0" style={{ color: accent }}>
-        +{reward} б
+      <span className="text-[10px] font-semibold shrink-0 inline-flex items-center gap-0.5" style={{ color: accent }}>
+        +{reward} <CoinIcon size={10} />
       </span>
     </div>
   );
