@@ -77,7 +77,7 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
           style={{ background: "var(--apex-surface)", border: "1px solid var(--apex-border)" }}
         >
           {/* Шапка */}
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-6" data-onboarding="mp-header">
             <div
               className="w-8 h-8 rounded-xl flex items-center justify-center"
               style={{ background: "var(--apex-success-bg)" }}
@@ -116,7 +116,7 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
           </div>
 
           {/* Фильтры: уровень */}
-          <div className="flex gap-1 mb-2">
+          <div className="flex gap-1 mb-2" data-onboarding="mp-filters">
             {[
               { label: "Все", value: undefined },
               { label: "L3", value: "L3" },

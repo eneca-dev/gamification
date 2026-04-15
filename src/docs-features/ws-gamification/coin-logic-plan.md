@@ -17,11 +17,27 @@ WS API поле `status` возвращает только `active` / `done` (о
 | Согласование   | 231517 | Нет |
 | Готово          | 229577 | Нет |
 
-Правило простое: штраф за внесение часов, если у задачи **нет тега «В работе» (id 229565)**.
+Правило простое: штраф за внесение часов, если задача **ни разу не была** в статусе «В работе» в этот день. Отсутствие тега статуса (`NULL`) тоже считается нарушением — тег должен быть установлен.
 
 ### Как определить кастомный статус
 
 В ответе `get_tasks` теги приходят в `tags: { "TAG_ID": "TAG_NAME", ... }`. Из набора тегов нужно найти тег, чей id входит в список id статусов (229565, 230943, 229569, 230828, 231517, 229577). Значение этого тега = текущий кастомный статус задачи.
+
+### История смены статусов
+
+WS API `get_events?period=1d` возвращает историю изменений, включая смену тегов:
+
+```json
+{
+  "action": "update",
+  "object": { "type": "task", "id": "4823388" },
+  "date_added": "2026-04-15 21:11",
+  "new": { "tags": ["10%", "Готово"] },
+  "old": { "tags": ["10%", "В работе"] }
+}
+```
+
+Это позволяет восстановить таймлайн статусов задачи за день без частого поллинга — один API-вызов в сутки.
 
 ---
 
@@ -29,11 +45,26 @@ WS API поле `status` возвращает только `active` / `done` (о
 
 ### Суть
 
-Если сотрудник вносит отчёт времени (cost entry) в задачу L3, у которой кастомный статус **не** «В работе» — списание **−3 коина**. Мотивация: сотрудники должны менять статус на «В работе» перед внесением времени.
+Если сотрудник вносит отчёт времени (cost entry) в задачу L3, и задача **ни разу за этот день** не была в статусе «В работе» — списание **−3 коина**. Мотивация: сотрудники должны менять статус на «В работе» перед внесением времени.
+
+**Презумпция невиновности:** если задача была «В работе» хотя бы в какой-то момент за день внесения часов — штрафа нет.
 
 ### Источник данных
 
-WS API `get_costs` возвращает `WsCostEntry` с `task.id`. Кастомный статус задачи определяется через теги (`tags`) в `ws_tasks_l3`.
+- `get_costs` (вчера) → какие задачи получили cost entries
+- `get_events?period=1d` → история смены тегов за день
+- `ws_tasks_l3.custom_status` → текущий статус на момент синка
+
+### Алгоритм определения нарушения
+
+Для каждой задачи L3, куда вчера были внесены часы:
+
+1. **Текущий статус** — из `ws_tasks_l3.custom_status` (после синка sync-ws-tasks)
+2. **История за день** — из `get_events?period=1d`, отфильтровать `action=update`, `object.type=task`, найти смены тегов статуса
+3. **Решение:**
+   - Если текущий статус = «В работе» → **нет штрафа**
+   - Если в истории событий за день есть хотя бы один момент, когда задача имела тег «В работе» (в `old.tags` или `new.tags`) → **нет штрафа**
+   - Иначе → **штраф**
 
 ### Необходимые изменения
 
@@ -52,12 +83,12 @@ ALTER TABLE ws_tasks_l3 ADD COLUMN custom_status text NULL;
 **В sync-ws-tasks.ts:**
 
 ```ts
-const PLANNING_STATUS_TAG_IDS = new Set(['229565', '230943', '229569', '230828', '231517', '229577'])
+const PLANNING_STATUS_TAGS = new Set(['В работе', 'План', 'Пауза', 'Приостановлено', 'Согласование', 'Готово'])
 
 function extractCustomStatus(tags?: Record<string, string>): string | null {
   if (!tags) return null
-  for (const [tagId, tagName] of Object.entries(tags)) {
-    if (PLANNING_STATUS_TAG_IDS.has(tagId)) return tagName
+  for (const tagName of Object.values(tags)) {
+    if (PLANNING_STATUS_TAGS.has(tagName)) return tagName
   }
   return null
 }
@@ -65,17 +96,53 @@ function extractCustomStatus(tags?: Record<string, string>): string | null {
 
 В l3Rows добавить: `custom_status: extractCustomStatus(l3.tags)`.
 
-#### 2. Определение нарушений в sync-ws-costs (VPS)
+#### 2. Новый скрипт / шаг: sync-task-events (VPS)
 
-В `syncDaily()` при обработке вчерашних cost entries — для каждого entry проверять кастомный статус задачи L3. Если статус ≠ «В работе» → записать в промежуточную таблицу.
+Отдельный шаг в оркестраторе (после sync-ws-costs, перед compute-gamification). Один API-вызов в сутки.
 
-**Логика в sync-ws-costs.ts (внутри syncDaily):**
+**Алгоритм:**
 
-1. Загрузить из БД `ws_tasks_l3` колонки `ws_task_id, custom_status` → Map<taskId, customStatus>
-2. При обработке каждого cost entry: если `task.id` есть в L3 и `customStatus !== 'В работе'` и `customStatus !== null` → добавить в массив нарушений
-3. По завершении — upsert нарушения в таблицу `ws_wrong_status_reports`
+1. Вызвать `get_events?period=1d`
+2. Отфильтровать: `action=update`, `object.type=task`
+3. Из `old.tags` / `new.tags` извлечь смены статусов (теги из набора «Система планирования»)
+4. Записать в таблицу `ws_task_status_changes`:
 
-**Новая таблица:**
+```sql
+CREATE TABLE ws_task_status_changes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  ws_task_id text NOT NULL,
+  old_status text NULL,
+  new_status text NULL,
+  changed_at timestamptz NOT NULL,
+  changed_by_email text NULL,
+  event_date date NOT NULL,
+  synced_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_task_status_changes_date ON ws_task_status_changes(event_date);
+CREATE INDEX idx_task_status_changes_task ON ws_task_status_changes(ws_task_id, event_date);
+```
+
+**Парсинг тегов из events:**
+
+```ts
+const PLANNING_STATUS_TAGS = new Set(['В работе', 'План', 'Пауза', 'Приостановлено', 'Согласование', 'Готово'])
+
+function extractStatusFromTags(tags: string[]): string | null {
+  return tags.find(t => PLANNING_STATUS_TAGS.has(t)) ?? null
+}
+
+// Для каждого event:
+const oldStatus = extractStatusFromTags(event.old?.tags ?? [])
+const newStatus = extractStatusFromTags(event.new?.tags ?? [])
+// Записать если oldStatus !== newStatus (реальная смена статуса)
+```
+
+#### 3. Определение нарушений в sync-ws-costs (VPS)
+
+В `syncDaily()` при обработке вчерашних cost entries — сохранять привязку cost → task для последующей проверки.
+
+**Новая таблица (промежуточная):**
 
 ```sql
 CREATE TABLE ws_wrong_status_reports (
@@ -90,16 +157,43 @@ CREATE TABLE ws_wrong_status_reports (
 );
 ```
 
-#### 3. Новый шаг в compute-gamification (VPS)
+**Логика определения (в compute-gamification, step 1c):**
 
-Добавить **Step 1c: Wrong status reports** между текущими step 1b (dynamics) и step 2 (day status).
+1. Загрузить все cost entries за вчера из `ws_wrong_status_reports` (или напрямую — см. п.4)
+2. Для каждой уникальной (user_email, ws_task_id, cost_date):
+   a. Проверить `ws_tasks_l3.custom_status` → если «В работе» → пропустить
+   b. Проверить `ws_task_status_changes` за этот день и задачу → если хотя бы одна запись содержит «В работе» (в `old_status` или `new_status`) → пропустить
+   c. Иначе (статус ≠ «В работе» ИЛИ статус NULL) → штраф
 
-Алгоритм:
-1. Прочитать записи из `ws_wrong_status_reports` за вчера (`cost_date = yesterdayIso`)
-2. Для каждой уникальной пары (user_email, ws_task_id, cost_date) → создать событие `wrong_status_report`
-3. Резолвинг email → user_id через `ws_users` (стандартная логика)
+#### 4. Альтернатива: без промежуточной таблицы `ws_wrong_status_reports`
 
-#### 4. Новый event_type
+Вместо сохранения нарушений в sync-ws-costs, можно в compute-gamification:
+1. Загрузить `ws_daily_reports` за вчера → список (user_email, report_date)
+2. Загрузить все cost entries за вчера через `get_costs` (повторный вызов API) → пары (user_email, task_id)
+3. Проверить каждую пару
+
+**Минус:** повторный API-вызов `get_costs`. **Плюс:** не нужна промежуточная таблица.
+
+**Рекомендуется:** сохранять пары (user_email, task_id, date) в sync-ws-costs при обработке вчерашних данных — данные уже в руках, дополнительный API-вызов не нужен.
+
+**Оптимальный подход:** расширить sync-ws-costs, чтобы помимо `ws_daily_reports` сохранять детализацию по задачам:
+
+```sql
+CREATE TABLE ws_daily_report_tasks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_email text NOT NULL,
+  user_id uuid REFERENCES ws_users(id),
+  ws_task_id text NOT NULL,
+  cost_date date NOT NULL,
+  hours numeric NOT NULL,
+  synced_at timestamptz DEFAULT now(),
+  UNIQUE(user_email, ws_task_id, cost_date)
+);
+```
+
+Это полезнее `ws_wrong_status_reports` — хранит все cost entries с привязкой к задачам, а не только нарушения. compute-gamification потом сам решает, какие из них — нарушения.
+
+#### 5. Новый event_type
 
 ```sql
 INSERT INTO gamification_event_types (key, name, coins, description, is_active)
@@ -112,7 +206,7 @@ VALUES ('wrong_status_report', 'Отчёт в неверном статусе з
 
 **details:** `{ ws_task_id, ws_task_name, ws_project_id, task_status }`
 
-#### 5. Админка (фронтенд)
+#### 6. Админка (фронтенд)
 
 Стоимость штрафа (`-3`) хранится в `gamification_event_types` и редактируется через `/admin/events` (EventTypesTable с inline-редактированием). **Дополнительная работа по фронтенду не требуется** — новый event type автоматически появится в таблице событий после миграции.
 
@@ -223,19 +317,34 @@ ALTER TABLE ws_tasks_l3 ADD COLUMN custom_status text NULL;
 -- 2. Плановая дата завершения задач L3
 ALTER TABLE ws_tasks_l3 ADD COLUMN date_end date NULL;
 
--- 3. Таблица нарушений статуса
-CREATE TABLE ws_wrong_status_reports (
+-- 3. История смен статусов (из get_events)
+CREATE TABLE ws_task_status_changes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  ws_task_id text NOT NULL,
+  old_status text NULL,
+  new_status text NULL,
+  changed_at timestamptz NOT NULL,
+  changed_by_email text NULL,
+  event_date date NOT NULL,
+  synced_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_task_status_changes_date ON ws_task_status_changes(event_date);
+CREATE INDEX idx_task_status_changes_task ON ws_task_status_changes(ws_task_id, event_date);
+
+-- 4. Детализация cost entries по задачам
+CREATE TABLE ws_daily_report_tasks (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_email text NOT NULL,
   user_id uuid REFERENCES ws_users(id),
   ws_task_id text NOT NULL,
-  task_status text NOT NULL,
   cost_date date NOT NULL,
+  hours numeric NOT NULL,
   synced_at timestamptz DEFAULT now(),
   UNIQUE(user_email, ws_task_id, cost_date)
 );
 
--- 4. Pending-таблица для проверки дедлайнов
+-- 5. Pending-таблица для проверки дедлайнов
 CREATE TABLE deadline_pending (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   ws_task_l3_id text REFERENCES ws_tasks_l3(ws_task_id),
@@ -248,7 +357,7 @@ CREATE TABLE deadline_pending (
   checked_at timestamptz NULL
 );
 
--- 5. Новые event types
+-- 6. Новые event types
 INSERT INTO gamification_event_types (key, name, coins, description, is_active) VALUES
   ('wrong_status_report', 'Отчёт в неверном статусе задачи', -3, 'Время внесено в задачу L3 не в статусе «В работе»', true),
   ('deadline_ok_l3', 'Задача L3 закрыта в срок', 3, 'Задача закрыта до плановой даты (проверка через 30 дней)', true),
@@ -263,9 +372,23 @@ INSERT INTO gamification_event_types (key, name, coins, description, is_active) 
 Применить сводную миграцию (все изменения в одном файле).
 
 ### Этап 2: VPS-скрипты (gamification-vps-scripts)
+
 1. **sync-ws-tasks** — сохранять `custom_status` (из тегов) и `date_end`
-2. **sync-ws-costs** — при синке вчерашних данных определять cost entries на задачи L3 не в статусе «В работе» → писать в `ws_wrong_status_reports`
-3. **compute-gamification** — новый step 1c (wrong status → events) + новый step 4.5 (deadline check с 30-дневной задержкой и clawback)
+2. **sync-ws-costs** — дополнительно сохранять детализацию cost entries по задачам в `ws_daily_report_tasks`
+3. **Новый шаг: sync-task-events** — вызов `get_events?period=1d`, парсинг смен статусов → `ws_task_status_changes`
+4. **compute-gamification:**
+   - Новый step 1c: wrong status check (чтение `ws_daily_report_tasks` + `ws_task_status_changes` + `ws_tasks_l3.custom_status` → события `wrong_status_report`)
+   - Новый step 4.5: deadline check (30-дневная задержка, clawback)
+
+**Порядок в оркестраторе:**
+
+```
+sync-ws-users → sync-ws-projects → sync-ws-tasks → sync-ws-costs
+→ sync-task-events → snapshot-task-percent → sync-ws-absences
+→ compute-gamification
+```
+
+sync-task-events идёт после sync-ws-costs, чтобы к моменту compute-gamification были и cost entries, и история статусов.
 
 ### Этап 3: Фронтенд (gamification)
 Дополнительных изменений в фронтенде не требуется:
@@ -282,12 +405,14 @@ INSERT INTO gamification_event_types (key, name, coins, description, is_active) 
 
 ## Edge cases
 
-1. **Задача без кастомного статуса (тег не установлен):** `custom_status = NULL` — штраф НЕ начисляется. Штраф только при явном статусе ≠ «В работе».
+1. **Задача без кастомного статуса (тег не установлен):** `custom_status = NULL` — штраф **начисляется**. Тег статуса должен быть установлен, отсутствие тега = нарушение.
 
-2. **Задача закрыта (status=done), но тег остался «В работе»:** WS API `status=done` означает закрытие через complete_task. Время во вчерашний синк попадает по `get_costs datestart=dateend=вчера` — если задача была закрыта до внесения времени, cost entry всё равно мог быть создан. Штраф в этом случае: зависит от `custom_status` в момент синка. Если тег «В работе» — штрафа нет, если «Готово» — штраф есть.
+2. **Задача была «В работе» часть дня:** сотрудник поставил «В работе» → внёс часы → вернул «Пауза». В `ws_task_status_changes` будет запись, что задача была «В работе». Штрафа нет — презумпция невиновности.
 
 3. **Задача без `date_end`:** не участвует в deadline check (аналогично задачам без `max_time` в budget check).
 
-4. **`date_end` изменился после закрытия:** deadline_pending хранит `planned_end` на момент создания pending-записи. Если плановая дата была сдвинута — проверка идёт по оригинальному `planned_end`. Переоткрытие → новый pending с актуальным `date_end`.
+4. **`date_end` изменился после закрытия:** `deadline_pending` хранит `planned_end` на момент создания pending-записи. Если плановая дата была сдвинута — проверка идёт по оригинальному `planned_end`. Переоткрытие → новый pending с актуальным `date_end`.
 
 5. **Одна задача, оба бонуса:** задача может получить и `budget_ok_l3` (+50) и `deadline_ok_l3` (+3) — это независимые механики.
+
+6. **get_events period:** синк запускается в 00:00 по Минску (21:00 UTC предыдущего дня). Используем `period=1d1h` с фильтрацией по дате — гарантированно покрывает весь вчерашний рабочий день с запасом.

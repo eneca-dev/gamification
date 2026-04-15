@@ -17,7 +17,7 @@
 
 **Поток 2 — VPS-скрипты (Worksection):**
 
-1. Оркестратор запускает 7 скриптов последовательно: sync-ws-users → sync-ws-projects → sync-ws-tasks → sync-ws-costs → snapshot-task-percent → sync-ws-absences → compute-gamification
+1. Оркестратор запускает 8 скриптов последовательно: sync-ws-users → sync-ws-projects → sync-ws-tasks → sync-ws-costs → snapshot-task-percent → sync-ws-absences → sync-task-events → compute-gamification
 2. `compute-gamification` анализирует данные и создаёт записи в `gamification_event_logs` → `gamification_transactions` → `gamification_balances`
 3. Скрипты находятся в репозитории **eneca-dev/gamification-vps-scripts** (`src/scripts/`)
 
@@ -26,7 +26,7 @@
 ## Зависимости
 
 - **Supabase Auth** — `auth.users`: регистрация, сессии, `auth.uid()`, `auth.jwt()`
-- **Worksection API** — источник `ws_users`, `ws_projects`, `ws_tasks_l2/l3`, `ws_daily_reports`, `ws_task_actual_hours`, `ws_user_absences`
+- **Worksection API** — источник `ws_users`, `ws_projects`, `ws_tasks_l2/l3`, `ws_daily_reports`, `ws_daily_report_tasks`, `ws_task_actual_hours`, `ws_task_status_changes`, `ws_user_absences`
 - **Elasticsearch / Kibana** — источник `elk_plugin_launches`
 - **Airtable** — источник `at_gratitudes`
 
@@ -40,7 +40,7 @@
 | `0 */4 * * *` (каждые 4 часа)           | `sync-gratitudes`               | Синк благодарностей из Airtable                                      |
 | `0 2 1 * *` (1 число месяца, 02:00 UTC) | `fn_award_department_contest()` | Начисление бонуса отделу-победителю по ревит-баллам за прошлый месяц |
 
-WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-costs`, `snapshot-task-percent`, `sync-ws-absences`, `compute-gamification`) запускаются **VPS-оркестратором**, не через pg_cron.
+WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-costs`, `snapshot-task-percent`, `sync-ws-absences`, `sync-task-events`, `compute-gamification`) запускаются **VPS-оркестратором**, не через pg_cron.
 
 ---
 
@@ -172,6 +172,8 @@ OAuth-токены Worksection для пользователей.
 | `assignee_email` | text NULL                     |                            |
 | `percent`        | smallint NULL                 | Процент выполнения (0-100) |
 | `max_time`       | numeric NULL                  | Бюджет часов               |
+| `custom_status`  | text NULL                     | Кастомный статус из тегов «Система планирования» (В работе, План, Пауза, Приостановлено, Согласование, Готово) |
+| `date_end`       | date NULL                     | Плановая дата завершения из WS API |
 | `date_closed`    | timestamptz NULL              |                            |
 | `synced_at`      | timestamptz                   |                            |
 
@@ -252,6 +254,41 @@ OAuth-токены Worksection для пользователей.
 | `synced_at`    | timestamptz          |                                        |
 
 **Частота обновления:** ежедневно. Скрипт `sync-ws-absences` синкает из двух источников: расписание отпусков/больничных (WS API `get_users_schedule`) и задача "Сикдеи" (task ID 4905680). Upsert по (user_email, absence_date). Используется для заморозки стриков и пропуска нарушений.
+
+#### `ws_task_status_changes`
+
+История смен статусов планирования из WS API get_events. Синкается скриптом `sync-task-events` (period=1d1h). Используется `compute-gamification` для определения, была ли задача «В работе» в течение дня.
+
+| Колонка            | Тип            | Описание                     |
+| ------------------ | -------------- | ---------------------------- |
+| `id`               | uuid PK        |                              |
+| `ws_task_id`       | text NOT NULL  |                              |
+| `old_status`       | text NULL      |                              |
+| `new_status`       | text NULL      |                              |
+| `changed_at`       | timestamptz NOT NULL |                          |
+| `changed_by_email` | text NULL      |                              |
+| `event_date`       | date NOT NULL  |                              |
+| `synced_at`        | timestamptz    |                              |
+
+**Частота обновления:** ежедневно. Скрипт `sync-task-events` парсит теги «Система планирования» из WS API `get_events`.
+
+#### `ws_daily_report_tasks`
+
+Детализированные записи трудозатрат по задачам за день. Синкается скриптом `sync-ws-costs` вместе с `ws_daily_reports`. Используется `compute-gamification` (шаг 1d) для проверки неверного статуса.
+
+| Колонка       | Тип                  | Описание                                          |
+| ------------- | -------------------- | ------------------------------------------------- |
+| `id`          | uuid PK              |                                                   |
+| `user_email`  | text NOT NULL        |                                                   |
+| `user_id`     | uuid NULL → ws_users |                                                   |
+| `ws_task_id`  | text NOT NULL        |                                                   |
+| `cost_date`   | date NOT NULL        |                                                   |
+| `hours`       | numeric NOT NULL     |                                                   |
+| `synced_at`   | timestamptz          |                                                   |
+
+UNIQUE(user_email, ws_task_id, cost_date).
+
+**Частота обновления:** ежедневно. Скрипт `sync-ws-costs` синкает вместе с `ws_daily_reports`. Upsert по (user_email, ws_task_id, cost_date).
 
 ---
 
@@ -361,6 +398,9 @@ OAuth-токены Worksection для пользователей.
 | `budget_revoked_l3_lead`     | -5    | Отзыв бонуса тимлиду: бюджет L3 превышен          |
 | `budget_revoked_l3`          | -50   | Отзыв коинов: бюджет L3 превышен после approval   |
 | `budget_revoked_l2`          | -200  | Отзыв коинов: бюджет L2 превышен после approval   |
+| `wrong_status_report`        | -3    | Время внесено в задачу L3 не в статусе «В работе»  |
+| `deadline_ok_l3`             | +3    | Задача закрыта до плановой даты (проверка через 30 дней) |
+| `deadline_revoked_l3`        | -3    | Бонус за срок отозван: задача переоткрыта после approval |
 
 **Информационные (0 коинов, фиксируют факт события):**
 
@@ -489,6 +529,24 @@ SET total_coins = (SELECT COALESCE(SUM(coins), 0) FROM gamification_transactions
 
 **Частота обновления:** заполняется `compute-gamification` при закрытии задач. Проверяется ежедневно — если `eligible_date` наступила и задача всё ещё в бюджете → `approved` и начисление. Пока пустая.
 
+#### `deadline_pending` (0 строк)
+
+Очередь отложенных проверок сроков задач L3 (аналогично `budget_pending`). Создаётся при закрытии задачи L3 с `date_end`. Проверяется через 30 дней.
+
+| Колонка          | Тип                              | Описание                                          |
+| ---------------- | -------------------------------- | ------------------------------------------------- |
+| `id`             | uuid PK                         |                                                   |
+| `ws_task_l3_id`  | text → ws_tasks_l3.ws_task_id    |                                                   |
+| `assignee_id`    | uuid NOT NULL → ws_users         |                                                   |
+| `assignee_email` | text NOT NULL                    |                                                   |
+| `closed_at`      | timestamptz NOT NULL             | Дата закрытия задачи                              |
+| `planned_end`    | date NOT NULL                    | Плановая дата завершения                          |
+| `eligible_date`  | date NOT NULL                    | Дата, когда можно проверить (closed_at + 30 дней) |
+| `status`         | text CHECK                       | `pending` / `approved` / `revoked`                |
+| `checked_at`     | timestamptz NULL                 |                                                   |
+
+**Частота обновления:** заполняется `compute-gamification` при закрытии задач L3 с `date_end`. Проверяется ежедневно — если `eligible_date` наступила и задача закрыта до `planned_end` → `approved` и начисление `deadline_ok_l3`. Если задача переоткрыта после approval → `revoked` и списание `deadline_revoked_l3`. Пока пустая.
+
 ---
 
 ### Views
@@ -560,7 +618,7 @@ WS-функции удалены — их полностью заменили VP
 
 ### Оркестратор (`orchestrator.ts`)
 
-Запускает 7 скриптов последовательно, собирает статистику, отправляет уведомление в Telegram.
+Запускает 8 скриптов последовательно, собирает статистику, отправляет уведомление в Telegram.
 
 ### Скрипты (`scripts/`)
 
@@ -569,10 +627,11 @@ WS-функции удалены — их полностью заменили VP
 | `sync-ws-users.ts`         | `ws_users`                                                                                                                                                              | Синк сотрудников из WS API. Insert/update/deactivate/reactivate                                                                                                       |
 | `sync-ws-projects.ts`      | `ws_projects`                                                                                                                                                           | Синк проектов с тегом "eneca.work sync". Insert/update/archive                                                                                                        |
 | `sync-ws-tasks.ts`         | `ws_tasks_l2`, `ws_tasks_l3`                                                                                                                                            | Парсинг дерева задач L1→L2→L3 из всех проектов                                                                                                                        |
-| `sync-ws-costs.ts`         | `ws_daily_reports`, `ws_task_actual_hours`, `ws_task_actual_hours_l2`                                                                                                   | Синк таймтрекинга: дневные отчёты + фактические часы                                                                                                                  |
+| `sync-ws-costs.ts`         | `ws_daily_reports`, `ws_daily_report_tasks`, `ws_task_actual_hours`, `ws_task_actual_hours_l2`                                                                           | Синк таймтрекинга: дневные отчёты + детализация по задачам + фактические часы                                                                                          |
 | `snapshot-task-percent.ts` | `ws_task_percent_snapshots`                                                                                                                                             | Снапшот текущего % задач L3                                                                                                                                           |
 | `sync-ws-absences.ts`      | `ws_user_absences`                                                                                                                                                      | Синк отсутствий из расписания + задачи сикдеев                                                                                                                        |
-| `compute-gamification.ts`  | `gamification_event_logs`, `gamification_transactions`, `gamification_balances`, `ws_user_streaks`, `ws_daily_statuses`, `budget_pending`, `ws_task_budget_checkpoints` | Основной движок WS-геймификации: нарушения, статусы дней, стрики, бюджеты, транзакции. Пропускает Сб/Вс (кроме `calendar_workdays`) и праздники (`calendar_holidays`) |
+| `sync-task-events.ts`      | `ws_task_status_changes`                                                                                                                                                | Синк смен статусов из WS API get_events (period=1d1h). Парсит теги «Система планирования»                                                                             |
+| `compute-gamification.ts`  | `gamification_event_logs`, `gamification_transactions`, `gamification_balances`, `ws_user_streaks`, `ws_daily_statuses`, `budget_pending`, `deadline_pending`, `ws_task_budget_checkpoints`, `ws_daily_report_tasks` | Основной движок WS-геймификации: нарушения, статусы дней, стрики, бюджеты, дедлайны, транзакции. Пропускает Сб/Вс (кроме `calendar_workdays`) и праздники (`calendar_holidays`) |
 
 ### Библиотеки (`lib/`)
 

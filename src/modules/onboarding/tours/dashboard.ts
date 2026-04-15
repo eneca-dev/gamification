@@ -36,6 +36,14 @@ export const dashboardTour: OnboardingTour = {
       placement: 'right',
     },
     {
+      id: 'dashboard-master-planner',
+      target: 'master-planner-panel',
+      title: 'Мастер планирования',
+      description:
+        'Отслеживайте стрик по бюджету задач в Worksection. За каждые 10 закрытых задач в рамках бюджета — бонусные коины. Серии L3 и L2 считаются независимо. Здесь же видны задачи, ожидающие проверки, и последние события.',
+      placement: 'left',
+    },
+    {
       id: 'dashboard-quests',
       target: 'daily-quests',
       title: 'Ежедневные задания',

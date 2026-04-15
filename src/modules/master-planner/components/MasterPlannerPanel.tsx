@@ -1,4 +1,4 @@
-import { Trophy, CheckCircle2, XCircle, Clock, ExternalLink } from "lucide-react";
+import { Trophy, CheckCircle2, XCircle, Clock, ExternalLink, ClipboardList } from "lucide-react";
 import Link from "next/link";
 
 import type { MasterPlannerPanelData, MasterPlannerEvent, PendingBudgetTask } from "../types";
@@ -258,6 +258,33 @@ export function MasterPlannerPanel({ data }: MasterPlannerPanelProps) {
           />
         </div>
       </div>
+
+      {/* Пустое состояние */}
+      {data.pendingTasks.length === 0 && data.recentEvents.length === 0 && (
+        <div
+          className="flex flex-col items-center justify-center flex-1 py-6 rounded-xl mt-2"
+          style={{ background: "var(--apex-bg)" }}
+        >
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+            style={{ background: "var(--apex-success-bg)" }}
+          >
+            <ClipboardList size={20} style={{ color: "var(--apex-primary)" }} />
+          </div>
+          <span
+            className="text-[13px] font-semibold mb-1"
+            style={{ color: "var(--apex-text-secondary)" }}
+          >
+            Кажется, у вас нет задач в Worksection
+          </span>
+          <span
+            className="text-[11px] text-center max-w-[220px]"
+            style={{ color: "var(--apex-text-muted)" }}
+          >
+            Когда появятся закрытые задачи с бюджетом — они отобразятся здесь
+          </span>
+        </div>
+      )}
 
       {/* Pending */}
       {data.pendingTasks.length > 0 && (

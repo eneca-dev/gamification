@@ -212,9 +212,49 @@ idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 
 ---
 
+## 7. Worksection — статус задачи при отчёте
+
+**Механизм:** VPS-скрипт `compute-gamification`, step 1d
+
+Если сотрудник залогировал трудозатраты (cost entry) на задачу L3, которая не находится в статусе «В работе», и задача ни разу не была «В работе» в течение этого дня — штраф -3 коина.
+
+**«Презумпция невиновности»:** если задача хотя бы раз была в статусе «В работе» в течение дня (проверяется через `ws_task_status_changes` из get_events API), штраф не применяется.
+
+NULL-статус (тег не установлен) = штраф.
+
+Одна штрафная запись на комбинацию (user, task, day).
+
+```
+event_type:      wrong_status_report
+source:          ws
+details:         { ws_task_id, ws_task_name, ws_project_id, task_status }
+idempotency_key: wrong_status_{user_id}_{ws_task_id}_{date}
+```
+
+---
+
+## 8. Worksection — закрытие в срок
+
+**Механизм:** VPS-скрипт `compute-gamification`, step 4.5
+
+При закрытии задачи L3 до или в дату `date_end` → +3 коина после 30-дневного ожидания (аналогично бюджету).
+
+- Если задача переоткрыта до проверки → pending-запись удаляется, повторное закрытие перезапускает 30-дневный отсчёт.
+- Если задача переоткрыта после одобрения → clawback (`deadline_revoked_l3`, -3 коина).
+- Задачи без `date_end` не участвуют.
+
+```
+event_type:      deadline_ok_l3 / deadline_revoked_l3
+source:          ws
+idempotency_key: deadline_ok_l3_{ws_task_id}_{user_id}
+                 deadline_revoked_l3_{ws_task_id}_{user_id}
+```
+
+---
+
 ## Полный справочник event_type
 
-Все типы зарегистрированы в `gamification_event_types` (34 строки).
+Все типы зарегистрированы в `gamification_event_types` (37 строк).
 
 **С начислением/списанием коинов:**
 
@@ -234,6 +274,9 @@ idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 | `revit_using_plugins` | +5 | revit | PG-триггер |
 | `budget_ok_l3_lead_bonus` | +5 | ws | compute-gamification |
 | `green_day` | +3 | ws | compute-gamification |
+| `deadline_ok_l3` | +3 | ws | compute-gamification |
+| `wrong_status_report` | -3 | ws | compute-gamification |
+| `deadline_revoked_l3` | -3 | ws | compute-gamification |
 | `budget_revoked_l3_lead` | -5 | ws | compute-gamification |
 | `budget_revoked_l3` | -50 | ws | compute-gamification |
 | `budget_revoked_l2` | -200 | ws | compute-gamification |
@@ -292,6 +335,14 @@ idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 | WS стрик 7 | `ws_streak_7_{user_id}_{date}` |
 | WS стрик 30 | `ws_streak_30_{user_id}_{date}` |
 | WS стрик 90 | `ws_streak_90_{user_id}_{date}` |
+
+**WS — дедлайны (compute-gamification):**
+
+| Событие | Формат ключа |
+|---|---|
+| Wrong status | `wrong_status_{user_id}_{ws_task_id}_{date}` |
+| Deadline OK L3 | `deadline_ok_l3_{ws_task_id}_{user_id}` |
+| Deadline revoked L3 | `deadline_revoked_l3_{ws_task_id}_{user_id}` |
 
 **WS — бюджет (compute-gamification):**
 

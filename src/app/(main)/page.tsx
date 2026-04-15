@@ -270,6 +270,7 @@ export default async function DashboardPage() {
         {masterPlannerData && (
           <div
             className="flex-1 min-w-0 rounded-2xl p-5"
+            data-onboarding="master-planner-panel"
             style={{
               background: "var(--apex-surface)",
               border: "1px solid var(--apex-border)",
