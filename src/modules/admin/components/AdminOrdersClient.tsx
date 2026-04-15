@@ -148,7 +148,7 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
       )}
 
       {/* Фильтры */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap" data-onboarding="orders-filter-tabs">
         {FILTER_TABS.map((tab) => (
           <button
             key={tab.value}
@@ -168,6 +168,7 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
       {/* Таблица */}
       <div
         className="rounded-2xl overflow-hidden"
+        data-onboarding="admin-orders-table"
         style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
       >
         <table className="w-full">

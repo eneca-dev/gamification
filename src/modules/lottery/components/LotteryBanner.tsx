@@ -4,6 +4,7 @@ import { useState, useTransition, useEffect, useRef, useMemo } from 'react'
 import { Ticket, Clock } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
+import { CoinIcon } from '@/components/CoinIcon'
 import { purchaseProduct } from '@/modules/shop/index.client'
 
 import type { LotteryWithStats, UserTicketInfo } from '../types'
@@ -112,6 +113,7 @@ export function LotteryBanner({ lottery, ticketInfo: initialTicketInfo, balance,
   return (
     <div
       className="rounded-2xl overflow-hidden animate-fade-in-up"
+      data-onboarding="lottery-banner"
       style={{ border: '1px solid var(--apex-border)' }}
     >
       {/* Заголовок */}
@@ -203,7 +205,7 @@ export function LotteryBanner({ lottery, ticketInfo: initialTicketInfo, balance,
               {isPending ? (
                 'Покупаем...'
               ) : !canAfford ? (
-                <>Ещё {lottery.ticket_price - currentBalance} баллов</>
+                <span className="inline-flex items-center gap-1">Ещё {lottery.ticket_price - currentBalance} <CoinIcon size={14} /></span>
               ) : (
                 <span className="flex items-center gap-2">
                   <Ticket size={16} />

@@ -1,7 +1,5 @@
 'use client'
 
-import { CoinStatic } from '@/components/CoinBalance'
-
 import { PurchaseButton } from './PurchaseButton'
 import type { ShopProductWithCategory } from '../types'
 import type { PendingReset } from '@/modules/streak-shield/index.client'
@@ -29,7 +27,8 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
 
   return (
     <div
-      className={`rounded-2xl overflow-hidden card-hover stagger-${Math.min(index + 1, 6)}`}
+      className={`rounded-2xl overflow-hidden card-hover flex flex-col stagger-${Math.min(index + 1, 6)}`}
+      {...(index === 0 ? { 'data-onboarding': 'product-card-first' } : {})}
       style={{
         background: 'var(--surface-elevated)',
         border: '1px solid var(--border)',
@@ -69,7 +68,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
       </div>
 
       {/* Детали товара */}
-      <div className="p-4" style={{ background: 'var(--surface-elevated)' }}>
+      <div className="p-4 flex flex-col flex-1" style={{ background: 'var(--surface-elevated)' }}>
         <div className="mb-1">
           <span className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>
             {product.category.name}
@@ -96,10 +95,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
         )}
         {!product.description && <div className="mb-3" />}
 
-        <div className="flex items-center justify-between mb-3">
-          <CoinStatic amount={product.price} size="sm" />
-        </div>
-
+        <div className="mt-auto pt-2">
         <PurchaseButton
           productId={product.id}
           price={product.price}
@@ -110,6 +106,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
           isPurchasing={isPurchasing}
           shieldNoPending={isShield && !hasActivePending}
         />
+        </div>
       </div>
     </div>
   )

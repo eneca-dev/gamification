@@ -1,5 +1,7 @@
 "use client";
 
+import { CoinIcon } from "@/components/CoinIcon";
+
 function ProgressBar({ value, max }: { value: number; max: number }) {
   const percent = Math.min((value / max) * 100, 100);
   return (
@@ -67,7 +69,7 @@ export function StatusWidgets({ goal }: StatusWidgetsProps) {
               Осталось накопить:{" "}
             </span>
             <span className="text-[13px] font-bold" style={{ color: "var(--apex-primary)" }}>
-              {remaining.toLocaleString("ru-RU")} баллов
+              <span className="inline-flex items-center gap-0.5">{remaining.toLocaleString("ru-RU")} <CoinIcon size={13} /></span>
             </span>
           </div>
         </div>

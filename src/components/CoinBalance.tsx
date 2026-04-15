@@ -1,6 +1,7 @@
 "use client";
 
 import { useBalance, BALANCE_POLL_INTERVAL } from '@/modules/shop/hooks/useBalance'
+import { CoinIcon } from '@/components/CoinIcon'
 
 interface CoinBalanceProps {
   amount: number;
@@ -8,11 +9,7 @@ interface CoinBalanceProps {
 }
 
 const sizeClasses = { sm: "text-sm", md: "text-lg", lg: "text-3xl" };
-const coinSizeClasses = {
-  sm: "w-4 h-4 text-[9px]",
-  md: "w-5 h-5 text-[10px]",
-  lg: "w-7 h-7 text-[13px]",
-};
+const coinSizes = { sm: 16, md: 20, lg: 28 };
 
 export function CoinBalance({ amount, size = "md" }: CoinBalanceProps) {
   const formatted = amount.toLocaleString("ru-RU");
@@ -20,15 +17,10 @@ export function CoinBalance({ amount, size = "md" }: CoinBalanceProps) {
 
   return (
     <span className={`inline-flex items-center gap-1.5 font-bold ${sizeClasses[size]}`}>
-      <span
-        className={`${coinSizeClasses[size]} rounded-full flex items-center justify-center text-white flex-shrink-0`}
-        style={{ background: isNegative ? "var(--apex-danger)" : "var(--apex-primary)" }}
-      >
-        Б
-      </span>
       <span style={{ color: isNegative ? "var(--apex-danger)" : "var(--apex-primary)" }}>
         {isNegative ? "" : "+"}{formatted}
       </span>
+      <CoinIcon size={coinSizes[size]} className="flex-shrink-0" />
     </span>
   );
 }
@@ -38,13 +30,8 @@ export function CoinStatic({ amount, size = "md" }: CoinBalanceProps) {
 
   return (
     <span className={`inline-flex items-center gap-1.5 font-bold ${sizeClasses[size]}`}>
-      <span
-        className={`${coinSizeClasses[size]} rounded-full flex items-center justify-center text-white flex-shrink-0`}
-        style={{ background: "var(--apex-primary)" }}
-      >
-        Б
-      </span>
-      <span style={{ color: "var(--apex-text)" }}>{formatted}</span>
+      <span style={{ color: "inherit" }}>{formatted}</span>
+      <CoinIcon size={coinSizes[size]} className="flex-shrink-0" />
     </span>
   );
 }
@@ -61,13 +48,8 @@ export function CoinBalanceLive({ initialAmount, size = "md" }: CoinBalanceLiveP
 
   return (
     <span className={`inline-flex items-center gap-1.5 font-bold ${sizeClasses[size]}`}>
-      <span
-        className={`${coinSizeClasses[size]} rounded-full flex items-center justify-center text-white flex-shrink-0`}
-        style={{ background: "var(--apex-primary)" }}
-      >
-        Б
-      </span>
       <span style={{ color: "var(--apex-text)" }}>{formatted}</span>
+      <CoinIcon size={coinSizes[size]} className="flex-shrink-0" />
     </span>
   );
 }

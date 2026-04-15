@@ -1,3 +1,4 @@
+import { CoinIcon } from "@/components/CoinIcon";
 import { AlarmsBanner } from "@/modules/alarms/components/AlarmsBanner";
 import { StreakPanel } from "@/components/dashboard/StreakPanel";
 import { TransactionFeed } from "@/components/dashboard/TransactionFeed";
@@ -301,7 +302,7 @@ export default async function DashboardPage() {
         <div className="col-span-2">
           <TransactionFeed transactions={allTransactions} />
         </div>
-        <div className="col-span-3">
+        <div className="col-span-3" data-onboarding="leaderboard">
           <Leaderboard
             entries={toLeaderboardEntries(wsPersonalRanking)}
             automationEntries={toLeaderboardEntries(revitPersonalRanking)}
@@ -309,7 +310,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="animate-fade-in-up stagger-3">
+      <div className="animate-fade-in-up stagger-3" data-onboarding="department-contest">
         <DepartmentContest
           departments={toDeptEntries(wsDeptRanking, currentDept)}
           automationDepartments={toDeptEntries(revitDeptRanking, currentDept)}

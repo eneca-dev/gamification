@@ -10,6 +10,7 @@ export function TransactionFeed({ transactions }: TransactionFeedProps) {
   return (
     <div
       className="rounded-2xl p-5 h-full"
+      data-onboarding="transaction-feed"
       style={{
         background: "var(--apex-surface)",
         border: "1px solid var(--apex-border)",

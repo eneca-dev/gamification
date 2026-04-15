@@ -121,77 +121,79 @@ export function CompanyGratitudeList({
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
-          {visible.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-2xl p-4"
-              style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg"
-                  style={{ background: 'var(--tag-purple-bg)' }}
-                >
-                  {getCategoryEmoji(item.category)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>
-                      {item.sender_name}
-                    </span>
-                    <ArrowRight size={12} style={{ color: 'var(--text-muted)' }} />
-                    <span className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>
-                      {item.recipient_name}
-                    </span>
-                    <span
-                      className="text-[11px] font-medium px-2 py-0.5 rounded-full"
-                      style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
-                    >
-                      {getCategoryLabel(item.category)}
-                    </span>
-                  </div>
+        <div>
+          <div className="md:columns-2 gap-3 space-y-3 [column-fill:_balance]">
+            {visible.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-2xl p-4 break-inside-avoid"
+                style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
+              >
+                <div className="flex items-start gap-3">
                   <div
-                    className="text-[13px] font-medium mt-1.5 leading-relaxed"
-                    style={{ color: 'var(--text-secondary)' }}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg"
+                    style={{ background: 'var(--tag-purple-bg)' }}
                   >
-                    {item.message}
+                    {getCategoryEmoji(item.category)}
                   </div>
-                  <div className="flex items-center gap-3 mt-2">
-                    <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
-                      {timeAgo(item.created_at)}
-                    </span>
-                    {item.type === 'gift' && item.earned_coins > 0 && (
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>
+                        {item.sender_name}
+                      </span>
+                      <ArrowRight size={12} style={{ color: 'var(--text-muted)' }} />
+                      <span className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>
+                        {item.recipient_name}
+                      </span>
                       <span
-                        className="text-[11px] font-bold px-2 py-0.5 rounded-md"
-                        style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-success-text)' }}
+                        className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+                        style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
                       >
-                        +{item.earned_coins} ПК
+                        {getCategoryLabel(item.category)}
                       </span>
-                    )}
-                    {item.type === 'thanks' && (
-                      <span
-                        className="text-[11px] font-medium px-2 py-0.5 rounded-md"
-                        style={{ background: 'var(--tag-purple-bg)', color: 'var(--tag-purple-text)' }}
-                      >
-                        спасибо
+                    </div>
+                    <div
+                      className="text-[13px] font-medium mt-1.5 leading-relaxed break-all"
+                      style={{ color: 'var(--text-secondary)' }}
+                    >
+                      {item.message}
+                    </div>
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
+                        {timeAgo(item.created_at)}
                       </span>
-                    )}
-                    {item.sender_department && (
-                      <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
-                        {item.sender_department}
-                      </span>
-                    )}
+                      {item.type === 'gift' && (
+                        <span
+                          className="text-[11px] font-bold px-2 py-0.5 rounded-md"
+                          style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-success-text)' }}
+                        >
+                          подарок
+                        </span>
+                      )}
+                      {item.type === 'thanks' && (
+                        <span
+                          className="text-[11px] font-medium px-2 py-0.5 rounded-md"
+                          style={{ background: 'var(--tag-purple-bg)', color: 'var(--tag-purple-text)' }}
+                        >
+                          спасибо
+                        </span>
+                      )}
+                      {item.sender_department && (
+                        <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
+                          {item.sender_department}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
 
           {hasMore && (
             <button
               onClick={() => setVisibleCount((c) => c + pageSize)}
-              className="w-full py-3 rounded-xl text-[13px] font-bold transition-colors"
+              className="w-full py-3 mt-3 rounded-xl text-[13px] font-bold transition-colors"
               style={{
                 background: 'var(--surface)',
                 color: 'var(--text-muted)',

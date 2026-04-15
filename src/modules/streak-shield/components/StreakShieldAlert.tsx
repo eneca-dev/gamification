@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition, useRef } from 'react'
 import { Shield, AlertTriangle } from 'lucide-react'
+import { CoinIcon } from '@/components/CoinIcon'
 
 import { buyStreakShield } from '@/modules/streak-shield/index.client'
 
@@ -113,7 +114,7 @@ export function StreakShieldAlert({ pending, userBalance }: StreakShieldAlertPro
           color: canAfford ? 'white' : 'var(--apex-text-muted)',
         }}
       >
-        {isPending ? 'Покупка...' : `Спасти за ${pending.price} ПК`}
+        {isPending ? 'Покупка...' : <span className="inline-flex items-center gap-1">Спасти за {pending.price} <CoinIcon size={12} /></span>}
       </button>
     </div>
   )

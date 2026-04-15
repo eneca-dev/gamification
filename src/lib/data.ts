@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 // ===== ТИПЫ ИСТОЧНИКОВ =====
 export type EntitySource = "worksection" | "revit" | "social";
 
@@ -51,7 +53,7 @@ export interface DailyTask {
   id: number;
   source: EntitySource;
   title: string;
-  description: string;
+  description: ReactNode;
   reward: number;
   icon: string;
   progress: number;

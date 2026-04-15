@@ -241,13 +241,14 @@ export function CalendarClient({ initialHolidays, initialWorkdays }: CalendarCli
 
       {/* Сетка месяцев */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-        {months.map(({ year, month }) => (
+        {months.map(({ year, month }, idx) => (
           <MonthCard
             key={`${year}-${month}`}
             year={year}
             month={month}
             getDayState={(d) => getDayState(year, month, d)}
             onDayClick={(d) => handleDayClick(year, month, d)}
+            {...(idx === 0 ? { 'data-onboarding': 'calendar-first-month' } : {})}
           />
         ))}
       </div>
@@ -291,9 +292,10 @@ interface MonthCardProps {
   month: number
   getDayState: (day: number) => DayState
   onDayClick: (day: number) => void
+  'data-onboarding'?: string
 }
 
-function MonthCard({ year, month, getDayState, onDayClick }: MonthCardProps) {
+function MonthCard({ year, month, getDayState, onDayClick, 'data-onboarding': dataOnboarding }: MonthCardProps) {
   const weeks = getMonthGrid(year, month)
   const now = new Date()
   const todayStr = toDateStr(now.getFullYear(), now.getMonth(), now.getDate())
@@ -301,6 +303,7 @@ function MonthCard({ year, month, getDayState, onDayClick }: MonthCardProps) {
   return (
     <div
       className="rounded-xl overflow-hidden"
+      {...(dataOnboarding ? { 'data-onboarding': dataOnboarding } : {})}
       style={{
         background: 'var(--apex-surface)',
         border: '1px solid var(--apex-border)',

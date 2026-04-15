@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ArrowUpRight, ArrowDownLeft } from 'lucide-react'
+import { CoinIcon } from '@/components/CoinIcon'
 
 import { GRATITUDE_CATEGORIES } from '../types'
 import type { GratitudeNew } from '../types'
@@ -116,7 +117,7 @@ export function GratitudeList({ items, currentUserEmail }: GratitudeListProps) {
                       </span>
                     </div>
                     <div
-                      className="text-[13px] font-medium mt-1.5 leading-relaxed"
+                      className="text-[13px] font-medium mt-1.5 leading-relaxed break-all"
                       style={{ color: 'var(--text-secondary)' }}
                     >
                       {item.message}
@@ -131,7 +132,7 @@ export function GratitudeList({ items, currentUserEmail }: GratitudeListProps) {
                             className="text-[11px] font-bold px-2 py-0.5 rounded-md"
                             style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-success-text)' }}
                           >
-                            +{item.earned_coins} ПК
+                            <span className="inline-flex items-center gap-0.5">+{item.earned_coins} <CoinIcon size={11} /></span>
                           </span>
                         ) : item.gift_source === 'quota' ? (
                           <span
@@ -145,7 +146,7 @@ export function GratitudeList({ items, currentUserEmail }: GratitudeListProps) {
                             className="text-[11px] font-bold px-2 py-0.5 rounded-md"
                             style={{ background: 'var(--apex-warning-bg)', color: 'var(--tag-orange-text)' }}
                           >
-                            -{item.earned_coins} ПК
+                            <span className="inline-flex items-center gap-0.5">-{item.earned_coins} <CoinIcon size={11} /></span>
                           </span>
                         )
                       )}

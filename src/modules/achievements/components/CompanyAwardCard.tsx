@@ -1,7 +1,6 @@
 import { Trophy, Users, Building2, Zap, CheckCircle, Heart } from 'lucide-react'
 
 import type { CompanyAward, AchievementArea, AchievementEntityType } from '../types'
-import { ACHIEVEMENT_BONUSES } from '../types'
 
 const AREA_UI: Record<AchievementArea, { label: string; icon: typeof Zap; color: string; bg: string }> = {
   revit: { label: 'Revit', icon: Zap, color: 'var(--tag-orange-text)', bg: 'var(--tag-orange-bg)' },
@@ -9,10 +8,10 @@ const AREA_UI: Record<AchievementArea, { label: string; icon: typeof Zap; color:
   gratitude: { label: 'Благодарности', icon: Heart, color: 'var(--tag-purple-text)', bg: 'var(--tag-purple-bg)' },
 }
 
-const ENTITY_UI: Record<AchievementEntityType, { emoji: string; label: string; icon: typeof Trophy }> = {
-  user: { emoji: '🏆', label: 'Личное', icon: Trophy },
-  team: { emoji: '🛡️', label: 'Команда', icon: Users },
-  department: { emoji: '👑', label: 'Отдел', icon: Building2 },
+const ENTITY_UI: Record<AchievementEntityType, { emoji: string; label: string }> = {
+  user: { emoji: '🏆', label: 'Личное' },
+  team: { emoji: '🛡️', label: 'Команда' },
+  department: { emoji: '👑', label: 'Отдел' },
 }
 
 interface CompanyAwardCardProps {
@@ -22,55 +21,41 @@ interface CompanyAwardCardProps {
 export function CompanyAwardCard({ award }: CompanyAwardCardProps) {
   const area = AREA_UI[award.area] ?? AREA_UI.revit
   const entity = ENTITY_UI[award.entity_type] ?? ENTITY_UI.user
-  const bonus = ACHIEVEMENT_BONUSES[award.entity_type]
   const AreaIcon = area.icon
 
   return (
     <div
-      className="rounded-2xl p-4 flex flex-col gap-3 transition-all card-hover"
+      className="rounded-xl p-3 flex items-center gap-2.5 transition-all card-hover"
       style={{
         background: 'var(--surface-elevated)',
-        border: `1px solid ${area.color}22`,
+        border: '1px solid var(--border)',
       }}
     >
-      {/* Верхняя часть: emoji + область */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">{entity.emoji}</span>
+      {/* Emoji */}
+      <span className="text-xl shrink-0">{entity.emoji}</span>
+
+      {/* Имя + метки */}
+      <div className="min-w-0">
+        <div className="text-[12px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>
+          {award.label}
+        </div>
+        <div className="flex items-center gap-1 mt-0.5">
           <div
-            className="flex items-center gap-1 px-2 py-0.5 rounded-full"
+            className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full"
             style={{ background: area.bg }}
           >
-            <AreaIcon size={11} style={{ color: area.color }} />
-            <span className="text-[10px] font-bold" style={{ color: area.color }}>
+            <AreaIcon size={9} style={{ color: area.color }} />
+            <span className="text-[9px] font-bold" style={{ color: area.color }}>
               {area.label}
             </span>
           </div>
+          <span
+            className="text-[9px] font-semibold px-1.5 py-px rounded-full"
+            style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
+          >
+            {entity.label}
+          </span>
         </div>
-        <span
-          className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-          style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
-        >
-          {entity.label}
-        </span>
-      </div>
-
-      {/* Имя */}
-      <div className="text-[14px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>
-        {award.label}
-      </div>
-
-      {/* Статистика */}
-      <div className="flex items-center gap-3">
-        <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
-          {award.days_in_top} дн. в топе
-        </span>
-        <span
-          className="text-[11px] font-bold px-2 py-0.5 rounded-md"
-          style={{ background: area.bg, color: area.color }}
-        >
-          +{bonus} ПК
-        </span>
       </div>
     </div>
   )

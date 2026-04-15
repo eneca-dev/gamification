@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Zap, CheckCircle, Heart, Trophy, Users, Building2, ChevronRight, X } from 'lucide-react'
+import Link from 'next/link'
+import { Zap, CheckCircle, Heart, Trophy, Users, Building2, ChevronRight } from 'lucide-react'
+import { CoinIcon } from '@/components/CoinIcon'
 
 import type { AchievementAward, AchievementEntityType, AchievementArea } from '../types'
 import { ACHIEVEMENT_BONUSES } from '../types'
@@ -115,7 +117,7 @@ function TrophyCell({
           {earned ? (
             <div className="text-[10px] mt-1 space-y-0.5" style={{ color: 'var(--text-secondary)' }}>
               <div>Дней в топе: {award.days_in_top}</div>
-              <div className="font-semibold" style={{ color: areaCfg.color }}>Награда: +{bonus} ПК</div>
+              <div className="font-semibold inline-flex items-center gap-0.5" style={{ color: areaCfg.color }}>Награда: +{bonus} <CoinIcon size={10} /></div>
             </div>
           ) : isCurrent ? (
             <div className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>В процессе...</div>
@@ -129,88 +131,12 @@ function TrophyCell({
   )
 }
 
-// Модалка "Все достижения"
-function AllAwardsModal({ awards, onClose }: { awards: AchievementAward[]; onClose: () => void }) {
-  // Группируем по месяцам
-  const grouped = new Map<string, AchievementAward[]>()
-  for (const a of awards) {
-    const key = a.period_start.slice(0, 7) // "2026-03"
-    if (!grouped.has(key)) grouped.set(key, [])
-    grouped.get(key)!.push(a)
-  }
-  const months = [...grouped.entries()].sort((a, b) => b[0].localeCompare(a[0]))
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.15)', backdropFilter: 'blur(2px)' }}>
-      <div
-        className="rounded-2xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto"
-        style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
-      >
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-extrabold" style={{ color: 'var(--text-primary)' }}>Все достижения</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-[var(--surface)] transition-colors">
-            <X size={18} style={{ color: 'var(--text-muted)' }} />
-          </button>
-        </div>
-
-        {months.length === 0 ? (
-          <div className="text-center py-8 text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>
-            Пока нет достижений
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {months.map(([monthKey, monthAwards]) => {
-              const d = new Date(monthKey + '-01')
-              const monthLabel = d.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
-
-              return (
-                <div key={monthKey}>
-                  <div className="text-[11px] font-bold uppercase tracking-wider mb-2 capitalize" style={{ color: 'var(--text-muted)' }}>
-                    {monthLabel}
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {monthAwards.map((award) => {
-                      const areaCfg = AREA_CONFIG[award.area]
-                      const entityCfg = ENTITY_CONFIG[award.entity_type]
-                      const bonus = ACHIEVEMENT_BONUSES[award.entity_type]
-
-                      return (
-                        <div
-                          key={`${award.entity_type}-${award.area}-${award.period_start}`}
-                          className="rounded-xl p-3 flex flex-col items-center gap-1"
-                          style={{ background: areaCfg.bg, border: `1px solid ${areaCfg.color}33` }}
-                        >
-                          <span className="text-2xl">{entityCfg.emoji}</span>
-                          <span className="text-[11px] font-bold text-center" style={{ color: areaCfg.color }}>
-                            {entityCfg.label}
-                          </span>
-                          <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
-                            {areaCfg.label}
-                          </span>
-                          <span className="text-[10px] font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                            {award.days_in_top} дней &middot; +{bonus} ПК
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // Основной компонент
 interface TrophyShelfProps {
   awards: AchievementAward[]
 }
 
 export function TrophyShelf({ awards }: TrophyShelfProps) {
-  const [showAll, setShowAll] = useState(false)
   const quarterMonths = getQuarterMonths()
   const areas: AchievementArea[] = ['revit', 'ws']
   const entityTypes: AchievementEntityType[] = ['user', 'team', 'department']
@@ -226,6 +152,7 @@ export function TrophyShelf({ awards }: TrophyShelfProps) {
     <>
       <div
         className="rounded-2xl p-5"
+        data-onboarding="trophy-shelf"
         style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
       >
         <div className="flex items-center justify-between mb-4">
@@ -235,14 +162,14 @@ export function TrophyShelf({ awards }: TrophyShelfProps) {
               Кубки за {quarterLabel}
             </div>
           </div>
-          <button
-            onClick={() => setShowAll(true)}
+          <Link
+            href="/achievements/all"
             className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors hover:opacity-80"
             style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
           >
             Все достижения
             <ChevronRight size={12} />
-          </button>
+          </Link>
         </div>
 
         <div className="space-y-5">
@@ -348,7 +275,6 @@ export function TrophyShelf({ awards }: TrophyShelfProps) {
         </div>
       </div>
 
-      {showAll && <AllAwardsModal awards={awards} onClose={() => setShowAll(false)} />}
     </>
   )
 }

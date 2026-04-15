@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Crown, Zap, Info } from "lucide-react";
+import { CoinIcon } from "@/components/CoinIcon";
 import type { AutomationLeaderboardEntry } from "@/modules/revit";
 
 // ─── Внутренний тип для рендеринга строки панели ──────────────────────────────
@@ -101,7 +102,7 @@ function TopFivePanel({
   icon,
   entries,
   accentColor,
-  unit = "б",
+  unit,
   currentUserRank,
   tooltip,
 }: {
@@ -109,7 +110,7 @@ function TopFivePanel({
   icon: React.ReactNode;
   entries: PanelEntry[];
   accentColor: string;
-  unit?: string;
+  unit?: React.ReactNode;
   currentUserRank?: number | null;
   tooltip?: string;
 }) {
@@ -216,11 +217,11 @@ function TopFivePanel({
                   </div>
                 </div>
 
-                <div className="text-right shrink-0">
+                <div className="flex items-center gap-1 shrink-0">
                   <div className="text-[14px] font-bold" style={{ color: accentColor }}>
                     {entry.value.toLocaleString("ru-RU")}
                   </div>
-                  <div className="text-[9px]" style={{ color: "var(--apex-text-muted)" }}>{unit}</div>
+                  {unit}
                 </div>
               </div>
             );
@@ -261,7 +262,7 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         icon={<Crown size={14} style={{ color: "var(--apex-primary)" }} />}
         entries={toPanel(entries)}
         accentColor="var(--apex-primary)"
-        unit="ПК"
+        unit={<CoinIcon size={14} />}
         currentUserRank={findRank(entries)}
         tooltip="Топ формируется по максимальному количеству баллов за Worksection, полученных за месяц. Сброс каждый месяц."
       />
@@ -269,7 +270,7 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         title="Топ-5 Revit"
         icon={<Zap size={14} style={{ color: "var(--orange-500)" }} />}
         entries={toPanel(automationEntries ?? [])}
-        unit="ПК"
+        unit={<CoinIcon size={14} />}
         accentColor="var(--orange-500)"
         currentUserRank={findRank(automationEntries ?? [])}
         tooltip="Топ формируется по максимальному количеству баллов за использование Revit-плагинов за месяц. Сброс каждый месяц."

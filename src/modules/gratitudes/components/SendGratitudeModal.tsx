@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Heart, Gift, Search, Send, Sparkles, Coins, CheckCircle } from 'lucide-react'
+import { CoinIcon } from '@/components/CoinIcon'
 
 import { sendGratitude } from '../actions'
 import { GRATITUDE_CATEGORIES } from '../types'
@@ -300,7 +301,7 @@ export function SendGratitudeModal({
                     <span className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>Сумма подарка</span>
                   </div>
                   <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
-                    Баланс: {balance.toLocaleString('ru-RU')} ПК
+                    <span className="inline-flex items-center gap-0.5">Баланс: {balance.toLocaleString('ru-RU')} <CoinIcon size={11} /></span>
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -350,7 +351,7 @@ export function SendGratitudeModal({
                 )}
                 {coinsAmount > balance && (
                   <p className="text-[11px] font-medium mt-1" style={{ color: 'var(--apex-danger)' }}>
-                    Недостаточно баллов (баланс: {balance} ПК)
+                    <span className="inline-flex items-center gap-0.5">Недостаточно баллов (баланс: {balance} <CoinIcon size={11} />)</span>
                   </p>
                 )}
                 <button
@@ -362,7 +363,7 @@ export function SendGratitudeModal({
                   {isPending ? 'Отправляется...' : (
                     <>
                       <Send size={13} />
-                      Отправить подарок за {coinsAmount} ПК
+                      <span className="inline-flex items-center gap-1">Отправить подарок за {coinsAmount} <CoinIcon size={12} /></span>
                     </>
                   )}
                 </button>
@@ -400,7 +401,7 @@ export function SendGratitudeModal({
                     <Heart size={14} style={{ color: 'var(--tag-purple-text)' }} />
                     {isPending ? 'Отправляется...' : 'Сказать спасибо'}
                   </span>
-                  <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>0 ПК</span>
+                  <span className="text-[11px] font-medium inline-flex items-center gap-0.5" style={{ color: 'var(--text-muted)' }}>0 <CoinIcon size={11} /></span>
                 </button>
 
                 {/* Подарок по квоте (если доступна) */}
@@ -417,7 +418,7 @@ export function SendGratitudeModal({
                         {isPending ? 'Отправляется...' : 'Подарить (бесплатная квота)'}
                       </span>
                       <span className="text-[11px] font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                        +{quota.coins_per_gratitude} ПК
+                        <span className="inline-flex items-center gap-0.5">+{quota.coins_per_gratitude} <CoinIcon size={11} /></span>
                       </span>
                     </button>
                     <div className="text-center text-[11px] font-medium mt-1.5" style={{ color: 'var(--text-muted)' }}>

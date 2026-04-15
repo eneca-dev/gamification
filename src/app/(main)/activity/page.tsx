@@ -3,7 +3,7 @@ import { Trophy, Heart, ChevronRight } from 'lucide-react'
 
 import { getCompanyAwards } from '@/modules/achievements'
 import { getCompanyGratitudes } from '@/modules/gratitudes'
-import { CompanyAwardCard } from '@/modules/achievements/components/CompanyAwardCard'
+import { AwardsFilters } from '@/modules/achievements/components/AwardsFilters'
 import { CompanyGratitudeList } from '@/modules/gratitudes/components/CompanyGratitudeList'
 
 function getCurrentMonthRange(): { start: string; end: string; label: string } {
@@ -91,45 +91,39 @@ export default async function ActivityPage() {
 
       {/* Секция достижений */}
       <div className="animate-fade-in-up stagger-2">
-        <div
-          className="rounded-2xl p-5"
-          style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Trophy size={14} style={{ color: 'var(--orange-500)' }} />
-              <span className="text-[12px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                Достижения за {monthRange.label}
-              </span>
-            </div>
-            <Link
-              href="/activity/achievements"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors hover:opacity-80"
-              style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
-            >
-              Все достижения
-              <ChevronRight size={12} />
-            </Link>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Trophy size={14} style={{ color: 'var(--orange-500)' }} />
+            <span className="text-[12px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              Достижения за {monthRange.label}
+            </span>
           </div>
-
-          {awards.length === 0 ? (
-            <div className="py-8 text-center">
-              <div className="text-3xl mb-3">🏆</div>
-              <div className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>
-                Пока никто не получил достижение
-              </div>
-              <div className="text-[12px] font-medium mt-1" style={{ color: 'var(--text-muted)' }}>
-                Достижения появятся здесь, когда кто-то проведёт достаточно дней в топе
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {awards.map((award) => (
-                <CompanyAwardCard key={award.id} award={award} />
-              ))}
-            </div>
-          )}
+          <Link
+            href="/activity/achievements"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors hover:opacity-80"
+            style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
+          >
+            Все достижения
+            <ChevronRight size={12} />
+          </Link>
         </div>
+
+        {awards.length === 0 ? (
+          <div
+            className="rounded-2xl py-8 text-center"
+            style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
+          >
+            <div className="text-3xl mb-3">🏆</div>
+            <div className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>
+              Пока никто не получил достижение
+            </div>
+            <div className="text-[12px] font-medium mt-1" style={{ color: 'var(--text-muted)' }}>
+              Достижения появятся здесь, когда кто-то проведёт достаточно дней в топе
+            </div>
+          </div>
+        ) : (
+          <AwardsFilters awards={awards} hideMonthGroups />
+        )}
       </div>
 
       {/* Секция благодарностей */}
