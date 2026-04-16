@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Trophy, Heart, ChevronRight } from 'lucide-react'
+import { Trophy, Heart } from 'lucide-react'
 
 import { getCompanyAwards } from '@/modules/achievements'
 import { getCompanyGratitudes } from '@/modules/gratitudes'
@@ -100,11 +100,10 @@ export default async function ActivityPage() {
           </div>
           <Link
             href="/activity/achievements"
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors hover:opacity-80"
-            style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
+            className="text-[12px] font-semibold transition-opacity hover:opacity-80"
+            style={{ color: 'var(--apex-primary)' }}
           >
-            Все достижения
-            <ChevronRight size={12} />
+            Все достижения →
           </Link>
         </div>
 
@@ -137,11 +136,10 @@ export default async function ActivityPage() {
           </div>
           <Link
             href="/activity/gratitudes"
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors hover:opacity-80"
-            style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
+            className="text-[12px] font-semibold transition-opacity hover:opacity-80"
+            style={{ color: 'var(--apex-primary)' }}
           >
-            Все благодарности
-            <ChevronRight size={12} />
+            Все благодарности →
           </Link>
         </div>
 

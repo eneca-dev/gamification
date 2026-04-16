@@ -8,10 +8,10 @@ const AREA_UI: Record<AchievementArea, { label: string; icon: typeof Zap; color:
   gratitude: { label: 'Благодарности', icon: Heart, color: 'var(--tag-purple-text)', bg: 'var(--tag-purple-bg)' },
 }
 
-const ENTITY_UI: Record<AchievementEntityType, { emoji: string; label: string }> = {
-  user: { emoji: '🏆', label: 'Личное' },
-  team: { emoji: '🛡️', label: 'Команда' },
-  department: { emoji: '👑', label: 'Отдел' },
+const ENTITY_UI: Record<AchievementEntityType, { emoji: string; label: string; color: string; bg: string }> = {
+  user: { emoji: '🏆', label: 'Личное', color: 'var(--apex-primary)', bg: 'var(--apex-success-bg)' },
+  team: { emoji: '🛡️', label: 'Команда', color: 'var(--apex-info-text)', bg: 'rgba(var(--apex-info-rgb), 0.08)' },
+  department: { emoji: '👑', label: 'Отдел', color: 'var(--tag-purple-text)', bg: 'var(--tag-purple-bg)' },
 }
 
 interface CompanyAwardCardProps {
@@ -50,8 +50,8 @@ export function CompanyAwardCard({ award }: CompanyAwardCardProps) {
             </span>
           </div>
           <span
-            className="text-[9px] font-semibold px-1.5 py-px rounded-full"
-            style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
+            className="text-[9px] font-bold px-1.5 py-px rounded-full"
+            style={{ background: entity.bg, color: entity.color }}
           >
             {entity.label}
           </span>

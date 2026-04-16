@@ -71,27 +71,29 @@ function StreakRow({
 // ─── Event icon ─────────────────────────────────────────────────────────────
 
 function EventIcon({ type }: { type: string }) {
+  const title = eventLabel(type);
+
   if (type.startsWith("budget_ok")) {
-    return <CheckCircle2 size={14} style={{ color: "var(--apex-primary)" }} />;
+    return <span title={title}><CheckCircle2 size={14} style={{ color: "var(--apex-primary)" }} /></span>;
   }
   if (type.startsWith("budget_exceeded")) {
-    return <XCircle size={14} style={{ color: "var(--apex-danger)" }} />;
+    return <span title={title}><XCircle size={14} style={{ color: "var(--apex-danger)" }} /></span>;
   }
   if (type.startsWith("budget_revoked")) {
-    return <XCircle size={14} style={{ color: "var(--orange-500)" }} />;
+    return <span title={title}><XCircle size={14} style={{ color: "var(--orange-500)" }} /></span>;
   }
   if (type === "master_planner" || type === "master_planner_l2") {
-    return <Trophy size={14} style={{ color: "var(--apex-primary)" }} />;
+    return <span title={title}><Trophy size={14} style={{ color: "var(--apex-primary)" }} /></span>;
   }
   if (type.includes("revoked")) {
-    return <Trophy size={14} style={{ color: "var(--apex-danger)" }} />;
+    return <span title={title}><Trophy size={14} style={{ color: "var(--apex-danger)" }} /></span>;
   }
   return null;
 }
 
 function eventLabel(type: string): string {
-  if (type.startsWith("budget_ok")) return "В бюджете";
-  if (type.startsWith("budget_exceeded")) return "Превышение";
+  if (type.startsWith("budget_ok")) return "Закрыта в бюджете";
+  if (type.startsWith("budget_exceeded")) return "Превышение бюджета";
   if (type.startsWith("budget_revoked")) return "Отозвано";
   if (type === "master_planner" || type === "master_planner_l2") return "Бонус";
   if (type.includes("revoked")) return "Бонус отозван";
@@ -141,7 +143,11 @@ function RecentEvents({ events }: { events: MasterPlannerEvent[] }) {
             </span>
           )}
           <span className="text-[10px] shrink-0" style={{ color: "var(--apex-text-muted)" }}>
-            {evt.date}
+            {new Date(evt.date + "T00:00:00").toLocaleDateString("ru-RU", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            })}
           </span>
         </div>
       ))}
@@ -161,7 +167,7 @@ function PendingTasks({ tasks }: { tasks: PendingBudgetTask[] }) {
           className="text-[10px] font-semibold uppercase tracking-wider"
           style={{ color: "var(--apex-text-muted)" }}
         >
-          Ожидают проверки
+          Ожидают 30 дней
         </div>
         {tasks.length > 3 && (
           <Link
@@ -176,7 +182,7 @@ function PendingTasks({ tasks }: { tasks: PendingBudgetTask[] }) {
       <div className="flex flex-col gap-1">
         {tasks.slice(0, 3).map((task, i) => (
           <div key={i} className="flex items-center gap-2">
-            <Clock size={12} style={{ color: "var(--apex-text-muted)" }} />
+            <span title="Ожидает 30 дней"><Clock size={12} style={{ color: "var(--apex-text-muted)" }} /></span>
             <span
               className="text-[10px] font-semibold px-1 py-0.5 rounded"
               style={{

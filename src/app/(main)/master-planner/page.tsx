@@ -160,9 +160,9 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
           <div className="flex gap-1 mb-4">
             {[
               { label: "Все события", value: undefined },
-              { label: "Ожидают проверки", value: "pending" },
-              { label: "В бюджете", value: "ok" },
-              { label: "Превышение", value: "exceeded" },
+              { label: "Ожидают 30 дней", value: "pending" },
+              { label: "Закрыта в бюджете", value: "ok" },
+              { label: "Превышение бюджета", value: "exceeded" },
               { label: "Отозвано", value: "revoked" },
             ].map((tab) => {
               const isActive = statusFilter === tab.value;

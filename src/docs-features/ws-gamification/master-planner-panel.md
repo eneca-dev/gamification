@@ -3,6 +3,7 @@
 ## Контекст
 
 В скрипте `compute-gamification.ts` (step 5) уже работает механика **master_planner** для L3:
+
 - 10 последовательных L3-задач, закрытых в рамках бюджета → +450 коинов
 - Любая L3 с превышением → сброс серии (`master_planner_reset`)
 - Серия циклическая: каждые 10 → бонус
@@ -87,11 +88,11 @@
 
 ### Важно: разница между exceeded и revoked
 
-| | `budget_exceeded` | `budget_revoked` |
-|---|---|---|
-| Что делает со стриком | Сбрасывает в 0 | Убирает задачу из потока, стрик уменьшается |
-| Создаёт reset | Да (`master_planner_reset`) | Нет |
-| Может отозвать бонус | Нет (exceeded сам по себе не отзывает, он просто ломает серию вперёд) | Да (`master_planner_revoked`, если бонус стал незаслуженным) |
+|                       | `budget_exceeded`                                                     | `budget_revoked`                                             |
+| --------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Что делает со стриком | Сбрасывает в 0                                                        | Убирает задачу из потока, стрик уменьшается                  |
+| Создаёт reset         | Да (`master_planner_reset`)                                           | Нет                                                          |
+| Может отозвать бонус  | Нет (exceeded сам по себе не отзывает, он просто ломает серию вперёд) | Да (`master_planner_revoked`, если бонус стал незаслуженным) |
 
 ### Пример пересчёта
 
@@ -137,6 +138,7 @@ expectedBonuses(0) < givenBonuses(1)
 ### Обратная совместимость
 
 В БД уже есть старые события `master_planner` с `details: {}` и ключами старого формата. Это не проблема:
+
 - Новые ключи (`_v2_`) не пересекаются со старыми
 - `givenBonuses` считается как `count(master_planner) - count(master_planner_revoked)` — старые события корректно учитываются
 - Вью парсит `(details->>'milestone')::integer` — для старых записей вернёт NULL, UI покажет без номера milestone
@@ -145,11 +147,11 @@ expectedBonuses(0) < givenBonuses(1)
 
 Все события мастера планирования хранят в details ссылки на задачи — события самодостаточны для отображения в UI без дополнительных JOIN-ов:
 
-| Событие | details | Зачем |
-|---|---|---|
-| `master_planner` | `{ milestone: 10, tasks: [{id:'t1',name:'...'}, ...] }` | UI: «Бонус за задачи: Дизайн главной, Рефакторинг API...» |
-| `master_planner_reset` | `{ streak_was: 7, exceeded_task: {id:'tX',name:'...'} }` | UI: «Серия сброшена из-за задачи X» |
-| `master_planner_revoked` | `{ expected: 0, given: 1, revoked_tasks: [{id:'tY',name:'...'}, ...] }` | UI: «Бонус отозван: бюджет превышен по задачам Y, Z» |
+| Событие                  | details                                                                 | Зачем                                                     |
+| ------------------------ | ----------------------------------------------------------------------- | --------------------------------------------------------- |
+| `master_planner`         | `{ milestone: 10, tasks: [{id:'t1',name:'...'}, ...] }`                 | UI: «Бонус за задачи: Дизайн главной, Рефакторинг API...» |
+| `master_planner_reset`   | `{ streak_was: 7, exceeded_task: {id:'tX',name:'...'} }`                | UI: «Серия сброшена из-за задачи X»                       |
+| `master_planner_revoked` | `{ expected: 0, given: 1, revoked_tasks: [{id:'tY',name:'...'}, ...] }` | UI: «Бонус отозван: бюджет превышен по задачам Y, Z»      |
 
 Названия задач денормализованы в details — дополнительных JOIN-ов не нужно. Старые записи `master_planner` с `details: {}` — обратно совместимы: tasks будет NULL, UI покажет бонус без списка задач.
 
@@ -159,12 +161,12 @@ expectedBonuses(0) < givenBonuses(1)
 
 ### Миграция: INSERT в `gamification_event_types`
 
-| key | coins | description |
-|---|---|---|
-| `master_planner_l2` | +400 | Мастер планирования L2: 10 задач подряд в бюджете |
-| `master_planner_l2_reset` | 0 | Сброс серии мастера планирования L2 |
-| `master_planner_revoked` | -450 | Отзыв бонуса мастера планирования L3 |
-| `master_planner_l2_revoked` | -400 | Отзыв бонуса мастера планирования L2 |
+| key                         | coins | description                                       |
+| --------------------------- | ----- | ------------------------------------------------- |
+| `master_planner_l2`         | +400  | Мастер планирования L2: 10 задач подряд в бюджете |
+| `master_planner_l2_reset`   | 0     | Сброс серии мастера планирования L2               |
+| `master_planner_revoked`    | -450  | Отзыв бонуса мастера планирования L3              |
+| `master_planner_l2_revoked` | -400  | Отзыв бонуса мастера планирования L2              |
 
 Примечание: фактическая сумма списания при revoke берётся через `coins_override` из оригинальной транзакции, а не из справочника. Значения -450/-400 в таблице — fallback на случай если оригинал не найден.
 
@@ -214,15 +216,15 @@ async function computeMasterPlannerForLevel(
 
 Параметры по уровню:
 
-| | L3 | L2 |
-|---|---|---|
-| ok event | `budget_ok_l3` | `budget_ok_l2` |
-| exceeded event | `budget_exceeded_l3` | `budget_exceeded_l2` |
-| revoked event | `budget_revoked_l3` | `budget_revoked_l2` |
-| bonus event | `master_planner` | `master_planner_l2` |
-| revoke event | `master_planner_revoked` | `master_planner_l2_revoked` |
-| reset event | `master_planner_reset` | `master_planner_l2_reset` |
-| reward | 450 | 400 |
+|                | L3                       | L2                          |
+| -------------- | ------------------------ | --------------------------- |
+| ok event       | `budget_ok_l3`           | `budget_ok_l2`              |
+| exceeded event | `budget_exceeded_l3`     | `budget_exceeded_l2`        |
+| revoked event  | `budget_revoked_l3`      | `budget_revoked_l2`         |
+| bonus event    | `master_planner`         | `master_planner_l2`         |
+| revoke event   | `master_planner_revoked` | `master_planner_l2_revoked` |
+| reset event    | `master_planner_reset`   | `master_planner_l2_reset`   |
+| reward         | 450                      | 400                         |
 
 ### Алгоритм (внутри `computeMasterPlannerForLevel`)
 
@@ -301,6 +303,7 @@ for (const user of users) {
 ## Часть 4. Миграция: вью `view_master_planner_history`
 
 ### Назначение
+
 Обогащает события мастера планирования (L3 и L2) данными задач для UI. Для budget-событий (`budget_ok/exceeded/revoked`) — JOIN по `details->>'ws_task_id'`. Для `master_planner_reset` — JOIN по `details->'exceeded_task'->>'id'` (задача-причина сброса). Для `master_planner` и `master_planner_revoked` — task_name NULL (ссылки на задачи в массивах `milestone_tasks` / `revoked_tasks`).
 
 ### SQL
@@ -411,39 +414,39 @@ WHERE el.event_type IN (
 
 ### Поля вью
 
-| Поле | Тип | Описание |
-|---|---|---|
-| `event_id` | uuid | PK события |
-| `user_id` | uuid | Пользователь |
-| `user_email` | text | Email |
-| `event_type` | text | Тип события |
-| `event_date` | date | Дата |
-| `created_at` | timestamptz | Время создания |
-| `level` | text | `'L3'` / `'L2'` |
-| `ws_task_id` | text | ID задачи: основная (budget_ok/exceeded/revoked) или причина сброса (reset). NULL для master_planner и master_planner_revoked |
-| `task_name` | text | Название задачи (JOIN). NULL для master_planner (список в milestone_tasks) и master_planner_revoked (список в revoked_tasks) |
-| `ws_project_id` | text | ID проекта (для URL) |
-| `ws_l1_id` | text | ID задачи L1 (для URL) |
-| `max_time` | numeric | Бюджет часов |
-| `actual_time` | numeric | Фактические часы |
-| `streak_was` | integer | Длина серии до сброса (reset) |
-| `milestone` | integer | Milestone стрика (10, 20...) — NULL для старых записей |
-| `milestone_tasks` | jsonb | Массив `[{id, name}, ...]` задач, входящих в milestone (master_planner) — NULL для остальных |
-| `revoke_expected` | integer | Ожидаемое кол-во бонусов (revoked) |
-| `revoke_given` | integer | Фактическое кол-во бонусов до отзыва (revoked) |
-| `revoked_tasks` | jsonb | Массив `[{id, name}, ...]` задач, из-за которых отозван бонус (master_planner_revoked) — NULL для остальных |
-| `coins` | integer | Коины транзакции |
+| Поле              | Тип         | Описание                                                                                                                      |
+| ----------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `event_id`        | uuid        | PK события                                                                                                                    |
+| `user_id`         | uuid        | Пользователь                                                                                                                  |
+| `user_email`      | text        | Email                                                                                                                         |
+| `event_type`      | text        | Тип события                                                                                                                   |
+| `event_date`      | date        | Дата                                                                                                                          |
+| `created_at`      | timestamptz | Время создания                                                                                                                |
+| `level`           | text        | `'L3'` / `'L2'`                                                                                                               |
+| `ws_task_id`      | text        | ID задачи: основная (budget_ok/exceeded/revoked) или причина сброса (reset). NULL для master_planner и master_planner_revoked |
+| `task_name`       | text        | Название задачи (JOIN). NULL для master_planner (список в milestone_tasks) и master_planner_revoked (список в revoked_tasks)  |
+| `ws_project_id`   | text        | ID проекта (для URL)                                                                                                          |
+| `ws_l1_id`        | text        | ID задачи L1 (для URL)                                                                                                        |
+| `max_time`        | numeric     | Бюджет часов                                                                                                                  |
+| `actual_time`     | numeric     | Фактические часы                                                                                                              |
+| `streak_was`      | integer     | Длина серии до сброса (reset)                                                                                                 |
+| `milestone`       | integer     | Milestone стрика (10, 20...) — NULL для старых записей                                                                        |
+| `milestone_tasks` | jsonb       | Массив `[{id, name}, ...]` задач, входящих в milestone (master_planner) — NULL для остальных                                  |
+| `revoke_expected` | integer     | Ожидаемое кол-во бонусов (revoked)                                                                                            |
+| `revoke_given`    | integer     | Фактическое кол-во бонусов до отзыва (revoked)                                                                                |
+| `revoked_tasks`   | jsonb       | Массив `[{id, name}, ...]` задач, из-за которых отозван бонус (master_planner_revoked) — NULL для остальных                   |
+| `coins`           | integer     | Коины транзакции                                                                                                              |
 
 ### Какие данные есть по типу события
 
-| event_type | task_name | max/actual_time | streak_was | milestone | milestone_tasks | revoked_tasks | coins |
-|---|---|---|---|---|---|---|---|
-| `budget_ok_*` | Задача | Да | — | — | — | — | Сумма начисления (+50/+200) |
-| `budget_exceeded_*` | Задача | Да | — | — | — | — | NULL (информационное) |
-| `budget_revoked_*` | Задача | Да | — | — | — | — | Сумма списания |
-| `master_planner` | NULL | — | — | 10/20/30 | `[{id,name},...]` | — | +450/+400 |
-| `master_planner_reset` | Задача-причина (exceeded) | — | Да | — | — | — | NULL (информационное) |
-| `master_planner_revoked` | NULL | — | — | — | — | `[{id,name},...]` | Сумма списания |
+| event_type               | task_name                 | max/actual_time | streak_was | milestone | milestone_tasks   | revoked_tasks     | coins                       |
+| ------------------------ | ------------------------- | --------------- | ---------- | --------- | ----------------- | ----------------- | --------------------------- |
+| `budget_ok_*`            | Задача                    | Да              | —          | —         | —                 | —                 | Сумма начисления (+50/+200) |
+| `budget_exceeded_*`      | Задача                    | Да              | —          | —         | —                 | —                 | NULL (информационное)       |
+| `budget_revoked_*`       | Задача                    | Да              | —          | —         | —                 | —                 | Сумма списания              |
+| `master_planner`         | NULL                      | —               | —          | 10/20/30  | `[{id,name},...]` | —                 | +450/+400                   |
+| `master_planner_reset`   | Задача-причина (exceeded) | —               | Да         | —         | —                 | —                 | NULL (информационное)       |
+| `master_planner_revoked` | NULL                      | —               | —          | —         | —                 | `[{id,name},...]` | Сумма списания              |
 
 ### URL задачи в WS (строится на клиенте)
 
@@ -457,6 +460,7 @@ WHERE el.event_type IN (
 ## Часть 5. Блок «Мастер планирования» в StreakPanel
 
 ### Что убираем
+
 - Правую часть `InlineDailyQuests` из `StreakPanel.tsx`
 - Пропс `tasks` из `StreakPanelProps`
 
@@ -466,21 +470,24 @@ WHERE el.event_type IN (
 
 **Два стрика (один под другим, стиль CompactStreakRow):**
 
-| Стрик | Считает | Exceeded (streak = 0) | Revoked (задача убрана, streak--) | Награда |
-|---|---|---|---|---|
-| L3 Исполнитель | `budget_ok_l3` подряд | `budget_exceeded_l3` | `budget_revoked_l3` | +450 за каждые 10 |
-| L2 Руководитель | `budget_ok_l2` подряд | `budget_exceeded_l2` | `budget_revoked_l2` | +400 за каждые 10 |
+| Стрик           | Считает               | Exceeded (streak = 0) | Revoked (задача убрана, streak--) | Награда           |
+| --------------- | --------------------- | --------------------- | --------------------------------- | ----------------- |
+| L3 Исполнитель  | `budget_ok_l3` подряд | `budget_exceeded_l3`  | `budget_revoked_l3`               | +450 за каждые 10 |
+| L2 Руководитель | `budget_ok_l2` подряд | `budget_exceeded_l2`  | `budget_revoked_l2`               | +400 за каждые 10 |
 
 Для каждого стрика:
+
 - Текущая серия (X из 10) + прогресс-бар
 - Завершённые циклы (бейдж Nx)
 
-**Ожидают проверки (pending):**
+**Ожидают 30 дней (pending):**
+
 - Компактный список задач из `budget_pending` со статусом `pending`
 - Для каждой: название задачи, обратный отсчёт (осталось X дней до проверки)
 - Чтобы пользователь видел, что процесс идёт (иначе панель может казаться "мёртвой")
 
 **Последние события (компактный список, 3-5 штук, L3+L2 вместе):**
+
 - Иконка статуса + уровень (L3/L2) + название задачи + дата
 - Зелёная галочка — budget_ok (в бюджете)
 - Красный крестик — budget_exceeded (превышение)
@@ -493,12 +500,15 @@ WHERE el.event_type IN (
 ### Данные
 
 **Стрики** — из `master_planner_state` (готовые значения, без дублирования логики):
+
 ```sql
 SELECT * FROM master_planner_state WHERE user_id = $1
 ```
+
 Если строки нет — `currentStreak: 0, completedCycles: 0`.
 
 **Последние события** — из вью:
+
 ```sql
 SELECT * FROM view_master_planner_history
 WHERE user_id = $1
@@ -507,6 +517,7 @@ LIMIT 5
 ```
 
 **Pending** — из существующей `view_budget_pending_status`:
+
 ```sql
 SELECT * FROM view_budget_pending_status
 WHERE user_id = $1 AND status = 'pending'
@@ -551,11 +562,13 @@ PendingBudgetTask:
 ## Часть 6. Страница истории `/master-planner`
 
 ### Роут
+
 `src/app/(main)/master-planner/page.tsx` + `loading.tsx`
 
 ### Содержимое
 
 **Шапка:**
+
 - Заголовок «Мастер планирования»
 - Два стрика (L3 + L2) с прогрессом (крупнее, чем в панели) — из `master_planner_state`
 - Итого бонусов: отдельно L3 и L2
@@ -564,15 +577,15 @@ PendingBudgetTask:
 
 **Таблица событий:**
 
-| Столбец | Источник |
-|---|---|
-| Дата | `event_date` |
-| Уровень | `level` |
-| Тип | Иконка + текст по `event_type` |
-| Задача | `task_name` + ссылка WS (для budget-событий и reset); для master_planner — раскрывающийся список из `milestone_tasks`; для master_planner_revoked — список из `revoked_tasks` |
-| Бюджет | `actual_time` / `max_time` ч (только для budget-событий) |
-| Серия | Номер в серии или «Сброс» / «Отозвано» (см. ниже) |
-| Коины | `coins` |
+| Столбец | Источник                                                                                                                                                                      |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Дата    | `event_date`                                                                                                                                                                  |
+| Уровень | `level`                                                                                                                                                                       |
+| Тип     | Иконка + текст по `event_type`                                                                                                                                                |
+| Задача  | `task_name` + ссылка WS (для budget-событий и reset); для master_planner — раскрывающийся список из `milestone_tasks`; для master_planner_revoked — список из `revoked_tasks` |
+| Бюджет  | `actual_time` / `max_time` ч (только для budget-событий)                                                                                                                      |
+| Серия   | Номер в серии или «Сброс» / «Отозвано» (см. ниже)                                                                                                                             |
+| Коины   | `coins`                                                                                                                                                                       |
 
 **Вычисление номера в серии (streak_position):**
 
@@ -581,6 +594,7 @@ PendingBudgetTask:
 **Два запроса в `queries.ts` для каждой страницы:**
 
 1. **Основной** — данные страницы:
+
    ```sql
    SELECT * FROM view_master_planner_history
    WHERE user_id = $1 AND level = $2
@@ -590,6 +604,7 @@ PendingBudgetTask:
 
 2. **Доп. запрос** — определить startPosition для нижней строки страницы
    (сколько подряд ok было ДО самого старого события на странице):
+
    ```sql
    SELECT event_type FROM view_master_planner_history
    WHERE user_id = $1 AND level = $2
@@ -597,6 +612,7 @@ PendingBudgetTask:
    OFFSET $3   -- offset + page_size (= первая запись СТАРШЕ текущей страницы)
    LIMIT 200   -- safety cap
    ```
+
    В `queries.ts`: пройти от начала результата (это события старше страницы,
    от новых к старым), считать подряд `budget_ok` до первого `exceeded`/`reset`.
    Результат = startPosition для нижней строки текущей страницы.
@@ -607,6 +623,7 @@ PendingBudgetTask:
 **Нумерация на клиенте:**
 Страница содержит 20 записей (DESC: сверху новые, снизу старые).
 Клиент проходит снизу вверх (от старых к новым):
+
 - `budget_ok` → position (startPosition + порядковый номер ok, считая снизу)
 - `budget_exceeded` / `master_planner_reset` → position = 0, отображаем «Сброс»
 - `budget_revoked` → отображаем «Отозвано» (position не меняется)
@@ -616,6 +633,7 @@ PendingBudgetTask:
 **Оценка нагрузки:** доп. запрос возвращает максимум длину текущей серии (обычно 10-50 строк, cap 200). Даже при 1000+ задач за год — миллисекунды.
 
 **Визуальные маркеры:**
+
 - `budget_ok_*` — обычный фон
 - `budget_exceeded_*` — красный фон, текст «Превышение бюджета»
 - `budget_revoked_*` — оранжевый фон, текст «Отозвано (бюджет превышен после доработок)»
@@ -651,26 +669,28 @@ src/docs/master-planner.md
 
 ### Изменения в существующих файлах
 
-| Файл | Изменение |
-|---|---|
-| `StreakPanel.tsx` | Убрать `InlineDailyQuests`, добавить `MasterPlannerPanel` |
-| `streak-panel/types.ts` | Добавить `masterPlanner?: MasterPlannerPanelData` или отдельный пропс |
-| `app/(main)/page.tsx` | Добавить запрос данных мастера, передать в StreakPanel |
+| Файл                            | Изменение                                                             |
+| ------------------------------- | --------------------------------------------------------------------- |
+| `StreakPanel.tsx`               | Убрать `InlineDailyQuests`, добавить `MasterPlannerPanel`             |
+| `streak-panel/types.ts`         | Добавить `masterPlanner?: MasterPlannerPanelData` или отдельный пропс |
+| `app/(main)/page.tsx`           | Добавить запрос данных мастера, передать в StreakPanel                |
 | `compute-gamification.ts` (VPS) | Рефакторинг checkMasterPlanner: A2-алгоритм + L2-стрик + UPSERT state |
-| `gamification-events.md` | Добавить 4 новых event types |
-| `business-logic.md` | Добавить раздел «Мастер планирования» |
+| `gamification-events.md`        | Добавить 4 новых event types                                          |
+| `business-logic.md`             | Добавить раздел «Мастер планирования»                                 |
 
 ---
 
 ## Часть 8. Порядок реализации
 
 ### Шаг 0. Миграция
+
 - INSERT 4 новых event types
 - CREATE TABLE `master_planner_state`
 - CREATE VIEW `view_master_planner_history`
 - Проверить данные
 
 ### Шаг 1. VPS-скрипт — рефакторинг `checkMasterPlanner`
+
 - Вынести логику в `computeMasterPlannerForLevel(user, level, ...)`
 - Реализовать A2-алгоритм (полный пересчёт с фильтрацией revoked)
 - Записывать tasks, exceeded_task, revoked_tasks (с названиями) в details
@@ -680,26 +700,31 @@ src/docs/master-planner.md
 - Обновить stats
 
 ### Шаг 2. Модуль `master-planner` (types + queries)
+
 - `types.ts`
 - `queries.ts` — читает `master_planner_state` + вью + `view_budget_pending_status`
 - `index.ts`
 
 ### Шаг 3. Компонент `MasterPlannerPanel`
+
 - Два стрика (L3 + L2)
 - Секция pending-задач
 - Список последних событий
 - Ссылка на историю
 
 ### Шаг 4. Интеграция в StreakPanel
+
 - Убрать `InlineDailyQuests`
 - Добавить `MasterPlannerPanel`
 - Обновить `page.tsx`
 
 ### Шаг 5. Страница `/master-planner`
+
 - `page.tsx` + `loading.tsx`
 - `MasterPlannerHistory` с таблицей, табами L3/L2, пагинацией
 
 ### Шаг 6. Документация
+
 - `src/docs/master-planner.md`
 - Обновить `gamification-events.md`
 - Обновить `business-logic.md`
@@ -714,6 +739,6 @@ src/docs/master-planner.md
 3. **Награда L2** — 400 коинов (настраивается в админке через `gamification_event_types`).
 4. **Revoke** — полный пересчёт (A2): revoke убирает задачу из потока, стрик уменьшается, бонусы отзываются через coins_override. Reset создаётся только при exceeded, не при revoke.
 5. **Дублирование логики** — скрипт сохраняет состояние в `master_planner_state`, Next.js читает готовые значения.
-6. **Обратная совместимость** — старые master_planner с `details: {}` корректно учитываются. Новые idempotency keys используют префикс `_v2_`, не пересекаются со старыми.
+6. **Обратная совместимость** — старые master*planner с `details: {}` корректно учитываются. Новые idempotency keys используют префикс `\_v2*`, не пересекаются со старыми.
 7. **Details** — все события мастера хранят ссылки на задачи с названиями (денормализовано): `tasks: [{id, name}]` (бонус), `exceeded_task: {id, name}` (сброс), `revoked_tasks: [{id, name}]` (отзыв). Дополнительных JOIN-ов для UI не нужно.
 8. **Streak position** — серверная пагинация + доп. запрос для startPosition (сколько подряд ok до текущей страницы). Клиент нумерует на основе startPosition. Доп. запрос лёгкий — максимум длина текущей серии (10-50 строк).

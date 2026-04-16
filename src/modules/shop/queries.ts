@@ -46,7 +46,7 @@ export async function getProducts(categorySlug?: string): Promise<ShopProductWit
     .from('shop_products')
     .select(`
       *,
-      category:shop_categories!category_id ( name, slug, is_physical, is_active )
+      category:shop_categories!category_id ( name, slug, is_physical, is_countable, is_active )
     `)
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
@@ -75,7 +75,7 @@ export async function getAllProducts(): Promise<ShopProductWithCategory[]> {
     .from('shop_products')
     .select(`
       *,
-      category:shop_categories!category_id ( name, slug, is_physical, is_active )
+      category:shop_categories!category_id ( name, slug, is_physical, is_countable, is_active )
     `)
     .order('sort_order', { ascending: true })
 
@@ -94,7 +94,7 @@ export async function getProductById(id: string): Promise<ShopProductWithCategor
     .from('shop_products')
     .select(`
       *,
-      category:shop_categories!category_id ( name, slug, is_physical, is_active )
+      category:shop_categories!category_id ( name, slug, is_physical, is_countable, is_active )
     `)
     .eq('id', id)
     .single()

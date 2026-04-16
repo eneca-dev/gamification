@@ -17,7 +17,7 @@ function getEventStyle(type: string): EventStyle {
     return {
       bg: "transparent",
       icon: <CheckCircle2 size={15} style={{ color: "var(--apex-primary)" }} />,
-      label: "В бюджете",
+      label: "Закрыта в бюджете",
     };
   }
   if (type.startsWith("budget_exceeded")) {

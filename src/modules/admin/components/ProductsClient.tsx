@@ -49,7 +49,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   // Категории — секция
   const [categoriesExpanded, setCategoriesExpanded] = useState(false)
   const [isCreatingCategory, setIsCreatingCategory] = useState(false)
-  const [newCat, setNewCat] = useState({ name: '', slug: '', description: '', is_physical: true })
+  const [newCat, setNewCat] = useState({ name: '', slug: '', description: '', is_physical: true, is_countable: true })
   const [editingCatId, setEditingCatId] = useState<string | null>(null)
   const [editCatField, setEditCatField] = useState<'name' | 'slug' | 'description' | 'is_physical' | null>(null)
   const [editCatValue, setEditCatValue] = useState('')
@@ -170,7 +170,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             created_at: new Date().toISOString(),
           },
         ])
-        setNewCat({ name: '', slug: '', description: '', is_physical: false })
+        setNewCat({ name: '', slug: '', description: '', is_physical: false, is_countable: false })
         setIsCreatingCategory(false)
         showNotification('Категория создана')
       }
@@ -257,7 +257,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         if (p.id !== productId) return p
         const updated = { ...p, ...updatePayload }
         if (cat) {
-          updated.category = { name: cat.name, slug: cat.slug, is_physical: cat.is_physical, is_active: cat.is_active }
+          updated.category = { name: cat.name, slug: cat.slug, is_physical: cat.is_physical, is_countable: cat.is_countable, is_active: cat.is_active }
           updated.category_id = cat.id
         }
         return updated
@@ -302,8 +302,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
       const payload = { ...data, image_url: imageUrl }
       const cat = categories.find((c) => c.id === data.category_id)
       const categoryData = cat
-        ? { name: cat.name, slug: cat.slug, is_physical: cat.is_physical, is_active: cat.is_active }
-        : { name: '', slug: '', is_physical: false, is_active: true }
+        ? { name: cat.name, slug: cat.slug, is_physical: cat.is_physical, is_countable: cat.is_countable, is_active: cat.is_active }
+        : { name: '', slug: '', is_physical: false, is_countable: false, is_active: true }
 
       // Optimistic update
       const prev = products
@@ -464,15 +464,26 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                     className="px-3 py-2 rounded-lg text-[13px] outline-none"
                     style={catInputStyle}
                   />
-                  <label className="flex items-center gap-2 text-[13px] px-3 py-2" style={{ color: 'var(--apex-text-secondary)' }}>
-                    <input
-                      type="checkbox"
-                      checked={newCat.is_physical}
-                      onChange={(e) => setNewCat({ ...newCat, is_physical: e.target.checked })}
-                      className="rounded"
-                    />
-                    Физический товар
-                  </label>
+                  <div className="flex items-center gap-4 px-3 py-2">
+                    <label className="flex items-center gap-2 text-[13px]" style={{ color: 'var(--apex-text-secondary)' }}>
+                      <input
+                        type="checkbox"
+                        checked={newCat.is_physical}
+                        onChange={(e) => setNewCat({ ...newCat, is_physical: e.target.checked, is_countable: e.target.checked ? newCat.is_countable : false })}
+                        className="rounded"
+                      />
+                      Физический
+                    </label>
+                    <label className="flex items-center gap-2 text-[13px]" style={{ color: 'var(--apex-text-secondary)' }}>
+                      <input
+                        type="checkbox"
+                        checked={newCat.is_countable}
+                        onChange={(e) => setNewCat({ ...newCat, is_countable: e.target.checked })}
+                        className="rounded"
+                      />
+                      Исчисляемый
+                    </label>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex-1" />
@@ -498,15 +509,16 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             {/* Таблица категорий */}
             <table className="w-full" style={{ tableLayout: 'fixed' }}>
               <colgroup>
-                <col style={{ width: '25%' }} />
-                <col style={{ width: '20%' }} />
-                <col style={{ width: '25%' }} />
-                <col style={{ width: '15%' }} />
-                <col style={{ width: '15%' }} />
+                <col style={{ width: '22%' }} />
+                <col style={{ width: '17%' }} />
+                <col style={{ width: '21%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '13%' }} />
               </colgroup>
               <thead>
                 <tr style={{ borderTop: '1px solid var(--apex-border)', borderBottom: '1px solid var(--apex-border)' }}>
-                  {['Название', 'Slug', 'Описание', 'Тип', 'Статус'].map((h) => (
+                  {['Название', 'Slug', 'Описание', 'Тип', 'Исчисляемый', 'Статус'].map((h) => (
                     <th
                       key={h}
                       className="text-left text-[12px] font-semibold px-5 py-2.5"
@@ -608,6 +620,16 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                               submitCatUpdate(cat.id, { is_physical: val })
                             }
                           }}
+                        />
+                      </td>
+
+                      {/* Исчисляемый */}
+                      <td className="px-5 py-2.5">
+                        <ToggleSwitch
+                          checked={cat.is_countable}
+                          onChange={() => submitCatUpdate(cat.id, { is_countable: !cat.is_countable })}
+                          disabled={isCatPending}
+                          label={cat.is_countable ? 'Да' : 'Нет'}
                         />
                       </td>
 
@@ -797,9 +819,9 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                       )}
                     </td>
 
-                    {/* Остаток — inline editable только для физических товаров */}
+                    {/* Остаток — inline editable только для исчисляемых товаров */}
                     <td className="px-5 py-2.5">
-                      {product.category?.is_physical ? (
+                      {product.category?.is_countable ? (
                         isInlineEditing && inlineEdit.field === 'stock' ? (
                           <InlineNumberInput
                             value={inlineEdit.value}

@@ -80,15 +80,19 @@ $$;
 | `name` | text UNIQUE | Отображаемое название («Мерч», «Техника», «Артефакты», «Розыгрыши») |
 | `slug` | text UNIQUE | Машинное имя для URL-фильтрации (`/store?category=merch`). Не FK — связь через `id` |
 | `description` | text NULL | Подпись для UI (например, «Товары переходят в собственность сотрудника») |
-| `is_physical` | boolean DEFAULT false | Физический товар? Определяет поведение при покупке и доступность поля `stock` |
+| `is_physical` | boolean DEFAULT false | Физический товар? Определяет статус заказа при покупке (pending/fulfilled) |
+| `is_countable` | boolean DEFAULT true | Исчисляемый? Определяет учёт остатков (stock обязателен / безлимит) |
 | `sort_order` | integer DEFAULT 0 | Порядок в фильтрах |
 | `is_active` | boolean DEFAULT true | Показывать ли категорию в магазине |
 | `created_at` | timestamptz | |
 
 **Флаг `is_physical` определяет:**
 - **При покупке:** `is_physical = true` → заказ `pending` (ждёт обработки админом). `is_physical = false` → заказ сразу `fulfilled`.
-- **При создании товара:** `is_physical = true` → админ **обязан** указать `stock` (количество). `is_physical = false` → поле `stock` недоступно, товар безлимитный (`stock = NULL`).
-- **В UI админки:** для нефизических категорий поле «Количество» скрыто/заблокировано.
+
+**Флаг `is_countable` определяет:**
+- **При создании товара:** `is_countable = true` → админ **обязан** указать `stock` (количество). `is_countable = false` → поле `stock` недоступно, товар безлимитный (`stock = NULL`).
+- **В UI админки:** для неисчисляемых категорий поле «Количество» скрыто/заблокировано.
+- **При покупке/отмене:** `is_countable = true` → `stock -= 1` / `stock += 1`. `is_countable = false` → stock не трогается.
 
 Начальные данные (seed в миграции):
 | name | slug | is_physical | description |
@@ -128,10 +132,10 @@ $$;
 | `updated_at` | timestamptz | Обновлять явно в `updateProduct` action: `updated_at = now()` |
 
 **Правила `stock`:**
-- Категория `is_physical = true` → `stock` обязателен (NOT NULL на уровне Server Action, не БД — чтобы не усложнять constraint кросс-таблицей)
-- Категория `is_physical = false` → `stock = NULL` (безлимит), поле скрыто в UI
-- При покупке: `stock -= 1` (только если `stock IS NOT NULL`)
-- При отмене заказа: `stock += 1` (только если `stock IS NOT NULL`)
+- Категория `is_countable = true` → `stock` обязателен (NOT NULL на уровне Server Action, не БД — чтобы не усложнять constraint кросс-таблицей)
+- Категория `is_countable = false` → `stock = NULL` (безлимит), поле скрыто в UI
+- При покупке: `stock -= 1` (только если `is_countable AND stock IS NOT NULL`)
+- При отмене заказа: `stock += 1` (только если `is_countable`)
 - Если `stock = 0` → товар нельзя купить (кнопка «Нет в наличии»)
 
 #### `shop_orders` — заказы/покупки

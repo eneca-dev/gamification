@@ -140,14 +140,16 @@ export function GratitudeWidget({
         </div>
 
         {/* Подзаголовок с ссылкой — аналог AlarmsBanner */}
-        <div className="flex items-center justify-between shrink-0 mt-[10px]">
-          <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-            {showReceived ? 'Последние полученные' : 'Последние отправленные'}
+        {displayList.length > 0 && (
+          <div className="flex items-center justify-between shrink-0 mt-[10px]">
+            <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              {showReceived ? 'Последние полученные' : 'Последние отправленные'}
+            </div>
+            <Link href="/gratitudes" className="text-[12px] font-semibold" style={{ color: 'var(--apex-primary)' }}>
+              Все благодарности →
+            </Link>
           </div>
-          <Link href="/gratitudes" className="text-[12px] font-semibold" style={{ color: 'var(--apex-primary)' }}>
-            Все благодарности →
-          </Link>
-        </div>
+        )}
 
         {/* Контент */}
         {displayList.length > 0 ? (

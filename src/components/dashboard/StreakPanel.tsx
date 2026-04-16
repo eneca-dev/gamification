@@ -361,6 +361,15 @@ interface StreakPanelProps {
 
 export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBalance = 0 }: StreakPanelProps) {
   const { calendarDays, completedCycles, ws, revit } = streakData;
+
+  const workingDays = calendarDays.filter((d) => d.status === "green" || d.status === "red");
+  const greenPct = workingDays.length > 0
+    ? Math.round((workingDays.filter((d) => d.status === "green").length / workingDays.length) * 100)
+    : 0;
+  const automationPct = workingDays.length > 0
+    ? Math.round((workingDays.filter((d) => d.automation).length / workingDays.length) * 100)
+    : 0;
+
   const { weeks, groups } = buildWeeksAndMonths(calendarDays);
   const DAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
   const headerOffset = DAY_LABEL_W + DAY_LABEL_MR;
@@ -401,13 +410,21 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
             </span>
           )}
         </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold leading-none" style={{ color: "var(--apex-text)" }}>
-            {ws.currentStreak}
-          </div>
-          <div className="text-[11px]" style={{ color: "var(--apex-text-secondary)" }}>
-            дней подряд
-          </div>
+        <div className="flex items-center gap-3">
+          <span
+            className="text-lg font-bold leading-none cursor-default"
+            style={{ color: "var(--apex-primary)" }}
+            title={`${greenPct}% зелёных дней из рабочих`}
+          >
+            {greenPct}%
+          </span>
+          <span
+            className="text-lg font-bold leading-none cursor-default"
+            style={{ color: "var(--orange-500)" }}
+            title={`${automationPct}% дней с автоматизациями из рабочих`}
+          >
+            {automationPct}%
+          </span>
         </div>
       </div>
 

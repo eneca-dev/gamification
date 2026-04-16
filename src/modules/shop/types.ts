@@ -14,6 +14,7 @@ export interface ShopCategory {
   slug: string
   description: string | null
   is_physical: boolean
+  is_countable: boolean
   sort_order: number
   is_active: boolean
   created_at: string
@@ -24,6 +25,7 @@ export const createCategorySchema = z.object({
   slug: z.string().min(1, 'Slug обязателен').max(50).regex(/^[a-z0-9-]+$/, 'Только латиница, цифры и дефис'),
   description: z.string().max(500).nullable().optional(),
   is_physical: z.boolean(),
+  is_countable: z.boolean(),
   sort_order: z.number().int().min(0).default(0),
 })
 
@@ -55,7 +57,7 @@ export interface ShopProduct {
 }
 
 export interface ShopProductWithCategory extends ShopProduct {
-  category: Pick<ShopCategory, 'name' | 'slug' | 'is_physical' | 'is_active'>
+  category: Pick<ShopCategory, 'name' | 'slug' | 'is_physical' | 'is_countable' | 'is_active'>
 }
 
 export const createProductSchema = z.object({

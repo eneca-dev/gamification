@@ -16,7 +16,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product, balance, index, onPurchase, isPurchasing, categoryDescription, pendingResets = [] }: ProductCardProps) {
   const canAfford = balance >= product.price
-  const outOfStock = product.category.is_physical && product.stock !== null && product.stock === 0
+  const outOfStock = product.category.is_countable && product.stock !== null && product.stock === 0
   const deficit = product.price - balance
 
   // Для щитов: кнопка активна только при наличии соответствующего pending
@@ -57,7 +57,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
             Нет в наличии
           </span>
         )}
-        {product.category.is_physical && product.stock !== null && product.stock > 0 && product.stock <= 5 && (
+        {product.category.is_countable && product.stock !== null && product.stock > 0 && product.stock <= 5 && (
           <span
             className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
             style={{ background: 'var(--apex-warning-text)', color: 'white' }}

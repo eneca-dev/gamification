@@ -4,7 +4,7 @@
 
 ## Логика работы
 
-Сотрудники тратят коины на товары. Покупка — атомарная SQL-функция `purchase_product` (списание баланса, создание event_log, транзакции, заказа). Нефизические товары (`is_physical = false`) — сразу `fulfilled`, безлимитные. Физические — `pending`, ждут обработки админом, `stock` уменьшается.
+Сотрудники тратят коины на товары. Покупка — атомарная SQL-функция `purchase_product` (списание баланса, создание event_log, транзакции, заказа). Нефизические товары (`is_physical = false`) — сразу `fulfilled`. Физические — `pending`, ждут обработки админом. Учёт остатков определяется флагом `is_countable` на категории: `is_countable = true` → `stock` обязателен и уменьшается при покупке; `is_countable = false` → `stock = NULL` (безлимит).
 
 Отмена заказа — SQL-функция `cancel_order` (возврат коинов, запись refund-транзакции, возврат stock). Доступна только админам.
 
@@ -24,9 +24,9 @@
 ## Типы
 
 - `OrderStatus` — `'pending' | 'processing' | 'fulfilled' | 'cancelled'`. Константа `ORDER_STATUSES` и Zod-схема `orderStatusSchema`
-- `ShopCategory` — категория: id, name, slug, description, is_physical, is_active, sort_order
+- `ShopCategory` — категория: id, name, slug, description, is_physical, is_countable, is_active, sort_order
 - `ShopProduct` — товар: id, name, description, price, category_id, image_url, emoji, stock, is_active, sort_order, created_by, updated_at
-- `ShopProductWithCategory` — товар + вложенная категория (name, slug, is_physical, is_active)
+- `ShopProductWithCategory` — товар + вложенная категория (name, slug, is_physical, is_countable, is_active)
 - `ShopOrderWithDetails` — заказ + название товара + emoji + image_url + coins_spent (через JOIN на transaction)
 - `PurchaseResult` — результат покупки из RPC: order_id, new_balance, coins_spent
 - `CancelResult` — результат отмены из RPC: order_id, refunded_coins, new_balance
@@ -75,8 +75,9 @@
 
 ## Ограничения
 
-- `stock` обязателен для физических категорий (валидация в Server Action, не в БД)
-- `stock = NULL` для нефизических — безлимит, поле скрыто в UI, не редактируемо inline
+- `stock` обязателен для исчисляемых категорий (`is_countable = true`), валидация в Server Action, не в БД
+- `stock = NULL` для неисчисляемых (`is_countable = false`) — безлимит, поле скрыто в UI, не редактируемо inline
+- `is_physical` определяет статус заказа (pending/fulfilled), `is_countable` определяет учёт остатков — это независимые флаги
 - Отмена доступна для любого статуса кроме `cancelled`. Idempotency через `shop_refund_{order_id}`
 - Race condition при покупке: защита через `FOR UPDATE` на balance и product
 - `cancelOrder` — в модуле `admin`, не здесь (админская операция)

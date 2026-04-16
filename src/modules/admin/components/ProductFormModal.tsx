@@ -32,7 +32,7 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const selectedCategory = categories.find((c) => c.id === categoryId)
-  const isPhysical = selectedCategory?.is_physical ?? false
+  const isCountable = selectedCategory?.is_countable ?? false
 
   useEffect(() => {
     function handleEsc(e: KeyboardEvent) {
@@ -95,8 +95,8 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
     if (!name.trim()) errs.name = 'Название обязательно'
     if (price <= 0) errs.price = 'Цена должна быть больше 0'
     if (!categoryId) errs.category_id = 'Выберите категорию'
-    if (isPhysical && stock === '') errs.stock = 'Укажите количество для физического товара'
-    if (isPhysical && stock !== '') {
+    if (isCountable && stock === '') errs.stock = 'Укажите количество'
+    if (isCountable && stock !== '') {
       const stockNum = parseInt(stock, 10)
       if (isNaN(stockNum) || stockNum < 0) errs.stock = 'Количество должно быть >= 0'
     }
@@ -115,7 +115,7 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
       category_id: categoryId,
       image_url: removeImage ? null : (imagePreview && !imageFile ? product?.image_url ?? null : null),
       emoji: emoji.trim() || null,
-      stock: isPhysical ? parseInt(stock, 10) : null,
+      stock: isCountable ? parseInt(stock, 10) : null,
       sort_order: product?.sort_order ?? 0,
     }
 
@@ -208,18 +208,18 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
 
             {/* Stock */}
             <Field
-              label={isPhysical ? 'Количество' : 'Количество (безлимит)'}
+              label={isCountable ? 'Количество' : 'Количество (безлимит)'}
               error={errors.stock}
             >
               <input
                 type="number"
-                value={isPhysical ? stock : ''}
+                value={isCountable ? stock : ''}
                 onChange={(e) => setStock(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg text-[13px] outline-none"
                 style={inputStyle(errors.stock)}
                 min={0}
-                disabled={!isPhysical}
-                placeholder={isPhysical ? '0' : 'Безлимит'}
+                disabled={!isCountable}
+                placeholder={isCountable ? '0' : 'Безлимит'}
               />
             </Field>
           </div>

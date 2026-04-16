@@ -65,11 +65,18 @@ const GRATITUDE_EMOJIS: Record<string, string> = {
   mentoring: '📚',
 }
 
+const ENTITY_TAG_STYLES: Record<AchievementEntityType, { color: string; bg: string }> = {
+  user: { color: 'var(--apex-primary)', bg: 'var(--apex-success-bg)' },
+  team: { color: 'var(--apex-info-text)', bg: 'rgba(var(--apex-info-rgb), 0.08)' },
+  department: { color: 'var(--tag-purple-text)', bg: 'var(--tag-purple-bg)' },
+}
+
 // --- Строка достижения по рейтингу ---
 
 function RankingRow({
   name,
   emoji,
+  entityType,
   entityLabel,
   groupName,
   progress,
@@ -84,6 +91,7 @@ function RankingRow({
 }: {
   name: string
   emoji: string
+  entityType: AchievementEntityType
   entityLabel: string
   groupName?: string
   progress: number
@@ -124,16 +132,19 @@ function RankingRow({
               </div>
             )}
           </span>
-          <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
+          <span
+            className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+            style={{ color: ENTITY_TAG_STYLES[entityType].color, background: ENTITY_TAG_STYLES[entityType].bg }}
+          >
             {groupName ?? entityLabel}
           </span>
           {currentRank !== null && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}>
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: 'var(--surface)', color: 'var(--text-muted)' }} title={`Текущая позиция в рейтинге: ${currentRank}`}>
               #{currentRank}
             </span>
           )}
         </div>
-        <span className="text-[12px] font-bold" style={{ color: earned ? 'var(--apex-success-text)' : 'var(--text-secondary)' }}>
+        <span className="text-[12px] font-bold" style={{ color: earned ? 'var(--apex-success-text)' : 'var(--text-secondary)' }} title={`Дней в топе: ${progress} из ${threshold} необходимых`}>
           {progress}/{threshold}
         </span>
       </div>
@@ -146,7 +157,7 @@ function RankingRow({
         <span className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>
           {earned ? <span className="inline-flex items-center gap-0.5">Получено! +{bonus} <CoinIcon size={9} /></span> : remaining > 0 ? `ещё ${remaining} дней` : ''}
         </span>
-        <span className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>
+        <span className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }} title={`Прошло ${daysElapsed} дней из ${periodDays} в этом месяце`}>
           {daysElapsed}/{periodDays}
         </span>
       </div>
@@ -181,7 +192,7 @@ function GratitudeRow({ item }: { item: GratitudeAchProgress }) {
               >
                 <div className="font-bold mb-1">{item.achievement_name}</div>
                 <div className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
-                  Получите {item.threshold} подарков в этой категории за месяц. Считаются только подарки с коинами.
+                  Получите {item.threshold} подарков в этой категории за месяц. Считаются только платные подарки.
                 </div>
                 <div className="text-[10px] font-semibold mt-1 inline-flex items-center gap-0.5" style={{ color: 'var(--tag-purple-text)' }}>Награда: +{item.bonus_coins} <CoinIcon size={10} /></div>
                 <div className="absolute top-full left-4 w-2 h-2 rotate-45" style={{ background: 'var(--surface-elevated)', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }} />
@@ -261,6 +272,7 @@ export function RankingBlock({
             key={r.entityType}
             name={names[r.entityType]}
             emoji={emojis[r.entityType]}
+            entityType={r.entityType}
             entityLabel={r.entityType === 'user' ? 'Личное' : r.entityType === 'team' ? 'Команда' : 'Отдел'}
             groupName={r.groupName}
             progress={r.progress.days_in_top}

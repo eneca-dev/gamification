@@ -234,7 +234,7 @@ function GratitudeRow({ item, cfg }: {
               >
                 <div className="font-bold mb-1">{item.achievement_name}</div>
                 <div className="text-[10px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                  Получите {item.threshold} подарков в категории &laquo;{cfg.label}&raquo; за месяц. Считаются только подарки с коинами.
+                  Получите {item.threshold} подарков в категории &laquo;{cfg.label}&raquo; за месяц. Считаются только платные подарки.
                 </div>
                 <div className="text-[10px] font-semibold mt-1 inline-flex items-center gap-0.5" style={{ color: cfg.color }}>
                   Награда: +{item.bonus_coins} <CoinIcon size={10} />

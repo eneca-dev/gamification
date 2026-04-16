@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Zap, CheckCircle, Heart, Trophy, Users, Building2, ChevronRight } from 'lucide-react'
+import { Zap, CheckCircle, Heart, Trophy, Users, Building2 } from 'lucide-react'
 import { CoinIcon } from '@/components/CoinIcon'
 
 import type { AchievementAward, AchievementEntityType, AchievementArea } from '../types'
@@ -14,10 +14,10 @@ const AREA_CONFIG = {
   gratitude: { label: 'Благодарности', icon: Trophy, color: 'var(--tag-purple-text)', bg: 'var(--tag-purple-bg)', emoji: '💜' },
 } as const
 
-const ENTITY_CONFIG: Record<AchievementEntityType, { icon: typeof Trophy; label: string; emoji: string }> = {
-  user: { icon: Trophy, label: 'Личное', emoji: '🏆' },
-  team: { icon: Users, label: 'Команда', emoji: '🛡️' },
-  department: { icon: Building2, label: 'Отдел', emoji: '👑' },
+const ENTITY_CONFIG: Record<AchievementEntityType, { icon: typeof Trophy; label: string; emoji: string; color: string; bg: string }> = {
+  user: { icon: Trophy, label: 'Личное', emoji: '🏆', color: 'var(--apex-primary)', bg: 'var(--apex-success-bg)' },
+  team: { icon: Users, label: 'Команда', emoji: '🛡️', color: 'var(--apex-info-text)', bg: 'rgba(var(--apex-info-rgb), 0.08)' },
+  department: { icon: Building2, label: 'Отдел', emoji: '👑', color: 'var(--tag-purple-text)', bg: 'var(--tag-purple-bg)' },
 }
 
 const MONTH_NAMES = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
@@ -76,12 +76,12 @@ function TrophyCell({
         className="w-full rounded-xl flex flex-col items-center justify-center gap-1 py-4 transition-all cursor-default"
         style={{
           background: earned
-            ? areaCfg.bg
+            ? entityCfg.bg
             : isCurrent
               ? 'var(--surface)'
               : 'var(--surface)',
           border: earned
-            ? `2px solid ${areaCfg.color}`
+            ? `2px solid ${entityCfg.color}`
             : isCurrent
               ? '2px dashed var(--border)'
               : '1px solid var(--border)',
@@ -93,7 +93,7 @@ function TrophyCell({
         </span>
         <span
           className="text-[10px] font-bold"
-          style={{ color: earned ? areaCfg.color : 'var(--text-muted)' }}
+          style={{ color: earned ? entityCfg.color : 'var(--text-muted)' }}
         >
           {label}
         </span>
@@ -164,11 +164,10 @@ export function TrophyShelf({ awards }: TrophyShelfProps) {
           </div>
           <Link
             href="/achievements/all"
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors hover:opacity-80"
-            style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
+            className="text-[12px] font-semibold transition-opacity hover:opacity-80"
+            style={{ color: 'var(--apex-primary)' }}
           >
-            Все достижения
-            <ChevronRight size={12} />
+            Все достижения →
           </Link>
         </div>
 
