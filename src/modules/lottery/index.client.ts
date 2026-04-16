@@ -1,5 +1,5 @@
 // Клиентобезопасные экспорты — типы + server actions
-export { createLottery } from './actions'
+export { createLottery, updateLottery } from './actions'
 export type {
   LotteryDraw,
   LotteryWithStats,

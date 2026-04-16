@@ -52,3 +52,15 @@ export const createLotterySchema = z.object({
 })
 
 export type CreateLotteryInput = z.infer<typeof createLotterySchema>
+
+// --- Схема обновления лотереи ---
+
+export const updateLotterySchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1, 'Название приза обязательно').max(200),
+  description: z.string().max(1000).nullable().optional(),
+  image_url: z.string().url().nullable().optional(),
+  ticket_price: z.number().int().positive('Цена билета должна быть больше 0'),
+})
+
+export type UpdateLotteryInput = z.infer<typeof updateLotterySchema>

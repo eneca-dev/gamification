@@ -37,7 +37,7 @@
 - `getBalanceAction()` — возвращает баланс текущего пользователя. Используется для polling на клиенте (CoinBalanceLive). Не требует параметров — берёт wsUserId из сессии
 - `purchaseProduct(productId)` — покупка, доступна всем. RPC `purchase_product`. Revalidate: `/store`, `/profile`
 - `createCategory(input)` — создание категории. Только админ. Revalidate: `/admin/products`, `/store`
-- `updateCategory(input)` — обновление категории (name, slug, description, is_physical, is_active). Только админ
+- `updateCategory(input)` — обновление категории (name, slug, description, is_physical, is_countable, is_active). При `is_countable = false` сбрасывает `stock` в NULL у всех товаров категории. Только админ
 - `createProduct(input)` — создание товара. Только админ. Записывает `created_by`
 - `updateProduct(input)` — обновление товара (включая is_active). Только админ
 - `deleteProduct(productId)` — удаление товара. Проверяет наличие заказов — если есть, блокирует. Удаляет изображение из Storage. Только админ

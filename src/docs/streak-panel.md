@@ -10,6 +10,8 @@
 
 Выходные/праздники/переносы: Сб/Вс → `gray` по умолчанию. Даты из `calendar_holidays` → `gray` (праздник = выходной). Даты из `calendar_workdays` → рабочий день (перенос, суббота = рабочая). Приоритет: `calendar_workdays` перекрывает выходной, `calendar_holidays` перекрывает будний.
 
+В шапке панели — два процентных показателя за текущий период: % зелёных дней из рабочих и % дней с автоматизациями из рабочих. Заменяют прежний счётчик «дней подряд».
+
 Под гридом — два стрика: Worksection (из `ws_user_streaks`) и Автоматизации (из `revit_user_streaks`). Milestones отображаются inline рядом с лейблом стрика. Данные milestones берутся из `gamification_event_types`.
 
 На дашборде StreakPanel и MasterPlannerPanel располагаются рядом в flex-контейнере (не вложены друг в друга). MasterPlannerPanel — отдельный модуль (см. `src/docs/master-planner.md`).

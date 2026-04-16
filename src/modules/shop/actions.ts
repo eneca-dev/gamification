@@ -117,6 +117,14 @@ export async function updateCategory(
   if (error) return { success: false, error: error.message }
   if (!data || data.length === 0) return { success: false, error: 'Категория не найдена' }
 
+  // При отключении исчисляемости — сбросить stock у всех товаров категории
+  if (fields.is_countable === false) {
+    await supabase
+      .from('shop_products')
+      .update({ stock: null, updated_at: new Date().toISOString() })
+      .eq('category_id', id)
+  }
+
   revalidatePath('/admin/products')
   revalidatePath('/store')
   return { success: true }

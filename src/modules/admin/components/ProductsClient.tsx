@@ -125,13 +125,21 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
   function submitCatUpdate(id: string, fields: Record<string, unknown>) {
     const prev = categories
+    const prevProducts = products
     setCategories((cats) => cats.map((c) => (c.id === id ? { ...c, ...fields } : c)))
+
+    // При отключении исчисляемости — сбросить stock у товаров этой категории
+    if (fields.is_countable === false) {
+      setProducts((items) => items.map((p) => p.category_id === id ? { ...p, stock: null } : p))
+    }
+
     cancelCatEdit()
 
     startCatTransition(async () => {
       const result = await updateCategory({ id, ...fields })
       if (!result.success) {
         setCategories(prev)
+        setProducts(prevProducts)
         setError(result.error)
       }
     })
@@ -617,7 +625,9 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                           onSelect={(val) => {
                             cancelCatEdit()
                             if (val !== cat.is_physical) {
-                              submitCatUpdate(cat.id, { is_physical: val })
+                              const updates: Record<string, unknown> = { is_physical: val }
+                              if (!val) updates.is_countable = false
+                              submitCatUpdate(cat.id, updates)
                             }
                           }}
                         />
@@ -628,7 +638,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                         <ToggleSwitch
                           checked={cat.is_countable}
                           onChange={() => submitCatUpdate(cat.id, { is_countable: !cat.is_countable })}
-                          disabled={isCatPending}
+                          disabled={isCatPending || !cat.is_physical}
                           label={cat.is_countable ? 'Да' : 'Нет'}
                         />
                       </td>

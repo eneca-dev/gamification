@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
-import { Plus, Ticket, Users, Coins, Upload, X } from 'lucide-react'
+import { Plus, Pencil, Ticket, Users, Upload, X, AlertTriangle } from 'lucide-react'
 
-import { createLottery } from '@/modules/lottery/index.client'
+import { CoinIcon } from '@/components/CoinIcon'
+import { createLottery, updateLottery } from '@/modules/lottery/index.client'
 import { uploadProductImage } from '@/modules/shop/index.client'
 import { formatLotteryMonth } from '@/modules/lottery/utils'
 
@@ -19,8 +20,10 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
   const [error, setError] = useState<string | null>(null)
   const [notification, setNotification] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [editingLottery, setEditingLottery] = useState<LotteryWithStats | null>(null)
+  const [showEditWarning, setShowEditWarning] = useState(false)
 
-  // Форма создания
+  // Форма создания/редактирования
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -71,23 +74,49 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
+  function startEditing(lottery: LotteryWithStats) {
+    setForm({
+      name: lottery.name,
+      description: lottery.description ?? '',
+      ticket_price: lottery.ticket_price,
+    })
+    setImagePreview(lottery.image_url)
+    setImageFile(null)
+    setEditingLottery(lottery)
+
+    // Показываем предупреждение, если уже есть купленные билеты
+    if (lottery.total_tickets > 0) {
+      setShowEditWarning(true)
+    }
+  }
+
+  function cancelEditing() {
+    setEditingLottery(null)
+    setShowEditWarning(false)
+    setForm({ name: '', description: '', ticket_price: 300 })
+    handleRemoveImage()
+    setError(null)
+  }
+
+  async function uploadImage(): Promise<string | null> {
+    if (!imageFile) return null
+    const fd = new FormData()
+    fd.append('file', imageFile)
+    const uploadResult = await uploadProductImage(fd)
+    if (!uploadResult.success) {
+      setError(uploadResult.error)
+      return null
+    }
+    return uploadResult.url
+  }
+
   function handleCreate() {
     setError(null)
     const prev = lotteries
 
     startTransition(async () => {
-      // Загружаем картинку, если выбрана
-      let imageUrl: string | null = null
-      if (imageFile) {
-        const fd = new FormData()
-        fd.append('file', imageFile)
-        const uploadResult = await uploadProductImage(fd)
-        if (!uploadResult.success) {
-          setError(uploadResult.error)
-          return
-        }
-        imageUrl = uploadResult.url
-      }
+      const imageUrl = await uploadImage()
+      if (imageFile && !imageUrl) return
 
       const result = await createLottery({
         name: form.name,
@@ -109,6 +138,43 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
       handleRemoveImage()
       setShowForm(false)
       showNotif('Лотерея создана')
+    })
+  }
+
+  function handleUpdate() {
+    if (!editingLottery) return
+    setError(null)
+    const prev = lotteries
+
+    startTransition(async () => {
+      const newImageUrl = await uploadImage()
+      if (imageFile && !newImageUrl) return
+
+      // Если загружена новая картинка — используем её, иначе оставляем текущую
+      const finalImageUrl = newImageUrl ?? (imageFile === null ? imagePreview : null)
+
+      const result = await updateLottery({
+        id: editingLottery.id,
+        name: form.name,
+        description: form.description || null,
+        image_url: finalImageUrl,
+        ticket_price: form.ticket_price,
+      })
+
+      if (!result.success) {
+        setError(result.error)
+        return
+      }
+
+      setLotteries(
+        prev.map((l) =>
+          l.id === editingLottery.id
+            ? { ...l, ...result.data, total_tickets: l.total_tickets, total_participants: l.total_participants }
+            : l
+        )
+      )
+      cancelEditing()
+      showNotif('Лотерея обновлена')
     })
   }
 
@@ -177,7 +243,7 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
 
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: 'var(--apex-text-secondary)' }}>
-                  Цена билета (баллов)
+                  Цена билета <CoinIcon size={12} className="inline" />
                 </label>
                 <input
                   type="number"
@@ -284,7 +350,7 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
           </div>
         )}
 
-        {activeLottery && (
+        {activeLottery && !editingLottery && (
           <div
             className="rounded-xl p-5"
             style={{ background: 'var(--surface-elevated)', border: '1px solid var(--apex-border)' }}
@@ -312,27 +378,191 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
                   )}
                 </div>
               </div>
-              <span
-                className="px-2.5 py-1 rounded-full text-xs font-medium"
-                style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-primary)' }}
-              >
-                Активна
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => startEditing(activeLottery)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+                  style={{ color: 'var(--apex-text-secondary)', border: '1px solid var(--apex-border)' }}
+                >
+                  <Pencil size={13} />
+                  Изменить приз
+                </button>
+                <span
+                  className="px-2.5 py-1 rounded-full text-xs font-medium"
+                  style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-primary)' }}
+                >
+                  Активна
+                </span>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard icon={<Ticket size={16} />} label="Билетов продано" value={activeLottery.total_tickets} />
               <StatCard icon={<Users size={16} />} label="Участников" value={activeLottery.total_participants} />
               <StatCard
-                icon={<Coins size={16} />}
+                icon={<CoinIcon size={16} />}
                 label="Цена билета"
                 value={activeLottery.ticket_price}
               />
               <StatCard
-                icon={<Coins size={16} />}
+                icon={<CoinIcon size={16} />}
                 label="Баллов выведено"
                 value={activeLottery.total_tickets * activeLottery.ticket_price}
               />
+            </div>
+          </div>
+        )}
+
+        {/* Форма редактирования активной лотереи */}
+        {editingLottery && (
+          <div
+            className="rounded-xl p-5 space-y-4"
+            style={{ background: 'var(--surface-elevated)', border: '1px solid var(--apex-border)' }}
+          >
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--apex-text-primary)' }}>
+              Редактирование приза
+            </h3>
+
+            {showEditWarning && (
+              <div
+                className="flex items-start gap-3 px-4 py-3 rounded-lg text-sm"
+                style={{ background: 'var(--apex-warning-bg)', color: 'var(--apex-warning-text)' }}
+              >
+                <AlertTriangle size={18} className="flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold mb-0.5">Лотерея уже идёт</p>
+                  <p className="text-xs" style={{ opacity: 0.85 }}>
+                    Продано {editingLottery.total_tickets} {editingLottery.total_tickets === 1 ? 'билет' : editingLottery.total_tickets < 5 ? 'билета' : 'билетов'} ({editingLottery.total_participants} {editingLottery.total_participants === 1 ? 'участник' : editingLottery.total_participants < 5 ? 'участника' : 'участников'}).
+                    Люди покупали билеты на другой приз — убедитесь, что изменение оправдано.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--apex-text-secondary)' }}>
+                  Название приза *
+                </label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="Logitech MX Master 3S"
+                  className="w-full px-3 py-2 rounded-lg text-sm"
+                  style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--apex-border)',
+                    color: 'var(--apex-text-primary)',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--apex-text-secondary)' }}>
+                  Цена билета <CoinIcon size={12} className="inline" />
+                </label>
+                <input
+                  type="number"
+                  value={form.ticket_price}
+                  onChange={(e) => setForm({ ...form, ticket_price: Number(e.target.value) })}
+                  min={1}
+                  className="w-full px-3 py-2 rounded-lg text-sm"
+                  style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--apex-border)',
+                    color: 'var(--apex-text-primary)',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--apex-text-secondary)' }}>
+                Описание
+              </label>
+              <textarea
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Описание приза (необязательно)"
+                rows={2}
+                className="w-full px-3 py-2 rounded-lg text-sm resize-none"
+                style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--apex-border)',
+                  color: 'var(--apex-text-primary)',
+                }}
+              />
+            </div>
+
+            {/* Загрузка картинки */}
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--apex-text-secondary)' }}>
+                Фото приза
+              </label>
+              {imagePreview ? (
+                <div className="relative inline-block">
+                  <img
+                    src={imagePreview}
+                    alt="Превью приза"
+                    className="w-32 h-32 object-contain rounded-lg"
+                    style={{ border: '1px solid var(--apex-border)' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-white"
+                    style={{ background: 'var(--apex-danger)' }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex flex-col items-center gap-2 px-4 py-5 rounded-xl cursor-pointer transition-colors text-center"
+                  style={{
+                    border: `2px dashed ${isDragging ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
+                    background: isDragging ? 'var(--apex-success-bg)' : 'var(--surface)',
+                  }}
+                >
+                  <Upload size={20} style={{ color: 'var(--apex-text-secondary)' }} />
+                  <p className="text-xs" style={{ color: 'var(--apex-text-secondary)' }}>
+                    Перетащите или нажмите для загрузки
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--apex-text-muted)' }}>
+                    JPEG, PNG, WebP · до 2 МБ
+                  </p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleUpdate}
+                disabled={!form.name.trim() || isPending}
+                className="px-4 py-2 rounded-full text-sm font-medium text-white transition-colors disabled:opacity-50"
+                style={{ background: 'var(--apex-primary)' }}
+              >
+                {isPending ? 'Сохраняем...' : 'Сохранить'}
+              </button>
+              <button
+                onClick={cancelEditing}
+                className="px-4 py-2 rounded-full text-sm font-medium transition-colors"
+                style={{ color: 'var(--apex-text-secondary)' }}
+              >
+                Отмена
+              </button>
             </div>
           </div>
         )}

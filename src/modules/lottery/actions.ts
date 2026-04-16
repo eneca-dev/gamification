@@ -8,7 +8,7 @@ import { checkIsAdmin } from '@/modules/admin/checkIsAdmin'
 
 import type { ActionResult } from '@/modules/cache'
 
-import { createLotterySchema } from './types'
+import { createLotterySchema, updateLotterySchema } from './types'
 import type { LotteryDraw } from './types'
 import { getDrawCategoryId, getActiveLottery } from './queries'
 
@@ -94,6 +94,67 @@ export async function createLottery(input: unknown): Promise<ActionResult<Lotter
     }
     return { success: false, error: `Ошибка создания лотереи: ${lotteryError.message}` }
   }
+
+  revalidatePath('/admin/lottery')
+  revalidatePath('/store')
+
+  return { success: true, data: lottery }
+}
+
+/**
+ * Обновление приза активной лотереи.
+ * Обновляет и lottery_draws, и связанный shop_product (билет).
+ */
+export async function updateLottery(input: unknown): Promise<ActionResult<LotteryDraw>> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const parsed = updateLotterySchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0].message }
+  }
+
+  const { id, name, description, image_url, ticket_price } = parsed.data
+  const supabase = createSupabaseAdminClient()
+
+  // Получаем текущую лотерею
+  const { data: current, error: fetchError } = await supabase
+    .from('lottery_draws')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (fetchError || !current) {
+    return { success: false, error: 'Лотерея не найдена' }
+  }
+
+  // Обновляем лотерею
+  const { data: lottery, error: lotteryError } = await supabase
+    .from('lottery_draws')
+    .update({
+      name,
+      description: description ?? null,
+      image_url: image_url ?? null,
+      ticket_price,
+    })
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (lotteryError || !lottery) {
+    return { success: false, error: `Ошибка обновления лотереи: ${lotteryError?.message}` }
+  }
+
+  // Обновляем связанный товар-билет
+  await supabase
+    .from('shop_products')
+    .update({
+      name: `Билет на розыгрыш: ${name}`,
+      description: description ?? `Лотерейный билет. Приз: ${name}`,
+      price: ticket_price,
+      image_url: image_url ?? null,
+    })
+    .eq('id', current.product_id)
 
   revalidatePath('/admin/lottery')
   revalidatePath('/store')
