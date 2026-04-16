@@ -87,7 +87,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
         </h3>
         {product.description && (
           <p
-            className="text-[11px] mt-0.5 mb-2 line-clamp-2"
+            className="text-[11px] mt-0.5 mb-2 line-clamp-2 hover:line-clamp-none cursor-default transition-all"
             style={{ color: 'var(--text-muted)' }}
           >
             {product.description}

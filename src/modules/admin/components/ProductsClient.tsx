@@ -37,6 +37,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   const [editingProduct, setEditingProduct] = useState<ShopProductWithCategory | null>(null)
   const [isCreatingProduct, setIsCreatingProduct] = useState(false)
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null)
+  const [expandedDescriptionId, setExpandedDescriptionId] = useState<string | null>(null)
 
   // Inline-редактирование товаров
   const [inlineEdit, setInlineEdit] = useState<{
@@ -684,11 +685,11 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           <colgroup>
             <col style={{ width: '60px' }} />
             <col />
-            <col style={{ width: '150px' }} />
+            <col style={{ width: '180px' }} />
             <col style={{ width: '120px' }} />
-            <col style={{ width: '100px' }} />
+            <col style={{ width: '130px' }} />
             <col style={{ width: '200px' }} />
-            <col style={{ width: '90px' }} />
+            <col style={{ width: '130px' }} />
           </colgroup>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--apex-border)' }}>
@@ -744,7 +745,11 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                         {product.name}
                       </span>
                       {product.description && (
-                        <p className="text-[11px] mt-0.5 truncate max-w-[250px]" style={{ color: 'var(--apex-text-muted)' }}>
+                        <p
+                          className={`text-[11px] mt-0.5 max-w-[250px] cursor-pointer ${expandedDescriptionId === product.id ? 'whitespace-normal' : 'truncate'}`}
+                          style={{ color: 'var(--apex-text-muted)' }}
+                          onClick={() => setExpandedDescriptionId(expandedDescriptionId === product.id ? null : product.id)}
+                        >
                           {product.description}
                         </p>
                       )}
