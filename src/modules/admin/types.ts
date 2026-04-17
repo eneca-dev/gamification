@@ -114,6 +114,15 @@ export function formatTransactionReason(tx: UserTransaction): string | null {
       : `В задаче «${name}» не был вовремя сменён процент готовности`
   }
 
+  if (tx.event_type === 'wrong_status_report') {
+    const name = (d.ws_task_name as string) ?? 'неизвестная задача'
+    const status = (d.task_status as string) ?? 'не установлен'
+    const url = (d.ws_task_url as string) ?? buildWsTaskUrl(d)
+    return url
+      ? `Время внесено в задачу «${name}» (статус: ${status}) — ${url}`
+      : `Время внесено в задачу «${name}» (статус: ${status})`
+  }
+
   if (tx.event_type === 'section_red') {
     const name = (d.violator_task_name as string) ?? (d.ws_task_name as string) ?? 'неизвестная задача'
     const violatorProjectId = d.violator_project_id as string | undefined

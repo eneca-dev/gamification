@@ -1,10 +1,12 @@
 // Причина красного дня (jsonb из ws_daily_statuses.red_reasons)
 export interface RedReason {
-  type: 'red_day' | 'task_dynamics_violation' | 'section_red'
+  type: 'red_day' | 'task_dynamics_violation' | 'section_red' | 'wrong_status_report'
   ws_task_id?: string
   ws_task_name?: string
   ws_project_id?: string
   ws_l2_id?: string
+  ws_task_url?: string
+  task_status?: string
 }
 
 // Строка из ws_daily_statuses

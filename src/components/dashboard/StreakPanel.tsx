@@ -98,6 +98,7 @@ function buildWeeksAndMonths(calendarDays: CalendarDay[]) {
 
 // Построение WS URL задачи
 function buildTaskUrl(reason: RedReason): string | null {
+  if (reason.ws_task_url) return reason.ws_task_url;
   if (!reason.ws_project_id || !reason.ws_task_id) return null;
   const base = "https://eneca.worksection.com/project";
   if (reason.ws_l2_id) {
@@ -124,6 +125,14 @@ function formatRedReason(reason: RedReason): string {
     return url
       ? `В задаче «${taskName}» не была вовремя сменена метка готовности — ${url}`
       : `В задаче «${taskName}» не была вовремя сменена метка готовности`;
+  }
+  if (reason.type === "wrong_status_report") {
+    const taskName = reason.ws_task_name ?? "неизвестная задача";
+    const status = reason.task_status ?? "не установлен";
+    const url = buildTaskUrl(reason);
+    return url
+      ? `Время внесено в задачу «${taskName}» (статус: ${status}) — ${url}`
+      : `Время внесено в задачу «${taskName}» (статус: ${status})`;
   }
   return reason.type;
 }
@@ -371,6 +380,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
     : 0;
 
   const { weeks, groups } = buildWeeksAndMonths(calendarDays);
+  const today = new Date().toISOString().slice(0, 10);
   const DAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
   const headerOffset = DAY_LABEL_W + DAY_LABEL_MR;
 
@@ -501,6 +511,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
                             );
                           }
 
+                          const isToday = day.date === today;
                           const isOut = day.status === "out";
                           const isFuture = day.status === "future";
                           const isNoData = day.status === "no_data";
@@ -516,11 +527,13 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
                                 flexShrink: 0,
                                 background: isFuture || isOut ? "transparent" : statusColors[day.status],
                                 opacity: isOut ? 0 : isNoData ? 0.5 : 1,
-                                border: isFuture
-                                  ? "1.5px dashed rgba(var(--apex-primary-rgb), 0.25)"
-                                  : isNoData
-                                    ? "1.5px dashed var(--apex-text-muted)"
-                                    : undefined,
+                                border: isToday
+                                  ? "2px solid var(--apex-primary)"
+                                  : isFuture
+                                    ? "1.5px dashed rgba(var(--apex-primary-rgb), 0.25)"
+                                    : isNoData
+                                      ? "1.5px dashed var(--apex-text-muted)"
+                                      : undefined,
                                 boxSizing: "border-box",
                               }}
                               title={getDayTooltip(day)}

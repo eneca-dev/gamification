@@ -48,7 +48,15 @@
       "Bash(find /d/1work/gamification-vps-scripts/src/scripts -name \"*.ts\" -exec basename {} \\\\;)",
       "Bash(xargs head:*)",
       "Bash(find /d/1work/gamification/gamification -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" \\\\\\) -exec grep -l \"ws_tasks_l3\\\\|ws_tasks_l2\\\\|ws_projects\" {} \\\\;)",
-      "Bash(find /d/1work/gamification/gamification/supabase/migrations -name \"*.sql\" -exec grep -l \"shop_categories\\\\|is_physical\" {} \\\\;)"
+      "Bash(find /d/1work/gamification/gamification/supabase/migrations -name \"*.sql\" -exec grep -l \"shop_categories\\\\|is_physical\" {} \\\\;)",
+      "Bash(find /d/1work/gamification/gamification/src -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) -exec grep -l \"wrong_status\" {} \\\\;)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(uv --version)",
+      "Bash(pip install *)",
+      "Bash(uv sync *)",
+      "Bash(python -m uv sync --frozen --extra dev)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Система геймификации ENECA — Обзор</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface-2: #1a1a26;
+      --border: #2a2a3a;
+      --text: #e8e8f0;
+      --text-muted: #8888a0;
+      --accent: #f59e0b;
+      --accent-dim: #b8761a;
+      --green: #22c55e;
+      --red: #ef4444;
+      --blue: #3b82f6;
+      --purple: #a855f7;
+      --cyan: #06b6d4;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.06) 0%, transparent 50%);
+      animation: pulse-bg 8s ease-in-out infinite;
+    }
+
+    @keyframes pulse-bg {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.1); opacity: 1; }
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-badge .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(135deg, var(--accent), #fbbf24);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      max-width: 600px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .scroll-indicator {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(8px); }
+    }
+
+    .scroll-indicator svg {
+      width: 20px;
+      height: 20px;
+      stroke: var(--text-muted);
+    }
+
+    /* ===== SECTIONS ===== */
+    section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 6rem 2rem;
+    }
+
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+
+    .section-title {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+    }
+
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 700px;
+      margin-bottom: 3rem;
+    }
+
+    /* ===== WHAT IS ===== */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: border-color 0.3s, transform 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: var(--accent-dim);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .feature-card h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .icon-coins { background: rgba(245, 158, 11, 0.15); }
+    .icon-streak { background: rgba(34, 197, 94, 0.15); }
+    .icon-shop { background: rgba(168, 85, 247, 0.15); }
+    .icon-contest { background: rgba(59, 130, 246, 0.15); }
+    .icon-lottery { background: rgba(239, 68, 68, 0.15); }
+    .icon-achieve { background: rgba(6, 182, 212, 0.15); }
+
+    /* ===== ARCHITECTURE DIAGRAM ===== */
+    .arch-section {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 6rem 2rem;
+    }
+
+    .arch-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .diagram {
+      margin-top: 2rem;
+      position: relative;
+    }
+
+    .diagram-row {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+
+    .diagram-arrow-down {
+      display: flex;
+      justify-content: center;
+      padding: 0.5rem 0;
+    }
+
+    .diagram-arrow-down svg {
+      width: 32px;
+      height: 32px;
+    }
+
+    .diagram-node {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.75rem;
+      text-align: center;
+      min-width: 180px;
+      transition: border-color 0.3s;
+    }
+
+    .diagram-node:hover {
+      border-color: var(--accent-dim);
+    }
+
+    .diagram-node .node-icon {
+      font-size: 1.6rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .diagram-node .node-label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .diagram-node .node-desc {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .node-source { border-color: rgba(59, 130, 246, 0.4); }
+    .node-vps { border-color: rgba(168, 85, 247, 0.4); }
+    .node-db { border-color: rgba(245, 158, 11, 0.4); }
+    .node-app { border-color: rgba(34, 197, 94, 0.4); }
+    .node-trigger { border-color: rgba(6, 182, 212, 0.4); }
+
+    .arrow-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .arrow-label svg {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .arrow-label .arrow-text {
+      background: var(--surface-2);
+      padding: 0.3rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.72rem;
+      border: 1px solid var(--border);
+    }
+
+    /* Multi-arrow row */
+    .multi-arrows {
+      display: flex;
+      justify-content: center;
+      gap: 6rem;
+      padding: 0.75rem 0;
+    }
+
+    .multi-arrows .arrow-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .multi-arrows .arrow-col svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .multi-arrows .arrow-col span {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* ===== EVENT TABLE ===== */
+    .events-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-top: 2rem;
+    }
+
+    .events-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .events-table th {
+      text-align: left;
+      padding: 0.75rem 1rem;
+      background: var(--surface);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .events-table td {
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .events-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .events-table tr:hover td {
+      background: rgba(245, 158, 11, 0.03);
+    }
+
+    .coins-plus { color: var(--green); font-weight: 600; }
+    .coins-minus { color: var(--red); font-weight: 600; }
+
+    /* ===== MASTER PLANNER SECTION ===== */
+    .mp-section {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 6rem 2rem;
+    }
+
+    .mp-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .mp-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: start;
+      margin-top: 2rem;
+    }
+
+    @media (max-width: 768px) {
+      .mp-layout { grid-template-columns: 1fr; }
+    }
+
+    .mp-visual {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+
+    .mp-streak-bar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 1.5rem;
+    }
+
+    .mp-streak-cell {
+      flex: 1;
+      height: 36px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 600;
+      transition: transform 0.2s;
+    }
+
+    .mp-streak-cell:hover {
+      transform: scaleY(1.15);
+    }
+
+    .cell-ok { background: rgba(34, 197, 94, 0.25); border: 1px solid rgba(34, 197, 94, 0.4); color: var(--green); }
+    .cell-exceeded { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: var(--red); }
+    .cell-pending { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: var(--accent); }
+    .cell-empty { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); }
+
+    .mp-streak-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background: var(--surface);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .mp-streak-info .streak-num {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .mp-streak-info .streak-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .mp-streak-info .streak-bonus {
+      font-size: 0.8rem;
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .mp-steps {
+      list-style: none;
+    }
+
+    .mp-steps li {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    .mp-steps li::before {
+      content: '';
+      position: absolute;
+      left: 15px;
+      top: 36px;
+      bottom: -12px;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .mp-steps li:last-child::before {
+      display: none;
+    }
+
+    .step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .step-content h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .step-content p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    /* ===== STATS ===== */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-top: 3rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-card .stat-number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-card .stat-label {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    .stat-accent { color: var(--accent); }
+    .stat-green { color: var(--green); }
+    .stat-blue { color: var(--blue); }
+    .stat-purple { color: var(--purple); }
+
+    /* ===== FOOTER ===== */
+    footer {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+    }
+
+    footer .footer-logo {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== HERO ===== -->
+  <div class="hero">
+    <div class="hero-badge">
+      <span class="dot"></span>
+      <span>Внутренняя система ENECA</span>
+    </div>
+    <h1>Система<br><span>геймификации</span></h1>
+    <p>Мотивация через баллы, стрики и соревнования. Автоматический сбор данных из корпоративных систем, прозрачные правила начислений.</p>
+    <div class="scroll-indicator">
+      <span>прокрутите</span>
+      <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+      </svg>
+    </div>
+  </div>
+
+  <!-- ===== ЧТО ЭТО ===== -->
+  <section>
+    <div class="section-label">Обзор</div>
+    <h2 class="section-title">Зачем нужна система?</h2>
+    <p class="section-desc">
+      Корпоративная геймификация для проектного института. Система автоматически отслеживает рабочую дисциплину, использование технологий и корпоративную культуру — и поощряет за каждое из этих направлений внутренней валютой.
+    </p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon icon-coins">🪙</div>
+        <h3>Внутренняя валюта (коины)</h3>
+        <p>Сотрудники зарабатывают баллы за дисциплину, использование плагинов и благодарности коллег. Баллы копятся на балансе.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon icon-streak">🔥</div>
+        <h3>Стрики</h3>
+        <p>Серии зелёных дней подряд. Бонус при 7, 30, 90 днях. Отсутствия (отпуск, больничный) замораживают стрик, а не сбрасывают.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon icon-shop">🛒</div>
+        <h3>Магазин</h3>
+        <p>Коины можно потратить на товары — физические призы или цифровые бонусы. Списание происходит мгновенно.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon icon-contest">🏆</div>
+        <h3>Соревнования отделов</h3>
+        <p>Ежемесячно определяется отдел-победитель по использованию Revit-плагинов. Каждый сотрудник отдела получает бонус.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon icon-lottery">🎰</div>
+        <h3>Лотерея</h3>
+        <p>Ежемесячный розыгрыш ценного приза. Билеты покупаются за коины — чем больше билетов, тем выше шанс выиграть.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon icon-achieve">⭐</div>
+        <h3>Достижения</h3>
+        <p>Бейджи и прогрессии за долгосрочные результаты. Три уровня: бронза, серебро, золото — каждый в своём темпе.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== АРХИТЕКТУРА ===== -->
+  <div class="arch-section">
+    <div class="arch-inner">
+      <div class="section-label">Архитектура</div>
+      <h2 class="section-title">Откуда приходят данные</h2>
+      <p class="section-desc">
+        Система автоматически собирает данные из корпоративных систем. Выделенный сервер ежедневно синхронизирует информацию, обрабатывает её и начисляет баллы.
+      </p>
+
+      <div class="diagram">
+        <!-- Row 1: Sources -->
+        <div class="diagram-row">
+          <div class="diagram-node node-source">
+            <div class="node-icon">📋</div>
+            <div class="node-label">Worksection</div>
+            <div class="node-desc">Задачи, учёт времени, проекты,<br>статусы, отпуска и больничные</div>
+          </div>
+          <div class="diagram-node node-source">
+            <div class="node-icon">🔌</div>
+            <div class="node-label">Revit-плагины</div>
+            <div class="node-desc">Статистика запусков<br>плагинов автоматизации</div>
+          </div>
+          <div class="diagram-node node-source">
+            <div class="node-icon">💬</div>
+            <div class="node-label">Благодарности</div>
+            <div class="node-desc">Благодарности<br>между сотрудниками</div>
+          </div>
+        </div>
+
+        <!-- Arrows down -->
+        <div class="multi-arrows">
+          <div class="arrow-col">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#a855f7"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7" /><path stroke-linecap="round" d="M12 3v18" /></svg>
+            <span style="color: #a855f7;">ежедневно</span>
+          </div>
+          <div class="arrow-col">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#06b6d4"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7" /><path stroke-linecap="round" d="M12 3v18" /></svg>
+            <span style="color: #06b6d4;">ежедневно</span>
+          </div>
+          <div class="arrow-col">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#06b6d4"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7" /><path stroke-linecap="round" d="M12 3v18" /></svg>
+            <span style="color: #06b6d4;">автоматически</span>
+          </div>
+        </div>
+
+        <!-- Row 2: Processing -->
+        <div class="diagram-row">
+          <div class="diagram-node node-vps">
+            <div class="node-icon">🖥️</div>
+            <div class="node-label">VPS-сервер</div>
+            <div class="node-desc">Синхронизация данных,<br>расчёт баллов и нарушений,<br>уведомления в Telegram</div>
+          </div>
+        </div>
+
+        <!-- Arrow down -->
+        <div class="arrow-label">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="var(--accent)"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7" /><path stroke-linecap="round" d="M12 3v18" /></svg>
+          <div class="arrow-text">события · начисления · балансы</div>
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="var(--accent)"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7" /><path stroke-linecap="round" d="M12 3v18" /></svg>
+        </div>
+
+        <!-- Row 3: Database -->
+        <div class="diagram-row">
+          <div class="diagram-node node-db" style="min-width: 400px;">
+            <div class="node-icon">🗄️</div>
+            <div class="node-label">База данных</div>
+            <div class="node-desc">Журнал событий · История начислений · Балансы сотрудников<br>Стрики · Бюджеты задач · Статусы дней<br>20+ таблиц с полной историей</div>
+          </div>
+        </div>
+
+        <!-- Arrow down -->
+        <div class="arrow-label">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="var(--green)"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7" /><path stroke-linecap="round" d="M12 3v18" /></svg>
+          <div class="arrow-text">отображение данных</div>
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="var(--green)"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7" /><path stroke-linecap="round" d="M12 3v18" /></svg>
+        </div>
+
+        <!-- Row 4: App -->
+        <div class="diagram-row">
+          <div class="diagram-node node-app" style="min-width: 400px;">
+            <div class="node-icon">🌐</div>
+            <div class="node-label">Веб-приложение</div>
+            <div class="node-desc">Дашборд · Стрики · Мастер планирования · Магазин<br>Лотерея · Благодарности · Лидерборд · Админка</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== КЛЮЧЕВЫЕ СОБЫТИЯ ===== -->
+  <section>
+    <div class="section-label">Правила</div>
+    <h2 class="section-title">Как начисляются коины</h2>
+    <p class="section-desc">
+      22 типа событий: от +450 за мастера планирования до -200 за превышение бюджета. Всё начисляется и списывается автоматически.
+    </p>
+
+    <div class="events-table-wrap">
+      <table class="events-table">
+        <thead>
+          <tr>
+            <th>Событие</th>
+            <th>Коины</th>
+            <th>Направление</th>
+            <th>Описание</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Мастер планирования</td>
+            <td class="coins-plus">+450</td>
+            <td>Дисциплина</td>
+            <td>10 задач подряд закрыты в рамках бюджета</td>
+          </tr>
+          <tr>
+            <td>Стрик 90 дней</td>
+            <td class="coins-plus">+300</td>
+            <td>Дисциплина</td>
+            <td>90 зелёных дней подряд без нарушений</td>
+          </tr>
+          <tr>
+            <td>Раздел в бюджете</td>
+            <td class="coins-plus">+200</td>
+            <td>Дисциплина</td>
+            <td>Раздел проекта закрыт без превышения бюджета</td>
+          </tr>
+          <tr>
+            <td>Победа отдела</td>
+            <td class="coins-plus">+200</td>
+            <td>Соревнование</td>
+            <td>Бонус каждому сотруднику отдела-победителя</td>
+          </tr>
+          <tr>
+            <td>Стрик Revit 30 дней</td>
+            <td class="coins-plus">+100</td>
+            <td>Автоматизация</td>
+            <td>30 дней использования плагинов подряд</td>
+          </tr>
+          <tr>
+            <td>Благодарность</td>
+            <td class="coins-plus">+20</td>
+            <td>Культура</td>
+            <td>Получена благодарность от коллеги</td>
+          </tr>
+          <tr>
+            <td>Использование плагина</td>
+            <td class="coins-plus">+5</td>
+            <td>Автоматизация</td>
+            <td>Запуск Revit-плагина за рабочий день</td>
+          </tr>
+          <tr>
+            <td>Зелёный день</td>
+            <td class="coins-plus">+3</td>
+            <td>Дисциплина</td>
+            <td>Все проверки дня пройдены</td>
+          </tr>
+          <tr>
+            <td>Неверный статус задачи</td>
+            <td class="coins-minus">-3</td>
+            <td>Штраф</td>
+            <td>Время внесено в задачу, которая не в работе</td>
+          </tr>
+          <tr>
+            <td>Превышение бюджета задачи</td>
+            <td class="coins-minus">-50</td>
+            <td>Штраф</td>
+            <td>Фактические часы превысили план</td>
+          </tr>
+          <tr>
+            <td>Превышение бюджета раздела</td>
+            <td class="coins-minus">-200</td>
+            <td>Штраф</td>
+            <td>Отзыв бонуса у руководителя раздела</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== МАСТЕР ПЛАНИРОВАНИЯ ===== -->
+  <div class="mp-section">
+    <div class="mp-inner">
+      <div class="section-label">Ключевая механика</div>
+      <h2 class="section-title">Мастер планирования</h2>
+      <p class="section-desc">
+        Самый крупный бонус в системе — 450 коинов. Поощряет стабильное закрытие задач в рамках бюджета.
+      </p>
+
+      <div class="mp-layout">
+        <!-- Визуализация -->
+        <div>
+          <div class="mp-visual">
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; font-weight: 600;">Серия задач (пример)</div>
+            <div class="mp-streak-bar">
+              <div class="mp-streak-cell cell-ok">✓</div>
+              <div class="mp-streak-cell cell-ok">✓</div>
+              <div class="mp-streak-cell cell-ok">✓</div>
+              <div class="mp-streak-cell cell-ok">✓</div>
+              <div class="mp-streak-cell cell-ok">✓</div>
+              <div class="mp-streak-cell cell-ok">✓</div>
+              <div class="mp-streak-cell cell-ok">✓</div>
+              <div class="mp-streak-cell cell-ok">✓</div>
+              <div class="mp-streak-cell cell-pending">⏳</div>
+              <div class="mp-streak-cell cell-empty">10</div>
+            </div>
+            <div class="mp-streak-info">
+              <div>
+                <div class="streak-num">8/10</div>
+                <div class="streak-label">задач в бюджете подряд</div>
+              </div>
+              <div style="text-align: right;">
+                <div class="streak-bonus">+450 коинов</div>
+                <div class="streak-label">награда за серию</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 1.5rem; padding: 1.25rem; background: var(--bg); border: 1px solid var(--border); border-radius: 12px;">
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; font-weight: 600;">Пример сброса серии</div>
+            <div class="mp-streak-bar">
+              <div class="mp-streak-cell cell-ok">✓</div>
+              <div class="mp-streak-cell cell-ok">✓</div>
+              <div class="mp-streak-cell cell-ok">✓</div>
+              <div class="mp-streak-cell cell-ok">✓</div>
+              <div class="mp-streak-cell cell-ok">✓</div>
+              <div class="mp-streak-cell cell-exceeded">✗</div>
+              <div class="mp-streak-cell cell-ok" style="opacity: 0.5;">1</div>
+              <div class="mp-streak-cell cell-empty"></div>
+              <div class="mp-streak-cell cell-empty"></div>
+              <div class="mp-streak-cell cell-empty"></div>
+            </div>
+            <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.5rem;">
+              Превышение бюджета <span style="color: var(--red);">сбрасывает серию в 0</span>. Счёт начинается заново.
+            </div>
+          </div>
+        </div>
+
+        <!-- Шаги -->
+        <div>
+          <ol class="mp-steps">
+            <li>
+              <div class="step-num">1</div>
+              <div class="step-content">
+                <h4>Задача закрывается</h4>
+                <p>Сотрудник завершает задачу в Worksection. Система фиксирует закрытие и ставит её на проверку.</p>
+              </div>
+            </li>
+            <li>
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <h4>30 дней ожидания</h4>
+                <p>Система ждёт 30 дней — задача не должна переоткрыться и бюджет не должен быть превышен.</p>
+              </div>
+            </li>
+            <li>
+              <div class="step-num">3</div>
+              <div class="step-content">
+                <h4>Проверка бюджета</h4>
+                <p>Если фактические часы не превысили план — задача засчитана. Если бюджет превышен — не засчитана.</p>
+              </div>
+            </li>
+            <li>
+              <div class="step-num">4</div>
+              <div class="step-content">
+                <h4>Счётчик серии</h4>
+                <p>Каждая засчитанная задача увеличивает счётчик. При 10 подряд — бонус «Мастер планирования» (+450).</p>
+              </div>
+            </li>
+            <li>
+              <div class="step-num">5</div>
+              <div class="step-content">
+                <h4>Циклическая серия</h4>
+                <p>После каждых 10 задач — бонус заново. Серия не заканчивается: 20 задач = 2 бонуса.</p>
+              </div>
+            </li>
+          </ol>
+
+          <div style="margin-top: 1rem; padding: 1rem; background: var(--bg); border: 1px solid var(--border); border-radius: 10px;">
+            <div style="font-size: 0.78rem; color: var(--text-muted);">
+              <strong style="color: var(--text);">Два независимых стрика:</strong><br>
+              <span style="color: var(--green);">Задачи</span> — для исполнителей (конкретные работы)<br>
+              <span style="color: var(--blue);">Разделы</span> — для руководителей (разделы проекта)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ЦИФРЫ ===== -->
+  <section>
+    <div class="section-label">Масштаб</div>
+    <h2 class="section-title">Система в цифрах</h2>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-number stat-accent">575</div>
+        <div class="stat-label">сотрудников в системе</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number stat-green">2 890+</div>
+        <div class="stat-label">начислений и списаний</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number stat-blue">22</div>
+        <div class="stat-label">типа событий</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number stat-purple">3</div>
+        <div class="stat-label">направления мотивации</div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-number stat-green">11 000+</div>
+        <div class="stat-label">задач отслеживается</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number stat-blue">4 100+</div>
+        <div class="stat-label">запусков Revit-плагинов</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number stat-accent">69</div>
+        <div class="stat-label">активных проектов</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number stat-purple">100%</div>
+        <div class="stat-label">автоматизация расчётов</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer>
+    <div class="footer-logo">ENECA Gamification</div>
+    <div>Корпоративная система мотивации сотрудников</div>
+    <div style="margin-top: 0.5rem;">2025–2026</div>
+  </footer>
+
+</body>
+</html>

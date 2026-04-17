@@ -119,12 +119,15 @@ interface RedReason {
   ws_task_id?: string
   ws_task_name?: string
   ws_project_id?: string
+  ws_task_url?: string
+  task_status?: string
 }
 
 const RED_REASON_LABELS: Record<string, string> = {
   red_day: 'Не внесены часы',
   task_dynamics_violation: 'Не сменена метка прогресса',
   section_red: 'Нарушение в секции',
+  wrong_status_report: 'Время внесено не в статусе «В работе»',
 }
 
 interface EnrichedResult {
@@ -159,9 +162,8 @@ function enrichTransaction(
           if (seen.has(key)) continue
           seen.add(key)
 
-          const url = r.ws_project_id && r.ws_task_id
-            ? buildTaskUrl(r.ws_project_id, r.ws_task_id)
-            : undefined
+          const url = r.ws_task_url
+            ?? (r.ws_project_id && r.ws_task_id ? buildTaskUrl(r.ws_project_id, r.ws_task_id) : undefined)
 
           subItems.push({ text, url })
         }
@@ -177,6 +179,22 @@ function enrichTransaction(
     case 'streak_reset_section': {
       const name = details?.ws_task_name as string | undefined
       return { description: name ? `Сброс стрика: нарушение в секции (${name})` : 'Сброс стрика: нарушение в секции' }
+    }
+    case 'streak_reset_wrong_status':
+      return { description: 'Сброс стрика: время в неверном статусе' }
+    case 'wrong_status_report': {
+      const name = details?.ws_task_name as string | undefined
+      const status = details?.task_status as string | undefined
+      const url = (details?.ws_task_url as string | undefined)
+        ?? (details?.ws_project_id && details?.ws_task_id
+          ? buildTaskUrl(details.ws_project_id as string, details.ws_task_id as string)
+          : undefined)
+      const statusLabel = status && status !== 'не установлен' ? `(${status})` : null
+      const text = [name, statusLabel].filter(Boolean).join(' ')
+      return {
+        description: 'Время внесено не в статусе «В работе»',
+        subItems: text ? [{ text, url }] : undefined,
+      }
     }
     case 'task_dynamics_violation': {
       const name = details?.ws_task_name as string | undefined
