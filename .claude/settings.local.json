@@ -56,7 +56,8 @@
       "Bash(uv --version)",
       "Bash(pip install *)",
       "Bash(uv sync *)",
-      "Bash(python -m uv sync --frozen --extra dev)"
+      "Bash(python -m uv sync --frozen --extra dev)",
+      "Bash(.venv/Scripts/python.exe -m worksection_mcp)"
     ]
   },
   "enableAllProjectMcpServers": true,

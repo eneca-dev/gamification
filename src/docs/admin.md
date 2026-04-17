@@ -80,7 +80,7 @@
 ## Утилиты
 
 - `checkIsAdmin()` — декодирует JWT, возвращает boolean. Используется во всех админских actions
-- `formatTransactionReason(tx)` — формирует человеко-читаемое описание причины красного дня из `tx.details`. Возвращает строку с текстом и ссылкой на задачу WS или `null`. Используется в `/admin/users/[id]` и `UserDetailModal`
+- `formatTransactionReason(tx)` — формирует человеко-читаемое описание причины красного дня из `tx.details`. Поддерживает типы: `red_day`, `task_dynamics_violation`, `section_red`, `wrong_status_report`. Возвращает строку с текстом и ссылкой на задачу WS или `null`. Ссылка берётся приоритетно из `ws_task_url`, иначе строится по project/task ID. Используется в `/admin/users/[id]` и `UserDetailModal`
 
 ## UI-паттерны
 
@@ -101,7 +101,7 @@
 - `/admin` — layout с заголовком и `AdminNav`. Главная — placeholder
 - `/admin/events` — `getEventTypes()` → `EventTypesTable`
 - `/admin/users` — `getUsers()` → `AdminUsersClient`
-- `/admin/users/[id]` — `getUserDetail(id)` → детальная страница пользователя с `RoleProvider`, информационными карточками, списком транзакций. Транзакции red_day/task_dynamics_violation/section_red показывают причину красным + кликабельную ссылку на задачу WS. 404 если не найден
+- `/admin/users/[id]` — `getUserDetail(id)` → детальная страница пользователя с `RoleProvider`, информационными карточками, списком транзакций. Транзакции red_day/task_dynamics_violation/section_red/wrong_status_report показывают причину красным + кликабельную ссылку на задачу WS. 404 если не найден
 - `/admin/products` — `getAllProducts()` + `getAllCategories()` параллельно → `ProductsClient`
 - `/admin/orders` — `getOrders()` → `AdminOrdersClient`
 - `/admin/calendar` — `getCalendarHolidays()` + `getCalendarWorkdays()` параллельно → `CalendarClient`

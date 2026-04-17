@@ -29,7 +29,7 @@
 
 ## Типы
 
-- `RedReason` — причина красного дня (jsonb из `ws_daily_statuses.red_reasons`): `{ type, ws_task_id?, ws_task_name?, ws_project_id?, ws_l2_id? }`
+- `RedReason` — причина красного дня (jsonb из `ws_daily_statuses.red_reasons`): `{ type, ws_task_id?, ws_task_name?, ws_project_id?, ws_l2_id?, ws_task_url?, task_status? }`
 - `CalendarDayStatus` — union: green | red | gray | frozen | future | out | no_data
 - `CalendarDay` — день грида: date, status, automation, absenceType?, redReasons? (RedReason[])
 - `StreakPanelData` — все данные для компонента: calendarDays, completedCycles, ws, revit
@@ -40,8 +40,11 @@
 - `red_day` → «Не внесён отчёт»
 - `task_dynamics_violation` → «В задаче «{имя}» не был вовремя сменён процент готовности» + ссылка на WS
 - `section_red` → «В задаче «{имя}» не была вовремя сменена метка готовности» + ссылка на WS
+- `wrong_status_report` → «Время внесено в задачу «{имя}» (статус: {статус})» + ссылка на WS
 
-Ссылки строятся по формату: `https://eneca.worksection.com/project/{projectId}/{l2Id}/{taskId}/`
+Ссылки строятся: приоритетно из `ws_task_url` (прямая ссылка), иначе по формату `https://eneca.worksection.com/project/{projectId}/{l2Id}/{taskId}/`
+
+Текущий день выделяется рамкой (`2px solid var(--apex-primary)`).
 
 ## Queries
 

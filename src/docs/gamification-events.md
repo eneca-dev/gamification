@@ -227,7 +227,7 @@ NULL-статус (тег не установлен) = штраф.
 ```
 event_type:      wrong_status_report
 source:          ws
-details:         { ws_task_id, ws_task_name, ws_project_id, task_status }
+details:         { ws_task_id, ws_task_name, ws_project_id, ws_task_url, task_status }
 idempotency_key: wrong_status_{user_id}_{ws_task_id}_{date}
 ```
 
@@ -254,7 +254,7 @@ idempotency_key: deadline_ok_l3_{ws_task_id}_{user_id}
 
 ## Полный справочник event_type
 
-Все типы зарегистрированы в `gamification_event_types` (37 строк).
+Все типы зарегистрированы в `gamification_event_types` (38 строк).
 
 **С начислением/списанием коинов:**
 
@@ -295,6 +295,7 @@ idempotency_key: deadline_ok_l3_{ws_task_id}_{user_id}
 | `streak_reset_timetracking` | ws | compute-gamification |
 | `streak_reset_dynamics` | ws | compute-gamification |
 | `streak_reset_section` | ws | compute-gamification |
+| `streak_reset_wrong_status` | ws | compute-gamification |
 | `master_planner_reset` | ws | compute-gamification |
 | `master_planner_l2_reset` | ws | compute-gamification |
 
@@ -327,6 +328,7 @@ idempotency_key: deadline_ok_l3_{ws_task_id}_{user_id}
 | Сброс стрика (таймтрекинг) | `ws_streak_reset_tt_{user_id}_{date}` |
 | Сброс стрика (динамика) | `ws_streak_reset_dyn_{user_id}_{date}` |
 | Сброс стрика (раздел) | `ws_streak_reset_sec_{user_id}_{date}` |
+| Сброс стрика (неверный статус) | `ws_streak_reset_wrong_status_{user_id}_{date}` |
 
 **WS — стрики (compute-gamification):**
 
