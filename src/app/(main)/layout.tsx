@@ -1,4 +1,5 @@
 import { Sidebar } from '@/components/Sidebar'
+import { BetaAccessDenied } from '@/components/BetaAccessDenied'
 import { getCurrentUser } from '@/modules/auth'
 import { getUserBalance } from '@/modules/shop'
 import { DevBanner } from '@/modules/dev-tools/components/DevBanner'
@@ -12,6 +13,12 @@ export default async function MainLayout({
   children: React.ReactNode
 }) {
   const user = await getCurrentUser()
+
+  // Бета-режим: только бета-тестеры имеют доступ
+  if (user && !user.isBetaTester) {
+    return <BetaAccessDenied />
+  }
+
   const balance = user?.wsUserId ? await getUserBalance(user.wsUserId) : 0
 
   return (

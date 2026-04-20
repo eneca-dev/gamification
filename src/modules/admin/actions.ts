@@ -139,6 +139,35 @@ export async function toggleAdmin(
   return { success: true, isAdmin: newValue }
 }
 
+export async function toggleBetaTester(
+  userId: string
+): Promise<{ success: true; isBetaTester: boolean } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const supabase = createSupabaseAdminClient()
+
+  const { data: user, error: readError } = await supabase
+    .from('ws_users')
+    .select('is_beta_tester')
+    .eq('id', userId)
+    .single()
+
+  if (readError || !user) return { success: false, error: 'Пользователь не найден' }
+
+  const newValue = !user.is_beta_tester
+
+  const { error } = await supabase
+    .from('ws_users')
+    .update({ is_beta_tester: newValue })
+    .eq('id', userId)
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/admin/users')
+  return { success: true, isBetaTester: newValue }
+}
+
 export async function updateOrderStatus(
   input: unknown
 ): Promise<{ success: true } | { success: false; error: string }> {
