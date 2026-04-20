@@ -17,6 +17,21 @@ export const queryKeys = {
     all: ['balance'] as const,
     current: () => [...queryKeys.balance.all, 'current'] as const,
   },
+  gratitudes: {
+    all: ['gratitudes'] as const,
+    feed: () => [...queryKeys.gratitudes.all, 'feed'] as const,
+    my: (userId: string) => [...queryKeys.gratitudes.all, 'my', userId] as const,
+    quota: (userId: string) => [...queryKeys.gratitudes.all, 'quota', userId] as const,
+    recipients: () => [...queryKeys.gratitudes.all, 'recipients'] as const,
+  },
+  orders: {
+    all: ['orders'] as const,
+    user: (userId: string) => [...queryKeys.orders.all, userId] as const,
+  },
+  lottery: {
+    all: ['lottery'] as const,
+    tickets: (userId: string) => [...queryKeys.lottery.all, 'tickets', userId] as const,
+  },
 } as const
 
 export type QueryKeys = typeof queryKeys

@@ -1,4 +1,5 @@
-import { createSupabaseServerClient, createSupabaseAdminClient } from '@/config/supabase'
+import { createSupabaseAdminClient } from '@/config/supabase'
+import { cached, CACHE_1H } from '@/lib/server-cache'
 
 import type {
   RevitStreak,
@@ -15,7 +16,7 @@ const LEADERBOARD_PERIOD_DAYS = 30
 // Активные даты из elk_plugin_launches для calendar grid (звёздочки)
 export async function getRevitActiveDates(email: string, days = STREAK_GRID_DAYS): Promise<string[]> {
   try {
-    const supabase = await createSupabaseServerClient()
+    const supabase = createSupabaseAdminClient()
     const sinceDate = new Date()
     sinceDate.setUTCDate(sinceDate.getUTCDate() - days)
     const sinceDateStr = sinceDate.toISOString().split('T')[0]
@@ -36,7 +37,7 @@ export async function getRevitActiveDates(email: string, days = STREAK_GRID_DAYS
 // Стрик из revit_user_streaks через ws_users.email
 export async function getRevitStreak(email: string): Promise<RevitStreak | null> {
   try {
-    const supabase = await createSupabaseServerClient()
+    const supabase = createSupabaseAdminClient()
     const normalizedEmail = email.toLowerCase()
 
     const { data: user } = await supabase
@@ -162,7 +163,7 @@ export async function getYesterdayRevitSummary(email: string): Promise<RevitYest
 }
 
 // Транзакции по ревиту для ленты операций
-export async function getRevitTransactions(email: string, limit = 10): Promise<RevitTransaction[]> {
+async function _getRevitTransactions(email: string, limit = 10): Promise<RevitTransaction[]> {
   try {
     const supabase = createSupabaseAdminClient()
     const normalizedEmail = email.toLowerCase()
@@ -194,6 +195,11 @@ export async function getRevitTransactions(email: string, limit = 10): Promise<R
     return []
   }
 }
+
+export const getRevitTransactions = (email: string, limit = 10) =>
+  cached(() => _getRevitTransactions(email, limit), ['revit-tx', email, String(limit)], {
+    tags: [`revit:${email}`], revalidate: CACHE_1H,
+  })()
 
 // Статистика автоматизации по отделам для соревнования (из VIEW)
 export async function getDepartmentAutomationStats(
@@ -238,7 +244,7 @@ export async function getDepartmentAutomationStats(
 }
 
 // Агрегированные данные для виджета на главной
-export async function getRevitWidgetData(email: string): Promise<RevitWidgetData> {
+async function _getRevitWidgetData(email: string): Promise<RevitWidgetData> {
   const [activeDates, streak, yesterdaySummary] = await Promise.all([
     getRevitActiveDates(email),
     getRevitStreak(email),
@@ -247,3 +253,8 @@ export async function getRevitWidgetData(email: string): Promise<RevitWidgetData
 
   return { streak, activeDates, yesterdaySummary }
 }
+
+export const getRevitWidgetData = (email: string) =>
+  cached(() => _getRevitWidgetData(email), ['revit-widget', email], {
+    tags: [`revit:${email}`], revalidate: CACHE_1H,
+  })()

@@ -36,8 +36,15 @@ async function buildVariablesMap(): Promise<Record<string, string>> {
   return vars
 }
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
 function replaceVariables(content: string, vars: Record<string, string>): string {
-  return content.replace(/\{\{(\w+)\}\}/g, (match, key: string) => vars[key] ?? match)
+  return content.replace(/\{\{(\w+)\}\}/g, (match, key: string) => {
+    const value = vars[key]
+    return value !== undefined ? escapeHtml(value) : match
+  })
 }
 
 function applyVariables(articles: HelpArticle[], vars: Record<string, string>): HelpArticle[] {

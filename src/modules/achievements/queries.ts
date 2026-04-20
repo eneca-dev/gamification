@@ -1,10 +1,9 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
+import { cached, CACHE_1H } from '@/lib/server-cache'
 
 import type { AchievementProgress, RankingEntry, GratitudeAchProgress, CompanyAward, CompanyProgressEntry } from './types'
 
-export async function getAchievementProgress(
-  wsUserId: string
-): Promise<AchievementProgress | null> {
+async function _getAchievementProgress(wsUserId: string): Promise<AchievementProgress | null> {
   const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase.rpc('fn_ach_get_progress', { p_user_id: wsUserId })
   if (error) {
@@ -13,6 +12,11 @@ export async function getAchievementProgress(
   }
   return data as AchievementProgress
 }
+
+export const getAchievementProgress = (wsUserId: string) =>
+  cached(_getAchievementProgress, ['achievements', wsUserId], {
+    tags: [`achievements:${wsUserId}`], revalidate: CACHE_1H,
+  })(wsUserId)
 
 // --- Хелперы для personal / team / department рейтингов ---
 
@@ -74,9 +78,7 @@ async function fetchDepartmentRanking(viewName: string, limit: number): Promise<
 }
 
 // --- Прогресс достижений по благодарностям ---
-export async function getGratitudeAchievementProgress(
-  wsUserId: string
-): Promise<GratitudeAchProgress[]> {
+async function _getGratitudeAchievementProgress(wsUserId: string): Promise<GratitudeAchProgress[]> {
   const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase.rpc('fn_ach_get_gratitude_progress', { p_user_id: wsUserId })
   if (error) {
@@ -85,6 +87,11 @@ export async function getGratitudeAchievementProgress(
   }
   return (data ?? []) as GratitudeAchProgress[]
 }
+
+export const getGratitudeAchievementProgress = (wsUserId: string) =>
+  cached(_getGratitudeAchievementProgress, ['gratitude-achievements', wsUserId], {
+    tags: [`achievements:${wsUserId}`], revalidate: CACHE_1H,
+  })(wsUserId)
 
 // --- Достижения компании (все пользователи) ---
 export async function getCompanyAwards(
@@ -296,12 +303,30 @@ export async function getGratitudeProgressAll(): Promise<CompanyProgressEntry[]>
   return result.sort((a, b) => a.remaining - b.remaining)
 }
 
-// --- Revit ---
-export const getRevitPersonalRanking = (limit = 10) => fetchPersonalRanking('view_top_pers_revit', limit)
-export const getRevitTeamRanking = (limit = 5) => fetchTeamRanking('view_top_team_revit', limit)
-export const getRevitDepartmentRanking = (limit = 5) => fetchDepartmentRanking('view_top_dept_revit', limit)
+// --- Revit (кэш 1ч — обновляется ночью) ---
+export const getRevitPersonalRanking = (limit = 10) =>
+  cached(() => fetchPersonalRanking('view_top_pers_revit', limit), ['ranking-revit-personal', String(limit)], {
+    tags: ['rankings'], revalidate: CACHE_1H,
+  })()
+export const getRevitTeamRanking = (limit = 5) =>
+  cached(() => fetchTeamRanking('view_top_team_revit', limit), ['ranking-revit-team', String(limit)], {
+    tags: ['rankings'], revalidate: CACHE_1H,
+  })()
+export const getRevitDepartmentRanking = (limit = 5) =>
+  cached(() => fetchDepartmentRanking('view_top_dept_revit', limit), ['ranking-revit-dept', String(limit)], {
+    tags: ['rankings'], revalidate: CACHE_1H,
+  })()
 
-// --- Worksection ---
-export const getWsPersonalRanking = (limit = 10) => fetchPersonalRanking('view_top_pers_ws', limit)
-export const getWsTeamRanking = (limit = 5) => fetchTeamRanking('view_top_team_ws', limit)
-export const getWsDepartmentRanking = (limit = 5) => fetchDepartmentRanking('view_top_dept_ws', limit)
+// --- Worksection (кэш 1ч — обновляется ночью) ---
+export const getWsPersonalRanking = (limit = 10) =>
+  cached(() => fetchPersonalRanking('view_top_pers_ws', limit), ['ranking-ws-personal', String(limit)], {
+    tags: ['rankings'], revalidate: CACHE_1H,
+  })()
+export const getWsTeamRanking = (limit = 5) =>
+  cached(() => fetchTeamRanking('view_top_team_ws', limit), ['ranking-ws-team', String(limit)], {
+    tags: ['rankings'], revalidate: CACHE_1H,
+  })()
+export const getWsDepartmentRanking = (limit = 5) =>
+  cached(() => fetchDepartmentRanking('view_top_dept_ws', limit), ['ranking-ws-dept', String(limit)], {
+    tags: ['rankings'], revalidate: CACHE_1H,
+  })()
