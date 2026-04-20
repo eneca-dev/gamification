@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useQueryClient } from '@tanstack/react-query'
 import { ArrowRight } from 'lucide-react'
 
 import { purchaseProduct } from '../actions'
+import { queryKeys } from '@/modules/cache/keys/query-keys'
 import { buyStreakShield } from '@/modules/streak-shield/index.client'
 import { ProductCard } from './ProductCard'
 import { LotteryBanner } from '@/modules/lottery/components/LotteryBanner'
@@ -38,6 +40,7 @@ export function StoreClient({
   const [purchasingId, setPurchasingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const queryClient = useQueryClient()
 
   const filtered = activeFilter === 'all'
     ? products
@@ -61,6 +64,7 @@ export function StoreClient({
           setNotification({ type: 'error', message: result.error })
         } else {
           setNotification({ type: 'success', message: 'Стрик спасён!' })
+          queryClient.invalidateQueries({ queryKey: queryKeys.balance.all })
         }
         setTimeout(() => setNotification(null), 3000)
       })
@@ -78,6 +82,8 @@ export function StoreClient({
         setNotification({ type: 'error', message: result.error })
       } else {
         setNotification({ type: 'success', message: 'Покупка совершена!' })
+        queryClient.invalidateQueries({ queryKey: queryKeys.balance.all })
+        queryClient.invalidateQueries({ queryKey: queryKeys.orders.all })
       }
 
       setTimeout(() => setNotification(null), 3000)

@@ -1,15 +1,12 @@
-import { createSupabaseServerClient } from '@/config/supabase'
+import { createSupabaseAdminClient } from '@/config/supabase'
+import { cached, CACHE_1H } from '@/lib/server-cache'
 
 import type { DayStatusRow, StreakMilestone, WsStreakData, RevitStreakData } from './types'
 
-// Статусы дней из ws_daily_statuses за период
-export async function getStreakDayStatuses(
-  userId: string,
-  gridStart: string,
-  gridEnd: string,
-): Promise<DayStatusRow[]> {
-  const supabase = await createSupabaseServerClient()
+// --- Внутренние функции (без кэша) ---
 
+async function _getStreakDayStatuses(userId: string, gridStart: string, gridEnd: string): Promise<DayStatusRow[]> {
+  const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase
     .from('ws_daily_statuses')
     .select('date, status, absence_type, red_reasons')
@@ -17,64 +14,36 @@ export async function getStreakDayStatuses(
     .gte('date', gridStart)
     .lte('date', gridEnd)
 
-  if (error) {
-    console.error('[streak-panel] getStreakDayStatuses failed:', error)
-    return []
-  }
-
+  if (error) { console.error('[streak-panel] getStreakDayStatuses failed:', error); return [] }
   return (data ?? []) as DayStatusRow[]
 }
 
-// Праздники / нерабочие дни за период
-export async function getHolidays(
-  gridStart: string,
-  gridEnd: string,
-): Promise<Set<string>> {
-  const supabase = await createSupabaseServerClient()
-
+async function _getHolidayDates(gridStart: string, gridEnd: string): Promise<string[]> {
+  const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase
     .from('calendar_holidays')
     .select('date')
     .gte('date', gridStart)
     .lte('date', gridEnd)
 
-  if (error) {
-    console.error('[streak-panel] getHolidays failed:', error)
-    return new Set()
-  }
-
-  return new Set((data ?? []).map((r) => r.date as string))
+  if (error) { console.error('[streak-panel] getHolidays failed:', error); return [] }
+  return (data ?? []).map((r) => r.date as string)
 }
 
-// Рабочие переносы (выходной → рабочий) за период
-export async function getWorkdays(
-  gridStart: string,
-  gridEnd: string,
-): Promise<Set<string>> {
-  const supabase = await createSupabaseServerClient()
-
+async function _getWorkdayDates(gridStart: string, gridEnd: string): Promise<string[]> {
+  const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase
     .from('calendar_workdays')
     .select('date')
     .gte('date', gridStart)
     .lte('date', gridEnd)
 
-  if (error) {
-    console.error('[streak-panel] getWorkdays failed:', error)
-    return new Set()
-  }
-
-  return new Set((data ?? []).map((r) => r.date as string))
+  if (error) { console.error('[streak-panel] getWorkdays failed:', error); return [] }
+  return (data ?? []).map((r) => r.date as string)
 }
 
-// Даты с автоматизацией из elk_plugin_launches
-export async function getAutomationDays(
-  userEmail: string,
-  gridStart: string,
-  gridEnd: string,
-): Promise<Set<string>> {
-  const supabase = await createSupabaseServerClient()
-
+async function _getAutomationDayDates(userEmail: string, gridStart: string, gridEnd: string): Promise<string[]> {
+  const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase
     .from('elk_plugin_launches')
     .select('work_date')
@@ -82,17 +51,12 @@ export async function getAutomationDays(
     .gte('work_date', gridStart)
     .lte('work_date', gridEnd)
 
-  if (error) {
-    console.error('[streak-panel] getAutomationDays failed:', error)
-    return new Set()
-  }
-
-  return new Set((data ?? []).map((r) => r.work_date as string))
+  if (error) { console.error('[streak-panel] getAutomationDays failed:', error); return [] }
+  return [...new Set((data ?? []).map((r) => r.work_date as string))]
 }
 
-// Данные стрика WS + milestones
-export async function getWsStreakData(userId: string): Promise<WsStreakData> {
-  const supabase = await createSupabaseServerClient()
+async function _getWsStreakData(userId: string): Promise<WsStreakData> {
+  const supabase = createSupabaseAdminClient()
 
   const { data: streakRow } = await supabase
     .from('ws_user_streaks')
@@ -105,7 +69,6 @@ export async function getWsStreakData(userId: string): Promise<WsStreakData> {
   const streakStartDate = streakRow?.streak_start_date ?? null
   const completedCycles = streakRow?.completed_cycles ?? 0
 
-  // Milestones из gamification_event_types
   const { data: eventTypes } = await supabase
     .from('gamification_event_types')
     .select('key, coins')
@@ -123,9 +86,8 @@ export async function getWsStreakData(userId: string): Promise<WsStreakData> {
   return { currentStreak, longestStreak, streakStartDate, completedCycles, milestones }
 }
 
-// Данные стрика Revit + milestones
-export async function getRevitStreakData(userId: string): Promise<RevitStreakData> {
-  const supabase = await createSupabaseServerClient()
+async function _getRevitStreakData(userId: string): Promise<RevitStreakData> {
+  const supabase = createSupabaseAdminClient()
 
   const { data: streakRow } = await supabase
     .from('revit_user_streaks')
@@ -150,3 +112,41 @@ export async function getRevitStreakData(userId: string): Promise<RevitStreakDat
 
   return { currentStreak, milestones }
 }
+
+// --- Публичные функции с кэшем (1 час) ---
+
+export const getStreakDayStatuses = (userId: string, gridStart: string, gridEnd: string) =>
+  cached(_getStreakDayStatuses, ['day-statuses', userId, gridStart, gridEnd], {
+    tags: [`day-statuses:${userId}`], revalidate: CACHE_1H,
+  })(userId, gridStart, gridEnd)
+
+export async function getHolidays(gridStart: string, gridEnd: string): Promise<Set<string>> {
+  const dates = await cached(_getHolidayDates, ['holidays', gridStart, gridEnd], {
+    tags: ['calendar'], revalidate: CACHE_1H,
+  })(gridStart, gridEnd)
+  return new Set(dates)
+}
+
+export async function getWorkdays(gridStart: string, gridEnd: string): Promise<Set<string>> {
+  const dates = await cached(_getWorkdayDates, ['workdays', gridStart, gridEnd], {
+    tags: ['calendar'], revalidate: CACHE_1H,
+  })(gridStart, gridEnd)
+  return new Set(dates)
+}
+
+export async function getAutomationDays(userEmail: string, gridStart: string, gridEnd: string): Promise<Set<string>> {
+  const dates = await cached(_getAutomationDayDates, ['automation-days', userEmail, gridStart, gridEnd], {
+    tags: [`automation:${userEmail}`], revalidate: CACHE_1H,
+  })(userEmail, gridStart, gridEnd)
+  return new Set(dates)
+}
+
+export const getWsStreakData = (userId: string) =>
+  cached(_getWsStreakData, ['ws-streak', userId], {
+    tags: [`streak-ws:${userId}`], revalidate: CACHE_1H,
+  })(userId)
+
+export const getRevitStreakData = (userId: string) =>
+  cached(_getRevitStreakData, ['revit-streak', userId], {
+    tags: [`streak-revit:${userId}`], revalidate: CACHE_1H,
+  })(userId)

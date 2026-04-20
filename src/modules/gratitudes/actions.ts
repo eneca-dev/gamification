@@ -101,5 +101,7 @@ export async function sendGratitude(
   }
 
   revalidatePath('/')
+  revalidatePath('/activity')
+  revalidatePath('/gratitudes')
   return { success: true }
 }

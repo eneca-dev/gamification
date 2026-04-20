@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect, useTransition, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Shield, AlertTriangle } from 'lucide-react'
 import { CoinIcon } from '@/components/CoinIcon'
 
 import { buyStreakShield } from '@/modules/streak-shield/index.client'
+import { queryKeys } from '@/modules/cache/keys/query-keys'
 
 import type { PendingReset } from '../types'
 
@@ -30,6 +32,7 @@ export function StreakShieldAlert({ pending, userBalance }: StreakShieldAlertPro
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const queryClient = useQueryClient()
   const isSubmitting = useRef(false)
 
   const canAfford = userBalance >= pending.price
@@ -77,6 +80,7 @@ export function StreakShieldAlert({ pending, userBalance }: StreakShieldAlertPro
       isSubmitting.current = false
       if (result.success) {
         setSuccess(true)
+        queryClient.invalidateQueries({ queryKey: queryKeys.balance.all })
       } else {
         setError(result.error)
       }

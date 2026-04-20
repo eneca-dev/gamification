@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
+import { cached, CACHE_1H } from '@/lib/server-cache'
 
 import type { UserTransaction, TransactionSubItem } from './types'
 
@@ -8,7 +9,7 @@ function buildTaskUrl(projectId: string, taskId: string): string {
   return `${WS_BASE_URL}/${projectId}/${taskId}/`
 }
 
-export async function getUserTransactions(
+async function _getUserTransactions(
   userEmail: string,
   limit = 10,
   offset = 0,
@@ -98,7 +99,13 @@ export async function getUserTransactions(
   })
 }
 
-export async function getUserTransactionsCount(userEmail: string): Promise<number> {
+export const getUserTransactions = (userEmail: string, limit = 10, offset = 0) =>
+  cached(() => _getUserTransactions(userEmail, limit, offset),
+    ['transactions', userEmail, String(limit), String(offset)],
+    { tags: [`transactions:${userEmail}`], revalidate: CACHE_1H },
+  )()
+
+async function _getUserTransactionsCount(userEmail: string): Promise<number> {
   const supabase = createSupabaseAdminClient()
   const normalizedEmail = userEmail.toLowerCase()
 
@@ -111,6 +118,12 @@ export async function getUserTransactionsCount(userEmail: string): Promise<numbe
 
   return count ?? 0
 }
+
+export const getUserTransactionsCount = (userEmail: string) =>
+  cached(() => _getUserTransactionsCount(userEmail),
+    ['transactions-count', userEmail],
+    { tags: [`transactions:${userEmail}`], revalidate: CACHE_1H },
+  )()
 
 // ==================== Обогащение ====================
 

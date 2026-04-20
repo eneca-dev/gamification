@@ -25,6 +25,7 @@ interface SendGratitudeModalProps {
   quota: SenderQuota
   recipients: GratitudeRecipient[]
   balance: number
+  onSuccess?: () => void
 }
 
 function quotaDaysLeft(quota: SenderQuota): number {
@@ -38,7 +39,7 @@ function nextQuotaDays(quota: SenderQuota): number {
 }
 
 export function SendGratitudeModal({
-  isOpen, onClose, senderId, quota, recipients, balance,
+  isOpen, onClose, senderId, quota, recipients, balance, onSuccess,
 }: SendGratitudeModalProps) {
   const [step, setStep] = useState<'form' | 'success'>('form')
   const [category, setCategory] = useState<GratitudeCategory | null>(null)
@@ -103,7 +104,7 @@ export function SendGratitudeModal({
         gift_source: null,
         coins_amount: 0,
       })
-      if (result.success) setStep('success')
+      if (result.success) { setStep('success'); onSuccess?.() }
       else setError(result.error)
     })
   }
@@ -121,7 +122,7 @@ export function SendGratitudeModal({
         gift_source: 'quota',
         coins_amount: 0,
       })
-      if (result.success) setStep('success')
+      if (result.success) { setStep('success'); onSuccess?.() }
       else setError(result.error)
     })
   }
@@ -147,7 +148,7 @@ export function SendGratitudeModal({
         gift_source: 'balance',
         coins_amount: coinsAmount,
       })
-      if (result.success) setStep('success')
+      if (result.success) { setStep('success'); onSuccess?.() }
       else setError(result.error)
     })
   }
