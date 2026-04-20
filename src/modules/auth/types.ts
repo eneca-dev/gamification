@@ -24,6 +24,7 @@ export interface AuthUser {
   department: string | null
   team: string | null
   isAdmin: boolean
+  isBetaTester: boolean
   wsUserId: string | null
   isImpersonating?: boolean
 }

@@ -1,6 +1,6 @@
 export {
   updateEventType, updateRankingSetting, updateGratitudeSetting,
-  toggleAdmin, updateOrderStatus, cancelOrder,
+  toggleAdmin, toggleBetaTester, updateOrderStatus, cancelOrder,
   addCalendarHoliday, deleteCalendarHoliday, addCalendarWorkday, deleteCalendarWorkday,
 } from './actions'
 export { formatTransactionReason } from './types'

@@ -53,7 +53,7 @@ export async function getUsers(): Promise<AdminUserRow[]> {
     .from('ws_users')
     .select(`
       id, email, first_name, last_name, department, team,
-      is_admin, is_active,
+      is_admin, is_beta_tester, is_active,
       gamification_balances ( total_coins )
     `)
     .eq('is_active', true)
@@ -69,6 +69,7 @@ export async function getUsers(): Promise<AdminUserRow[]> {
     department: row.department,
     team: row.team,
     is_admin: row.is_admin,
+    is_beta_tester: row.is_beta_tester,
     is_active: row.is_active,
     total_coins: extractCoins(row.gamification_balances),
   }))
@@ -82,7 +83,7 @@ export async function getUserDetail(userId: string): Promise<UserDetail | null> 
     .from('ws_users')
     .select(`
       id, email, first_name, last_name, department, team,
-      is_admin, is_active,
+      is_admin, is_beta_tester, is_active,
       gamification_balances ( total_coins )
     `)
     .eq('id', userId)
@@ -98,6 +99,7 @@ export async function getUserDetail(userId: string): Promise<UserDetail | null> 
     department: userData.department,
     team: userData.team,
     is_admin: userData.is_admin,
+    is_beta_tester: userData.is_beta_tester,
     is_active: userData.is_active,
     total_coins: extractCoins(userData.gamification_balances),
   }
