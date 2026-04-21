@@ -77,6 +77,7 @@ export function Sidebar({ user, balance, showDevSwitcher }: SidebarProps) {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={true}
                 className="flex items-center gap-3 px-4 py-2.5 rounded-full text-[13px] font-semibold transition-colors duration-150"
                 style={{
                   background: isActive ? 'var(--apex-success-bg)' : 'transparent',
@@ -106,6 +107,7 @@ export function Sidebar({ user, balance, showDevSwitcher }: SidebarProps) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={true}
                   className="flex items-center gap-3 px-4 py-2.5 rounded-full text-[13px] font-semibold transition-colors duration-150"
                   style={{
                     background: isActive ? 'var(--apex-disabled-bg)' : 'transparent',

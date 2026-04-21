@@ -1,11 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import Link from 'next/link'
+import { useQueryClient } from '@tanstack/react-query'
 import { Heart, ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import { CoinIcon } from '@/components/CoinIcon'
 
 import { SendGratitudeModal } from './SendGratitudeModal'
+import { useMyGratitudes, useSenderQuota } from '../hooks/useGratitudes'
+import { queryKeys } from '@/modules/cache/keys/query-keys'
 import { GRATITUDE_CATEGORIES } from '../types'
 import type { GratitudeNew, SenderQuota, GratitudeRecipient } from '../types'
 
@@ -95,9 +98,18 @@ function GratitudeCard({
 }
 
 export function GratitudeWidget({
-  senderId, currentUserEmail, quota, recipients, balance, myGratitudes,
+  senderId, currentUserEmail, quota: initialQuota, recipients, balance, myGratitudes: initialGratitudes,
 }: GratitudeWidgetProps) {
   const [showSendModal, setShowSendModal] = useState(false)
+  const queryClient = useQueryClient()
+
+  const { data: myGratitudes = initialGratitudes } = useMyGratitudes(currentUserEmail, initialGratitudes)
+  const { data: quota = initialQuota } = useSenderQuota(senderId, initialQuota)
+
+  const handleGratitudeSent = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.gratitudes.all })
+    queryClient.invalidateQueries({ queryKey: queryKeys.balance.all })
+  }, [queryClient])
 
   const received = myGratitudes.filter((g) => g.recipient_email === currentUserEmail)
   const sent = myGratitudes.filter((g) => g.sender_email === currentUserEmail)
@@ -179,6 +191,7 @@ export function GratitudeWidget({
         quota={quota}
         recipients={recipients}
         balance={balance}
+        onSuccess={handleGratitudeSent}
       />
 
     </>

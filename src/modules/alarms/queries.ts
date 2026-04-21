@@ -1,10 +1,10 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
+import { cached, CACHE_1H } from '@/lib/server-cache'
 
 import type { Alarm } from './types'
 
-export async function getActiveAlarms(userId: string): Promise<Alarm[]> {
+async function _getActiveAlarms(userId: string): Promise<Alarm[]> {
   const supabase = createSupabaseAdminClient()
-  // Синк данных из WS происходит в 00:00 по Минску — alarm_date = вчера по Минску
   const now = new Date()
   const minskNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Minsk' }))
   minskNow.setDate(minskNow.getDate() - 1)
@@ -15,14 +15,18 @@ export async function getActiveAlarms(userId: string): Promise<Alarm[]> {
     .select('*')
     .eq('user_id', userId)
     .eq('alarm_date', alarmDate)
-    .order('is_resolved', { ascending: true }) // active first
+    .order('is_resolved', { ascending: true })
     .order('severity', { ascending: true })
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(error.message)
-
   return (data ?? []) as Alarm[]
 }
+
+export const getActiveAlarms = (userId: string) =>
+  cached(_getActiveAlarms, ['alarms', userId], {
+    tags: [`alarms:${userId}`], revalidate: CACHE_1H,
+  })(userId)
 
 export async function getAllAlarms(userId: string): Promise<Alarm[]> {
   const supabase = createSupabaseAdminClient()

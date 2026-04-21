@@ -1,4 +1,5 @@
-import { createSupabaseServerClient, createSupabaseAdminClient } from '@/config/supabase'
+import { createSupabaseAdminClient } from '@/config/supabase'
+import { cached, CACHE_1H } from '@/lib/server-cache'
 
 import type { ShopCategory, ShopProductWithCategory, ShopOrderWithDetails } from './types'
 
@@ -14,8 +15,8 @@ export async function getUserBalance(wsUserId: string): Promise<number> {
   return data?.total_coins ?? 0
 }
 
-export async function getCategories(): Promise<ShopCategory[]> {
-  const supabase = await createSupabaseServerClient()
+async function _getCategories(): Promise<ShopCategory[]> {
+  const supabase = createSupabaseAdminClient()
 
   const { data, error } = await supabase
     .from('shop_categories')
@@ -26,6 +27,9 @@ export async function getCategories(): Promise<ShopCategory[]> {
   if (error) throw new Error(error.message)
   return data ?? []
 }
+
+export const getCategories = () =>
+  cached(_getCategories, ['shop-categories'], { tags: ['shop-categories'], revalidate: CACHE_1H })()
 
 export async function getAllCategories(): Promise<ShopCategory[]> {
   const supabase = createSupabaseAdminClient()
@@ -39,8 +43,8 @@ export async function getAllCategories(): Promise<ShopCategory[]> {
   return data ?? []
 }
 
-export async function getProducts(categorySlug?: string): Promise<ShopProductWithCategory[]> {
-  const supabase = await createSupabaseServerClient()
+async function _getProducts(categorySlug?: string): Promise<ShopProductWithCategory[]> {
+  const supabase = createSupabaseAdminClient()
 
   let query = supabase
     .from('shop_products')
@@ -68,6 +72,11 @@ export async function getProducts(categorySlug?: string): Promise<ShopProductWit
     })) as ShopProductWithCategory[]
 }
 
+export const getProducts = (categorySlug?: string) =>
+  cached(() => _getProducts(categorySlug), ['shop-products', categorySlug ?? 'all'], {
+    tags: ['shop-products'], revalidate: CACHE_1H,
+  })()
+
 export async function getAllProducts(): Promise<ShopProductWithCategory[]> {
   const supabase = createSupabaseAdminClient()
 
@@ -88,7 +97,7 @@ export async function getAllProducts(): Promise<ShopProductWithCategory[]> {
 }
 
 export async function getProductById(id: string): Promise<ShopProductWithCategory | null> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
 
   const { data, error } = await supabase
     .from('shop_products')
