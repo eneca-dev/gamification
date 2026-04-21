@@ -57,11 +57,23 @@
       "Bash(pip install *)",
       "Bash(uv sync *)",
       "Bash(python -m uv sync --frozen --extra dev)",
-      "Bash(.venv/Scripts/python.exe -m worksection_mcp)"
+      "Bash(.venv/Scripts/python.exe -m worksection_mcp)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill //PID 38732 //F)",
+      "mcp__worksection__get_users",
+      "mcp__worksection__search_tasks",
+      "Bash(curl -s http://127.0.0.1:8000/mcp -X POST -H \"Content-Type: application/json\" -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"test\",\"version\":\"1.0\"}}}')",
+      "Bash(findstr \":8000\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X POST http://127.0.0.1:8000/mcp -H \"Content-Type: application/json\" -H \"Accept: application/json, text/event-stream\" -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"test\",\"version\":\"1.0\"}}}')",
+      "mcp__worksection__get_current_user",
+      "mcp__worksection__get_projects",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:8000/mcp)",
+      "Bash(claude mcp *)"
     ]
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "supabase"
+    "supabase",
+    "worksection"
   ]
 }

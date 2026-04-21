@@ -1,7 +1,7 @@
 "use client";
 
-import { Fragment } from "react";
-import { Trophy, CheckCircle2 } from "lucide-react";
+import { Fragment, useState } from "react";
+import { Trophy, CheckCircle2, Info } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { sourceColors } from "@/lib/data";
 import type { DailyTask } from "@/lib/data";
@@ -157,6 +157,108 @@ function getDayTooltip(day: CalendarDay): string | undefined {
   }
 
   return text;
+}
+
+// ─── Criteria tooltip ───────────────────────────────────────────────────────
+
+function DayCriteriaTooltip() {
+  const [show, setShow] = useState(false);
+
+  const greenCriteria = [
+    "Внесён дневной отчёт в Worksection",
+    "% готовности обновлён до пересечения 20 / 40 / 60 / 80 / 100% бюджета задачи",
+    "Время вносится в задачи со статусом «В работе»",
+  ];
+
+  const redCriteria = [
+    "Не внесён дневной отчёт",
+    "Бюджет задачи пересёк чекпоинт 20 / 40 / 60 / 80 / 100%, но % готовности не был изменён",
+    "Время внесено в задачу со статусом отличным от «В работе» (План, Пауза, Готово и т.п.)",
+  ];
+
+  return (
+    <span
+      className="relative inline-flex cursor-help"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      <span
+        className="w-4 h-4 rounded-full flex items-center justify-center relative -top-[7px]"
+        style={{ background: "var(--apex-surface)", border: "1px solid var(--apex-border)" }}
+      >
+        <Info size={10} style={{ color: "var(--apex-text-muted)" }} />
+      </span>
+      {show && (
+        <div
+          className="absolute top-full left-0 mt-2 px-3 py-2.5 rounded-xl w-72 pointer-events-none"
+          style={{
+            zIndex: 100,
+            background: "#ffffff",
+            border: "1px solid var(--apex-border)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+          }}
+        >
+          <div className="mb-2">
+            <div
+              className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider mb-1.5"
+              style={{ color: "var(--apex-primary)" }}
+            >
+              <span
+                className="w-2 h-2 rounded-xs"
+                style={{ background: "var(--apex-primary)" }}
+              />
+              Зелёный день — все условия выполнены
+            </div>
+            <ul className="flex flex-col gap-1">
+              {greenCriteria.map((text) => (
+                <li
+                  key={text}
+                  className="text-[10px] leading-relaxed pl-3 relative"
+                  style={{ color: "var(--apex-text-secondary)" }}
+                >
+                  <span className="absolute left-0" style={{ color: "var(--apex-primary)" }}>✓</span>
+                  {text}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="pt-2" style={{ borderTop: "1px solid var(--apex-border)" }}>
+            <div
+              className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider mb-1.5"
+              style={{ color: "var(--apex-danger)" }}
+            >
+              <span
+                className="w-2 h-2 rounded-xs"
+                style={{ background: "var(--apex-danger)" }}
+              />
+              Штраф — нарушено любое из условий
+            </div>
+            <ul className="flex flex-col gap-1">
+              {redCriteria.map((text) => (
+                <li
+                  key={text}
+                  className="text-[10px] leading-relaxed pl-3 relative"
+                  style={{ color: "var(--apex-text-secondary)" }}
+                >
+                  <span className="absolute left-0" style={{ color: "var(--apex-danger)" }}>✕</span>
+                  {text}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div
+            className="absolute bottom-full left-3 w-2 h-2 rotate-45"
+            style={{
+              background: "#ffffff",
+              borderLeft: "1px solid var(--apex-border)",
+              borderTop: "1px solid var(--apex-border)",
+              transform: "translateY(50%) rotate(45deg)",
+            }}
+          />
+        </div>
+      )}
+    </span>
+  );
 }
 
 // ─── Compact streak row ──────────────────────────────────────────────────────
@@ -380,7 +482,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
     : 0;
 
   const { weeks, groups } = buildWeeksAndMonths(calendarDays);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Minsk" });
   const DAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
   const headerOffset = DAY_LABEL_W + DAY_LABEL_MR;
 
@@ -407,6 +509,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
           >
             Worksection и автоматизации
           </span>
+          <DayCriteriaTooltip />
           {completedCycles > 0 && (
             <span
               className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
