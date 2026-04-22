@@ -3,7 +3,7 @@ import { QueryProvider } from '@/modules/cache'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Геймификация — Система баллов',
+  title: 'Геймификация',
   description: 'Корпоративная система геймификации',
 }
 
