@@ -114,6 +114,7 @@ function TopFivePanel({
   currentUserRank?: number | null;
   tooltip?: string;
 }) {
+  const isFirstOfMonth = new Date().getDate() === 1;
   const sorted = [...entries].sort((a, b) => b.value - a.value).slice(0, 5);
 
   return (
@@ -162,7 +163,7 @@ function TopFivePanel({
         >
           <span className="text-lg">📅</span>
           <div className="text-[12px] font-medium text-center" style={{ color: 'var(--apex-text-muted)' }}>
-            Топ сброшен в начале месяца.<br />Данные появятся завтра.
+            {isFirstOfMonth ? "Топ сброшен в начале месяца." : "Топ сброшен в связи с началом бета-тестирования."}<br />Данные появятся завтра.
           </div>
         </div>
       ) : null}

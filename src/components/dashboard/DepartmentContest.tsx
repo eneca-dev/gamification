@@ -85,6 +85,7 @@ function DisciplineColumn({
   currentName,
   tooltip,
 }: DisciplineColumnProps) {
+  const isFirstOfMonth = new Date().getDate() === 1;
   const leader = sorted[0];
   const currentDept = sorted.find((d) => d.isCurrentDepartment);
   const currentRank = currentDept?.rank ?? null;
@@ -152,7 +153,7 @@ function DisciplineColumn({
           >
             <span className="text-lg">📅</span>
             <div className="text-[12px] font-medium text-center" style={{ color: 'var(--apex-text-muted)' }}>
-              Топ сброшен в начале месяца.<br />Данные появятся завтра.
+              {isFirstOfMonth ? "Топ сброшен в начале месяца." : "Данные сброшены в связи с началом бета-тестирования."}<br />Данные появятся завтра.
             </div>
           </div>
         ) : null}
@@ -279,6 +280,15 @@ function DisciplineColumn({
   );
 }
 
+function pluralizeDays(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 14) return `${n} дней`;
+  if (mod10 === 1) return `${n} день`;
+  if (mod10 >= 2 && mod10 <= 4) return `${n} дня`;
+  return `${n} дней`;
+}
+
 export function DepartmentContest({ departments, automationDepartments, daysLeft, title = "Соревнование отделов", currentEntityName, wsTooltip, autoTooltip }: DepartmentContestProps) {
   const sortedWs = [...departments]
     .sort((a, b) => b.contestScore - a.contestScore)
@@ -313,7 +323,7 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
         >
           <Clock size={11} style={{ color: "var(--orange-500)" }} />
           <span className="text-[11px] font-semibold" style={{ color: "var(--orange-500)" }}>
-            {daysLeft === 1 ? "1 день" : `${daysLeft} дня`}
+            {pluralizeDays(daysLeft)}
           </span>
           <span className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>до конца месяца</span>
         </div>
