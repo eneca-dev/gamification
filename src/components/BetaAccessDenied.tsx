@@ -27,7 +27,7 @@ export function BetaAccessDenied() {
           Доступ ограничен
         </h1>
         <p className="text-[13px] font-medium mb-6" style={{ color: 'var(--apex-text-secondary)' }}>
-          Приложение находится в режиме бета-тестирования. Обратитесь к администратору для получения доступа.
+          Приложение находится в режиме бета-тестирования. Обратитесь к отделу развития для получения доступа.
         </p>
         <form action={signOut}>
           <button
