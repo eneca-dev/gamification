@@ -1,4 +1,34 @@
+import { AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+
+interface ErrorMessage {
+  title: string
+  steps: { action: string; details: string }[]
+  itHint: string
+}
+
+const errorMessages: Record<string, ErrorMessage> = {
+  cookies_blocked: {
+    title: 'Не удалось войти',
+    steps: [
+      {
+        action: 'Сделайте жёсткую перезагрузку страницы',
+        details: 'нажмите Ctrl + F5 (на Windows) или Cmd + Shift + R (на Mac).',
+      },
+      {
+        action: 'Если не помогло — отключите расширения браузера',
+        details:
+          'обычно мешают блокировщики рекламы и трекеров: AdBlock, uBlock Origin, Privacy Badger, Ghostery. Отключите их для этого сайта и попробуйте снова.',
+      },
+      {
+        action: 'Если и это не помогло — откройте сайт в другом браузере',
+        details: 'например, в Google Chrome или Microsoft Edge.',
+      },
+    ],
+    itHint:
+      'Если ничего из этого не сработало — напишите Группе развития и приложите скриншот этой страницы.',
+  },
+}
 
 function PhoneIllustration() {
   return (
@@ -41,7 +71,14 @@ function PhoneIllustration() {
   )
 }
 
-export default function LoginPage() {
+interface LoginPageProps {
+  searchParams: Promise<{ error?: string }>
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const { error } = await searchParams
+  const errorMessage = error ? errorMessages[error] : null
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="w-full max-w-5xl mx-auto px-10 flex flex-col md:flex-row items-center gap-12 md:justify-between">
@@ -56,12 +93,38 @@ export default function LoginPage() {
               Авторизация доступна только сотрудникам компании с действующим аккаунтом Worksection.
             </p>
           </div>
+
+          {errorMessage && (
+            <div
+              className="flex flex-col gap-3 max-w-md rounded-xl px-4 py-3.5 border"
+              style={{
+                background: 'var(--apex-error-bg)',
+                borderColor: 'var(--apex-error-text)',
+                color: 'var(--apex-error-text)',
+              }}
+              role="alert"
+            >
+              <div className="flex items-center gap-2">
+                <AlertCircle size={18} className="flex-shrink-0" />
+                <p className="text-sm font-semibold">{errorMessage.title}</p>
+              </div>
+              <ol className="flex flex-col gap-2 pl-6 text-sm leading-snug list-decimal">
+                {errorMessage.steps.map((step) => (
+                  <li key={step.action}>
+                    <span className="font-medium">{step.action}</span> — {step.details}
+                  </li>
+                ))}
+              </ol>
+              <p className="text-sm leading-snug pl-6">{errorMessage.itHint}</p>
+            </div>
+          )}
+
           <Link
             href="/api/auth/worksection"
             className="self-start py-2 px-5 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90"
             style={{ background: 'var(--apex-primary)' }}
           >
-            Войти через Worksection
+            {errorMessage ? 'Попробовать снова' : 'Войти через Worksection'}
           </Link>
         </div>
 

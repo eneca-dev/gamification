@@ -15,7 +15,28 @@ export async function GET(request: NextRequest) {
   const stateCookie = cookieStore.get('ws_oauth_state')?.value
 
   if (!state || !stateCookie || state !== stateCookie) {
-    return new NextResponse('Invalid state parameter', { status: 400 })
+    // Протухший/невалидный OAuth-flow (истёк cookie, старая ссылка, другой браузер)
+    // — перезапускаем авторизацию автоматически.
+    // ws_oauth_retry защищает от зацикливания, если браузер полностью блокирует cookies.
+    if (cookieStore.get('ws_oauth_retry')?.value) {
+      const errorResponse = NextResponse.redirect(
+        new URL('/login?error=cookies_blocked', request.url)
+      )
+      errorResponse.cookies.delete('ws_oauth_retry')
+      return errorResponse
+    }
+
+    const retryResponse = NextResponse.redirect(
+      new URL('/api/auth/worksection', request.url)
+    )
+    retryResponse.cookies.set('ws_oauth_retry', '1', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60,
+      path: '/',
+    })
+    return retryResponse
   }
 
   if (!code) {
@@ -23,6 +44,7 @@ export async function GET(request: NextRequest) {
   }
 
   cookieStore.delete('ws_oauth_state')
+  cookieStore.delete('ws_oauth_retry')
 
   // Обмен кода на токены
   const tokenRes = await fetch(worksectionConfig.urls.token, {
