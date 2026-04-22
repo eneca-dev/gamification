@@ -257,7 +257,7 @@ function enrichTransaction(
     case 'budget_revoked_l2':
     case 'budget_revoked_l3_lead': {
       const name = details?.ws_task_name as string | undefined
-      return { description: name ? `Отзыв баллов: ${name}` : defaultDesc }
+      return { description: name ? `Отзыв 💎: ${name}` : defaultDesc }
     }
     case 'revit_using_plugins': {
       const name = details?.plugin_name as string | undefined

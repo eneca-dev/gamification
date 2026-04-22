@@ -131,7 +131,7 @@ export function SendGratitudeModal({
   function handleSendBalanceGift() {
     if (!validate()) return
     if (coinsAmount > balance) {
-      setError('Недостаточно баллов')
+      setError('Недостаточно 💎')
       return
     }
     if (coinsAmount < 1) {
@@ -352,7 +352,7 @@ export function SendGratitudeModal({
                 )}
                 {coinsAmount > balance && (
                   <p className="text-[11px] font-medium mt-1" style={{ color: 'var(--apex-danger)' }}>
-                    <span className="inline-flex items-center gap-0.5">Недостаточно баллов (баланс: {balance} <CoinIcon size={11} />)</span>
+                    <span className="inline-flex items-center gap-0.5">Недостаточно 💎 (баланс: {balance} <CoinIcon size={11} />)</span>
                   </p>
                 )}
                 <button

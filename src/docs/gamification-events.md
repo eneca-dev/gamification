@@ -1,6 +1,6 @@
 # gamification-events
 
-Логика начисления и списания баллов по каждому типу события.
+Логика начисления и списания 💎 по каждому типу события.
 
 ---
 
@@ -116,7 +116,7 @@ idempotency_key: gratitude_recipient_{airtable_record_id}
 - `sender_email` или `recipient_email` = NULL → начисление пропускается
 - `sender_email` или `recipient_email` не найден в `ws_users` (is_active=true) → начисление пропускается
 - `deleted_in_airtable = true` → пропускается целиком
-- Уже начисленные баллы за удалённые благодарности не отзываются автоматически
+- Уже начисленные 💎 за удалённые благодарности не отзываются автоматически
 - Email в `ws_users` хранятся в нижнем регистре. Airtable может присылать любой регистр — `lower()` в JOIN обязателен
 
 ---
@@ -195,7 +195,7 @@ View `view_daily_statuses` агрегирует эту логику.
 
 **Механизм:** PG-функция `fn_award_department_contest()`, запускается pg_cron 1 числа каждого месяца в 02:00 UTC.
 
-**Метрика:** сумма ревит-баллов (`source = 'revit'`) по отделу за прошлый календарный месяц. Отдел с максимальной суммой = победитель.
+**Метрика:** сумма ревит-💎 (`source = 'revit'`) по отделу за прошлый календарный месяц. Отдел с максимальной суммой = победитель.
 
 **Получатель:** каждый активный сотрудник отдела-победителя.
 **💎:** `team_contest_top1_bonus` → **+200**
@@ -207,7 +207,7 @@ details:         { department, contest_month, department_coins }
 idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 ```
 
-**VIEW для UI:** `view_department_revit_contest` — сумма ревит-баллов по отделам за текущий месяц. Используется в `getDepartmentAutomationStats()` для отображения рейтинга на дашборде.
+**VIEW для UI:** `view_department_revit_contest` — сумма ревит-💎 по отделам за текущий месяц. Используется в `getDepartmentAutomationStats()` для отображения рейтинга на дашборде.
 
 ---
 
@@ -376,7 +376,7 @@ idempotency_key: deadline_ok_l3_{ws_task_id}_{user_id}
 
 - `gamification_event_logs` + `gamification_transactions` — append-only, строки не удаляются
 - Если email не найден в `ws_users` — событие молча пропускается
-- `at_gratitudes` с `deleted_in_airtable = true` — начисленные баллы не отзываются автоматически
+- `at_gratitudes` с `deleted_in_airtable = true` — начисленные 💎 не отзываются автоматически
 - Отрицательный баланс допустим (штрафы, clawback). Запрет только при покупке (будущий этап)
 - Информационные события (red_day, violations, resets) имеют coins=0 в `gamification_event_types` — записываются в `gamification_event_logs`, но не создают транзакций в `gamification_transactions`
 - `green_day` начисляет +3 💎 (обновлено миграцией 011)

@@ -115,7 +115,7 @@ export function StoreClient({
             Магазин
           </h1>
           <p className="text-sm font-medium mt-1" style={{ color: 'var(--text-secondary)' }}>
-            Обменивайте баллы на реальные награды
+            Обменивайте 💎 на реальные награды
           </p>
         </div>
         <Link

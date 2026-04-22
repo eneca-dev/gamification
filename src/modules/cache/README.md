@@ -47,16 +47,20 @@ src/modules/cache/
 
 ```tsx
 // src/app/layout.tsx
-import { QueryProvider } from '@/modules/cache'
+import { QueryProvider } from "@/modules/cache";
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html>
       <body>
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
-  )
+  );
 }
 ```
 
@@ -66,36 +70,37 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 // src/modules/cache/keys/query-keys.ts
 export const queryKeys = {
   achievements: {
-    all: ['achievements'] as const,
-    lists: () => [...queryKeys.achievements.all, 'list'] as const,
-    detail: (id: string) => [...queryKeys.achievements.all, 'detail', id] as const,
+    all: ["achievements"] as const,
+    lists: () => [...queryKeys.achievements.all, "list"] as const,
+    detail: (id: string) =>
+      [...queryKeys.achievements.all, "detail", id] as const,
   },
-} as const
+} as const;
 ```
 
 ### 3. Создать Server Action
 
 ```typescript
 // src/modules/achievements/actions.ts
-'use server'
+"use server";
 
-import { createClient } from '@/config/supabase'  // после настройки Supabase
-import { safeAction } from '@/modules/cache'
-import type { ActionResult } from '@/modules/cache'
+import { createClient } from "@/config/supabase"; // после настройки Supabase
+import { safeAction } from "@/modules/cache";
+import type { ActionResult } from "@/modules/cache";
 
 export interface Achievement {
-  id: string
-  title: string
-  points: number
+  id: string;
+  title: string;
+  points: number;
 }
 
 export async function getAchievements(): Promise<ActionResult<Achievement[]>> {
   return safeAction(async () => {
-    const supabase = await createClient()
-    const { data, error } = await supabase.from('achievements').select('*')
-    if (error) return { success: false, error: error.message }
-    return { success: true, data }
-  })
+    const supabase = await createClient();
+    const { data, error } = await supabase.from("achievements").select("*");
+    if (error) return { success: false, error: error.message };
+    return { success: true, data };
+  });
 }
 ```
 
@@ -103,38 +108,44 @@ export async function getAchievements(): Promise<ActionResult<Achievement[]>> {
 
 ```typescript
 // src/modules/achievements/hooks/use-achievements.ts
-'use client'
+"use client";
 
-import { createSimpleCacheQuery, queryKeys, staleTimePresets } from '@/modules/cache'
-import { getAchievements } from '../actions'
+import {
+  createSimpleCacheQuery,
+  queryKeys,
+  staleTimePresets,
+} from "@/modules/cache";
+import { getAchievements } from "../actions";
 
 export const useAchievements = createSimpleCacheQuery({
   queryKey: queryKeys.achievements.lists(),
   queryFn: getAchievements,
   staleTime: staleTimePresets.slow,
-})
+});
 ```
 
 ### 5. Использовать в компоненте
 
 ```tsx
-'use client'
+"use client";
 
-import { useAchievements } from '@/modules/achievements/hooks/use-achievements'
+import { useAchievements } from "@/modules/achievements/hooks/use-achievements";
 
 export function AchievementsList() {
-  const { data, isLoading, error } = useAchievements()
+  const { data, isLoading, error } = useAchievements();
 
-  if (isLoading) return <div>Загрузка...</div>
-  if (error) return <div>Ошибка: {error.message}</div>
+  if (isLoading) return <div>Загрузка...</div>;
+  if (error) return <div>Ошибка: {error.message}</div>;
 
   return (
     <ul>
       {data?.map((a) => (
-        <li key={a.id}>{a.title} — {a.points} баллов</li>
+        <li key={a.id}>
+          {a.title} — {a.points} 💎
+        </li>
       ))}
     </ul>
-  )
+  );
 }
 ```
 
@@ -153,9 +164,9 @@ const useAchievements = createCacheQuery({
   queryKey: (filters) => queryKeys.achievements.list(filters),
   queryFn: (filters) => getAchievements(filters),
   staleTime: staleTimePresets.medium,
-})
+});
 
-const { data, isLoading } = useAchievements({ category: 'performance' })
+const { data, isLoading } = useAchievements({ category: "performance" });
 ```
 
 #### `createSimpleCacheQuery<TData>`
@@ -167,7 +178,7 @@ const useAchievements = createSimpleCacheQuery({
   queryKey: queryKeys.achievements.lists(),
   queryFn: getAchievements,
   staleTime: staleTimePresets.static,
-})
+});
 ```
 
 #### `createDetailCacheQuery<TData>`
@@ -178,10 +189,10 @@ const useAchievements = createSimpleCacheQuery({
 const useAchievement = createDetailCacheQuery({
   queryKey: (id) => queryKeys.achievements.detail(id),
   queryFn: (id) => getAchievementById(id),
-})
+});
 
-const { data } = useAchievement('ach-123')
-const { data } = useAchievement(undefined) // запрос не выполнится
+const { data } = useAchievement("ach-123");
+const { data } = useAchievement(undefined); // запрос не выполнится
 ```
 
 ### Mutation Factories
@@ -194,7 +205,7 @@ const { data } = useAchievement(undefined) // запрос не выполнит
 const useCreateAchievement = createCacheMutation({
   mutationFn: createAchievement,
   invalidateKeys: [queryKeys.achievements.all],
-})
+});
 ```
 
 #### `createUpdateMutation<TInput, TData>`
@@ -208,7 +219,7 @@ const useUpdateAchievement = createUpdateMutation({
   listQueryKey: queryKeys.achievements.lists(),
   merge: (item, input) => ({ ...item, ...input }),
   invalidateKeys: [queryKeys.achievements.all],
-})
+});
 ```
 
 #### `createDeleteMutation<TInput, TData>`
@@ -220,19 +231,19 @@ const useDeleteAchievement = createDeleteMutation({
   mutationFn: deleteAchievement,
   listQueryKey: queryKeys.achievements.lists(),
   invalidateKeys: [queryKeys.achievements.all],
-})
+});
 ```
 
 ### `staleTimePresets`
 
-| Ключ | Значение | Когда использовать |
-|------|----------|--------------------|
-| `static` | 10 мин | Справочники (редко меняются) |
-| `slow` | 5 мин | Профили, настройки |
-| `medium` | 3 мин | Основные данные (по умолчанию) |
-| `fast` | 2 мин | Часто обновляемые данные |
-| `realtime` | 1 мин | Почти realtime данные |
-| `none` | 0 | Уведомления, без кэширования |
+| Ключ       | Значение | Когда использовать             |
+| ---------- | -------- | ------------------------------ |
+| `static`   | 10 мин   | Справочники (редко меняются)   |
+| `slow`     | 5 мин    | Профили, настройки             |
+| `medium`   | 3 мин    | Основные данные (по умолчанию) |
+| `fast`     | 2 мин    | Часто обновляемые данные       |
+| `realtime` | 1 мин    | Почти realtime данные          |
+| `none`     | 0        | Уведомления, без кэширования   |
 
 ---
 
@@ -241,15 +252,16 @@ const useDeleteAchievement = createDeleteMutation({
 Все ключи хранятся в `keys/query-keys.ts`. Пополняется по мере создания модулей.
 
 **Правила:**
+
 - Никогда не использовать строковые массивы напрямую в `queryKey`
 - Всегда через `queryKeys.<entity>.<method>()`
 
 ```typescript
 // ❌ Запрещено
-queryKey: ['achievements', 'list']
+queryKey: ["achievements", "list"];
 
 // ✅ Правильно
-queryKey: () => queryKeys.achievements.lists()
+queryKey: () => queryKeys.achievements.lists();
 ```
 
 **Паттерн для нового модуля:**
@@ -273,6 +285,7 @@ myEntity: {
 ### Добавление подписки
 
 1. Добавить в `realtime/config.ts`:
+
 ```typescript
 {
   table: 'achievements',
@@ -281,6 +294,7 @@ myEntity: {
 ```
 
 2. Включить таблицу в Supabase publication:
+
 ```sql
 ALTER PUBLICATION supabase_realtime ADD TABLE achievements;
 ```
@@ -288,9 +302,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE achievements;
 ### Отключение Realtime
 
 ```tsx
-<QueryProvider disableRealtime>
-  {children}
-</QueryProvider>
+<QueryProvider disableRealtime>{children}</QueryProvider>
 ```
 
 ---
@@ -302,7 +314,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE achievements;
 `invalidateKeys` должен включать достаточно широкий ключ:
 
 ```typescript
-invalidateKeys: [queryKeys.achievements.all] // инвалидирует ВСЕ achievements запросы
+invalidateKeys: [queryKeys.achievements.all]; // инвалидирует ВСЕ achievements запросы
 ```
 
 ### TypeScript ошибки в createUpdateMutation / createDeleteMutation
@@ -315,8 +327,8 @@ invalidateKeys: [queryKeys.achievements.all] // инвалидирует ВСЕ 
 
 ```typescript
 // ❌ Плохо
-return data
+return data;
 
 // ✅ Правильно
-return { success: true, data }
+return { success: true, data };
 ```

@@ -406,7 +406,7 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
               />
               <StatCard
                 icon={<CoinIcon size={16} />}
-                label="Баллов выведено"
+                label="💎 выведено"
                 value={activeLottery.total_tickets * activeLottery.ticket_price}
               />
             </div>

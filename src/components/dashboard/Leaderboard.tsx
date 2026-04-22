@@ -151,7 +151,7 @@ function TopFivePanel({
             className="text-[11px] font-bold px-2 py-0.5 rounded-full"
             style={{ background: "var(--surface)", color: "var(--apex-text-muted)", border: `1px solid var(--apex-border)` }}
           >
-            Нет баллов
+            Нет 💎
           </span>
         )}
       </div>
@@ -265,7 +265,7 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         accentColor="var(--apex-primary)"
         unit={<CoinIcon size={14} />}
         currentUserRank={findRank(entries)}
-        tooltip="Топ формируется по максимальному количеству баллов за Worksection, полученных за месяц. Сброс каждый месяц."
+        tooltip="Топ формируется по максимальному количеству 💎 за Worksection, полученных за месяц. Сброс каждый месяц."
       />
       <TopFivePanel
         title="Топ-5 Revit"
@@ -274,7 +274,7 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         unit={<CoinIcon size={14} />}
         accentColor="var(--orange-500)"
         currentUserRank={findRank(automationEntries ?? [])}
-        tooltip="Топ формируется по максимальному количеству баллов за использование Revit-плагинов за месяц. Сброс каждый месяц."
+        tooltip="Топ формируется по максимальному количеству 💎 за использование Revit-плагинов за месяц. Сброс каждый месяц."
       />
     </div>
   );

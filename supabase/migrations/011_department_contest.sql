@@ -1,4 +1,4 @@
--- VIEW: сумма ревит-баллов по отделам за текущий месяц
+-- VIEW: сумма ревит-💎 по отделам за текущий месяц
 CREATE OR REPLACE VIEW view_department_revit_contest AS
 WITH dept_coins AS (
   SELECT

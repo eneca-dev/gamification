@@ -58,7 +58,7 @@ export interface DepartmentEntry {
   employeesUsing: number;
   totalEmployees: number;
   usagePercent: number;  // % автоматизаций (WS дисциплина)
-  totalCoins: number;    // сумма баллов за ревит (автоматизация)
+  totalCoins: number;    // сумма 💎 за ревит (автоматизация)
   contestScore: number;  // totalCoins * (activeUsers / totalEmployees)
   wsPercent: number;     // % дисциплины Worksection
   isCurrentDepartment: boolean;

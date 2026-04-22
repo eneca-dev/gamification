@@ -6,7 +6,7 @@
 
 ## Логика работы
 
-Баллы начисляются всем сотрудникам из `ws_users` по email, независимо от регистрации в приложении. Регистрация (OAuth через Worksection) связывает `auth.users` с `ws_users.user_id`, а триггер `trg_link_ws_user_on_profile_insert` автоматически связывает `profiles` с `ws_users`.
+💎 начисляются всем сотрудникам из `ws_users` по email, независимо от регистрации в приложении. Регистрация (OAuth через Worksection) связывает `auth.users` с `ws_users.user_id`, а триггер `trg_link_ws_user_on_profile_insert` автоматически связывает `profiles` с `ws_users`.
 
 Два параллельных потока начислений:
 
@@ -34,11 +34,11 @@
 
 ## Cron-расписание (pg_cron)
 
-| Расписание                              | Edge Function                   | Что делает                                                           |
-| --------------------------------------- | ------------------------------- | -------------------------------------------------------------------- |
-| `0 1 * * *` (01:00 UTC ежедневно)       | `sync-plugin-launches`          | Синк запусков Revit-плагинов из Elasticsearch                        |
-| `0 */4 * * *` (каждые 4 часа)           | `sync-gratitudes`               | Синк благодарностей из Airtable                                      |
-| `0 2 1 * *` (1 число месяца, 02:00 UTC) | `fn_award_department_contest()` | Начисление бонуса отделу-победителю по ревит-баллам за прошлый месяц |
+| Расписание                              | Edge Function                   | Что делает                                                       |
+| --------------------------------------- | ------------------------------- | ---------------------------------------------------------------- |
+| `0 1 * * *` (01:00 UTC ежедневно)       | `sync-plugin-launches`          | Синк запусков Revit-плагинов из Elasticsearch                    |
+| `0 */4 * * *` (каждые 4 часа)           | `sync-gratitudes`               | Синк благодарностей из Airtable                                  |
+| `0 2 1 * *` (1 число месяца, 02:00 UTC) | `fn_award_department_contest()` | Начисление бонуса отделу-победителю по ревит-💎 за прошлый месяц |
 
 WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-costs`, `snapshot-task-percent`, `sync-ws-absences`, `sync-task-events`, `compute-gamification`) запускаются **VPS-оркестратором**, не через pg_cron.
 
@@ -55,7 +55,7 @@ WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-co
 | `process_gamification_event(...)`       | Атомарная функция для VPS-скрипта: INSERT event + INSERT transaction + UPSERT balance в одной транзакции. Дубли по idempotency_key пропускаются. SECURITY DEFINER, доступ только service_role |
 | `link_ws_user_on_profile_insert()`      | Триггер: при создании `profiles` связывает с `ws_users.user_id`                                                                                                                               |
 | `custom_access_token_hook(event)`       | Auth Hook: добавляет `is_admin` и `ws_user_id` из `ws_users` в JWT claims при каждом выпуске/рефреше токена                                                                                   |
-| `fn_award_department_contest()`         | Ежемесячное начисление бонуса отделу-победителю по ревит-баллам                                                                                                                               |
+| `fn_award_department_contest()`         | Ежемесячное начисление бонуса отделу-победителю по ревит-💎                                                                                                                                   |
 
 ---
 
@@ -374,7 +374,7 @@ UNIQUE(user_email, ws_task_id, cost_date).
 
 ### Группа D: Ядро геймификации
 
-Единая система начисления баллов. Данные пишутся двумя путями: PG-триггерами (Revit, благодарности) и VPS-скриптом `compute-gamification` (WS-события).
+Единая система начисления 💎. Данные пишутся двумя путями: PG-триггерами (Revit, благодарности) и VPS-скриптом `compute-gamification` (WS-события).
 
 #### `gamification_event_types`
 
@@ -393,8 +393,8 @@ UNIQUE(user_email, ws_task_id, cost_date).
 | `budget_ok_l3`               | +50   | Задача L3 закрыта в рамках бюджета (30 дней)             |
 | `revit_streak_7_bonus`       | +25   | Бонус за стрик 7 дней (Revit)                            |
 | `ws_streak_7`                | +25   | Бонус за стрик 7 зелёных дней (WS)                       |
-| `gratitude_recipient_points` | +20   | Баллы получателю благодарности                           |
-| `revit_using_plugins`        | +5    | Баллы за использование плагина                           |
+| `gratitude_recipient_points` | +20   | 💎 получателю благодарности                              |
+| `revit_using_plugins`        | +5    | 💎 за использование плагина                              |
 | `budget_ok_l3_lead_bonus`    | +5    | Бонус тимлиду L2 за закрытие дочерней L3 в бюджете       |
 | `green_day`                  | +3    | Зелёный день (все проверки пройдены)                     |
 | `budget_revoked_l3_lead`     | -5    | Отзыв бонуса тимлиду: бюджет L3 превышен                 |
@@ -581,7 +581,7 @@ JOIN `gamification_transactions` + `gamification_event_logs` + `gamification_eve
 
 #### `view_department_revit_contest`
 
-Сумма ревит-баллов по отделам за текущий месяц. Используется в `getDepartmentAutomationStats()` для рейтинга соревнования. Колонки: `department_code`, `users_earning`, `total_employees`, `total_coins`. Отделы без баллов показываются с `total_coins = 0`.
+Сумма ревит-💎 по отделам за текущий месяц. Используется в `getDepartmentAutomationStats()` для рейтинга соревнования. Колонки: `department_code`, `users_earning`, `total_employees`, `total_coins`. Отделы без 💎 показываются с `total_coins = 0`.
 
 ---
 

@@ -317,8 +317,8 @@ export default async function DashboardPage() {
           automationDepartments={toDeptEntries(revitDeptRanking, currentDept)}
           daysLeft={daysLeft}
           currentEntityName={wsDeptCode}
-          wsTooltip="Формула: сумма баллов отдела за Worksection / количество людей в отделе. Сброс каждый месяц."
-          autoTooltip="Формула: сумма баллов по Revit в отделе × (кол-во людей, использующих плагины / общее кол-во людей в отделе). Сброс каждый месяц."
+          wsTooltip="Формула: сумма 💎 отдела за Worksection / количество людей в отделе. Сброс каждый месяц."
+          autoTooltip="Формула: сумма 💎 по Revit в отделе × (кол-во людей, использующих плагины / общее кол-во людей в отделе). Сброс каждый месяц."
         />
       </div>
 
@@ -330,8 +330,8 @@ export default async function DashboardPage() {
           daysLeft={daysLeft}
           title="Соревнование команд"
           currentEntityName={wsTeam}
-          wsTooltip="Формула: сумма баллов команды за Worksection / количество людей в команде. Сброс каждый месяц."
-          autoTooltip="Формула: сумма баллов по Revit в команде × (кол-во людей, использующих плагины / общее кол-во людей в команде). Сброс каждый месяц."
+          wsTooltip="Формула: сумма 💎 команды за Worksection / количество людей в команде. Сброс каждый месяц."
+          autoTooltip="Формула: сумма 💎 по Revit в команде × (кол-во людей, использующих плагины / общее кол-во людей в команде). Сброс каждый месяц."
         />
       </div>
     </div>

@@ -80,7 +80,7 @@ export async function sendGratitude(
       .single()
 
     if (!balance || balance.total_coins < coins_amount) {
-      return { success: false, error: 'Недостаточно баллов' }
+      return { success: false, error: 'Недостаточно 💎' }
     }
   }
 

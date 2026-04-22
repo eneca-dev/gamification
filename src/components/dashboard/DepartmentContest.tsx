@@ -334,7 +334,7 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
           title="Worksection"
           icon="📋"
           prize={150}
-          metricLabel="Баллы с учётом вовлечённости"
+          metricLabel="💎 с учётом вовлечённости"
           sorted={sortedWs}
           getMetric={(d) => Math.round(d.contestScore)}
           getUsing={(d) => d.employeesUsing}
@@ -348,7 +348,7 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
           title="Revit"
           icon="⚡"
           prize={200}
-          metricLabel="Баллы с учётом вовлечённости"
+          metricLabel="💎 с учётом вовлечённости"
           sorted={sortedAuto}
           getMetric={(d) => Math.round(d.contestScore)}
           getUsing={(d) => d.employeesUsing}
