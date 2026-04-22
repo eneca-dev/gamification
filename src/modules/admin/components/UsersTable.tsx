@@ -61,6 +61,7 @@ export function UsersTable({ users }: UsersTableProps) {
   const [search, setSearch] = useState('')
   const [deptFilter, setDeptFilter] = useState('all')
   const [adminsOnly, setAdminsOnly] = useState(false)
+  const [betaOnly, setBetaOnly] = useState(false)
   const [allExpanded, setAllExpanded] = useState(true)
   const [expandKey, setExpandKey] = useState(0)
   const [isPending, startTransition] = useTransition()
@@ -74,6 +75,7 @@ export function UsersTable({ users }: UsersTableProps) {
   const filtered = useMemo(() => {
     return items.filter((u) => {
       if (adminsOnly && !u.is_admin) return false
+      if (betaOnly && !u.is_beta_tester) return false
       if (deptFilter !== 'all' && u.department !== deptFilter) return false
       if (search) {
         const q = search.toLowerCase()
@@ -84,7 +86,7 @@ export function UsersTable({ users }: UsersTableProps) {
       }
       return true
     })
-  }, [items, search, deptFilter, adminsOnly])
+  }, [items, search, deptFilter, adminsOnly, betaOnly])
 
   const groups = useMemo(() => buildGroups(filtered), [filtered])
 
@@ -171,6 +173,20 @@ export function UsersTable({ users }: UsersTableProps) {
           >
             {adminsOnly && <Check size={12} />}
             Только админы
+          </button>
+
+          {/* Beta only — chip toggle */}
+          <button
+            onClick={() => setBetaOnly(!betaOnly)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-medium transition-colors"
+            style={{
+              background: betaOnly ? 'var(--apex-success-bg)' : 'transparent',
+              border: `1px solid ${betaOnly ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
+              color: betaOnly ? 'var(--apex-primary)' : 'var(--apex-text-secondary)',
+            }}
+          >
+            {betaOnly && <Check size={12} />}
+            Только бета
           </button>
 
           {/* Spacer */}
