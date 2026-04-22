@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { usePathname } from 'next/navigation'
 
 import { OnboardingSpotlight } from './OnboardingSpotlight'
+import { OnboardingDevPanel } from './OnboardingDevPanel'
 import { isTourSeen, markTourSeen, resetTour, resetAllTours } from '../storage'
 import { dashboardTour } from '../tours/dashboard'
 import { achievementsTour } from '../tours/achievements'
@@ -169,6 +170,9 @@ export function OnboardingProvider({ userId, children }: OnboardingProviderProps
           onNext={handleNext}
           onSkip={handleSkip}
         />
+      )}
+      {process.env.NODE_ENV === 'development' && (
+        <OnboardingDevPanel userId={userId} />
       )}
     </OnboardingContext.Provider>
   )

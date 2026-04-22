@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { Trophy, CheckCircle2, Info } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { sourceColors } from "@/lib/data";
@@ -183,14 +183,14 @@ function DayCriteriaTooltip() {
       onMouseLeave={() => setShow(false)}
     >
       <span
-        className="w-4 h-4 rounded-full flex items-center justify-center relative -top-[7px]"
+        className="w-4 h-4 rounded-full flex items-center justify-center"
         style={{ background: "var(--apex-surface)", border: "1px solid var(--apex-border)" }}
       >
         <Info size={10} style={{ color: "var(--apex-text-muted)" }} />
       </span>
       {show && (
         <div
-          className="absolute top-full left-0 mt-2 px-3 py-2.5 rounded-xl w-72 pointer-events-none"
+          className="absolute bottom-full left-0 mb-2 px-3 py-2.5 rounded-xl w-72 pointer-events-none"
           style={{
             zIndex: 100,
             background: "#ffffff",
@@ -200,11 +200,11 @@ function DayCriteriaTooltip() {
         >
           <div className="mb-2">
             <div
-              className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider mb-1.5"
+              className="flex items-start gap-1.5 text-[10px] font-semibold uppercase tracking-wider mb-1.5 leading-[1.2]"
               style={{ color: "var(--apex-primary)" }}
             >
               <span
-                className="w-2 h-2 rounded-xs"
+                className="w-2 h-2 rounded-xs shrink-0 mt-[2px]"
                 style={{ background: "var(--apex-primary)" }}
               />
               Зелёный день — все условия выполнены
@@ -224,11 +224,11 @@ function DayCriteriaTooltip() {
           </div>
           <div className="pt-2" style={{ borderTop: "1px solid var(--apex-border)" }}>
             <div
-              className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider mb-1.5"
+              className="flex items-start gap-1.5 text-[10px] font-semibold uppercase tracking-wider mb-1.5 leading-[1.2]"
               style={{ color: "var(--apex-danger)" }}
             >
               <span
-                className="w-2 h-2 rounded-xs"
+                className="w-2 h-2 rounded-xs shrink-0 mt-[2px]"
                 style={{ background: "var(--apex-danger)" }}
               />
               Штраф — нарушено любое из условий
@@ -247,12 +247,80 @@ function DayCriteriaTooltip() {
             </ul>
           </div>
           <div
-            className="absolute bottom-full left-3 w-2 h-2 rotate-45"
+            className="absolute top-full left-3"
             style={{
+              width: 8,
+              height: 8,
               background: "#ffffff",
-              borderLeft: "1px solid var(--apex-border)",
-              borderTop: "1px solid var(--apex-border)",
-              transform: "translateY(50%) rotate(45deg)",
+              borderRight: "1px solid var(--apex-border)",
+              borderBottom: "1px solid var(--apex-border)",
+              transform: "translateY(-50%) rotate(45deg)",
+            }}
+          />
+        </div>
+      )}
+    </span>
+  );
+}
+
+// ─── Automation plugins tooltip ──────────────────────────────────────────────
+
+function AutomationPluginsTooltip() {
+  const [show, setShow] = useState(false);
+
+  const plugins = [
+    "Auditor", "ClashesManager", "LinksManager", "ShareModel",
+    "SDT", "ParamOperator", "ApartmentLayouts", "FasciaCappings",
+    "SpacesManager", "ResaveModels", "AutoOpenings", "Finishing",
+    "SharedCoordinates", "ProfiLay", "LookupTables", "ViewCloner",
+    "LintelsTransfer", "SurfaceGen", "QuickMount", "SchedulesTable",
+  ];
+
+  return (
+    <span
+      className="relative inline-flex cursor-help"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      <span
+        className="w-4 h-4 rounded-full flex items-center justify-center"
+        style={{ background: "var(--apex-surface)", border: "1px solid var(--apex-border)" }}
+      >
+        <Info size={10} style={{ color: "var(--apex-text-muted)" }} />
+      </span>
+      {show && (
+        <div
+          className="absolute bottom-full left-0 mb-2 px-3 py-2.5 rounded-xl pointer-events-none"
+          style={{
+            zIndex: 100,
+            background: "#ffffff",
+            border: "1px solid var(--apex-border)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+            width: 220,
+          }}
+        >
+          <div
+            className="text-[10px] font-semibold uppercase tracking-wider mb-2"
+            style={{ color: "var(--orange-500)" }}
+          >
+            Плагины автоматизации
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+            {plugins.map((p) => (
+              <div key={p} className="text-[10px]" style={{ color: "var(--apex-text-secondary)" }}>
+                {p}
+              </div>
+            ))}
+          </div>
+          <div
+            className="absolute top-full left-3"
+            style={{
+              width: 8,
+              height: 8,
+              background: "#ffffff",
+              borderRight: "1px solid var(--apex-border)",
+              borderBottom: "1px solid var(--apex-border)",
+              transform: "translateY(-50%) rotate(45deg)",
             }}
           />
         </div>
@@ -268,11 +336,13 @@ function CompactStreakRow({
   currentDays,
   milestones,
   variant = "teal",
+  labelSuffix,
 }: {
   label: string;
   currentDays: number;
   milestones: StreakMilestone[];
   variant?: "teal" | "orange";
+  labelSuffix?: ReactNode;
 }) {
   const next = milestones.find((m) => !m.reached);
   const prev = [...milestones].reverse().find((m) => m.reached);
@@ -292,11 +362,14 @@ function CompactStreakRow({
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <div
-          className="text-[10px] font-semibold uppercase tracking-wider"
-          style={{ color: "var(--apex-text-muted)" }}
-        >
-          {label}
+        <div className="flex items-center gap-1">
+          <div
+            className="text-[10px] font-semibold uppercase tracking-wider leading-none"
+            style={{ color: "var(--apex-text-muted)" }}
+          >
+            {label}
+          </div>
+          {labelSuffix}
         </div>
         <div className="flex gap-1">
           {milestones.map((m) => (
@@ -498,18 +571,17 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <div
-            className="w-6 h-6 rounded-lg flex items-center justify-center relative -top-[7px]"
+            className="w-6 h-6 rounded-lg flex items-center justify-center"
             style={{ background: "var(--apex-success-bg)" }}
           >
             <Trophy size={14} style={{ color: "var(--apex-primary)" }} />
           </div>
           <span
-            className="text-[12px] font-semibold uppercase tracking-wider relative -top-[7px]"
+            className="text-[12px] font-semibold uppercase tracking-wider"
             style={{ color: "var(--apex-text-muted)" }}
           >
             Worksection и автоматизации
           </span>
-          <DayCriteriaTooltip />
           {completedCycles > 0 && (
             <span
               className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
@@ -707,12 +779,14 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
               currentDays={ws.currentStreak}
               milestones={ws.milestones}
               variant="teal"
+              labelSuffix={<DayCriteriaTooltip />}
             />
             <CompactStreakRow
               label="Автоматизации ★"
               currentDays={revit.currentStreak}
               milestones={revit.milestones}
               variant="orange"
+              labelSuffix={<AutomationPluginsTooltip />}
             />
           </div>
         </div>

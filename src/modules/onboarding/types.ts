@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 export type StepPlacement = 'top' | 'bottom' | 'left' | 'right' | 'center'
 
 export interface OnboardingStep {
@@ -7,8 +9,8 @@ export interface OnboardingStep {
   target: string | null
   /** Заголовок подсказки */
   title: string
-  /** Текст подсказки */
-  description: string
+  /** Текст подсказки (строка или JSX для форматированного контента) */
+  description: ReactNode
   /** Предпочтительное положение tooltip относительно target */
   placement: StepPlacement
 }
