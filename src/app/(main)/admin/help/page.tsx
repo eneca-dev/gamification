@@ -16,7 +16,7 @@ export default async function AdminHelpPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-onboarding="admin-help-articles">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-[16px] font-bold" style={{ color: 'var(--text-primary)' }}>
