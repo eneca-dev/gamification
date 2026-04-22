@@ -120,7 +120,7 @@ function AreaColumn({ config }: { config: ColumnConfig }) {
         >
           <span className="text-lg">📅</span>
           <div className="text-[12px] font-medium text-center" style={{ color: 'var(--text-muted)' }}>
-            Топ сброшен в начале месяца.<br />Данные появятся завтра.
+            {isFirstOfMonth ? "Топ сброшен в начале месяца." : "Данные сброшены в связи с началом бета-тестирования."}<br />Данные появятся завтра.
           </div>
         </div>
       )}
@@ -295,6 +295,7 @@ export function AchievementProgressAdmin({
   gratitudeProgress,
   users,
 }: AchievementProgressAdminProps) {
+  const isFirstOfMonth = new Date().getDate() === 1;
   const [search, setSearch] = useState('')
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [userProgress, setUserProgress] = useState<FullAchievementProgress | null>(null)
