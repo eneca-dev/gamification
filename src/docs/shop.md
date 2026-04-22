@@ -4,9 +4,9 @@
 
 ## Логика работы
 
-Сотрудники тратят коины на товары. Покупка — атомарная SQL-функция `purchase_product` (списание баланса, создание event_log, транзакции, заказа). Нефизические товары (`is_physical = false`) — сразу `fulfilled`. Физические — `pending`, ждут обработки админом. Учёт остатков определяется флагом `is_countable` на категории: `is_countable = true` → `stock` обязателен и уменьшается при покупке; `is_countable = false` → `stock = NULL` (безлимит).
+Сотрудники тратят 💎 на товары. Покупка — атомарная SQL-функция `purchase_product` (списание баланса, создание event_log, транзакции, заказа). Нефизические товары (`is_physical = false`) — сразу `fulfilled`. Физические — `pending`, ждут обработки админом. Учёт остатков определяется флагом `is_countable` на категории: `is_countable = true` → `stock` обязателен и уменьшается при покупке; `is_countable = false` → `stock = NULL` (безлимит).
 
-Отмена заказа — SQL-функция `cancel_order` (возврат коинов, запись refund-транзакции, возврат stock). Доступна только админам.
+Отмена заказа — SQL-функция `cancel_order` (возврат 💎, запись refund-транзакции, возврат stock). Доступна только админам.
 
 Обе функции `SECURITY INVOKER`, вызываются через `supabaseAdmin` (service_role).
 
@@ -62,7 +62,7 @@
 
 - `CoinBalanceLive` (`src/components/CoinBalance.tsx`) — клиентский компонент баланса с polling. Принимает `initialAmount` (SSR-значение) — показывает его до первого ответа polling. Используется в Sidebar
 - `StoreClient` — клиентский контейнер: фильтрация по категориям, optimistic update баланса при покупке, toast-уведомления (3 сек). Grid: 2 колонки → 3 на lg → 4 на xl
-- `ProductCard` — карточка товара: image_url (object-contain) / emoji / placeholder (?), фон emoji — var(--apex-emoji-bg), разделитель между картинкой и футером, футер с var(--apex-bg). Бейдж «мало» при stock ≤ 5 (физические), бейдж «нет в наличии». Staggered-анимация по index
+- `ProductCard` — карточка товара: image_url (object-contain) / emoji / placeholder (?), фон emoji — var(--apex-emoji-bg), разделитель между картинкой и футером, футер с var(--apex-bg). Бейдж «мало» при stock ≤ 5 (физические), бейдж «нет в наличии». Staggered-анимация по index. Описание: `line-clamp-2` по умолчанию; если текст реально обрезан (detect через ResizeObserver на scrollHeight/clientHeight) — клик по описанию раскрывает его полностью (toggle). Соседние карточки в строке растягиваются за счёт CSS Grid `align-items: stretch`
 - `PurchaseButton` — кнопка покупки: проверка баланса и stock, динамический текст (покупаем/нет в наличии/ещё N баллов/получить за N баллов)
 - `OrdersClient` — клиентский контейнер страницы «Мои заказы»: фильтрация по статусу, отображение image_url / emoji / placeholder, ссылка на магазин при пустом списке
 
@@ -81,4 +81,4 @@
 - Отмена доступна для любого статуса кроме `cancelled`. Idempotency через `shop_refund_{order_id}`
 - Race condition при покупке: защита через `FOR UPDATE` на balance и product
 - `cancelOrder` — в модуле `admin`, не здесь (админская операция)
-- Slug категории: только строчные латинские буквы, цифры и _, начинается с буквы, уникальный
+- Slug категории: только строчные латинские буквы, цифры и \_, начинается с буквы, уникальный

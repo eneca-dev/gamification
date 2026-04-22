@@ -4,10 +4,10 @@
 
 В скрипте `compute-gamification.ts` (step 5) уже работает механика **master_planner** для L3:
 
-- 10 последовательных L3-задач, закрытых в рамках бюджета → +450 коинов
+- 10 последовательных L3-задач, закрытых в рамках бюджета → +450 💎
 - Любая L3 с превышением → сброс серии (`master_planner_reset`)
 - Серия циклическая: каждые 10 → бонус
-- События: `master_planner` (+450), `master_planner_reset` (0 коинов, `details.streak_was`)
+- События: `master_planner` (+450), `master_planner_reset` (0 💎, `details.streak_was`)
 
 ### Что нужно изменить / добавить
 
@@ -277,7 +277,7 @@ async function computeMasterPlannerForLevel(
      details: { milestone: N, tasks: [{id, name}, ...] }
    if diff < 0 → создать revoke событие(я)
      найти оригинальную транзакцию bonus,
-     coins_override = -abs(оригинальные коины)
+     coins_override = -abs(оригинальные 💎)
      details: { expected, given, revoked_tasks: [{id, name}, ...все новые revoked] }
 
 8. Если lastExceededIsNew && lastExceededStreakWas > 0:
@@ -435,7 +435,7 @@ WHERE el.event_type IN (
 | `revoke_expected` | integer     | Ожидаемое кол-во бонусов (revoked)                                                                                            |
 | `revoke_given`    | integer     | Фактическое кол-во бонусов до отзыва (revoked)                                                                                |
 | `revoked_tasks`   | jsonb       | Массив `[{id, name}, ...]` задач, из-за которых отозван бонус (master_planner_revoked) — NULL для остальных                   |
-| `coins`           | integer     | Коины транзакции                                                                                                              |
+| `coins`           | integer     | 💎 транзакции                                                                                                                 |
 
 ### Какие данные есть по типу события
 
@@ -585,7 +585,7 @@ PendingBudgetTask:
 | Задача  | `task_name` + ссылка WS (для budget-событий и reset); для master_planner — раскрывающийся список из `milestone_tasks`; для master_planner_revoked — список из `revoked_tasks` |
 | Бюджет  | `actual_time` / `max_time` ч (только для budget-событий)                                                                                                                      |
 | Серия   | Номер в серии или «Сброс» / «Отозвано» (см. ниже)                                                                                                                             |
-| Коины   | `coins`                                                                                                                                                                       |
+| 💎      | `coins`                                                                                                                                                                       |
 
 **Вычисление номера в серии (streak_position):**
 
@@ -736,7 +736,7 @@ src/docs/master-planner.md
 
 1. **Ежедневные задания** — `InlineDailyQuests` убираем полностью, никуда не переносим.
 2. **Sidebar** — пункта «Мастер планирования» в навигации нет. Доступ только через панель на главной + ссылка «История» → `/master-planner`.
-3. **Награда L2** — 400 коинов (настраивается в админке через `gamification_event_types`).
+3. **Награда L2** — 400 💎 (настраивается в админке через `gamification_event_types`).
 4. **Revoke** — полный пересчёт (A2): revoke убирает задачу из потока, стрик уменьшается, бонусы отзываются через coins_override. Reset создаётся только при exceeded, не при revoke.
 5. **Дублирование логики** — скрипт сохраняет состояние в `master_planner_state`, Next.js читает готовые значения.
 6. **Обратная совместимость** — старые master*planner с `details: {}` корректно учитываются. Новые idempotency keys используют префикс `\_v2*`, не пересекаются со старыми.

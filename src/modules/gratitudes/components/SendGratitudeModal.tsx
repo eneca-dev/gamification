@@ -441,7 +441,7 @@ export function SendGratitudeModal({
                       Подарить за свой счёт
                     </span>
                     <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
-                      Выбрать кол-во коинов
+                      Выбрать кол-во 💎
                     </span>
                   </button>
                   {quota.used && (

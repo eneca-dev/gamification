@@ -1,4 +1,4 @@
--- Таблица 11: История начислений/списаний коинов
+-- Таблица 11: История начислений/списаний 💎
 -- Каждая транзакция привязана к событию из gamification_event_logs
 -- Стоимость фиксируется из gamification_event_types на момент создания
 
@@ -24,7 +24,7 @@ CREATE POLICY "Service role full access" ON gamification_transactions
   USING (auth.role() = 'service_role')
   WITH CHECK (auth.role() = 'service_role');
 
--- Таблица 12: Материализованный баланс коинов
+-- Таблица 12: Материализованный баланс 💎
 -- Кэш для быстрого чтения (профиль, лидерборд, магазин)
 -- Обновляется атомарно вместе с INSERT в gamification_transactions
 

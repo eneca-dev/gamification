@@ -13,7 +13,7 @@ import type { ShieldType } from './types'
  *
  * 1. Проверяет pending в streak-таблице
  * 2. Проверяет что grace period не истёк
- * 3. Покупает товар через purchase_product (списание коинов)
+ * 3. Покупает товар через purchase_product (списание 💎)
  * 4. Очищает pending в streak-таблице
  * 5. Записывает лог в streak_shield_log
  */
@@ -62,7 +62,7 @@ export async function buyStreakShield(
 
   if (purchaseError) {
     const msg = purchaseError.message
-    if (msg.includes('Недостаточно коинов')) return { success: false, error: 'Недостаточно коинов' }
+    if (msg.includes('Недостаточно 💎')) return { success: false, error: 'Недостаточно 💎' }
     return { success: false, error: 'Ошибка при покупке' }
   }
 

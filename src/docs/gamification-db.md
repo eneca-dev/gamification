@@ -46,16 +46,16 @@ WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-co
 
 ## Вспомогательные SQL-функции
 
-| Функция                                 | Что делает                                                                                                                    |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `my_email()`                            | Email текущего пользователя из JWT, нижний регистр                                                                            |
-| `my_ws_user_id()`                       | UUID из `ws_users` по email из JWT                                                                                            |
-| `get_user_id_by_email(email)`           | UUID из `auth.users` по email                                                                                                 |
-| `increment_balance(p_user_id, p_coins)` | Атомарный UPSERT баланса в `gamification_balances`. Устаревшая — заменена `process_gamification_event`. Триггеры делают inline UPSERT |
-| `process_gamification_event(...)` | Атомарная функция для VPS-скрипта: INSERT event + INSERT transaction + UPSERT balance в одной транзакции. Дубли по idempotency_key пропускаются. SECURITY DEFINER, доступ только service_role |
-| `link_ws_user_on_profile_insert()`      | Триггер: при создании `profiles` связывает с `ws_users.user_id`                                                               |
-| `custom_access_token_hook(event)`       | Auth Hook: добавляет `is_admin` и `ws_user_id` из `ws_users` в JWT claims при каждом выпуске/рефреше токена                   |
-| `fn_award_department_contest()`         | Ежемесячное начисление бонуса отделу-победителю по ревит-баллам                                                               |
+| Функция                                 | Что делает                                                                                                                                                                                    |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `my_email()`                            | Email текущего пользователя из JWT, нижний регистр                                                                                                                                            |
+| `my_ws_user_id()`                       | UUID из `ws_users` по email из JWT                                                                                                                                                            |
+| `get_user_id_by_email(email)`           | UUID из `auth.users` по email                                                                                                                                                                 |
+| `increment_balance(p_user_id, p_coins)` | Атомарный UPSERT баланса в `gamification_balances`. Устаревшая — заменена `process_gamification_event`. Триггеры делают inline UPSERT                                                         |
+| `process_gamification_event(...)`       | Атомарная функция для VPS-скрипта: INSERT event + INSERT transaction + UPSERT balance в одной транзакции. Дубли по idempotency_key пропускаются. SECURITY DEFINER, доступ только service_role |
+| `link_ws_user_on_profile_insert()`      | Триггер: при создании `profiles` связывает с `ws_users.user_id`                                                                                                                               |
+| `custom_access_token_hook(event)`       | Auth Hook: добавляет `is_admin` и `ws_user_id` из `ws_users` в JWT claims при каждом выпуске/рефреше токена                                                                                   |
+| `fn_award_department_contest()`         | Ежемесячное начисление бонуса отделу-победителю по ревит-баллам                                                                                                                               |
 
 ---
 
@@ -161,21 +161,21 @@ OAuth-токены Worksection для пользователей.
 
 Задачи 3-го уровня (конкретные работы внутри разделов).
 
-| Колонка          | Тип                           | Описание                   |
-| ---------------- | ----------------------------- | -------------------------- |
-| `id`             | uuid PK                       |                            |
-| `ws_task_id`     | text UNIQUE                   |                            |
-| `ws_project_id`  | text                          |                            |
-| `parent_l2_id`   | text → ws_tasks_l2.ws_task_id |                            |
-| `name`           | text                          |                            |
-| `assignee_id`    | uuid NULL → ws_users          |                            |
-| `assignee_email` | text NULL                     |                            |
-| `percent`        | smallint NULL                 | Процент выполнения (0-100) |
-| `max_time`       | numeric NULL                  | Бюджет часов               |
+| Колонка          | Тип                           | Описание                                                                                                       |
+| ---------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `id`             | uuid PK                       |                                                                                                                |
+| `ws_task_id`     | text UNIQUE                   |                                                                                                                |
+| `ws_project_id`  | text                          |                                                                                                                |
+| `parent_l2_id`   | text → ws_tasks_l2.ws_task_id |                                                                                                                |
+| `name`           | text                          |                                                                                                                |
+| `assignee_id`    | uuid NULL → ws_users          |                                                                                                                |
+| `assignee_email` | text NULL                     |                                                                                                                |
+| `percent`        | smallint NULL                 | Процент выполнения (0-100)                                                                                     |
+| `max_time`       | numeric NULL                  | Бюджет часов                                                                                                   |
 | `custom_status`  | text NULL                     | Кастомный статус из тегов «Система планирования» (В работе, План, Пауза, Приостановлено, Согласование, Готово) |
-| `date_end`       | date NULL                     | Плановая дата завершения из WS API |
-| `date_closed`    | timestamptz NULL              |                            |
-| `synced_at`      | timestamptz                   |                            |
+| `date_end`       | date NULL                     | Плановая дата завершения из WS API                                                                             |
+| `date_closed`    | timestamptz NULL              |                                                                                                                |
+| `synced_at`      | timestamptz                   |                                                                                                                |
 
 **Частота обновления:** ежедневно. Upsert по `ws_task_id`. Процент парсится из тегов задач.
 
@@ -259,16 +259,16 @@ OAuth-токены Worksection для пользователей.
 
 История смен статусов планирования из WS API get_events. Синкается скриптом `sync-task-events` (period=1d1h). Используется `compute-gamification` для определения, была ли задача «В работе» в течение дня.
 
-| Колонка            | Тип            | Описание                     |
-| ------------------ | -------------- | ---------------------------- |
-| `id`               | uuid PK        |                              |
-| `ws_task_id`       | text NOT NULL  |                              |
-| `old_status`       | text NULL      |                              |
-| `new_status`       | text NULL      |                              |
-| `changed_at`       | timestamptz NOT NULL |                          |
-| `changed_by_email` | text NULL      |                              |
-| `event_date`       | date NOT NULL  |                              |
-| `synced_at`        | timestamptz    |                              |
+| Колонка            | Тип                  | Описание |
+| ------------------ | -------------------- | -------- |
+| `id`               | uuid PK              |          |
+| `ws_task_id`       | text NOT NULL        |          |
+| `old_status`       | text NULL            |          |
+| `new_status`       | text NULL            |          |
+| `changed_at`       | timestamptz NOT NULL |          |
+| `changed_by_email` | text NULL            |          |
+| `event_date`       | date NOT NULL        |          |
+| `synced_at`        | timestamptz          |          |
 
 UNIQUE по `(ws_task_id, changed_at)` — защита от дублей при повторном запуске.
 
@@ -278,15 +278,15 @@ UNIQUE по `(ws_task_id, changed_at)` — защита от дублей при
 
 Детализированные записи трудозатрат по задачам за день. Синкается скриптом `sync-ws-costs` вместе с `ws_daily_reports`. Используется `compute-gamification` (шаг 1d) для проверки неверного статуса.
 
-| Колонка       | Тип                  | Описание                                          |
-| ------------- | -------------------- | ------------------------------------------------- |
-| `id`          | uuid PK              |                                                   |
-| `user_email`  | text NOT NULL        |                                                   |
-| `user_id`     | uuid NULL → ws_users |                                                   |
-| `ws_task_id`  | text NOT NULL        |                                                   |
-| `cost_date`   | date NOT NULL        |                                                   |
-| `hours`       | numeric NOT NULL     |                                                   |
-| `synced_at`   | timestamptz          |                                                   |
+| Колонка      | Тип                  | Описание |
+| ------------ | -------------------- | -------- |
+| `id`         | uuid PK              |          |
+| `user_email` | text NOT NULL        |          |
+| `user_id`    | uuid NULL → ws_users |          |
+| `ws_task_id` | text NOT NULL        |          |
+| `cost_date`  | date NOT NULL        |          |
+| `hours`      | numeric NOT NULL     |          |
+| `synced_at`  | timestamptz          |          |
 
 UNIQUE(user_email, ws_task_id, cost_date).
 
@@ -378,33 +378,33 @@ UNIQUE(user_email, ws_task_id, cost_date).
 
 #### `gamification_event_types`
 
-Справочник типов событий и их стоимость в коинах. Колонка `name` — человекочитаемое название для отображения в UI. Редактируется админами через `/admin/events`.
+Справочник типов событий и их стоимость в 💎. Колонка `name` — человекочитаемое название для отображения в UI. Редактируется админами через `/admin/events`.
 
-**С начислением/списанием коинов:**
+**С начислением/списанием 💎:**
 
-| key                          | coins | description                                       |
-| ---------------------------- | ----- | ------------------------------------------------- |
-| `master_planner`             | +450  | Мастер планирования: 10 задач L3 подряд в бюджете |
-| `ws_streak_90`               | +300  | Бонус за стрик 90 зелёных дней (WS)               |
-| `budget_ok_l2`               | +200  | Раздел L2 закрыт в рамках бюджета (30 дней)       |
-| `team_contest_top1_bonus`    | +200  | Бонус каждому сотруднику отдела-победителя        |
-| `revit_streak_30_bonus`      | +100  | Бонус за стрик 30 дней (Revit)                    |
-| `ws_streak_30`               | +100  | Бонус за стрик 30 зелёных дней (WS)               |
-| `budget_ok_l3`               | +50   | Задача L3 закрыта в рамках бюджета (30 дней)      |
-| `revit_streak_7_bonus`       | +25   | Бонус за стрик 7 дней (Revit)                     |
-| `ws_streak_7`                | +25   | Бонус за стрик 7 зелёных дней (WS)                |
-| `gratitude_recipient_points` | +20   | Баллы получателю благодарности                    |
-| `revit_using_plugins`        | +5    | Баллы за использование плагина                    |
-| `budget_ok_l3_lead_bonus`    | +5    | Бонус тимлиду L2 за закрытие дочерней L3 в бюджете |
-| `green_day`                  | +3    | Зелёный день (все проверки пройдены)               |
-| `budget_revoked_l3_lead`     | -5    | Отзыв бонуса тимлиду: бюджет L3 превышен          |
-| `budget_revoked_l3`          | -50   | Отзыв коинов: бюджет L3 превышен после approval   |
-| `budget_revoked_l2`          | -200  | Отзыв коинов: бюджет L2 превышен после approval   |
-| `wrong_status_report`        | -3    | Время внесено в задачу L3 не в статусе «В работе»  |
+| key                          | coins | description                                              |
+| ---------------------------- | ----- | -------------------------------------------------------- |
+| `master_planner`             | +450  | Мастер планирования: 10 задач L3 подряд в бюджете        |
+| `ws_streak_90`               | +300  | Бонус за стрик 90 зелёных дней (WS)                      |
+| `budget_ok_l2`               | +200  | Раздел L2 закрыт в рамках бюджета (30 дней)              |
+| `team_contest_top1_bonus`    | +200  | Бонус каждому сотруднику отдела-победителя               |
+| `revit_streak_30_bonus`      | +100  | Бонус за стрик 30 дней (Revit)                           |
+| `ws_streak_30`               | +100  | Бонус за стрик 30 зелёных дней (WS)                      |
+| `budget_ok_l3`               | +50   | Задача L3 закрыта в рамках бюджета (30 дней)             |
+| `revit_streak_7_bonus`       | +25   | Бонус за стрик 7 дней (Revit)                            |
+| `ws_streak_7`                | +25   | Бонус за стрик 7 зелёных дней (WS)                       |
+| `gratitude_recipient_points` | +20   | Баллы получателю благодарности                           |
+| `revit_using_plugins`        | +5    | Баллы за использование плагина                           |
+| `budget_ok_l3_lead_bonus`    | +5    | Бонус тимлиду L2 за закрытие дочерней L3 в бюджете       |
+| `green_day`                  | +3    | Зелёный день (все проверки пройдены)                     |
+| `budget_revoked_l3_lead`     | -5    | Отзыв бонуса тимлиду: бюджет L3 превышен                 |
+| `budget_revoked_l3`          | -50   | Отзыв 💎: бюджет L3 превышен после approval              |
+| `budget_revoked_l2`          | -200  | Отзыв 💎: бюджет L2 превышен после approval              |
+| `wrong_status_report`        | -3    | Время внесено в задачу L3 не в статусе «В работе»        |
 | `deadline_ok_l3`             | +3    | Задача закрыта до плановой даты (проверка через 30 дней) |
 | `deadline_revoked_l3`        | -3    | Бонус за срок отозван: задача переоткрыта после approval |
 
-**Информационные (0 коинов, фиксируют факт события):**
+**Информационные (0 💎, фиксируют факт события):**
 
 | key                         | description                                    |
 | --------------------------- | ---------------------------------------------- |
@@ -448,7 +448,7 @@ UNIQUE(user_email, ws_task_id, cost_date).
 
 #### `gamification_transactions` (2890 строк)
 
-Финансовый журнал начислений/списаний коинов.
+Финансовый журнал начислений/списаний 💎.
 
 | Колонка      | Тип                                   | Описание                                             |
 | ------------ | ------------------------------------- | ---------------------------------------------------- |
@@ -463,7 +463,7 @@ UNIQUE(user_email, ws_task_id, cost_date).
 
 #### `gamification_balances` (271 строка)
 
-Текущий баланс коинов каждого сотрудника.
+Текущий баланс 💎 каждого сотрудника.
 
 | Колонка       | Тип                | Описание |
 | ------------- | ------------------ | -------- |
@@ -535,17 +535,17 @@ SET total_coins = (SELECT COALESCE(SUM(coins), 0) FROM gamification_transactions
 
 Очередь отложенных проверок сроков задач L3 (аналогично `budget_pending`). Создаётся при закрытии задачи L3 с `date_end`. Проверяется через 30 дней.
 
-| Колонка          | Тип                              | Описание                                          |
-| ---------------- | -------------------------------- | ------------------------------------------------- |
-| `id`             | uuid PK                         |                                                   |
-| `ws_task_l3_id`  | text → ws_tasks_l3.ws_task_id    |                                                   |
-| `assignee_id`    | uuid NOT NULL → ws_users         |                                                   |
-| `assignee_email` | text NOT NULL                    |                                                   |
-| `closed_at`      | timestamptz NOT NULL             | Дата закрытия задачи                              |
-| `planned_end`    | date NOT NULL                    | Плановая дата завершения                          |
-| `eligible_date`  | date NOT NULL                    | Дата, когда можно проверить (closed_at + 30 дней) |
-| `status`         | text CHECK                       | `pending` / `approved` / `revoked`                |
-| `checked_at`     | timestamptz NULL                 |                                                   |
+| Колонка          | Тип                           | Описание                                          |
+| ---------------- | ----------------------------- | ------------------------------------------------- |
+| `id`             | uuid PK                       |                                                   |
+| `ws_task_l3_id`  | text → ws_tasks_l3.ws_task_id |                                                   |
+| `assignee_id`    | uuid NOT NULL → ws_users      |                                                   |
+| `assignee_email` | text NOT NULL                 |                                                   |
+| `closed_at`      | timestamptz NOT NULL          | Дата закрытия задачи                              |
+| `planned_end`    | date NOT NULL                 | Плановая дата завершения                          |
+| `eligible_date`  | date NOT NULL                 | Дата, когда можно проверить (closed_at + 30 дней) |
+| `status`         | text CHECK                    | `pending` / `approved` / `revoked`                |
+| `checked_at`     | timestamptz NULL              |                                                   |
 
 **Частота обновления:** заполняется `compute-gamification` при закрытии задач L3 с `date_end`. Проверяется ежедневно — если `eligible_date` наступила и задача закрыта до `planned_end` → `approved` и начисление `deadline_ok_l3`. Если задача переоткрыта после approval → `revoked` и списание `deadline_revoked_l3`. Пока пустая.
 
@@ -558,6 +558,7 @@ SET total_coins = (SELECT COALESCE(SUM(coins), 0) FROM gamification_transactions
 Статус дня сотрудника: `green` / `red` / `absent`. Заполняется VPS-скриптом `compute-gamification` (upsert по user_id + date). PK: `(user_id, date)`. Колонки: `status`, `absence_type`, `red_reasons` (jsonb). Нет записи = скрипт ещё не обработал день.
 
 `red_reasons` — массив объектов с причинами красного дня. Каждый объект содержит `type` и опциональные поля задачи:
+
 - `{ type: 'red_day' }` — не внесён отчёт
 - `{ type: 'task_dynamics_violation', ws_task_id, ws_task_name, ws_project_id, ws_l2_id }` — не сменён процент готовности
 - `{ type: 'section_red', ws_task_id, ws_task_name, ws_project_id, ws_l2_id }` — нарушение в подчинённой задаче (для ТЛ)
@@ -576,7 +577,7 @@ JOIN `gamification_transactions` + `gamification_event_logs` + `gamification_eve
 
 #### `v_gratitudes_feed`
 
-Лента благодарностей: JOIN `at_gratitudes` + `ws_users` (имя отправителя) + `gamification_event_logs/transactions` (начисленные коины). Исключает `deleted_in_airtable = true`.
+Лента благодарностей: JOIN `at_gratitudes` + `ws_users` (имя отправителя) + `gamification_event_logs/transactions` (начисленные 💎). Исключает `deleted_in_airtable = true`.
 
 #### `view_department_revit_contest`
 
@@ -624,15 +625,15 @@ WS-функции удалены — их полностью заменили VP
 
 ### Скрипты (`scripts/`)
 
-| Скрипт                     | Целевые таблицы                                                                                                                                                         | Что делает                                                                                                                                                            |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sync-ws-users.ts`         | `ws_users`                                                                                                                                                              | Синк сотрудников из WS API. Insert/update/deactivate/reactivate                                                                                                       |
-| `sync-ws-projects.ts`      | `ws_projects`                                                                                                                                                           | Синк проектов с тегом "eneca.work sync". Insert/update/archive                                                                                                        |
-| `sync-ws-tasks.ts`         | `ws_tasks_l2`, `ws_tasks_l3`                                                                                                                                            | Парсинг дерева задач L1→L2→L3 из всех проектов                                                                                                                        |
-| `sync-ws-costs.ts`         | `ws_daily_reports`, `ws_daily_report_tasks`, `ws_task_actual_hours`, `ws_task_actual_hours_l2`                                                                           | Синк таймтрекинга: дневные отчёты + детализация по задачам + фактические часы                                                                                          |
-| `snapshot-task-percent.ts` | `ws_task_percent_snapshots`                                                                                                                                             | Снапшот текущего % задач L3                                                                                                                                           |
-| `sync-ws-absences.ts`      | `ws_user_absences`                                                                                                                                                      | Синк отсутствий из расписания + задачи сикдеев                                                                                                                        |
-| `sync-task-events.ts`      | `ws_task_status_changes`                                                                                                                                                | Синк смен статусов из WS API get_events (period=1d1h). Парсит теги «Система планирования»                                                                             |
+| Скрипт                     | Целевые таблицы                                                                                                                                                                                                      | Что делает                                                                                                                                                                      |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sync-ws-users.ts`         | `ws_users`                                                                                                                                                                                                           | Синк сотрудников из WS API. Insert/update/deactivate/reactivate                                                                                                                 |
+| `sync-ws-projects.ts`      | `ws_projects`                                                                                                                                                                                                        | Синк проектов с тегом "eneca.work sync". Insert/update/archive                                                                                                                  |
+| `sync-ws-tasks.ts`         | `ws_tasks_l2`, `ws_tasks_l3`                                                                                                                                                                                         | Парсинг дерева задач L1→L2→L3 из всех проектов                                                                                                                                  |
+| `sync-ws-costs.ts`         | `ws_daily_reports`, `ws_daily_report_tasks`, `ws_task_actual_hours`, `ws_task_actual_hours_l2`                                                                                                                       | Синк таймтрекинга: дневные отчёты + детализация по задачам + фактические часы                                                                                                   |
+| `snapshot-task-percent.ts` | `ws_task_percent_snapshots`                                                                                                                                                                                          | Снапшот текущего % задач L3                                                                                                                                                     |
+| `sync-ws-absences.ts`      | `ws_user_absences`                                                                                                                                                                                                   | Синк отсутствий из расписания + задачи сикдеев                                                                                                                                  |
+| `sync-task-events.ts`      | `ws_task_status_changes`                                                                                                                                                                                             | Синк смен статусов из WS API get_events (period=1d1h). Парсит теги «Система планирования»                                                                                       |
 | `compute-gamification.ts`  | `gamification_event_logs`, `gamification_transactions`, `gamification_balances`, `ws_user_streaks`, `ws_daily_statuses`, `budget_pending`, `deadline_pending`, `ws_task_budget_checkpoints`, `ws_daily_report_tasks` | Основной движок WS-геймификации: нарушения, статусы дней, стрики, бюджеты, дедлайны, транзакции. Пропускает Сб/Вс (кроме `calendar_workdays`) и праздники (`calendar_holidays`) |
 
 ### Библиотеки (`lib/`)

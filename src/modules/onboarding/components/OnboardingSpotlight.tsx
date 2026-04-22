@@ -59,6 +59,9 @@ export function OnboardingSpotlight({
       return
     }
 
+    // Подготовить DOM перед поиском target (переключить таб и т.п.)
+    step.onBeforeShow?.()
+
     const startTime = Date.now()
 
     const poll = setInterval(() => {
@@ -78,7 +81,7 @@ export function OnboardingSpotlight({
     }, TARGET_POLL_INTERVAL)
 
     return () => clearInterval(poll)
-  }, [step.id, step.target, isModal, onNext])
+  }, [step.id, step.target, step.onBeforeShow, isModal, onNext])
 
   // Скролл к элементу и расчёт позиции
   useLayoutEffect(() => {

@@ -150,6 +150,7 @@ export function StoreClient({
             <button
               key={cat.id}
               onClick={() => setActiveFilter(cat.slug)}
+              data-onboarding-category={cat.slug}
               className="px-4 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"
               style={{
                 background: isActive ? 'var(--apex-primary)' : 'var(--surface-elevated)',

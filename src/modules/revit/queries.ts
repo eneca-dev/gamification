@@ -69,7 +69,7 @@ export async function getRevitStreak(email: string): Promise<RevitStreak | null>
   }
 }
 
-// Топ N пользователей по заработанным коинам за плагины (текущий месяц)
+// Топ N пользователей по заработанным 💎 за плагины (текущий месяц)
 export async function getTopAutomationUsers(
   limit: number,
   currentUserEmail?: string
@@ -80,7 +80,7 @@ export async function getTopAutomationUsers(
     monthStart.setUTCDate(1)
     const monthStartStr = monthStart.toISOString().split('T')[0]
 
-    // Коины из gamification_transactions по revit-событиям за текущий месяц
+    // 💎 из gamification_transactions по revit-событиям за текущий месяц
     const { data: rows } = await supabase
       .from('view_user_transactions')
       .select('user_email, coins')
@@ -126,7 +126,7 @@ export async function getTopAutomationUsers(
   }
 }
 
-// Сводка за вчера: сколько плагинов использовано и коинов начислено (из БД)
+// Сводка за вчера: сколько плагинов использовано и 💎 начислено (из БД)
 export async function getYesterdayRevitSummary(email: string): Promise<RevitYesterdaySummary> {
   try {
     const supabase = createSupabaseAdminClient()
@@ -145,7 +145,7 @@ export async function getYesterdayRevitSummary(email: string): Promise<RevitYest
 
     const pluginCount = new Set((launches ?? []).map((r) => r.plugin_name)).size
 
-    // Коины из view_user_transactions за вчера (все revit event types)
+    // 💎 из view_user_transactions за вчера (все revit event types)
     const { data: txRows } = await supabase
       .from('view_user_transactions')
       .select('coins')

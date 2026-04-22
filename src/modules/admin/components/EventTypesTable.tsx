@@ -104,7 +104,7 @@ export function EventTypesTable({ eventTypes }: EventTypesTableProps) {
         </colgroup>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--apex-border)' }}>
-            {['Название', 'Ключ', 'Описание', 'Коины', 'Статус'].map((h) => (
+            {['Название', 'Ключ', 'Описание', '💎', 'Статус'].map((h) => (
               <th
                 key={h}
                 className="text-left text-[12px] font-semibold px-5 py-3"
@@ -193,7 +193,7 @@ export function EventTypesTable({ eventTypes }: EventTypesTableProps) {
                   )}
                 </td>
 
-                {/* Коины */}
+                {/* 💎 */}
                 <td className="px-5 py-3">
                   {editing === 'coins' ? (
                     <InlineEdit

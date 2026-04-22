@@ -100,7 +100,7 @@ function GratitudeAchItem({
               >
                 <div className="font-bold mb-1">{item.achievement_name}</div>
                 <div className="text-[10px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                  Получите {item.threshold} подарков в категории "{cfg.label}" за месяц. Считаются только подарки (с коинами), бесплатные благодарности не учитываются.
+                  Получите {item.threshold} подарков в категории "{cfg.label}" за месяц. Считаются только подарки (с 💎), бесплатные благодарности не учитываются.
                 </div>
                 <div className="text-[10px] font-semibold mt-1 inline-flex items-center gap-0.5" style={{ color: cfg.color }}>
                   Награда: +{item.bonus_coins} <CoinIcon size={10} />

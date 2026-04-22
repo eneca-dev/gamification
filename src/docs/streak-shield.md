@@ -1,6 +1,6 @@
 # streak-shield
 
-Вторая жизнь для стриков. Пользователь покупает защиту стрика за коины после красного дня (grace period 24ч).
+Вторая жизнь для стриков. Пользователь покупает защиту стрика за 💎 после красного дня (grace period 24ч).
 
 ## Логика работы
 
@@ -9,20 +9,23 @@
 Заранее купить нельзя — только при наличии pending (после красного дня).
 
 ### WS стрик (VPS-скрипт compute-gamification)
+
 - Фаза 1: финализация неразрешённых pending (`pending_reset_date IS NOT NULL` → сброс)
 - Фаза 2: red день → `pending_reset_date = вчера`, `pending_reset_expires_at = now()+24h`. Стрик не трогается.
 - Green день → обычная логика + очистка pending
 
 ### Revit стрик (триггер fn_award_revit_points)
+
 - gap_days > 0 → pending вместо сброса, `last_green_date` обновляется
 - При следующем запуске: если pending expired → сброс; если pending active → skip streak update
 - Ежедневная очистка: `fn_finalize_expired_revit_pendings()` (вызывается из sync-plugin)
 
 ### Покупка щита (server action buyStreakShield)
+
 1. Проверить pending в streak-таблице
 2. Проверить grace period не истёк
 3. Найти товар по `effect` в `shop_products`
-4. `purchase_product` (атомарное списание коинов)
+4. `purchase_product` (атомарное списание 💎)
 5. Очистить pending
 6. Записать лог в `streak_shield_log`
 
@@ -56,5 +59,5 @@
 - Щит нельзя купить заранее — только при активном pending
 - Grace period: 24 часа от момента установки pending
 - Для Revit: один щит покрывает один пропущенный рабочий день. Gap > 1 = нужно столько щитов
-- Стоимость: 500 коинов за каждый тип
+- Стоимость: 500 💎 за каждый тип
 - Товары идентифицируются по `shop_products.effect`, не по ID

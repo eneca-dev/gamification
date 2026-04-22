@@ -112,7 +112,7 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
         setOrders(prev)
         setError(result.error)
       } else {
-        showNotification('Заказ отменён, коины возвращены')
+        showNotification('Заказ отменён, 💎 возвращены')
       }
     })
   }
@@ -354,7 +354,7 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
               Отменить заказ?
             </h3>
             <p className="text-[13px] mb-4" style={{ color: 'var(--apex-text-secondary)' }}>
-              Коины будут возвращены покупателю. Это действие нельзя отменить.
+              💎 будут возвращены покупателю. Это действие нельзя отменить.
             </p>
             <textarea
               value={cancelNote}

@@ -93,7 +93,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
               <InfoCard label="Отдел" value={detail.user.department ?? '—'} />
               <InfoCard
                 label="Баланс"
-                value={`${detail.user.total_coins.toLocaleString('ru-RU')} коинов`}
+                value={`${detail.user.total_coins.toLocaleString('ru-RU')} 💎`}
                 accent
               />
               <InfoCard

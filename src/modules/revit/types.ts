@@ -15,7 +15,7 @@ export interface AutomationLeaderboardEntry {
   isCurrentUser: boolean
 }
 
-// Сводка за вчера: плагины + коины
+// Сводка за вчера: плагины + 💎
 export interface RevitYesterdaySummary {
   pluginCount: number
   coinsEarned: number

@@ -100,7 +100,7 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
         <span className="shrink-0 w-6" />
         <div className="flex-1 min-w-0">Задача</div>
         <span className="shrink-0 w-14 text-center">Серия</span>
-        <span className="shrink-0 w-14 text-right">Коины</span>
+        <span className="shrink-0 w-14 text-right">💎</span>
         <span className="shrink-0 w-12 text-right">Дата</span>
       </div>
 
@@ -172,7 +172,7 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
               {positions[i]}
             </span>
 
-            {/* Коины */}
+            {/* 💎 */}
             <span
               className="text-[11px] font-bold shrink-0 w-14 text-right"
               style={{

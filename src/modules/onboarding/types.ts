@@ -13,6 +13,8 @@ export interface OnboardingStep {
   description: ReactNode
   /** Предпочтительное положение tooltip относительно target */
   placement: StepPlacement
+  /** Выполнить перед поиском target (например, переключить таб, открыть аккордеон) */
+  onBeforeShow?: () => void | Promise<void>
 }
 
 export interface OnboardingTour {

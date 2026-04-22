@@ -2,7 +2,7 @@
 
 ## Цель
 
-Создать полноценный магазин, где сотрудники обменивают коины на товары (артефакты, мерч, техника, розыгрыши), и админ-панель для управления системой геймификации: товары, заказы, события, пользователи, роли.
+Создать полноценный магазин, где сотрудники обменивают 💎 на товары (артефакты, мерч, техника, розыгрыши), и админ-панель для управления системой геймификации: товары, заказы, события, пользователи, роли.
 
 ---
 
@@ -23,12 +23,14 @@
 **Решение: `is_admin boolean DEFAULT false` в таблице `ws_users`.**
 
 Обоснование:
+
 - `ws_users` — центральная таблица, на неё завязана вся геймификация
 - Нужна ровно одна роль — «админ»
 - RLS-политики проще: `COALESCE((auth.jwt() -> 'is_admin')::boolean, false)`
 - Если потребуются новые роли — несложно мигрировать на отдельную таблицу
 
 Первый админ назначается вручную в БД:
+
 ```sql
 UPDATE ws_users SET is_admin = true WHERE email = 'admin@example.com';
 ```
@@ -36,6 +38,7 @@ UPDATE ws_users SET is_admin = true WHERE email = 'admin@example.com';
 Админы могут назначать новых админов через UI.
 
 **Защита админки:**
+
 - Middleware проверяет `is_admin` **из JWT** для роутов `/admin/*` (0 DB-запросов, UX-редирект)
 - Server Actions админ-модуля проверяют `is_admin` **из JWT** перед каждой мутацией
 - RLS-политики на таблицах магазина: INSERT/UPDATE/DELETE — только для `is_admin = true` (через `auth.jwt() -> 'is_admin'`)
@@ -43,6 +46,7 @@ UPDATE ws_users SET is_admin = true WHERE email = 'admin@example.com';
 **`is_admin` в JWT — Custom Access Token Hook:**
 
 Supabase Auth Hook (pg-функция), которая добавляет `is_admin` и `ws_user_id` в JWT claims при каждом выпуске/рефреше токена:
+
 ```sql
 CREATE OR REPLACE FUNCTION custom_access_token_hook(event jsonb)
 RETURNS jsonb LANGUAGE plpgsql AS $$
@@ -74,22 +78,24 @@ $$;
 
 Управляются админами через UI. Предзаполняются миграцией.
 
-| Колонка | Тип | Описание |
-|---|---|---|
-| `id` | uuid PK | |
-| `name` | text UNIQUE | Отображаемое название («Мерч», «Техника», «Артефакты», «Розыгрыши») |
-| `slug` | text UNIQUE | Машинное имя для URL-фильтрации (`/store?category=merch`). Не FK — связь через `id` |
-| `description` | text NULL | Подпись для UI (например, «Товары переходят в собственность сотрудника») |
-| `is_physical` | boolean DEFAULT false | Физический товар? Определяет статус заказа при покупке (pending/fulfilled) |
-| `is_countable` | boolean DEFAULT true | Исчисляемый? Определяет учёт остатков (stock обязателен / безлимит) |
-| `sort_order` | integer DEFAULT 0 | Порядок в фильтрах |
-| `is_active` | boolean DEFAULT true | Показывать ли категорию в магазине |
-| `created_at` | timestamptz | |
+| Колонка        | Тип                   | Описание                                                                            |
+| -------------- | --------------------- | ----------------------------------------------------------------------------------- |
+| `id`           | uuid PK               |                                                                                     |
+| `name`         | text UNIQUE           | Отображаемое название («Мерч», «Техника», «Артефакты», «Розыгрыши»)                 |
+| `slug`         | text UNIQUE           | Машинное имя для URL-фильтрации (`/store?category=merch`). Не FK — связь через `id` |
+| `description`  | text NULL             | Подпись для UI (например, «Товары переходят в собственность сотрудника»)            |
+| `is_physical`  | boolean DEFAULT false | Физический товар? Определяет статус заказа при покупке (pending/fulfilled)          |
+| `is_countable` | boolean DEFAULT true  | Исчисляемый? Определяет учёт остатков (stock обязателен / безлимит)                 |
+| `sort_order`   | integer DEFAULT 0     | Порядок в фильтрах                                                                  |
+| `is_active`    | boolean DEFAULT true  | Показывать ли категорию в магазине                                                  |
+| `created_at`   | timestamptz           |                                                                                     |
 
 **Флаг `is_physical` определяет:**
+
 - **При покупке:** `is_physical = true` → заказ `pending` (ждёт обработки админом). `is_physical = false` → заказ сразу `fulfilled`.
 
 **Флаг `is_countable` определяет:**
+
 - **При создании товара:** `is_countable = true` → админ **обязан** указать `stock` (количество). `is_countable = false` → поле `stock` недоступно, товар безлимитный (`stock = NULL`).
 - **В UI админки:** для неисчисляемых категорий поле «Количество» скрыто/заблокировано.
 - **При покупке/отмене:** `is_countable = true` → `stock -= 1` / `stock += 1`. `is_countable = false` → stock не трогается.
@@ -103,11 +109,13 @@ $$;
 | Розыгрыши | `raffle` | false | Билеты на участие в розыгрышах |
 
 Админ может:
+
 - Создавать новые категории (name, slug, description, is_physical, sort_order)
 - Редактировать существующую категорию
 - Деактивировать категорию (`is_active = false`) — не удалять, чтобы не ломать FK товаров
 
 **Деактивация категории с pending заказами:**
+
 - При деактивации UI показывает кол-во `pending`/`processing` заказов в этой категории
 - Деактивация не блокируется — админ может деактивировать даже с активными заказами
 - Существующие заказы (`pending`, `processing`) остаются доступными для обработки в админке
@@ -115,23 +123,24 @@ $$;
 
 #### `shop_products` — каталог товаров
 
-| Колонка | Тип | Описание |
-|---|---|---|
-| `id` | uuid PK | |
-| `name` | text | Название товара |
-| `description` | text NULL | Описание для карточки |
-| `price` | integer CHECK > 0 | Цена в коинах |
-| `category_id` | uuid → shop_categories | Категория товара |
-| `image_url` | text NULL | URL картинки |
-| `emoji` | text NULL | Эмодзи для карточки (пока нет картинок) |
-| `is_active` | boolean DEFAULT true | Показывать ли в магазине |
-| `stock` | integer NULL CHECK (stock >= 0) | Остаток. NULL = безлимит (нефизические). Обязателен для физических товаров |
-| `sort_order` | integer DEFAULT 0 | Порядок сортировки |
-| `created_by` | uuid → ws_users | Кто из админов создал |
-| `created_at` | timestamptz | |
-| `updated_at` | timestamptz | Обновлять явно в `updateProduct` action: `updated_at = now()` |
+| Колонка       | Тип                             | Описание                                                                   |
+| ------------- | ------------------------------- | -------------------------------------------------------------------------- |
+| `id`          | uuid PK                         |                                                                            |
+| `name`        | text                            | Название товара                                                            |
+| `description` | text NULL                       | Описание для карточки                                                      |
+| `price`       | integer CHECK > 0               | Цена в 💎                                                                  |
+| `category_id` | uuid → shop_categories          | Категория товара                                                           |
+| `image_url`   | text NULL                       | URL картинки                                                               |
+| `emoji`       | text NULL                       | Эмодзи для карточки (пока нет картинок)                                    |
+| `is_active`   | boolean DEFAULT true            | Показывать ли в магазине                                                   |
+| `stock`       | integer NULL CHECK (stock >= 0) | Остаток. NULL = безлимит (нефизические). Обязателен для физических товаров |
+| `sort_order`  | integer DEFAULT 0               | Порядок сортировки                                                         |
+| `created_by`  | uuid → ws_users                 | Кто из админов создал                                                      |
+| `created_at`  | timestamptz                     |                                                                            |
+| `updated_at`  | timestamptz                     | Обновлять явно в `updateProduct` action: `updated_at = now()`              |
 
 **Правила `stock`:**
+
 - Категория `is_countable = true` → `stock` обязателен (NOT NULL на уровне Server Action, не БД — чтобы не усложнять constraint кросс-таблицей)
 - Категория `is_countable = false` → `stock = NULL` (безлимит), поле скрыто в UI
 - При покупке: `stock -= 1` (только если `is_countable AND stock IS NOT NULL`)
@@ -140,32 +149,34 @@ $$;
 
 #### `shop_orders` — заказы/покупки
 
-| Колонка | Тип | Описание |
-|---|---|---|
-| `id` | uuid PK | |
-| `user_id` | uuid → ws_users | Покупатель |
-| `product_id` | uuid → shop_products | Что купил |
-| `status` | text CHECK | `pending` / `processing` / `fulfilled` / `cancelled` |
-| `status_changed_by` | uuid NULL → ws_users | Какой админ изменил статус |
-| `status_changed_at` | timestamptz NULL | |
-| `transaction_id` | uuid UNIQUE → gamification_transactions | Связь с финансовой транзакцией (1:1) |
-| `refund_transaction_id` | uuid NULL UNIQUE → gamification_transactions | Связь с транзакцией возврата (при отмене) |
-| `note` | text NULL | Комментарий админа |
-| `created_at` | timestamptz | |
+| Колонка                 | Тип                                          | Описание                                             |
+| ----------------------- | -------------------------------------------- | ---------------------------------------------------- |
+| `id`                    | uuid PK                                      |                                                      |
+| `user_id`               | uuid → ws_users                              | Покупатель                                           |
+| `product_id`            | uuid → shop_products                         | Что купил                                            |
+| `status`                | text CHECK                                   | `pending` / `processing` / `fulfilled` / `cancelled` |
+| `status_changed_by`     | uuid NULL → ws_users                         | Какой админ изменил статус                           |
+| `status_changed_at`     | timestamptz NULL                             |                                                      |
+| `transaction_id`        | uuid UNIQUE → gamification_transactions      | Связь с финансовой транзакцией (1:1)                 |
+| `refund_transaction_id` | uuid NULL UNIQUE → gamification_transactions | Связь с транзакцией возврата (при отмене)            |
+| `note`                  | text NULL                                    | Комментарий админа                                   |
+| `created_at`            | timestamptz                                  |                                                      |
 
 **Сумма списания не дублируется** — берётся через JOIN на `transaction_id`:
 `gamification_transactions.coins` (отрицательное число при покупке). Связь 1:1, JOIN на PK — мгновенный.
 
 **Статусы заказов** — CHECK constraint + TypeScript union + Zod enum:
+
 - `pending` — куплено, ожидает обработки (физические товары)
 - `processing` — админ взял в работу
 - `fulfilled` — выполнено (автоматически для нефизических при покупке)
-- `cancelled` — отменено админом (коины возвращены)
+- `cancelled` — отменено админом (💎 возвращены)
 
 **✅ Решение:** статусов достаточно. Типизация: CHECK в БД, `OrderStatus` union type + `z.enum()` в TypeScript. Переходы между статусами не ограничиваются — админ может выставить любой допустимый статус (кроме `cancelled` — через `cancelOrder` с возвратом).
 
 **Возврат при отмене — да, с `shop_refund`:**
-- При отмене заказа коины возвращаются пользователю
+
+- При отмене заказа 💎 возвращаются пользователю
 - Сумма возврата = `ABS(gamification_transactions.coins)` по `transaction_id`
 - Кому вернуть = `shop_orders.user_id`
 - Транзакция возврата записывается в `refund_transaction_id`
@@ -191,6 +202,7 @@ $$;
 | `shop_refund` | 0 | true | Возврат за отменённый заказ (сумма = цена покупки) |
 
 **Как работает `is_dynamic_coins`:**
+
 - `false` (по умолчанию, все существующие события) — сумма фиксированная, берётся из `coins`. Админ может менять `coins` через UI.
 - `true` (shop_purchase, shop_refund) — сумма определяется при создании транзакции (цена товара). `coins` в таблице = 0 как заглушка, не используется. В админке поле «Стоимость» заблокировано, показывает «Определяется при покупке».
 
@@ -199,22 +211,26 @@ $$;
 #### RLS-политики на таблицах магазина
 
 **`shop_categories`:**
+
 - SELECT: все аутентифицированные (`auth.role() = 'authenticated'`)
 - INSERT/UPDATE: только админы (`COALESCE((auth.jwt() -> 'is_admin')::boolean, false)`)
 - DELETE: запрещён (деактивация вместо удаления)
 
 **`shop_products`:**
+
 - SELECT: все аутентифицированные
 - INSERT/UPDATE: только админы
 - DELETE: запрещён
 
 **`shop_orders`:**
+
 - SELECT: пользователь видит **только свои** (`user_id = my_ws_user_id()`), админ видит **все**
 - INSERT: только service_role (через SQL-функцию `purchase_product`)
 - UPDATE: service_role (через SQL-функцию `cancel_order`) + админы (через `updateOrderStatus` Server Action с обычным supabase-клиентом)
 - DELETE: запрещён
 
 **Существующие таблицы** (`gamification_event_logs`, `gamification_transactions`, `gamification_balances`):
+
 - Без изменений — остаётся `service_role` only. Запись через SQL-функции, вызываемые из Server Actions через `supabaseAdmin`
 
 ---
@@ -245,7 +261,7 @@ SQL-функция purchase_product(p_product_id, p_user_id) — SECURITY INVOKE
      → если is_physical AND stock = 0 → ошибка «Нет в наличии»
   2. SELECT total_coins FROM gamification_balances WHERE user_id = p_user_id FOR UPDATE
      → блокирует строку баланса до конца транзакции (защита от race condition)
-     → если total_coins < price → ошибка «Недостаточно коинов»
+     → если total_coins < price → ошибка «Недостаточно 💎»
   3. Генерируем order_id = gen_random_uuid()
   4. INSERT gamification_event_logs
      (user_id = p_user_id, user_email = v_user_email,
@@ -274,17 +290,20 @@ SQL-функция purchase_product(p_product_id, p_user_id) — SECURITY INVOKE
 **Какие заказы можно отменить:** любые, кроме уже отменённых (`cancelled`). В том числе `fulfilled` — на случай ошибки или возврата физического товара.
 
 **Откуда берутся данные для возврата:**
+
 - **Кому вернуть** — `shop_orders.user_id`
 - **Сколько вернуть** — `ABS(gamification_transactions.coins)` через JOIN на `shop_orders.transaction_id`. При покупке `coins` записывается как отрицательное число (например, `-150`), при возврате берём абсолютное значение (`+150`)
 - **Какой товар** — `shop_orders.product_id` (для возврата `stock`)
 - **Физический ли** — JOIN `shop_products.category_id` → `shop_categories.is_physical` (для возврата `stock`)
 
 **Связь заказа с транзакциями:**
+
 ```
 shop_orders
   ├── transaction_id → gamification_transactions (покупка, coins = -150)
   └── refund_transaction_id → gamification_transactions (возврат, coins = +150)
 ```
+
 Оба поля — UNIQUE FK на `gamification_transactions.id`. `refund_transaction_id` заполняется только при отмене, иначе NULL.
 
 **Полный flow:**
@@ -362,11 +381,13 @@ SQL-функция cancel_order(p_order_id, p_admin_id, p_note) — SECURITY INV
 **Idempotency:** ключ `shop_refund_{order_id}` — один заказ можно отменить только один раз. Повторный вызов `cancelOrder` с тем же `orderId` ничего не сделает (шаг 2 отсечёт по статусу `cancelled`).
 
 **Что видит юзер после отмены:**
+
 - В истории заказов: статус `cancelled`, комментарий админа
 - В истории транзакций: две записи — покупка (`-150`) и возврат (`+150`)
 - Баланс: восстановлен
 
 **Что видит админ:**
+
 - В таблице заказов: статус `cancelled`, кто отменил, когда, комментарий
 - `refund_transaction_id` заполнен — можно проследить связь с транзакцией возврата
 
@@ -375,7 +396,8 @@ SQL-функция cancel_order(p_order_id, p_admin_id, p_note) — SECURITY INV
 ### 5. Управление событиями (gamification_event_types)
 
 Админ может через UI:
-- Просматривать все event types с текущими коинами
+
+- Просматривать все event types с текущими 💎и
 - Менять `coins` у событий с `is_dynamic_coins = false`
 - У событий с `is_dynamic_coins = true` — поле заблокировано, показывает «Определяется при покупке»
 - **Не может** добавлять/удалять event types (они создаются в миграциях, привязаны к логике триггеров и скриптов)
@@ -387,6 +409,7 @@ SQL-функция cancel_order(p_order_id, p_admin_id, p_note) — SECURITY INV
 ### 6. Просмотр пользователей (админка)
 
 Админ может:
+
 - Видеть список всех сотрудников из `ws_users` (имя, email, отдел, баланс, is_admin)
 - Фильтровать/искать по имени, отделу
 - Кликнуть на сотрудника → увидеть:
@@ -400,10 +423,11 @@ SQL-функция cancel_order(p_order_id, p_admin_id, p_note) — SECURITY INV
 ### 7. Управление заказами (админка)
 
 Админ может:
+
 - Видеть список всех заказов из `shop_orders` (JOIN с `ws_users` + `shop_products`)
 - Фильтровать по статусу (`pending` / `processing` / `fulfilled` / `cancelled`)
 - Менять статус заказа (любой допустимый, кроме `cancelled` — для отмены есть `cancelOrder`)
-- Отменять заказ (с возвратом коинов)
+- Отменять заказ (с возвратом 💎)
 - Оставлять комментарий (`note`)
 
 ---
@@ -411,6 +435,7 @@ SQL-функция cancel_order(p_order_id, p_admin_id, p_note) — SECURITY INV
 ### 8. Управление категориями (админка)
 
 Админ может:
+
 - Видеть список категорий из `shop_categories`
 - Создавать новую категорию (name, slug, description, sort_order)
 - Редактировать существующую категорию
@@ -419,12 +444,14 @@ SQL-функция cancel_order(p_order_id, p_admin_id, p_note) — SECURITY INV
 ### 9. Управление товарами (админка)
 
 Админ может:
+
 - Видеть список всех товаров из `shop_products` (с названием категории через JOIN)
 - Создавать новый товар (name, description, price, category_id, emoji/image_url, stock)
 - Редактировать существующий товар
 - Деактивировать товар (`is_active = false`) — не удалять, чтобы не ломать FK в заказах
 
 **Деактивация товара с pending заказами:**
+
 - При деактивации UI показывает кол-во `pending`/`processing` заказов на этот товар
 - Деактивация не блокируется — существующие заказы обрабатываемы, новые покупки заблокированы
 - Аналогично деактивации категории
@@ -438,6 +465,7 @@ Supabase Storage — S3-совместимое хранилище файлов, 
 **Путь файла в Storage:** `${productId}/${timestamp}_${filename}` — timestamp исключает коллизии имён при замене.
 
 **Flow добавления картинки (создание/редактирование товара):**
+
 ```
 Админ выбирает файл в форме товара
   │
@@ -451,6 +479,7 @@ Supabase Storage — S3-совместимое хранилище файлов, 
 ```
 
 **Flow замены картинки:**
+
 ```
 Админ выбирает новый файл в форме редактирования товара
   │
@@ -466,6 +495,7 @@ Supabase Storage — S3-совместимое хранилище файлов, 
 ```
 
 **Flow удаления картинки (без замены):**
+
 ```
 Админ нажимает "Удалить картинку" в форме редактирования товара
   │
@@ -477,6 +507,7 @@ Supabase Storage — S3-совместимое хранилище файлов, 
 ```
 
 **Политики Storage:**
+
 - SELECT (download): public — любой может видеть картинки
 - INSERT (upload): только `is_admin = true`
 - UPDATE/DELETE: только `is_admin = true`
@@ -484,6 +515,7 @@ Supabase Storage — S3-совместимое хранилище файлов, 
 **В UI карточки товара:** если `image_url` есть — показываем картинку. Если нет — показываем `emoji`. Fallback на дефолтный placeholder если ни того, ни другого.
 
 **Ограничения:**
+
 - Максимальный размер файла: 2 MB (настраивается в bucket)
 - Допустимые форматы: `image/jpeg`, `image/png`, `image/webp`
 - Валидация на клиенте (UX) + политика Storage (безопасность)
@@ -495,6 +527,7 @@ Supabase Storage — S3-совместимое хранилище файлов, 
 ### Новые модули
 
 #### `shop` — магазин (товары, категории, покупки)
+
 ```
 src/modules/shop/
   types.ts          — ShopProduct, ShopCategory, ShopOrder, CreateProductInput, UpdateProductInput, CreateCategoryInput, UpdateCategoryInput, PurchaseInput, OrderStatus
@@ -508,6 +541,7 @@ src/modules/shop/
 Весь CRUD товаров и категорий — в `shop`. Это один entity, одна зона ответственности. Админские страницы импортируют из `@/modules/shop` (page.tsx использует модуль — это не кросс-модульный импорт).
 
 #### `admin` — админ-панель (пользователи, роли, заказы, события)
+
 ```
 src/modules/admin/
   types.ts          — AdminUser, UpdateEventTypeInput, UpdateOrderStatusInput
@@ -521,6 +555,7 @@ src/modules/admin/
 ### Изменения в существующих модулях
 
 #### `auth`
+
 - `getCurrentUser` — добавить в `AuthUser`:
   - `isAdmin: boolean` — из JWT claim `is_admin`
   - `wsUserId: string | null` — из JWT claim `ws_user_id` (ws_users.id, нужен для покупок, заказов). 0 DB-запросов
@@ -530,6 +565,7 @@ src/modules/admin/
 ## Роуты (src/app/)
 
 ### Изменения в существующих
+
 - `/store` — переключить с мок-данных на реальные из `shop_products`
 
 ### Админка — отдельные роуты
@@ -563,6 +599,7 @@ src/app/(main)/admin/
 ## Этапы реализации
 
 ### Этап 1: Роли и защита админки
+
 - [x] Миграция: `ALTER TABLE ws_users ADD COLUMN is_admin boolean DEFAULT false`
 - [x] Миграция: Custom Access Token Hook — pg-функция `custom_access_token_hook` (SECURITY DEFINER), добавляет `is_admin` и `ws_user_id` в JWT claims
 - [x] Регистрация hook'а в Supabase Dashboard → Authentication → Hooks
@@ -576,6 +613,7 @@ src/app/(main)/admin/
 - [x] Server Actions: проверка `is_admin` из JWT перед мутациями (реализовано в этапе 2 через `checkIsAdmin()` + `supabaseAdmin`)
 
 ### Этап 2: Управление событиями
+
 - [x] Миграция: RLS-политика UPDATE на `gamification_event_types` для админов
 - [x] Миграция: колонка `name` в `gamification_event_types` с человекочитаемыми названиями
 - [x] Модуль `admin`: types.ts, queries.ts, actions.ts, checkIsAdmin.ts, index.ts, index.client.ts
@@ -592,6 +630,7 @@ src/app/(main)/admin/
 - [x] Принцип: админские actions через `supabaseAdmin` (service role) + `checkIsAdmin()` в коде
 
 ### Этап 3: Просмотр пользователей
+
 - [x] `getUsers()` query — ws_users LEFT JOIN gamification_balances (supabaseAdmin)
 - [x] `getUserDetail()` query — пользователь + транзакции из view_user_transactions
 - [x] `toggleAdmin()` action — переключение is_admin (supabaseAdmin + checkIsAdmin, optimistic update)
@@ -602,6 +641,7 @@ src/app/(main)/admin/
 - [ ] История заказов — будет после создания shop_orders (этап 4)
 
 ### Этап 4: Магазин — БД и бэкенд
+
 - [x] Миграции: `shop_categories`, `shop_products`, `shop_orders` + RLS-политики + seed категорий
 - [x] Миграция: `is_dynamic_coins` в `gamification_event_types` + новые записи (`shop_purchase`, `shop_refund`)
 - [x] Миграция: SQL-функции `purchase_product` и `cancel_order` (`SECURITY INVOKER`, вызываются через `supabaseAdmin`)
@@ -613,6 +653,7 @@ src/app/(main)/admin/
 - [x] `src/docs/shop.md` — документация модуля
 
 ### Этап 5: Магазин — UI
+
 - [x] Переключить `/store` с мок-данных на реальные (Server Component + `StoreClient`)
 - [x] `ProductCard` — карточки товаров (image_url → emoji → placeholder, тег «Нет в наличии» / «Осталось: N»)
 - [x] `PurchaseButton` — кнопка покупки с проверкой баланса и состоянием загрузки
@@ -621,6 +662,7 @@ src/app/(main)/admin/
 - [x] История покупок юзера — `/store/orders` (OrdersClient: фильтрация по статусу, карточки заказов)
 
 ### Этап 6: Админка магазина
+
 - [x] CRUD категорий: `createCategory()`, `updateCategory()` actions (в модуле shop)
 - [x] UI: управление категориями — inline-редактирование в ProductsClient, создание через expandable форму
 - [x] CRUD товаров: `createProduct()`, `updateProduct()` actions (в модуле shop)
@@ -647,14 +689,17 @@ src/app/(main)/admin/
 ## Известные ограничения и решения
 
 ### Race condition при покупке
-Два одновременных запроса могут пройти проверку баланса и оба списать коины. `CHECK (stock >= 0)` защищает stock на уровне БД, но для баланса такого ограничения нет (отрицательный баланс допустим для штрафов).
+
+Два одновременных запроса могут пройти проверку баланса и оба списать 💎. `CHECK (stock >= 0)` защищает stock на уровне БД, но для баланса такого ограничения нет (отрицательный баланс допустим для штрафов).
 **Решение:** обернуть `purchaseProduct` в SQL-функцию с `SELECT ... FOR UPDATE` на строку `gamification_balances` (блокирует конкурентные покупки одного юзера) и `FOR UPDATE OF p` на строку `shop_products` (блокирует конкурентные покупки одного товара разными юзерами).
 
 ### Деактивация категории
+
 При `shop_categories.is_active = false` товары этой категории должны быть скрыты из магазина.
 **Решение:** все запросы к магазину фильтруют `WHERE p.is_active = true AND c.is_active = true`. Существующие заказы (`pending`, `processing`) остаются доступными для обработки в админке. При деактивации UI показывает кол-во незавершённых заказов.
 
 ### `status_changed_by` — только последняя смена
+
 Если заказ прошёл `pending → processing → fulfilled`, записан только последний админ. История переходов не хранится. Для MVP достаточно.
 
 ---
@@ -663,7 +708,7 @@ src/app/(main)/admin/
 
 - [ ] Роли работают: первый админ через БД, далее через UI
 - [ ] Админка защищена: не-админы не видят страницу и не могут вызвать actions
-- [ ] Магазин показывает товары из БД, покупка списывает коины
+- [ ] Магазин показывает товары из БД, покупка списывает 💎
 - [ ] При покупке создаётся запись в gamification_transactions
 - [ ] Проверка баланса перед покупкой
 - [ ] Админ видит заказы, может менять статус

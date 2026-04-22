@@ -40,7 +40,7 @@ BEGIN
     RETURN;
   END IF;
 
-  -- 2. INSERT транзакция (только если есть коины)
+  -- 2. INSERT транзакция (только если есть 💎)
   IF p_coins <> 0 THEN
     INSERT INTO gamification_transactions (user_id, user_email, event_id, coins)
     VALUES (p_user_id, p_user_email, v_event_id, p_coins);

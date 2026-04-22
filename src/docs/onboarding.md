@@ -13,7 +13,8 @@
 2. При смене route → проверяет localStorage (`onboarding_v1:{userId}:{pageSlug}`)
 3. Если записи нет → задержка 1.5с (ждём рендер) → записывает `startedAt` → запускает тур
 4. Target-элементы находятся по `data-onboarding="step-id"` атрибутам
-5. Если target не найден за 3 сек → шаг пропускается (условные элементы вроде лотереи)
+5. Перед поиском target вызывается `step.onBeforeShow?.()` (если задан) — для подготовки DOM (переключение таба, открытие аккордеона)
+6. Если target не найден за 3 сек → шаг пропускается (условные элементы вроде лотереи)
 
 ## Зависимости
 
@@ -24,7 +25,7 @@
 
 ## Типы
 
-- `OnboardingStep` — id, target (null = модалка), title, description, placement
+- `OnboardingStep` — id, target (null = модалка), title, description, placement, onBeforeShow?
 - `OnboardingTour` — pageSlug + steps[]
 - `OnboardingRecord` — startedAt, completedAt?, skippedAt?
 
@@ -38,7 +39,7 @@
 ### Пользовательские
 - `dashboard` — 10 шагов (welcome, баланс, календарь, стрик, мастер планирования, благодарности, операции, лидерборд, контест, финал)
 - `achievements` — 4 шага (grid, ranking block, gratitude block, trophy shelf)
-- `store` — 3 шага (каталог, карточка, лотерея — условный)
+- `store` — 3 шага (каталог, карточка, лотерея — третий шаг через `onBeforeShow` переключает фильтр на «Розыгрыш», чтобы отрендерился `LotteryBanner`)
 - `activity` — 1 шаг (лента)
 - `master-planner` — 2 шага (шапка с прогрессом, фильтры)
 

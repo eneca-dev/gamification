@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
+
 import { PurchaseButton } from './PurchaseButton'
 import type { ShopProductWithCategory } from '../types'
 import type { PendingReset } from '@/modules/streak-shield/index.client'
@@ -24,6 +26,23 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
   const isShield = shieldEffect === 'streak_shield_ws' || shieldEffect === 'streak_shield_revit'
   const shieldType = shieldEffect === 'streak_shield_ws' ? 'ws' : 'revit'
   const hasActivePending = isShield && pendingResets.some((p) => p.type === shieldType)
+
+  // Раскрытие описания по клику. isTruncated нужен только для курсора
+  const descRef = useRef<HTMLParagraphElement>(null)
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [isTruncated, setIsTruncated] = useState(false)
+
+  useEffect(() => {
+    const el = descRef.current
+    if (!el || isExpanded) return
+    const check = () => {
+      setIsTruncated(el.scrollHeight > el.clientHeight + 1)
+    }
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [product.description, isExpanded])
 
   return (
     <div
@@ -87,8 +106,17 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
         </h3>
         {product.description && (
           <p
-            className="text-[11px] mt-0.5 mb-2 line-clamp-2 hover:line-clamp-none cursor-default transition-all"
-            style={{ color: 'var(--text-muted)' }}
+            ref={descRef}
+            onClick={() => setIsExpanded((v) => !v)}
+            className={`text-[11px] mt-0.5 mb-2 overflow-hidden ${
+              isTruncated || isExpanded ? 'cursor-pointer' : 'cursor-default'
+            }`}
+            style={{
+              color: 'var(--text-muted)',
+              display: '-webkit-box',
+              WebkitBoxOrient: 'vertical',
+              WebkitLineClamp: isExpanded ? 'unset' : 2,
+            }}
           >
             {product.description}
           </p>

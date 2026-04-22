@@ -306,7 +306,7 @@ function GratitudeSettingsBlock({ initialItems }: { initialItems: GratitudeSetti
         </colgroup>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--apex-border)' }}>
-            {['Категория', 'Порог подарков', 'Бонус коинов', 'Статус'].map((h) => (
+            {['Категория', 'Порог подарков', 'Бонус 💎', 'Статус'].map((h) => (
               <th
                 key={h}
                 className="text-left text-[12px] font-semibold px-5 py-3"

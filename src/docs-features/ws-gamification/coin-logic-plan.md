@@ -9,13 +9,13 @@
 WS API поле `status` возвращает только `active` / `done` (открыта / закрыта). Кастомные статусы — это **теги из набора «Система планирования»** (group id 128):
 
 | Тег (title)    | tag_id | Допускает внесение часов? |
-|----------------|--------|--------------------------|
-| В работе       | 229565 | **Да** |
-| План           | 230943 | Нет |
-| Пауза          | 229569 | Нет |
-| Приостановлено | 230828 | Нет |
-| Согласование   | 231517 | Нет |
-| Готово          | 229577 | Нет |
+| -------------- | ------ | ------------------------- |
+| В работе       | 229565 | **Да**                    |
+| План           | 230943 | Нет                       |
+| Пауза          | 229569 | Нет                       |
+| Приостановлено | 230828 | Нет                       |
+| Согласование   | 231517 | Нет                       |
+| Готово         | 229577 | Нет                       |
 
 Правило простое: штраф за внесение часов, если задача **ни разу не была** в статусе «В работе» в этот день. Отсутствие тега статуса (`NULL`) тоже считается нарушением — тег должен быть установлен.
 
@@ -41,11 +41,11 @@ WS API `get_events?period=1d` возвращает историю изменен
 
 ---
 
-## Механика 1: Штраф за отчёт в статусе ≠ «В работе» (−3 коина)
+## Механика 1: Штраф за отчёт в статусе ≠ «В работе» (−3 💎)
 
 ### Суть
 
-Если сотрудник вносит отчёт времени (cost entry) в задачу L3, и задача **ни разу за этот день** не была в статусе «В работе» — списание **−3 коина**. Мотивация: сотрудники должны менять статус на «В работе» перед внесением времени.
+Если сотрудник вносит отчёт времени (cost entry) в задачу L3, и задача **ни разу за этот день** не была в статусе «В работе» — списание **−3 💎**. Мотивация: сотрудники должны менять статус на «В работе» перед внесением времени.
 
 **Презумпция невиновности:** если задача была «В работе» хотя бы в какой-то момент за день внесения часов — штрафа нет.
 
@@ -83,14 +83,21 @@ ALTER TABLE ws_tasks_l3 ADD COLUMN custom_status text NULL;
 **В sync-ws-tasks.ts:**
 
 ```ts
-const PLANNING_STATUS_TAGS = new Set(['В работе', 'План', 'Пауза', 'Приостановлено', 'Согласование', 'Готово'])
+const PLANNING_STATUS_TAGS = new Set([
+  "В работе",
+  "План",
+  "Пауза",
+  "Приостановлено",
+  "Согласование",
+  "Готово",
+]);
 
 function extractCustomStatus(tags?: Record<string, string>): string | null {
-  if (!tags) return null
+  if (!tags) return null;
   for (const tagName of Object.values(tags)) {
-    if (PLANNING_STATUS_TAGS.has(tagName)) return tagName
+    if (PLANNING_STATUS_TAGS.has(tagName)) return tagName;
   }
-  return null
+  return null;
 }
 ```
 
@@ -126,15 +133,22 @@ CREATE INDEX idx_task_status_changes_task ON ws_task_status_changes(ws_task_id, 
 **Парсинг тегов из events:**
 
 ```ts
-const PLANNING_STATUS_TAGS = new Set(['В работе', 'План', 'Пауза', 'Приостановлено', 'Согласование', 'Готово'])
+const PLANNING_STATUS_TAGS = new Set([
+  "В работе",
+  "План",
+  "Пауза",
+  "Приостановлено",
+  "Согласование",
+  "Готово",
+]);
 
 function extractStatusFromTags(tags: string[]): string | null {
-  return tags.find(t => PLANNING_STATUS_TAGS.has(t)) ?? null
+  return tags.find((t) => PLANNING_STATUS_TAGS.has(t)) ?? null;
 }
 
 // Для каждого event:
-const oldStatus = extractStatusFromTags(event.old?.tags ?? [])
-const newStatus = extractStatusFromTags(event.new?.tags ?? [])
+const oldStatus = extractStatusFromTags(event.old?.tags ?? []);
+const newStatus = extractStatusFromTags(event.new?.tags ?? []);
 // Записать если oldStatus !== newStatus (реальная смена статуса)
 ```
 
@@ -168,6 +182,7 @@ CREATE TABLE ws_wrong_status_reports (
 #### 4. Альтернатива: без промежуточной таблицы `ws_wrong_status_reports`
 
 Вместо сохранения нарушений в sync-ws-costs, можно в compute-gamification:
+
 1. Загрузить `ws_daily_reports` за вчера → список (user_email, report_date)
 2. Загрузить все cost entries за вчера через `get_costs` (повторный вызов API) → пары (user_email, task_id)
 3. Проверить каждую пару
@@ -212,11 +227,12 @@ VALUES ('wrong_status_report', 'Отчёт в неверном статусе з
 
 ---
 
-## Механика 2: Бонус за закрытие задачи L3 до плановой даты (+3 коина)
+## Механика 2: Бонус за закрытие задачи L3 до плановой даты (+3 💎)
 
 ### Суть
 
-Если задача L3 закрыта **до или в** плановую дату (`date_end`) — бонус **+3 коина** исполнителю. Логика аналогична `budget_ok_l3`:
+Если задача L3 закрыта **до или в** плановую дату (`date_end`) — бонус **+3 💎** исполнителю. Логика аналогична `budget_ok_l3`:
+
 - При закрытии задачи создаётся pending-запись
 - Ждём 30 дней (защита от переоткрытия)
 - Если через 30 дней задача всё ещё закрыта и `date_closed ≤ date_end` → начисление
@@ -270,6 +286,7 @@ INSERT INTO gamification_event_types (key, name, coins, description, is_active) 
 ```
 
 **Idempotency keys:**
+
 - `deadline_ok_l3_{ws_task_id}_{user_id}`
 - `deadline_revoked_l3_{ws_task_id}_{user_id}`
 
@@ -280,22 +297,26 @@ INSERT INTO gamification_event_types (key, name, coins, description, is_active) 
 Алгоритм:
 
 **4.5a. Новые закрытия:**
+
 - Все L3 где `date_closed IS NOT NULL`, `date_end IS NOT NULL`, `assignee_id IS NOT NULL`
 - Нет записи в `deadline_pending` для этой задачи
 - → INSERT в `deadline_pending` с `eligible_date = closed_at + 30 дней`
 
 **4.5b. Переоткрытые (pending):**
+
 - Записи в `deadline_pending` со статусом `pending`
 - Если задача снова открыта (`ws_tasks_l3.date_closed IS NULL`) → DELETE pending
 - При повторном закрытии step 4.5a создаст новую запись
 
 **4.5c. Подошёл срок (eligible_date ≤ today):**
+
 - Загрузить task из `ws_tasks_l3` (нужен актуальный `date_closed`)
 - Сравнить: `date_closed ≤ planned_end`?
   - **Да** → `status = 'approved'`, создать event `deadline_ok_l3` (+3)
   - **Нет** → `status = 'revoked'` (не в срок — просто не даём бонус, штраф не начисляем)
 
 **4.5d. Clawback (ревизия approved):**
+
 - Записи со статусом `approved`
 - Проверить: задача переоткрыта (`date_closed IS NULL`) ИЛИ `date_closed` изменилась и теперь `> planned_end`?
   - **Да** → создать event `deadline_revoked_l3`, `coins_override` из оригинальной транзакции, `status = 'revoked'`
@@ -369,6 +390,7 @@ INSERT INTO gamification_event_types (key, name, coins, description, is_active) 
 ## Порядок реализации
 
 ### Этап 1: Миграция БД
+
 Применить сводную миграцию (все изменения в одном файле).
 
 ### Этап 2: VPS-скрипты (gamification-vps-scripts)
@@ -391,12 +413,15 @@ sync-ws-users → sync-ws-projects → sync-ws-tasks → sync-ws-costs
 sync-task-events идёт после sync-ws-costs, чтобы к моменту compute-gamification были и cost entries, и история статусов.
 
 ### Этап 3: Фронтенд (gamification)
+
 Дополнительных изменений в фронтенде не требуется:
+
 - Новые event types автоматически отображаются в `/admin/events`
 - Транзакции показываются в `view_user_transactions`
 - Баланс обновляется автоматически
 
 ### Этап 4: Документация
+
 1. Обновить `src/docs/gamification-events.md` — добавить описание новых событий
 2. Обновить `src/docs/gamification-db.md` — новые таблицы и колонки
 3. Обновить `src/docs-features/ws-gamification/business-logic.md`

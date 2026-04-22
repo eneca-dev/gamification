@@ -3,7 +3,7 @@ ALTER TABLE ws_user_streaks
   ADD COLUMN IF NOT EXISTS streak_start_date date,
   ADD COLUMN IF NOT EXISTS completed_cycles integer NOT NULL DEFAULT 0;
 
--- 2. green_day: 0 → 3 коина
+-- 2. green_day: 0 → 3 💎
 UPDATE gamification_event_types SET coins = 3, updated_at = now() WHERE key = 'green_day';
 
 -- 3. Бонус тимлиду L2 за закрытие дочерней L3 в бюджете (+5)

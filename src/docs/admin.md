@@ -8,11 +8,11 @@
 
 Админ может менять стоимость событий (coins) в `gamification_event_types`. Добавление/удаление event types запрещено — они создаются в миграциях и привязаны к триггерам/скриптам.
 
-Управление заказами: смена статуса (pending/processing/fulfilled) через дропдаун на статус-бейдже, отмена с возвратом коинов через модал подтверждения. Нефизические товары — статус не меняется (только отмена).
+Управление заказами: смена статуса (pending/processing/fulfilled) через дропдаун на статус-бейдже, отмена с возвратом 💎 через модал подтверждения. Нефизические товары — статус не меняется (только отмена).
 
 Управление товарами: inline-редактирование категории, цены и остатка в таблице. Полное редактирование через модалку (ProductFormModal). Удаление товара с проверкой наличия заказов. Загрузка изображений через drag-and-drop (API route, не Server Action).
 
-Управление категориями: inline-редактирование всех полей (name, slug, description, is_physical, is_countable). Slug валидируется: только строчные латинские, цифры, _, начинается с буквы, уникальный. Деактивация категории блокирует тоггл статуса у товаров этой категории. `is_countable` — отдельный тоггл, определяет учёт остатков (stock); заблокирован для нефизических категорий. Переключение `is_physical → false` автоматически сбрасывает `is_countable`. При отключении `is_countable` — stock сбрасывается в NULL у всех товаров категории (optimistic на клиенте + серверный сброс).
+Управление категориями: inline-редактирование всех полей (name, slug, description, is*physical, is_countable). Slug валидируется: только строчные латинские, цифры, *, начинается с буквы, уникальный. Деактивация категории блокирует тоггл статуса у товаров этой категории. `is_countable` — отдельный тоггл, определяет учёт остатков (stock); заблокирован для нефизических категорий. Переключение `is_physical → false` автоматически сбрасывает `is_countable`. При отключении `is_countable` — stock сбрасывается в NULL у всех товаров категории (optimistic на клиенте + серверный сброс).
 
 Управление календарём: визуальный календарь на год + 1 месяц. Клик по дню переключает его состояние. Будний → выходной (INSERT calendar_holidays), выходной (Сб/Вс) → рабочий (INSERT calendar_workdays), уже переключённый → откат (DELETE). Названия записей автоматические ("Выходной" / "Рабочий перенос"). Множественные клики не блокируются — optimistic updates работают параллельно. Данные учитываются в стриках (VPS-скрипт пропускает праздники, обрабатывает рабочие переносы) и в гриде дней (streak-panel: праздник → gray, перенос → рабочий).
 
@@ -47,7 +47,7 @@
 - `updateEventType({ key, name?, coins?, description?, is_active? })` — обновляет поля события. Revalidate: `/admin/events`
 - `toggleAdmin(userId)` — переключает is_admin у пользователя. Revalidate: `/admin/users`
 - `updateOrderStatus({ orderId, status, note? })` — смена статуса заказа (кроме cancelled). Revalidate: `/admin/orders`, `/store/orders`
-- `cancelOrder({ orderId, note? })` — отмена заказа с возвратом коинов через RPC `cancel_order`. Revalidate: `/admin/orders`, `/store/orders`, `/store`, `/profile`
+- `cancelOrder({ orderId, note? })` — отмена заказа с возвратом 💎 через RPC `cancel_order`. Revalidate: `/admin/orders`, `/store/orders`, `/store`, `/profile`
 - `addCalendarHoliday({ date, name })` — добавляет праздник. Проверяет конфликт с calendar_workdays. Revalidate: `/admin/calendar`
 - `deleteCalendarHoliday({ id })` — удаляет праздник. Revalidate: `/admin/calendar`
 - `addCalendarWorkday({ date, name })` — добавляет рабочий перенос. Проверяет конфликт с calendar_holidays. Revalidate: `/admin/calendar`
@@ -111,7 +111,7 @@
 ## Ограничения
 
 - Админ не может добавлять/удалять event types — только менять coins
-- Отмена заказа: любой статус кроме `cancelled`. Коины возвращаются через RPC `cancel_order`
+- Отмена заказа: любой статус кроме `cancelled`. 💎 возвращаются через RPC `cancel_order`
 - Смена статуса на `cancelled` только через `cancelOrder` (не через `updateOrderStatus`)
 - Нефизические товары: статус заказа не меняется через дропдаун, только отмена
 - Удаление товара запрещено при наличии заказов

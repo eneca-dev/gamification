@@ -56,7 +56,7 @@ export async function purchaseProduct(
 
   if (error) {
     const msg = error.message
-    if (msg.includes('Недостаточно коинов')) return { success: false, error: 'Недостаточно коинов' }
+    if (msg.includes('Недостаточно 💎')) return { success: false, error: 'Недостаточно 💎' }
     if (msg.includes('Нет в наличии')) return { success: false, error: 'Нет в наличии' }
     if (msg.includes('недоступен')) return { success: false, error: 'Товар недоступен' }
     return { success: false, error: 'Ошибка при покупке' }

@@ -177,7 +177,7 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
 
           <div className="grid grid-cols-2 gap-4">
             {/* Цена */}
-            <Field label="Цена (коины)" error={errors.price}>
+            <Field label="Цена (💎)" error={errors.price}>
               <input
                 type="number"
                 value={price || ''}
