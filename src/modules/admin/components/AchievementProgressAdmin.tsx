@@ -95,6 +95,7 @@ interface ColumnConfig {
 }
 
 function AreaColumn({ config }: { config: ColumnConfig }) {
+  const isFirstOfMonth = new Date().getDate() === 1;
   const Icon = config.icon
   const hasData = config.subBlocks.some((sb) => sb.entries.length > 0)
 
@@ -295,7 +296,6 @@ export function AchievementProgressAdmin({
   gratitudeProgress,
   users,
 }: AchievementProgressAdminProps) {
-  const isFirstOfMonth = new Date().getDate() === 1;
   const [search, setSearch] = useState('')
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [userProgress, setUserProgress] = useState<FullAchievementProgress | null>(null)
