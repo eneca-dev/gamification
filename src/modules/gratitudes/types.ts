@@ -55,7 +55,7 @@ const categoryEnum = z.enum(['help', 'quality', 'mentoring', 'teamwork', 'atmosp
 
 export const sendGratitudeSchema = z.object({
   recipient_id: z.string().uuid(),
-  message: z.string().min(1, 'Напишите сообщение').max(500, 'Максимум 500 символов'),
+  message: z.string().max(500, 'Максимум 500 символов').default(''),
   category: categoryEnum,
   type: z.enum(['thanks', 'gift']),
   gift_source: z.enum(['quota', 'balance']).nullable(),

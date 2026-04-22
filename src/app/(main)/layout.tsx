@@ -21,7 +21,7 @@ export default async function MainLayout({
 
   const balance = user?.wsUserId ? await getUserBalance(user.wsUserId) : 0
 
-  return (
+  const layout = (
     <div className="flex min-h-screen">
       {user?.isImpersonating && (
         <DevBanner
@@ -32,12 +32,12 @@ export default async function MainLayout({
       )}
       <Sidebar user={user} balance={balance} showDevSwitcher={IS_DEV} />
       <main className={`flex-1 ml-[260px] p-8 max-w-[1200px] ${user?.isImpersonating ? 'pt-14' : ''}`}>
-        {user?.id ? (
-          <OnboardingProvider userId={user.id}>
-            {children}
-          </OnboardingProvider>
-        ) : children}
+        {children}
       </main>
     </div>
   )
+
+  return user?.id ? (
+    <OnboardingProvider userId={user.id}>{layout}</OnboardingProvider>
+  ) : layout
 }

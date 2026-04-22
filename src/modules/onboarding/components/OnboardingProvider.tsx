@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { OnboardingSpotlight } from './OnboardingSpotlight'
 import { OnboardingDevPanel } from './OnboardingDevPanel'
 import { isTourSeen, markTourSeen, resetTour, resetAllTours } from '../storage'
+import { getPageSlug } from '../page-slug'
 import { dashboardTour } from '../tours/dashboard'
 import { achievementsTour } from '../tours/achievements'
 import { storeTour } from '../tours/store'
@@ -29,29 +30,6 @@ const TOURS: OnboardingTour[] = [
   adminEventsTour, adminCalendarTour, adminAchievementsTour, adminLotteryTour,
   adminHelpTour, helpTour, masterPlannerTour,
 ]
-
-/** Маппинг pathname → pageSlug */
-const PAGE_SLUG_MAP: Record<string, string> = {
-  '/': 'dashboard',
-  '/achievements': 'achievements',
-  '/store': 'store',
-  '/activity': 'activity',
-  '/admin': 'admin',
-  '/admin/users': 'admin-users',
-  '/admin/products': 'admin-products',
-  '/admin/orders': 'admin-orders',
-  '/admin/events': 'admin-events',
-  '/admin/calendar': 'admin-calendar',
-  '/admin/achievements': 'admin-achievements',
-  '/admin/lottery': 'admin-lottery',
-  '/admin/help': 'admin-help',
-  '/help': 'help',
-  '/master-planner': 'master-planner',
-}
-
-function getPageSlug(pathname: string): string | null {
-  return PAGE_SLUG_MAP[pathname] ?? null
-}
 
 interface OnboardingContextValue {
   /** Принудительно запустить тур для текущей страницы */

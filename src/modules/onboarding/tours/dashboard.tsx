@@ -38,8 +38,11 @@ export const dashboardTour: OnboardingTour = {
             <span>🔵 Отпуск / больничный — стрик не прерывается</span>
             <span>⭐ Звезда — использование Revit-плагинов</span>
           </span>
+          <span style={{ color: 'var(--text-secondary)' }}>
+            Worksection и Revit — две независимые механики: один день может быть одновременно и зелёным, и со звездой.
+          </span>
           <span className="text-[10px] pt-0.5" style={{ color: 'var(--text-muted)', borderTop: '1px solid var(--apex-border)' }}>
-            Эти критерии всегда доступны — наведите на ⓘ рядом с заголовком «Worksection».
+            Эти критерии всегда доступны — наведите на ⓘ рядом с заголовком «Worksection» или «Автоматизации».
           </span>
         </span>
       ),

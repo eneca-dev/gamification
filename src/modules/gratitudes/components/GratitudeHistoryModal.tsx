@@ -126,12 +126,14 @@ export function GratitudeHistoryModal({ isOpen, onClose, items, currentUserEmail
                             {getCategoryLabel(item.category)}
                           </span>
                         </div>
-                        <div
-                          className="text-[12px] font-medium mt-0.5 line-clamp-2 break-all"
-                          style={{ color: 'var(--text-secondary)' }}
-                        >
-                          {item.message}
-                        </div>
+                        {item.message && (
+                          <div
+                            className="text-[12px] font-medium mt-0.5 line-clamp-2 break-all"
+                            style={{ color: 'var(--text-secondary)' }}
+                          >
+                            {item.message}
+                          </div>
+                        )}
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
                             {timeAgo(item.created_at)}

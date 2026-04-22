@@ -31,8 +31,18 @@
 
 ## Компоненты
 
-- `OnboardingProvider` — context, управление активным туром, автозапуск по pathname
+- `OnboardingProvider` — context, управление активным туром, автозапуск по pathname. Должен оборачивать и Sidebar, и main, чтобы `useOnboardingContext()` был доступен в Sidebar-кнопке запуска тура
 - `OnboardingSpotlight` — overlay + highlight + tooltip с кнопками «Далее» / «Пропустить»
+
+## Ручной запуск
+
+Sidebar рендерит кнопку «Запустить онбординг» под ссылкой «Справка». Slug текущей страницы определяется через `getPageSlugWithFallback(pathname)` — точное совпадение по `PAGE_SLUG_MAP` плюс префиксное (нужно для вложенных маршрутов `/help/<slug>`, `/admin/users/<id>`). Если slug не найден — кнопка скрыта. Клик вызывает `startTour(slug)` из контекста.
+
+## Page slug resolver
+
+`src/modules/onboarding/page-slug.ts` — единый источник правды для `PAGE_SLUG_MAP`:
+- `getPageSlug(pathname)` — точное совпадение, используется автозапуском
+- `getPageSlugWithFallback(pathname)` — точное + префиксное, используется Sidebar-кнопкой. Более длинные пути проверяются первыми (`/admin/users` раньше `/admin`)
 
 ## Туры
 

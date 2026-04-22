@@ -24,7 +24,7 @@
 - `Gratitude` — полная благодарность с именами sender/recipient, department, earned_coins
 - `SenderQuota` — { used: boolean, coins_per_gratitude: number }
 - `GratitudeRecipient` — { id, name, department } для списка выбора
-- `SendGratitudeInput` — Zod-схема: recipient_id (uuid), message (1-500), category (nullable)
+- `SendGratitudeInput` — Zod-схема: recipient_id (uuid), message (0-500, опционально), category (nullable)
 
 ## Queries
 

@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, ShoppingBag, Trophy, Users, Settings, LogOut, HelpCircle } from 'lucide-react'
+import { Home, ShoppingBag, Trophy, Users, Settings, LogOut, HelpCircle, Play } from 'lucide-react'
 
 import { signOut } from '@/modules/auth/index.client'
 import type { AuthUser } from '@/modules/auth/index.client'
 import { DevUserSwitcher } from '@/modules/dev-tools/components/DevUserSwitcher'
 import { CoinBalanceLive } from '@/components/CoinBalance'
+import { getPageSlugWithFallback, useOnboardingContext } from '@/modules/onboarding/index.client'
 
 interface SidebarProps {
   user: AuthUser | null
@@ -44,6 +45,8 @@ function getInitials(fullName: string, email?: string): string {
 
 export function Sidebar({ user, balance, showDevSwitcher }: SidebarProps) {
   const pathname = usePathname()
+  const { startTour } = useOnboardingContext()
+  const currentTourSlug = getPageSlugWithFallback(pathname)
 
   return (
     <aside
@@ -120,6 +123,22 @@ export function Sidebar({ user, balance, showDevSwitcher }: SidebarProps) {
                 </Link>
               )
             })}
+
+          {currentTourSlug && (
+            <button
+              type="button"
+              onClick={() => startTour(currentTourSlug)}
+              className="flex items-center gap-3 px-4 py-2.5 rounded-full text-[13px] font-semibold transition-colors duration-150 w-full hover:bg-black/5"
+              style={{
+                color: 'var(--apex-text-muted)',
+                border: '1px solid transparent',
+              }}
+            >
+              <Play size={16} />
+              Запустить онбординг
+            </button>
+          )}
+
           {showDevSwitcher && <DevUserSwitcher />}
         </div>
       </nav>

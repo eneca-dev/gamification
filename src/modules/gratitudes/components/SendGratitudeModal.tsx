@@ -83,8 +83,8 @@ export function SendGratitudeModal({
   }
 
   function validate(): boolean {
-    if (!recipientId || !category || !message.trim()) {
-      setError('Заполните все поля')
+    if (!recipientId || !category) {
+      setError('Выберите получателя и категорию')
       return false
     }
     setError(null)
@@ -274,12 +274,12 @@ export function SendGratitudeModal({
             {/* Сообщение */}
             <div>
               <label className="text-[11px] font-bold uppercase tracking-wider mb-1.5 block" style={{ color: 'var(--text-muted)' }}>
-                Сообщение
+                Сообщение <span className="font-medium normal-case tracking-normal" style={{ color: 'var(--text-muted)' }}></span>
               </label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Напишите, за что вы благодарны..."
+                placeholder="Спасибо за..."
                 rows={3}
                 maxLength={500}
                 className="w-full px-3 py-2.5 rounded-xl text-[13px] font-medium outline-none resize-none"

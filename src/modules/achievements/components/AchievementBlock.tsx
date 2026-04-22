@@ -192,7 +192,7 @@ function GratitudeRow({ item }: { item: GratitudeAchProgress }) {
               >
                 <div className="font-bold mb-1">{item.achievement_name}</div>
                 <div className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
-                  Получите {item.threshold} подарков в этой категории за месяц. Считаются только платные подарки.
+                  Получите {item.threshold} подарка в этой категории за месяц. Считаются только платные подарки.
                 </div>
                 <div className="text-[10px] font-semibold mt-1 inline-flex items-center gap-0.5" style={{ color: 'var(--tag-purple-text)' }}>Награда: +{item.bonus_coins} <CoinIcon size={10} /></div>
                 <div className="absolute top-full left-4 w-2 h-2 rotate-45" style={{ background: 'var(--surface-elevated)', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }} />

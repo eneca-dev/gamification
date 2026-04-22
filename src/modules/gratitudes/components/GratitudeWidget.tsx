@@ -73,12 +73,14 @@ function GratitudeCard({
             {getCategoryLabel(item.category)}
           </span>
         </div>
-        <div
-          className="text-[12px] font-medium mt-0.5 truncate"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          &ldquo;{item.message}&rdquo;
-        </div>
+        {item.message && (
+          <div
+            className="text-[12px] font-medium mt-0.5 truncate"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            &ldquo;{item.message}&rdquo;
+          </div>
+        )}
         <div className="flex items-center gap-2 mt-1">
           <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
             {timeAgo(item.created_at)}
