@@ -95,6 +95,7 @@ interface ColumnConfig {
 }
 
 function AreaColumn({ config }: { config: ColumnConfig }) {
+  const isFirstOfMonth = new Date().getDate() === 1;
   const Icon = config.icon
   const hasData = config.subBlocks.some((sb) => sb.entries.length > 0)
 
@@ -120,7 +121,7 @@ function AreaColumn({ config }: { config: ColumnConfig }) {
         >
           <span className="text-lg">📅</span>
           <div className="text-[12px] font-medium text-center" style={{ color: 'var(--text-muted)' }}>
-            Топ сброшен в начале месяца.<br />Данные появятся завтра.
+            {isFirstOfMonth ? "Топ сброшен в начале месяца." : "Данные сброшены в связи с началом бета-тестирования."}<br />Данные появятся завтра.
           </div>
         </div>
       )}
