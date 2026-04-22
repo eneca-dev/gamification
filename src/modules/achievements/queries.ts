@@ -1,5 +1,5 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
-import { cached, CACHE_1H } from '@/lib/server-cache'
+import { cached, CACHE_1H, CACHE_5M } from '@/lib/server-cache'
 
 import type { AchievementProgress, RankingEntry, GratitudeAchProgress, CompanyAward, CompanyProgressEntry } from './types'
 
@@ -15,7 +15,7 @@ async function _getAchievementProgress(wsUserId: string): Promise<AchievementPro
 
 export const getAchievementProgress = (wsUserId: string) =>
   cached(_getAchievementProgress, ['achievements', wsUserId], {
-    tags: [`achievements:${wsUserId}`], revalidate: CACHE_1H,
+    tags: [`achievements:${wsUserId}`], revalidate: CACHE_5M,
   })(wsUserId)
 
 // --- Хелперы для personal / team / department рейтингов ---
@@ -90,7 +90,7 @@ async function _getGratitudeAchievementProgress(wsUserId: string): Promise<Grati
 
 export const getGratitudeAchievementProgress = (wsUserId: string) =>
   cached(_getGratitudeAchievementProgress, ['gratitude-achievements', wsUserId], {
-    tags: [`achievements:${wsUserId}`], revalidate: CACHE_1H,
+    tags: [`achievements:${wsUserId}`], revalidate: CACHE_5M,
   })(wsUserId)
 
 // --- Достижения компании (все пользователи) ---
@@ -306,27 +306,27 @@ export async function getGratitudeProgressAll(): Promise<CompanyProgressEntry[]>
 // --- Revit (кэш 1ч — обновляется ночью) ---
 export const getRevitPersonalRanking = (limit = 10) =>
   cached(() => fetchPersonalRanking('view_top_pers_revit', limit), ['ranking-revit-personal', String(limit)], {
-    tags: ['rankings'], revalidate: CACHE_1H,
+    tags: ['rankings'], revalidate: CACHE_5M,
   })()
 export const getRevitTeamRanking = (limit = 5) =>
   cached(() => fetchTeamRanking('view_top_team_revit', limit), ['ranking-revit-team', String(limit)], {
-    tags: ['rankings'], revalidate: CACHE_1H,
+    tags: ['rankings'], revalidate: CACHE_5M,
   })()
 export const getRevitDepartmentRanking = (limit = 5) =>
   cached(() => fetchDepartmentRanking('view_top_dept_revit', limit), ['ranking-revit-dept', String(limit)], {
-    tags: ['rankings'], revalidate: CACHE_1H,
+    tags: ['rankings'], revalidate: CACHE_5M,
   })()
 
 // --- Worksection (кэш 1ч — обновляется ночью) ---
 export const getWsPersonalRanking = (limit = 10) =>
   cached(() => fetchPersonalRanking('view_top_pers_ws', limit), ['ranking-ws-personal', String(limit)], {
-    tags: ['rankings'], revalidate: CACHE_1H,
+    tags: ['rankings'], revalidate: CACHE_5M,
   })()
 export const getWsTeamRanking = (limit = 5) =>
   cached(() => fetchTeamRanking('view_top_team_ws', limit), ['ranking-ws-team', String(limit)], {
-    tags: ['rankings'], revalidate: CACHE_1H,
+    tags: ['rankings'], revalidate: CACHE_5M,
   })()
 export const getWsDepartmentRanking = (limit = 5) =>
   cached(() => fetchDepartmentRanking('view_top_dept_ws', limit), ['ranking-ws-dept', String(limit)], {
-    tags: ['rankings'], revalidate: CACHE_1H,
+    tags: ['rankings'], revalidate: CACHE_5M,
   })()

@@ -1,5 +1,5 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
-import { cached, CACHE_1H } from '@/lib/server-cache'
+import { cached, CACHE_5M } from '@/lib/server-cache'
 
 import type { Alarm } from './types'
 
@@ -25,7 +25,7 @@ async function _getActiveAlarms(userId: string): Promise<Alarm[]> {
 
 export const getActiveAlarms = (userId: string) =>
   cached(_getActiveAlarms, ['alarms', userId], {
-    tags: [`alarms:${userId}`], revalidate: CACHE_1H,
+    tags: [`alarms:${userId}`], revalidate: CACHE_5M,
   })(userId)
 
 export async function getAllAlarms(userId: string): Promise<Alarm[]> {

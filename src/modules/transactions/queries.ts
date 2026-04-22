@@ -1,5 +1,5 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
-import { cached, CACHE_1H } from '@/lib/server-cache'
+import { cached, CACHE_5M } from '@/lib/server-cache'
 
 import type { UserTransaction, TransactionSubItem } from './types'
 
@@ -102,7 +102,7 @@ async function _getUserTransactions(
 export const getUserTransactions = (userEmail: string, limit = 10, offset = 0) =>
   cached(() => _getUserTransactions(userEmail, limit, offset),
     ['transactions', userEmail, String(limit), String(offset)],
-    { tags: [`transactions:${userEmail}`], revalidate: CACHE_1H },
+    { tags: [`transactions:${userEmail}`], revalidate: CACHE_5M },
   )()
 
 async function _getUserTransactionsCount(userEmail: string): Promise<number> {
@@ -122,7 +122,7 @@ async function _getUserTransactionsCount(userEmail: string): Promise<number> {
 export const getUserTransactionsCount = (userEmail: string) =>
   cached(() => _getUserTransactionsCount(userEmail),
     ['transactions-count', userEmail],
-    { tags: [`transactions:${userEmail}`], revalidate: CACHE_1H },
+    { tags: [`transactions:${userEmail}`], revalidate: CACHE_5M },
   )()
 
 // ==================== Обогащение ====================

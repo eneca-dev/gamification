@@ -1,5 +1,5 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
-import { cached, CACHE_1H } from '@/lib/server-cache'
+import { cached, CACHE_5M } from '@/lib/server-cache'
 
 import type {
   RevitStreak,
@@ -198,7 +198,7 @@ async function _getRevitTransactions(email: string, limit = 10): Promise<RevitTr
 
 export const getRevitTransactions = (email: string, limit = 10) =>
   cached(() => _getRevitTransactions(email, limit), ['revit-tx', email, String(limit)], {
-    tags: [`revit:${email}`], revalidate: CACHE_1H,
+    tags: [`revit:${email}`], revalidate: CACHE_5M,
   })()
 
 // Статистика автоматизации по отделам для соревнования (из VIEW)
@@ -256,5 +256,5 @@ async function _getRevitWidgetData(email: string): Promise<RevitWidgetData> {
 
 export const getRevitWidgetData = (email: string) =>
   cached(() => _getRevitWidgetData(email), ['revit-widget', email], {
-    tags: [`revit:${email}`], revalidate: CACHE_1H,
+    tags: [`revit:${email}`], revalidate: CACHE_5M,
   })()
