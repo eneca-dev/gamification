@@ -1,5 +1,7 @@
 "use client";
 
+import { Receipt } from "lucide-react";
+
 import type { Transaction } from "@/lib/data";
 
 interface TransactionFeedProps {
@@ -7,9 +9,11 @@ interface TransactionFeedProps {
 }
 
 export function TransactionFeed({ transactions }: TransactionFeedProps) {
+  const isEmpty = transactions.length === 0;
+
   return (
     <div
-      className="rounded-2xl p-5 h-full"
+      className="rounded-2xl p-5 h-full flex flex-col"
       data-onboarding="transaction-feed"
       style={{
         background: "var(--apex-surface)",
@@ -20,10 +24,35 @@ export function TransactionFeed({ transactions }: TransactionFeedProps) {
         <div className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--apex-text-muted)" }}>
           Последние операции
         </div>
-        <a href="/transactions" className="text-[12px] font-semibold" style={{ color: "var(--apex-primary)" }}>
-          Все операции →
-        </a>
+        {!isEmpty && (
+          <a href="/transactions" className="text-[12px] font-semibold" style={{ color: "var(--apex-primary)" }}>
+            Все операции →
+          </a>
+        )}
       </div>
+
+      {isEmpty && (
+        <div className="flex flex-col items-center justify-center flex-1 py-6">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+            style={{ background: "var(--apex-success-bg)" }}
+          >
+            <Receipt size={20} style={{ color: "var(--apex-primary)" }} />
+          </div>
+          <span
+            className="text-[13px] font-semibold mb-1"
+            style={{ color: "var(--apex-text-secondary)" }}
+          >
+            Кажется, у вас пока что нет транзакций
+          </span>
+          <span
+            className="text-[11px] text-center max-w-[220px]"
+            style={{ color: "var(--apex-text-muted)" }}
+          >
+            Здесь появятся начисления и списания, как только они случатся
+          </span>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         {transactions.map((tx) => {

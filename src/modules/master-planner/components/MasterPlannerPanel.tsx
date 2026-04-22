@@ -225,6 +225,8 @@ interface MasterPlannerPanelProps {
 }
 
 export function MasterPlannerPanel({ data }: MasterPlannerPanelProps) {
+  const isEmpty = data.pendingTasks.length === 0 && data.recentEvents.length === 0;
+
   return (
     <div className="flex flex-col h-full">
       {/* Заголовок */}
@@ -243,9 +245,11 @@ export function MasterPlannerPanel({ data }: MasterPlannerPanelProps) {
             Мастер планирования
           </span>
         </div>
-        <Link href="/master-planner" className="text-[12px] font-semibold" style={{ color: "var(--apex-primary)" }}>
-          Вся история →
-        </Link>
+        {!isEmpty && (
+          <Link href="/master-planner" className="text-[12px] font-semibold" style={{ color: "var(--apex-primary)" }}>
+            Вся история →
+          </Link>
+        )}
       </div>
 
       {/* Два стрика в одну строку */}
@@ -271,7 +275,7 @@ export function MasterPlannerPanel({ data }: MasterPlannerPanelProps) {
       </div>
 
       {/* Пустое состояние */}
-      {data.pendingTasks.length === 0 && data.recentEvents.length === 0 && (
+      {isEmpty && (
         <div
           className="flex flex-col items-center justify-center flex-1 py-6 rounded-xl mt-2"
         >
