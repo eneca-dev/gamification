@@ -1,5 +1,5 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
-import { cached, CACHE_1H } from '@/lib/server-cache'
+import { cached, CACHE_5M } from '@/lib/server-cache'
 
 import type { DayStatusRow, StreakMilestone, WsStreakData, RevitStreakData } from './types'
 
@@ -117,36 +117,36 @@ async function _getRevitStreakData(userId: string): Promise<RevitStreakData> {
 
 export const getStreakDayStatuses = (userId: string, gridStart: string, gridEnd: string) =>
   cached(_getStreakDayStatuses, ['day-statuses', userId, gridStart, gridEnd], {
-    tags: [`day-statuses:${userId}`], revalidate: CACHE_1H,
+    tags: [`day-statuses:${userId}`], revalidate: CACHE_5M,
   })(userId, gridStart, gridEnd)
 
 export async function getHolidays(gridStart: string, gridEnd: string): Promise<Set<string>> {
   const dates = await cached(_getHolidayDates, ['holidays', gridStart, gridEnd], {
-    tags: ['calendar'], revalidate: CACHE_1H,
+    tags: ['calendar'], revalidate: CACHE_5M,
   })(gridStart, gridEnd)
   return new Set(dates)
 }
 
 export async function getWorkdays(gridStart: string, gridEnd: string): Promise<Set<string>> {
   const dates = await cached(_getWorkdayDates, ['workdays', gridStart, gridEnd], {
-    tags: ['calendar'], revalidate: CACHE_1H,
+    tags: ['calendar'], revalidate: CACHE_5M,
   })(gridStart, gridEnd)
   return new Set(dates)
 }
 
 export async function getAutomationDays(userEmail: string, gridStart: string, gridEnd: string): Promise<Set<string>> {
   const dates = await cached(_getAutomationDayDates, ['automation-days', userEmail, gridStart, gridEnd], {
-    tags: [`automation:${userEmail}`], revalidate: CACHE_1H,
+    tags: [`automation:${userEmail}`], revalidate: CACHE_5M,
   })(userEmail, gridStart, gridEnd)
   return new Set(dates)
 }
 
 export const getWsStreakData = (userId: string) =>
   cached(_getWsStreakData, ['ws-streak', userId], {
-    tags: [`streak-ws:${userId}`], revalidate: CACHE_1H,
+    tags: [`streak-ws:${userId}`], revalidate: CACHE_5M,
   })(userId)
 
 export const getRevitStreakData = (userId: string) =>
   cached(_getRevitStreakData, ['revit-streak', userId], {
-    tags: [`streak-revit:${userId}`], revalidate: CACHE_1H,
+    tags: [`streak-revit:${userId}`], revalidate: CACHE_5M,
   })(userId)
