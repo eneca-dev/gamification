@@ -79,7 +79,7 @@ export function HelpContent({ title, content, updatedAt }: HelpContentProps) {
   }, [query])
 
   return (
-    <article>
+    <article data-onboarding="help-article">
       <h1
         className="text-xl font-extrabold mb-1"
         style={{ color: 'var(--text-primary)' }}

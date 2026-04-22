@@ -7,7 +7,7 @@
 ## Общие правила
 
 1. Все события записываются в `gamification_event_logs` с `idempotency_key`. Дубли игнорируются (`ON CONFLICT DO NOTHING`).
-2. Каждое событие с ненулевыми 💎и порождает ровно одну транзакцию в `gamification_transactions` (1:1 через `event_id` UNIQUE).
+2. Каждое событие с ненулевыми 💎 порождает ровно одну транзакцию в `gamification_transactions` (1:1 через `event_id` UNIQUE).
 3. Баланс обновляется атомарно через inline UPSERT в `gamification_balances` (триггеры не используют RPC `increment_balance`).
 4. Суммы 💎 читаются из `gamification_event_types` — не хардкодятся.
 5. Резолвинг email → `ws_users.id`: `SELECT id FROM ws_users WHERE email = lower(?) AND is_active = true`. Если не найден — событие пропускается без ошибки.

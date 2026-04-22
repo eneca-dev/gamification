@@ -148,6 +148,18 @@ export const dashboardTour: OnboardingTour = {
       placement: 'top',
     },
     {
+      id: 'dashboard-coins-reference',
+      target: 'help-article',
+      title: 'Справочник начислений',
+      description:
+        'Вы в разделе «Справка». Здесь — полный список действий, за которые начисляются 💎 и их суммы. Возвращайтесь сюда, чтобы свериться с правилами.',
+      placement: 'left',
+      // Открываем страницу справочника до показа подсказки
+      onBeforeShow: ({ router }) => {
+        router.push('/help/coins-reference')
+      },
+    },
+    {
       id: 'dashboard-finish',
       target: null,
       title: 'Вы готовы!',

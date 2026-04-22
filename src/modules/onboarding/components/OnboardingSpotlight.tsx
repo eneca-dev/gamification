@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronRight } from 'lucide-react'
 
@@ -38,6 +39,7 @@ export function OnboardingSpotlight({
   onNext,
   onSkip,
 }: OnboardingSpotlightProps) {
+  const router = useRouter()
   const tooltipRef = useRef<HTMLDivElement>(null)
   const [targetEl, setTargetEl] = useState<HTMLElement | null>(null)
   const [tooltipPos, setTooltipPos] = useState<TooltipPosition | null>(null)
@@ -54,13 +56,13 @@ export function OnboardingSpotlight({
     setTargetRect(null)
     setTooltipPos(null)
 
+    // Подготовить DOM перед поиском target (переключить таб, перейти на страницу и т.п.)
+    step.onBeforeShow?.({ router })
+
     if (isModal) {
       setReady(true)
       return
     }
-
-    // Подготовить DOM перед поиском target (переключить таб и т.п.)
-    step.onBeforeShow?.()
 
     const startTime = Date.now()
 
@@ -81,7 +83,7 @@ export function OnboardingSpotlight({
     }, TARGET_POLL_INTERVAL)
 
     return () => clearInterval(poll)
-  }, [step.id, step.target, step.onBeforeShow, isModal, onNext])
+  }, [step.id, step.target, step.onBeforeShow, isModal, onNext, router])
 
   // Скролл к элементу и расчёт позиции
   useLayoutEffect(() => {
