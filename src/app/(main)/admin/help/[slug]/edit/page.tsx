@@ -1,4 +1,4 @@
-import { getAllHelpArticles } from '@/modules/help'
+import { getAllHelpArticles, getHelpVariablesMeta } from '@/modules/help'
 import { HelpEditor } from '@/modules/help/components/HelpEditor'
 
 interface AdminHelpEditPageProps {
@@ -10,11 +10,12 @@ export default async function AdminHelpEditPage({ params }: AdminHelpEditPagePro
 
   const isNew = slug === 'new'
 
-  let article = null
-  if (!isNew) {
-    const articles = await getAllHelpArticles()
-    article = articles.find((a) => a.slug === slug) ?? null
-  }
+  const [articles, variables] = await Promise.all([
+    isNew ? Promise.resolve([]) : getAllHelpArticles(),
+    getHelpVariablesMeta(),
+  ])
+
+  const article = isNew ? null : (articles.find((a) => a.slug === slug) ?? null)
 
   if (!isNew && !article) {
     return (
@@ -38,6 +39,7 @@ export default async function AdminHelpEditPage({ params }: AdminHelpEditPagePro
         is_published: article.is_published,
       } : null}
       isNew={isNew}
+      variables={variables}
     />
   )
 }

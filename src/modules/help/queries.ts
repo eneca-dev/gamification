@@ -1,8 +1,45 @@
 import { createSupabaseServerClient } from '@/config/supabase'
 
-import type { HelpArticle, HelpFolder } from './types'
+import type { HelpArticle, HelpFolder, HelpVariableMeta } from './types'
 
 // --- Шаблонные переменные {{key}} → значения из БД ---
+
+export async function getHelpVariables(): Promise<Record<string, string>> {
+  return buildVariablesMap()
+}
+
+export async function getHelpVariablesMeta(): Promise<HelpVariableMeta[]> {
+  const supabase = await createSupabaseServerClient()
+
+  const [eventTypes, gratitudeSettings, shieldProducts] = await Promise.all([
+    supabase
+      .from('gamification_event_types')
+      .select('key, name, coins')
+      .eq('is_active', true)
+      .or('coins.neq.0,key.eq.red_day'),
+    supabase.from('ach_gratitude_settings').select('category, threshold, bonus_coins'),
+    supabase.from('shop_products').select('effect, price, name').like('effect', 'streak_shield_%'),
+  ])
+
+  const result: HelpVariableMeta[] = []
+
+  for (const row of eventTypes.data ?? []) {
+    result.push({ key: row.key, name: row.name ?? row.key, value: String(Math.abs(row.coins)) })
+  }
+
+  const gratRows = gratitudeSettings.data ?? []
+  if (gratRows.length > 0) {
+    result.push({ key: 'gratitude_threshold', name: 'Порог достижений за благодарности', value: String(gratRows[0].threshold) })
+    result.push({ key: 'gratitude_bonus', name: 'Бонус за достижения благодарности', value: String(gratRows[0].bonus_coins) })
+  }
+
+  for (const row of shieldProducts.data ?? []) {
+    if (row.effect === 'streak_shield_ws') result.push({ key: 'shield_price_ws', name: row.name ?? 'Цена щита WS', value: String(row.price) })
+    if (row.effect === 'streak_shield_revit') result.push({ key: 'shield_price_revit', name: row.name ?? 'Цена щита Revit', value: String(row.price) })
+  }
+
+  return result
+}
 
 async function buildVariablesMap(): Promise<Record<string, string>> {
   const supabase = await createSupabaseServerClient()

@@ -1,3 +1,9 @@
+export interface HelpVariableMeta {
+  key: string
+  name: string
+  value: string
+}
+
 export interface HelpArticle {
   id: string
   slug: string
