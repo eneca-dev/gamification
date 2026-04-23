@@ -1,3 +1,3 @@
-export { getHelpArticles, getHelpArticle, getHelpFolders, getAllHelpArticles } from './queries'
+export { getHelpArticles, getHelpArticle, getHelpFolders, getAllHelpArticles, getHelpVariables, getHelpVariablesMeta } from './queries'
 export { updateHelpArticle, createHelpArticle, deleteHelpArticle } from './actions'
-export type { HelpArticle, HelpFolder } from './types'
+export type { HelpArticle, HelpFolder, HelpVariableMeta } from './types'
