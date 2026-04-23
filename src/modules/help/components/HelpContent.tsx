@@ -3,6 +3,7 @@
 import { useMemo, type ReactNode } from 'react'
 import Markdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 
 import { useHelpSearch } from './HelpSearchContext'
 
@@ -94,7 +95,7 @@ export function HelpContent({ title, content, updatedAt }: HelpContentProps) {
       </div>
 
       <div className="help-content">
-        <Markdown remarkPlugins={[remarkGfm]} components={components}>
+        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]} components={components}>
           {content}
         </Markdown>
       </div>
