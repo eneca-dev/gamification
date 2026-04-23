@@ -68,7 +68,13 @@
       "mcp__worksection__get_current_user",
       "mcp__worksection__get_projects",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:8000/mcp)",
-      "Bash(claude mcp *)"
+      "Bash(claude mcp *)",
+      "Bash(git branch *)",
+      "Bash(git push *)",
+      "Bash(git remote *)",
+      "Bash(git checkout *)",
+      "Bash(git pull *)",
+      "Bash(git merge *)"
     ]
   },
   "enableAllProjectMcpServers": true,
