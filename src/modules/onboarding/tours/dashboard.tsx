@@ -29,7 +29,7 @@ export const dashboardTour: OnboardingTour = {
             <span className="font-semibold" style={{ color: 'var(--apex-primary)' }}>🟢 Зелёный день — все условия WS выполнены:</span>
             <span className="flex flex-col gap-0.5 pl-2" style={{ color: 'var(--text-secondary)' }}>
               <span>✓ Внесён дневной отчёт</span>
-              <span>✓ % готовности обновлён до пересечения 20/40/60/80/100% бюджета</span>
+              <span>✓ % готовности обновлён на каждом 20%-чекпоинте бюджета (20/40/60/80/100/120/…)</span>
               <span>✓ Время в задачах со статусом «В работе»</span>
             </span>
           </span>

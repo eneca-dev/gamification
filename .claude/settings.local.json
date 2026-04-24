@@ -74,7 +74,8 @@
       "Bash(git remote *)",
       "Bash(git checkout *)",
       "Bash(git pull *)",
-      "Bash(git merge *)"
+      "Bash(git merge *)",
+      "Bash(git -C d:/1work/gamification-vps-scripts log --oneline -15)"
     ]
   },
   "enableAllProjectMcpServers": true,
