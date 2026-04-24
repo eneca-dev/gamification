@@ -67,6 +67,9 @@ export const dashboardTour: OnboardingTour = {
             <span className="pl-2 text-[11px]" style={{ color: 'var(--text-secondary)' }}>
               Auditor, ClashesManager, LinksManager, ShareModel, SDT, ParamOperator, ApartmentLayouts, FasciaCappings, SpacesManager, ResaveModels, AutoOpenings, Finishing, SharedCoordinates, ProfiLay, LookupTables, ViewCloner, LintelsTransfer, SurfaceGen, QuickMount, SchedulesTable.
             </span>
+            <span className="pl-2 text-[11px] font-semibold" style={{ color: 'var(--apex-warning-text)' }}>
+              ⚠️ Старые версии плагинов могут не передавать данные — обновите плагины перед использованием.
+            </span>
           </span>
 
           <span

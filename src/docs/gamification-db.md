@@ -38,7 +38,10 @@
 | --------------------------------------- | ------------------------------- | ---------------------------------------------------------------- |
 | `0 1 * * *` (01:00 UTC ежедневно)       | `sync-plugin-launches`          | Синк запусков Revit-плагинов из Elasticsearch                    |
 | `0 */4 * * *` (каждые 4 часа)           | `sync-gratitudes`               | Синк благодарностей из Airtable                                  |
-| `0 2 1 * *` (1 число месяца, 02:00 UTC) | `fn_award_department_contest()` | Начисление бонуса отделу-победителю по ревит-💎 за прошлый месяц |
+| `0 22 1 * *` (1 число месяца, 22:00 UTC) | `fn_award_department_contest()`   | Начисление бонуса отделу-победителю по ревит-💎 за прошлый месяц  |
+| `1 22 1 * *` (1 число месяца, 22:01 UTC) | `fn_award_revit_team_contest()`   | Начисление бонуса команде-победителю по ревит-💎 за прошлый месяц |
+| `2 22 1 * *` (1 число месяца, 22:02 UTC) | `fn_award_ws_dept_contest()`      | Начисление бонуса отделу-победителю по WS-💎 за прошлый месяц     |
+| `3 22 1 * *` (1 число месяца, 22:03 UTC) | `fn_award_ws_team_contest()`      | Начисление бонуса команде-победителю по WS-💎 за прошлый месяц    |
 
 WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-costs`, `snapshot-task-percent`, `sync-ws-absences`, `sync-task-events`, `compute-gamification`) запускаются **VPS-оркестратором**, не через pg_cron.
 
@@ -55,7 +58,10 @@ WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-co
 | `process_gamification_event(...)`       | Атомарная функция для VPS-скрипта: INSERT event + INSERT transaction + UPSERT balance в одной транзакции. Дубли по idempotency_key пропускаются. SECURITY DEFINER, доступ только service_role |
 | `link_ws_user_on_profile_insert()`      | Триггер: при создании `profiles` связывает с `ws_users.user_id`                                                                                                                               |
 | `custom_access_token_hook(event)`       | Auth Hook: добавляет `is_admin` и `ws_user_id` из `ws_users` в JWT claims при каждом выпуске/рефреше токена                                                                                   |
-| `fn_award_department_contest()`         | Ежемесячное начисление бонуса отделу-победителю по ревит-💎                                                                                                                                   |
+| `fn_award_department_contest()`         | Ежемесячное начисление бонуса отделу-победителю по ревит-💎. Метрика: `total_coins × (users_earning / total_employees)`       |
+| `fn_award_revit_team_contest()`         | То же для команды по ревит-💎. Та же формула с вовлечённостью                                                                 |
+| `fn_award_ws_dept_contest()`            | Ежемесячное начисление бонуса отделу-победителю по WS-💎. Метрика: `total_coins / total_employees`                           |
+| `fn_award_ws_team_contest()`            | То же для команды по WS-💎. Та же формула среднего                                                                            |
 
 ---
 

@@ -191,23 +191,83 @@ View `view_daily_statuses` агрегирует эту логику.
 
 ---
 
-## 5. Командное соревнование по Revit
+## 5. Ежемесячные конкурсы отделов и команд
 
-**Механизм:** PG-функция `fn_award_department_contest()`, запускается pg_cron 1 числа каждого месяца в 02:00 UTC.
+Четыре независимых конкурса. Победитель определяется 1-го числа каждого месяца в 22:00–22:03 UTC за предыдущий календарный месяц. Каждый активный сотрудник победившей сущности получает **+200 💎**.
 
-**Метрика:** сумма ревит-💎 (`source = 'revit'`) по отделу за прошлый календарный месяц. Отдел с максимальной суммой = победитель.
+Все функции защищены от пустого месяца: если `contest_score = 0` — никто не получает бонус.
 
-**Получатель:** каждый активный сотрудник отдела-победителя.
-**💎:** `team_contest_top1_bonus` → **+200**
+---
+
+### 5a. Revit — отдел
+
+**Функция:** `fn_award_department_contest()` · cron `0 22 1 * *`
+
+**Метрика:** `total_revit_coins × (users_earning / total_employees)` — учитывает вовлечённость отдела
 
 ```
 event_type:      team_contest_top1_bonus
 source:          contest
-details:         { department, contest_month, department_coins }
+details:         { department, contest_month, contest_score }
 idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 ```
 
-**VIEW для UI:** `view_department_revit_contest` — сумма ревит-💎 по отделам за текущий месяц. Используется в `getDepartmentAutomationStats()` для отображения рейтинга на дашборде.
+**VIEW для UI:** `view_department_revit_contest` — текущий месяц, используется в `getDepartmentAutomationStats()`
+
+---
+
+### 5b. Revit — команда
+
+**Функция:** `fn_award_revit_team_contest()` · cron `1 22 1 * *`
+
+**Метрика:** `total_revit_coins × (users_earning / total_employees)` по команде
+
+Исключены: `NULL`, `''`, `Вне команд*`, `Декретный`
+
+```
+event_type:      revit_team_contest_top1_bonus
+source:          contest
+details:         { team, contest_month, contest_score }
+idempotency_key: team_top1_revit_{user_id}_{YYYY-MM}
+```
+
+---
+
+### 5c. Worksection — отдел
+
+**Функция:** `fn_award_ws_dept_contest()` · cron `2 22 1 * *`
+
+**Метрика:** `total_ws_coins / total_employees` — среднее количество WS-монет на сотрудника
+
+```
+event_type:      ws_dept_contest_top1_bonus
+source:          contest
+details:         { department, contest_month, contest_score }
+idempotency_key: dept_top1_ws_{user_id}_{YYYY-MM}
+```
+
+---
+
+### 5d. Worksection — команда
+
+**Функция:** `fn_award_ws_team_contest()` · cron `3 22 1 * *`
+
+**Метрика:** `total_ws_coins / total_employees` по команде
+
+Исключены: `NULL`, `''`, `Вне команд*`, `Декретный`
+
+```
+event_type:      ws_team_contest_top1_bonus
+source:          contest
+details:         { team, contest_month, contest_score }
+idempotency_key: team_top1_ws_{user_id}_{YYYY-MM}
+```
+
+---
+
+### VIEW для истории
+
+`view_contest_monthly_winners` — один победитель на (event_type × contest_month). Читается в `getContestWinners()` (`src/modules/contests/`) для отображения в UI и в блоке `/admin/achievements`.
 
 ---
 
