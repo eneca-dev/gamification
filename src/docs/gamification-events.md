@@ -377,7 +377,7 @@ idempotency_key: deadline_ok_l3_{ws_task_id}_{user_id}
 - `gamification_event_logs` + `gamification_transactions` — append-only, строки не удаляются
 - Если email не найден в `ws_users` — событие молча пропускается
 - `at_gratitudes` с `deleted_in_airtable = true` — начисленные 💎 не отзываются автоматически
-- Отрицательный баланс допустим (штрафы, clawback). Запрет только при покупке (будущий этап)
+- Баланс не уходит ниже 0: `process_gamification_event` clamp'ит штрафы/clawback до доступного, фактическая сумма пишется в `gamification_transactions` (см. `gamification-db.md`)
 - Информационные события (red_day, violations, resets) имеют coins=0 в `gamification_event_types` — записываются в `gamification_event_logs`, но не создают транзакций в `gamification_transactions`
 - `green_day` начисляет +3 💎 (обновлено миграцией 011)
 - Триггеры срабатывают на UPDATE тоже — idempotency_key защищает от повторных начислений при повторных синках

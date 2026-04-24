@@ -52,7 +52,7 @@ WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-co
 | `my_ws_user_id()`                       | UUID из `ws_users` по email из JWT                                                                                                                                                            |
 | `get_user_id_by_email(email)`           | UUID из `auth.users` по email                                                                                                                                                                 |
 | `increment_balance(p_user_id, p_coins)` | Атомарный UPSERT баланса в `gamification_balances`. Устаревшая — заменена `process_gamification_event`. Триггеры делают inline UPSERT                                                         |
-| `process_gamification_event(...)`       | Атомарная функция для VPS-скрипта: INSERT event + INSERT transaction + UPSERT balance в одной транзакции. Дубли по idempotency_key пропускаются. SECURITY DEFINER, доступ только service_role |
+| `process_gamification_event(...)`       | Атомарная функция для VPS-скрипта: INSERT event + INSERT transaction + UPSERT balance в одной транзакции. Дубли по idempotency_key пропускаются. При отрицательном `p_coins` списание ограничено текущим балансом (clamp к 0) — в транзакцию пишется фактическая сумма, остаток долга теряется. SECURITY DEFINER, доступ только service_role |
 | `link_ws_user_on_profile_insert()`      | Триггер: при создании `profiles` связывает с `ws_users.user_id`                                                                                                                               |
 | `custom_access_token_hook(event)`       | Auth Hook: добавляет `is_admin` и `ws_user_id` из `ws_users` в JWT claims при каждом выпуске/рефреше токена                                                                                   |
 | `fn_award_department_contest()`         | Ежемесячное начисление бонуса отделу-победителю по ревит-💎                                                                                                                                   |
@@ -406,17 +406,18 @@ UNIQUE(user_email, ws_task_id, cost_date).
 
 **Информационные (0 💎, фиксируют факт события):**
 
-| key                         | description                                    |
-| --------------------------- | ---------------------------------------------- |
-| `red_day`                   | Красный день (есть нарушения)                  |
-| `task_dynamics_violation`   | Нарушение динамики: метка % не обновлена       |
-| `section_red`               | Дисциплина раздела: нарушение у исполнителя L3 |
-| `budget_exceeded_l3`        | Бюджет L3 превышен при проверке                |
-| `budget_exceeded_l2`        | Бюджет L2 превышен при проверке                |
-| `streak_reset_timetracking` | Стрик сброшен: не внёс время                   |
-| `streak_reset_dynamics`     | Стрик сброшен: нарушение динамики задачи       |
-| `streak_reset_section`      | Стрик сброшен: нарушение в разделе             |
-| `master_planner_reset`      | Серия мастера планирования сброшена            |
+| key                         | description                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------- |
+| `red_day`                   | Красный день (есть нарушения)                                                               |
+| `task_dynamics_violation`   | Нарушение динамики: метка % не обновлена                                                    |
+| `section_red`               | Дисциплина раздела: нарушение у исполнителя L3                                              |
+| `budget_exceeded_l3`        | Бюджет L3 превышен при проверке                                                             |
+| `budget_exceeded_l2`        | Бюджет L2 превышен при проверке                                                             |
+| `streak_reset_timetracking` | Стрик сброшен: не внёс время                                                                |
+| `streak_reset_dynamics`     | Стрик сброшен: нарушение динамики задачи                                                    |
+| `streak_reset_section`      | Стрик сброшен: нарушение в разделе                                                          |
+| `master_planner_reset`      | Серия мастера планирования сброшена                                                         |
+| `balance_correction`        | Разовая техническая коррекция баланса (миграция 028, clamp отрицательных к 0). `is_active = false` |
 
 **Частота обновления:** вручную администратором. Таблица-справочник.
 
@@ -473,13 +474,17 @@ UNIQUE(user_email, ws_task_id, cost_date).
 
 **Частота обновления:** атомарно при каждом начислении через inline UPSERT в триггерах. Upsert — создаётся при первом начислении, далее инкрементируется.
 
+Баланс не уходит ниже 0. `process_gamification_event` при отрицательном `p_coins` ограничивает списание доступным балансом и пишет в `gamification_transactions` фактическую сумму — инвариант `SUM(transactions) = balance` сохраняется. Остаток «долга» теряется (см. event_type `balance_correction` для исторических данных).
+
 Если баланс рассинхронизировался — пересчитать:
 
 ```sql
 UPDATE gamification_balances b
-SET total_coins = (SELECT COALESCE(SUM(coins), 0) FROM gamification_transactions t WHERE t.user_id = b.user_id),
+SET total_coins = COALESCE((SELECT SUM(coins) FROM gamification_transactions t WHERE t.user_id = b.user_id), 0),
     updated_at = now();
 ```
+
+После запуска `process_gamification_event` clamp'ит штрафы по факту, поэтому `SUM(transactions)` уже не может быть отрицательной для новых транзакций.
 
 #### `revit_user_streaks` (267 строк)
 
@@ -657,7 +662,7 @@ Express-сервер на порту 3000, endpoint `GET /health` → "Working 2
 
 - `gamification_transactions` — append-only, строки не удаляются и не обновляются
 - Email в `ws_users` — всегда нижний регистр (CHECK constraint). Source-таблицы хранят email как есть — сравнение в триггерах через `lower()`
-- Отрицательный баланс допустим (штрафы). Запрет только при покупке (будущий этап)
+- Баланс не уходит ниже 0. Штраф через `process_gamification_event` списывается в пределах доступного (clamp) — в `gamification_transactions` пишется фактическая сумма. Покупки и подарки за свой счёт отдельно проверяют баланс и отклоняются при нехватке. Разовая коррекция существующих минусов выполнена миграцией 028 (event_type `balance_correction`)
 - WS-скрипты запускаются VPS-оркестратором, не pg_cron — из-за ограничений Edge Functions на время выполнения
 - `ws_users` — строки не удаляются физически, только деактивация
 - Все source-таблицы работают через upsert — данные обновляются, не стираются
