@@ -154,6 +154,14 @@ export function GratitudeHistoryModal({ isOpen, onClose, items, currentUserEmail
                               спасибо
                             </span>
                           )}
+                          {!isReceived && item.is_anonymous && (
+                            <span
+                              className="text-[10px] font-medium px-1.5 py-0.5 rounded-md"
+                              style={{ background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                            >
+                              анонимно
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

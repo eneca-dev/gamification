@@ -74,6 +74,8 @@ interface DisciplineColumnProps {
   tooltip?: string;
   lastMonthWinner?: string | null;
   lastMonthLabel?: string;
+  showFraction?: boolean;
+  countTooltip?: string;
 }
 
 function DisciplineColumn({
@@ -91,6 +93,8 @@ function DisciplineColumn({
   tooltip,
   lastMonthWinner,
   lastMonthLabel,
+  showFraction = true,
+  countTooltip,
 }: DisciplineColumnProps) {
   const isFirstOfMonth = new Date().getDate() === 1;
   const leader = sorted[0];
@@ -263,8 +267,12 @@ function DisciplineColumn({
                     }}
                   />
                 </div>
-                <span className="text-[9px] flex-shrink-0" style={{ color: "var(--apex-text-muted)" }}>
-                  {using}/{dept.totalEmployees}
+                <span
+                  className="text-[9px] flex-shrink-0 cursor-help"
+                  style={{ color: "var(--apex-text-muted)" }}
+                  title={countTooltip}
+                >
+                  {showFraction ? `${using}/${dept.totalEmployees}` : dept.totalEmployees}
                 </span>
               </div>
             </div>
@@ -373,6 +381,8 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
           tooltip={wsTooltip}
           lastMonthWinner={lastMonthWsWinner}
           lastMonthLabel={lastMonthLabel}
+          showFraction={false}
+          countTooltip="Сотрудников в отделе сегодня (без учёта отпуска, больничного и отгула)"
         />
         <DisciplineColumn
           title="Revit"
@@ -389,6 +399,8 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
           tooltip={autoTooltip}
           lastMonthWinner={lastMonthRevitWinner}
           lastMonthLabel={lastMonthLabel}
+          showFraction={true}
+          countTooltip="Использовали Revit / сотрудников в отделе сегодня (без учёта отпуска, больничного и отгула)"
         />
       </div>
     </div>

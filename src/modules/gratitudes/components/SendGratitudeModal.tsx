@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Heart, Gift, Search, Send, Sparkles, Coins, CheckCircle } from 'lucide-react'
+import { X, Heart, Gift, Search, Send, Sparkles, Coins, CheckCircle, EyeOff } from 'lucide-react'
 import { CoinIcon } from '@/components/CoinIcon'
 
 import { sendGratitude } from '../actions'
@@ -45,6 +45,7 @@ export function SendGratitudeModal({
   const [category, setCategory] = useState<GratitudeCategory | null>(null)
   const [recipientId, setRecipientId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+  const [isAnonymous, setIsAnonymous] = useState(false)
   const [showBalanceInput, setShowBalanceInput] = useState(false)
   const [coinsAmount, setCoinsAmount] = useState(10)
   const [customInput, setCustomInput] = useState(false)
@@ -69,6 +70,7 @@ export function SendGratitudeModal({
     setCategory(null)
     setRecipientId(null)
     setMessage('')
+    setIsAnonymous(false)
     setShowBalanceInput(false)
     setCoinsAmount(10)
     setCustomInput(false)
@@ -103,6 +105,7 @@ export function SendGratitudeModal({
         type: 'thanks',
         gift_source: null,
         coins_amount: 0,
+        is_anonymous: isAnonymous,
       })
       if (result.success) { setStep('success'); onSuccess?.() }
       else setError(result.error)
@@ -121,6 +124,7 @@ export function SendGratitudeModal({
         type: 'gift',
         gift_source: 'quota',
         coins_amount: 0,
+        is_anonymous: isAnonymous,
       })
       if (result.success) { setStep('success'); onSuccess?.() }
       else setError(result.error)
@@ -147,6 +151,7 @@ export function SendGratitudeModal({
         type: 'gift',
         gift_source: 'balance',
         coins_amount: coinsAmount,
+        is_anonymous: isAnonymous,
       })
       if (result.success) { setStep('success'); onSuccess?.() }
       else setError(result.error)
@@ -285,10 +290,44 @@ export function SendGratitudeModal({
                 className="w-full px-3 py-2.5 rounded-xl text-[13px] font-medium outline-none resize-none"
                 style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
               />
-              <div className="text-right text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                {message.length}/500
+              <div className="flex items-center justify-between mt-0.5">
+                <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                  Win + . (Win + Ю) — смайлики
+                </span>
+                <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                  {message.length}/500
+                </span>
               </div>
             </div>
+
+            {/* Анонимность */}
+            <button
+              type="button"
+              onClick={() => setIsAnonymous((v) => !v)}
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl w-full text-left transition-all"
+              style={{
+                background: isAnonymous ? 'var(--apex-success-bg)' : 'var(--surface)',
+                border: `1.5px solid ${isAnonymous ? 'var(--teal-100)' : 'var(--border)'}`,
+              }}
+            >
+              <div
+                className="w-4 h-4 rounded flex items-center justify-center shrink-0"
+                style={{
+                  background: isAnonymous ? 'var(--apex-primary)' : 'transparent',
+                  border: `1.5px solid ${isAnonymous ? 'var(--apex-primary)' : 'var(--border)'}`,
+                }}
+              >
+                {isAnonymous && (
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M1.5 5.5L3.5 7.5L8.5 2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+              <EyeOff size={13} style={{ color: isAnonymous ? 'var(--apex-success-text)' : 'var(--text-muted)' }} />
+              <span className="text-[12px] font-semibold" style={{ color: isAnonymous ? 'var(--apex-success-text)' : 'var(--text-muted)' }}>
+                {isAnonymous ? 'Анонимно — получатель увидит «Аноним»' : 'Отправить анонимно'}
+              </span>
+            </button>
 
             {/* Ввод суммы при оплате из баланса */}
             {showBalanceInput && (
