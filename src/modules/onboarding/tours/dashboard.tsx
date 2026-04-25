@@ -25,7 +25,10 @@ export const dashboardTour: OnboardingTour = {
       title: 'Календарь активности',
       description: (
         <span className="flex flex-col gap-2">
-          <span className="flex flex-col gap-1">
+          <span className="font-semibold" style={{ color: 'var(--apex-text)' }}>
+            🔥 Стрик — это серия подряд идущих зелёных дней или звёздочек за использование плагинов.
+          </span>
+          <span className="flex flex-col gap-1" style={{ paddingTop: '2px', borderTop: '1px solid var(--apex-border)' }}>
             <span className="font-semibold" style={{ color: 'var(--apex-primary)' }}>🟢 Зелёный день — все условия WS выполнены:</span>
             <span className="flex flex-col gap-0.5 pl-2" style={{ color: 'var(--text-secondary)' }}>
               <span>✓ Внесён дневной отчёт</span>

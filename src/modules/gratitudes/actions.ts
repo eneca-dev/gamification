@@ -19,7 +19,7 @@ export async function sendGratitude(
     return { success: false, error: parsed.error.errors[0].message }
   }
 
-  const { recipient_id, message, category, type, gift_source, coins_amount } = parsed.data
+  const { recipient_id, message, category, type, gift_source, coins_amount, is_anonymous } = parsed.data
 
   // 2. Проверка авторизации: senderId принадлежит текущему пользователю
   const currentUser = await getCurrentUser()
@@ -93,6 +93,7 @@ export async function sendGratitude(
     type,
     gift_source: type === 'gift' ? gift_source : null,
     coins_amount: type === 'gift' && gift_source === 'balance' ? coins_amount : 0,
+    is_anonymous,
   })
 
   if (error) {

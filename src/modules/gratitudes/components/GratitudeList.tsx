@@ -160,6 +160,14 @@ export function GratitudeList({ items, currentUserEmail }: GratitudeListProps) {
                           спасибо
                         </span>
                       )}
+                      {!isReceived && item.is_anonymous && (
+                        <span
+                          className="text-[11px] font-medium px-2 py-0.5 rounded-md"
+                          style={{ background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                        >
+                          анонимно
+                        </span>
+                      )}
                       {isReceived && item.sender_department && (
                         <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
                           {item.sender_department}
