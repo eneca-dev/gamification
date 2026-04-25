@@ -260,6 +260,11 @@ function enrichTransaction(
       return { description: name ? `Отзыв 💎: ${name}` : defaultDesc }
     }
     case 'revit_using_plugins': {
+      const plugins = details?.plugins as Array<{ plugin_name: string; launch_count: number }> | undefined
+      if (plugins && plugins.length > 1) {
+        const total = plugins.reduce((sum, p) => sum + p.launch_count, 0)
+        return { description: `Revit-плагины: ${total} запусков` }
+      }
       const name = details?.plugin_name as string | undefined
       const count = details?.launch_count as number | undefined
       return { description: name ? `${name}: ${count ?? 1} запусков` : defaultDesc }

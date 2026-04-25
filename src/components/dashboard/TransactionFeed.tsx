@@ -86,6 +86,11 @@ export function TransactionFeed({ transactions }: TransactionFeedProps) {
                     {tx.description}
                   </span>
                 </div>
+                {tx.plugins && tx.plugins.length > 0 && (
+                  <div className="text-[11px] mt-0.5 truncate" style={{ color: "var(--apex-text-muted)" }}>
+                    {tx.plugins.map((p) => p.plugin_name).join(' · ')}
+                  </div>
+                )}
                 <div className="text-[11px] mt-0.5" style={{ color: "var(--apex-text-muted)" }}>
                   {tx.date}
                 </div>

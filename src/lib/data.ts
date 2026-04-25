@@ -48,6 +48,7 @@ export interface Transaction {
   amount: number;
   date: string;
   icon: string;
+  plugins?: Array<{ plugin_name: string; launch_count: number }>;
 }
 
 // ===== СОРЕВНОВАНИЕ ОТДЕЛОВ =====

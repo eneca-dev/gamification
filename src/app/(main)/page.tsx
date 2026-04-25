@@ -223,15 +223,22 @@ export default async function DashboardPage() {
   };
 
   // Транзакции из view_user_transactions (все источники)
-  const allTransactions: Transaction[] = recentTransactions.map((tx, i) => ({
-    id: i + 1,
-    source: tx.source as Transaction["source"],
-    category: "daily_green" as Transaction["category"],
-    description: tx.description,
-    amount: tx.coins,
-    date: new Date(tx.event_date + "T00:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
-    icon: getEventIcon(tx.event_type),
-  }));
+  const allTransactions: Transaction[] = recentTransactions.map((tx, i) => {
+    const details = tx.details as Record<string, unknown> | null
+    const plugins = tx.event_type === 'revit_using_plugins'
+      ? (details?.plugins as Array<{ plugin_name: string; launch_count: number }> | undefined)
+      : undefined
+    return {
+      id: i + 1,
+      source: tx.source as Transaction["source"],
+      category: "daily_green" as Transaction["category"],
+      description: tx.description,
+      amount: tx.coins,
+      date: new Date(tx.event_date + "T00:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
+      icon: getEventIcon(tx.event_type),
+      plugins,
+    }
+  });
 
   // Конвертируем RankingEntry[] в формат для Leaderboard
   const toLeaderboardEntries = (entries: typeof wsPersonalRanking) =>
