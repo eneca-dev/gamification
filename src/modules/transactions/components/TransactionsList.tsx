@@ -11,6 +11,7 @@ interface TransactionItem {
   icon: string
   dateFormatted: string
   subItems?: TransactionSubItem[]
+  inlineLink?: TransactionSubItem
   productEmoji?: string
   productImageUrl?: string | null
 }
@@ -73,8 +74,28 @@ export function TransactionsList({ items }: TransactionsListProps) {
               {iconContent}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--apex-text)' }}>
-                {tx.description}
+              <div className="flex items-center gap-1 min-w-0 flex-wrap">
+                <span className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>
+                  {tx.description}
+                </span>
+                {tx.inlineLink && (
+                  tx.inlineLink.url ? (
+                    <a
+                      href={tx.inlineLink.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[13px] font-semibold hover:underline inline-flex items-center gap-1 min-w-0"
+                      style={{ color: 'var(--apex-primary)' }}
+                    >
+                      <span className="truncate">{tx.inlineLink.text}</span>
+                      <ExternalLink size={10} className="flex-shrink-0" style={{ color: 'var(--apex-text-muted)' }} />
+                    </a>
+                  ) : (
+                    <span className="text-[13px] font-semibold truncate" style={{ color: 'var(--apex-text)' }}>
+                      {tx.inlineLink.text}
+                    </span>
+                  )
+                )}
               </div>
 
               {tx.subItems && tx.subItems.length > 0 && (
