@@ -42,7 +42,7 @@ const statusLabels: Record<CalendarDayStatus, string> = {
 const absenceLabels: Record<string, string> = {
   vacation:   "Отпуск",
   sick_leave: "Больничный",
-  sick_day:   "Оплачиваемый больничный",
+  sick_day:   "SickDay",
 };
 
 interface MonthGroup {
