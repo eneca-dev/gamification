@@ -59,7 +59,7 @@ async function _getWsStreakData(userId: string): Promise<WsStreakData> {
   const supabase = createSupabaseAdminClient()
 
   const { data: streakRow } = await supabase
-    .from('ws_user_streaks')
+    .from('ws_user_streaks_effective')
     .select('current_streak, longest_streak, streak_start_date, completed_cycles')
     .eq('user_id', userId)
     .maybeSingle()
