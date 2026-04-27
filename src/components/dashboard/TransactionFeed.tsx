@@ -1,6 +1,6 @@
 "use client";
 
-import { Receipt } from "lucide-react";
+import { Receipt, ExternalLink } from "lucide-react";
 
 import type { Transaction } from "@/lib/data";
 
@@ -81,14 +81,55 @@ export function TransactionFeed({ transactions }: TransactionFeedProps) {
                 {tx.icon}
               </div>
               <div className="flex-1 min-w-0">
-                <div>
-                  <span className="text-[13px] font-semibold truncate block" style={{ color: "var(--apex-text)" }}>
+                <div className="flex items-center gap-1 min-w-0 flex-wrap">
+                  <span className="text-[13px] font-semibold" style={{ color: "var(--apex-text)" }}>
                     {tx.description}
                   </span>
+                  {tx.inlineLink && (
+                    tx.inlineLink.url ? (
+                      <a
+                        href={tx.inlineLink.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[13px] font-semibold hover:underline inline-flex items-center gap-1 min-w-0"
+                        style={{ color: "var(--apex-primary)" }}
+                      >
+                        <span className="truncate">{tx.inlineLink.text}</span>
+                        <ExternalLink size={10} className="flex-shrink-0" />
+                      </a>
+                    ) : (
+                      <span className="text-[13px] font-semibold truncate" style={{ color: "var(--apex-text)" }}>
+                        {tx.inlineLink.text}
+                      </span>
+                    )
+                  )}
                 </div>
                 {tx.plugins && tx.plugins.length > 0 && (
                   <div className="text-[11px] mt-0.5 truncate" style={{ color: "var(--apex-text-muted)" }}>
                     {tx.plugins.map((p) => p.plugin_name).join(' · ')}
+                  </div>
+                )}
+                {tx.subItems && tx.subItems.length > 0 && (
+                  <div className="mt-0.5 space-y-0.5">
+                    {tx.subItems.map((item, i) => (
+                      <div key={i} className="flex items-center gap-1 text-[11px]">
+                        <span style={{ color: "var(--apex-text-muted)" }}>•</span>
+                        {item.url ? (
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:underline flex items-center gap-1 min-w-0"
+                            style={{ color: "var(--apex-text-secondary)" }}
+                          >
+                            <span className="truncate">{item.text}</span>
+                            <ExternalLink size={9} className="flex-shrink-0" style={{ color: "var(--apex-text-muted)" }} />
+                          </a>
+                        ) : (
+                          <span className="truncate" style={{ color: "var(--apex-text-secondary)" }}>{item.text}</span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
                 <div className="text-[11px] mt-0.5" style={{ color: "var(--apex-text-muted)" }}>
