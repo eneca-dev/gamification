@@ -4,8 +4,14 @@ import { encodeHex } from 'https://deno.land/std@0.224.0/encoding/hex.ts'
 
 const WS_API_URL = 'https://eneca.worksection.com/api/admin/v2'
 
-// ID L1-задачи для сикдеев
-const SICK_DAY_TASK_ID = '4905680'
+// L1-задача "[Sick day]" в HR-проекте. Подзадачи под ней = индивидуальные сикдеи.
+const SICK_DAY_PROJECT_ID = '130340'
+const SICK_DAY_PARENT_TASK_ID = '4905680'
+const SICK_DAY_PARENT_PATH = `/${SICK_DAY_PROJECT_ID}/${SICK_DAY_PARENT_TASK_ID}/`
+
+// Окно событий для sick_day. 8d = согласованная HR граница "не раньше 7 дней до"
+// + сутки буфера на таймзоны и время cron.
+const SICK_DAY_EVENTS_PERIOD = '8d'
 
 interface ScheduleUser {
   id: string
@@ -14,21 +20,38 @@ interface ScheduleUser {
   schedule?: Record<string, string>
 }
 
-interface WsTaskChild {
+interface WsEvent {
+  action: 'post' | 'update' | 'close' | 'reopen' | 'delete'
+  object: { type: string; id: string; page: string }
+  date_added: string
+  user_from?: { id: string; email: string; name: string }
+  new?: Record<string, unknown>
+  old?: Record<string, unknown>
+}
+
+interface WsTaskFull {
   id: string
-  name: string
-  status: string
   user_to?: { id: string; email: string; name: string }
   date_start?: string
   date_end?: string
+}
+
+interface AbsenceRow {
+  user_id: string | null
+  user_email: string
+  absence_type: 'vacation' | 'sick_leave' | 'sick_day'
+  absence_date: string
+  synced_at: string
+  ws_task_id: string | null
 }
 
 interface SyncStats {
   target_date: string
   schedule_users: number
   schedule_rows: number
-  sick_day_tasks_total: number
-  sick_day_tasks_matched: number
+  sick_day_events_total: number
+  sick_day_tasks_unique: number
+  sick_day_deletes: number
   sick_day_rows: number
   upserted: number
   user_errors: string[]
@@ -43,7 +66,7 @@ async function md5(input: string): Promise<string> {
   return encodeHex(new Uint8Array(hashBuffer))
 }
 
-/** Вчерашняя дата в YYYY-MM-DD */
+/** Вчерашняя дата в YYYY-MM-DD (по локальной TZ Edge runtime — Минск) */
 function getYesterday(): string {
   const d = new Date()
   d.setDate(d.getDate() - 1)
@@ -56,7 +79,19 @@ function toWsDateFormat(isoDate: string): string {
   return `${d}.${m}.${y}`
 }
 
-/** Получаем расписание пользователей за конкретную дату */
+/** Перебор дат YYYY-MM-DD от start до end включительно */
+function eachDateInRange(startIso: string, endIso: string): string[] {
+  const dates: string[] = []
+  const start = new Date(startIso + 'T00:00:00Z')
+  const end = new Date(endIso + 'T00:00:00Z')
+  if (start > end) return dates
+  for (const d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+    dates.push(d.toISOString().slice(0, 10))
+  }
+  return dates
+}
+
+/** Расписание отпусков/больничных за конкретную дату */
 async function fetchSchedule(wsApiKey: string, dateIso: string): Promise<Record<string, ScheduleUser>> {
   const wsDate = toWsDateFormat(dateIso)
   const queryParams = `action=get_users_schedule&datestart=${wsDate}&dateend=${wsDate}`
@@ -64,39 +99,39 @@ async function fetchSchedule(wsApiKey: string, dateIso: string): Promise<Record<
   const url = `${WS_API_URL}/?${queryParams}&hash=${hash}`
   const response = await fetch(url)
 
-  if (!response.ok) {
-    throw new Error(`WS API error: ${response.status} ${response.statusText}`)
-  }
-
+  if (!response.ok) throw new Error(`WS API error: ${response.status} ${response.statusText}`)
   const json = await response.json()
-  if (json.status !== 'ok') {
-    throw new Error(`WS API returned status: ${json.status}`)
-  }
+  if (json.status !== 'ok') throw new Error(`WS API returned status: ${json.status}`)
 
   return (json.data ?? {}) as Record<string, ScheduleUser>
 }
 
-/** Получаем дочерние задачи сикдеев */
-async function fetchSickDayTasks(wsApiKey: string): Promise<WsTaskChild[]> {
-  const queryParams = `action=get_task&id_task=${SICK_DAY_TASK_ID}&extra=subtasks`
+/** События последних N дней по HR-проекту (для отслеживания подзадач сикдеев) */
+async function fetchSickDayEvents(wsApiKey: string): Promise<WsEvent[]> {
+  const queryParams = `action=get_events&period=${SICK_DAY_EVENTS_PERIOD}&id_project=${SICK_DAY_PROJECT_ID}`
   const hash = await md5(queryParams + wsApiKey)
   const url = `${WS_API_URL}/?${queryParams}&hash=${hash}`
   const response = await fetch(url)
 
-  if (!response.ok) {
-    throw new Error(`WS API error: ${response.status} ${response.statusText}`)
-  }
-
+  if (!response.ok) throw new Error(`WS API error: ${response.status} ${response.statusText}`)
   const json = await response.json()
-  if (json.status !== 'ok') {
-    throw new Error(`WS API returned status: ${json.status}`)
-  }
+  if (json.status !== 'ok') throw new Error(`WS API returned status: ${json.status}`)
 
-  // get_task возвращает одну задачу, дочерние в child
-  const task = json.data
-  if (!task || !task.child) return []
+  return (json.data ?? []) as WsEvent[]
+}
 
-  return task.child as WsTaskChild[]
+/** Полная карточка задачи (без extra=subtasks — оно урезает поля у дочерних) */
+async function fetchTask(wsApiKey: string, taskId: string): Promise<WsTaskFull | null> {
+  const queryParams = `action=get_task&id_task=${taskId}`
+  const hash = await md5(queryParams + wsApiKey)
+  const url = `${WS_API_URL}/?${queryParams}&hash=${hash}`
+  const response = await fetch(url)
+
+  if (!response.ok) return null
+  const json = await response.json()
+  if (json.status !== 'ok') return null
+
+  return json.data as WsTaskFull
 }
 
 Deno.serve(async (req) => {
@@ -143,8 +178,9 @@ Deno.serve(async (req) => {
       target_date: targetDate,
       schedule_users: 0,
       schedule_rows: 0,
-      sick_day_tasks_total: 0,
-      sick_day_tasks_matched: 0,
+      sick_day_events_total: 0,
+      sick_day_tasks_unique: 0,
+      sick_day_deletes: 0,
       sick_day_rows: 0,
       upserted: 0,
       user_errors: [],
@@ -152,9 +188,9 @@ Deno.serve(async (req) => {
     }
 
     const now = new Date().toISOString()
-    const rows: { user_id: string | null; user_email: string; absence_type: string; absence_date: string; synced_at: string }[] = []
 
-    // ─── Источник 1: get_users_schedule за вчера ───
+    // ─── Источник 1: vacation / sick_leave из расписания за вчера ───
+    const scheduleRows: AbsenceRow[] = []
     const scheduleData = await fetchSchedule(wsApiKey, targetDate)
 
     for (const userData of Object.values(scheduleData)) {
@@ -163,65 +199,118 @@ Deno.serve(async (req) => {
       stats.schedule_users++
 
       const userId = userMap.get(email) ?? null
-      if (!userId) {
-        stats.user_errors.push(`schedule: ${email}`)
-      }
+      if (!userId) stats.user_errors.push(`schedule: ${email}`)
 
       for (const [date, type] of Object.entries(userData.schedule)) {
-        let absenceType: string | null = null
+        let absenceType: AbsenceRow['absence_type'] | null = null
         if (type === 'vacation') absenceType = 'vacation'
         else if (type === 'sick-leave') absenceType = 'sick_leave'
         else continue
 
-        rows.push({
+        scheduleRows.push({
           user_id: userId,
           user_email: email,
           absence_type: absenceType,
           absence_date: date,
           synced_at: now,
+          ws_task_id: null,
         })
         stats.schedule_rows++
       }
     }
 
-    // ─── Источник 2: задачи сикдеев, фильтр по вчера ───
-    const allSickDayTasks = await fetchSickDayTasks(wsApiKey)
-    stats.sick_day_tasks_total = allSickDayTasks.length
+    // ─── Источник 2: sick_day через get_events + get_task ───
+    const events = await fetchSickDayEvents(wsApiKey)
+    stats.sick_day_events_total = events.length
 
-    for (const task of allSickDayTasks) {
-      const email = task.user_to?.email?.toLowerCase()
-      if (!email) continue
-      if (!task.date_start || !task.date_end) continue
+    const relevantEvents = events.filter(
+      (e) =>
+        e.object?.type === 'task' &&
+        e.object?.page?.includes(SICK_DAY_PARENT_PATH) &&
+        (e.action === 'post' || e.action === 'update' || e.action === 'delete')
+    )
 
-      // Проверяем: вчера попадает в диапазон [date_start, date_end]?
-      if (targetDate < task.date_start || targetDate > task.date_end) continue
+    // Последнее событие на каждый task_id
+    const lastEventByTaskId = new Map<string, WsEvent>()
+    const sortedEvents = [...relevantEvents].sort((a, b) =>
+      a.date_added.localeCompare(b.date_added)
+    )
+    for (const e of sortedEvents) {
+      lastEventByTaskId.set(e.object.id, e)
+    }
+    stats.sick_day_tasks_unique = lastEventByTaskId.size
 
-      stats.sick_day_tasks_matched++
+    const sickDayRows: AbsenceRow[] = []
 
-      const userId = userMap.get(email) ?? null
-      if (!userId) {
-        stats.user_errors.push(`sick_day: ${email}`)
+    for (const [taskId, lastEvent] of lastEventByTaskId) {
+      if (lastEvent.action === 'delete') {
+        stats.sick_day_deletes++
+        continue
       }
 
-      rows.push({
-        user_id: userId,
-        user_email: email,
-        absence_type: 'sick_day',
-        absence_date: targetDate,
-        synced_at: now,
-      })
-      stats.sick_day_rows++
-    }
+      const task = await fetchTask(wsApiKey, taskId)
+      if (!task) {
+        stats.user_errors.push(`sick_day: get_task failed for ${taskId}`)
+        continue
+      }
 
-    // ─── Upsert ───
-    if (!dryRun && rows.length > 0) {
-      const { error } = await supabase
-        .from('ws_user_absences')
-        .upsert(rows, { onConflict: 'user_email,absence_date,absence_type', ignoreDuplicates: true })
-      if (error) {
-        stats.db_errors.push(`upsert: ${error.message}`)
-      } else {
-        stats.upserted = rows.length
+      const email = task.user_to?.email?.toLowerCase()
+      if (!email || !task.date_start || !task.date_end) {
+        stats.user_errors.push(`sick_day: incomplete task ${taskId}`)
+        continue
+      }
+
+      const userId = userMap.get(email) ?? null
+      if (!userId) stats.user_errors.push(`sick_day: ${email} not in ws_users`)
+
+      for (const date of eachDateInRange(task.date_start, task.date_end)) {
+        sickDayRows.push({
+          user_id: userId,
+          user_email: email,
+          absence_type: 'sick_day',
+          absence_date: date,
+          synced_at: now,
+          ws_task_id: taskId,
+        })
+      }
+    }
+    stats.sick_day_rows = sickDayRows.length
+
+    // ─── Применение в БД ───
+    if (!dryRun) {
+      // 1. Расписание (vacation / sick_leave) — upsert как раньше
+      if (scheduleRows.length > 0) {
+        const { error } = await supabase
+          .from('ws_user_absences')
+          .upsert(scheduleRows, {
+            onConflict: 'user_email,absence_date,absence_type',
+            ignoreDuplicates: true,
+          })
+        if (error) stats.db_errors.push(`schedule upsert: ${error.message}`)
+        else stats.upserted += scheduleRows.length
+      }
+
+      // 2. Sick_day: для всех затронутых задач сначала удаляем старые записи
+      //    (это покрывает и action=delete, и сужение/смещение диапазона дат после update),
+      //    затем вставляем актуальные.
+      const touchedTaskIds = Array.from(lastEventByTaskId.keys())
+      if (touchedTaskIds.length > 0) {
+        const { error: delErr } = await supabase
+          .from('ws_user_absences')
+          .delete()
+          .in('ws_task_id', touchedTaskIds)
+        if (delErr) stats.db_errors.push(`sick_day delete: ${delErr.message}`)
+      }
+
+      if (sickDayRows.length > 0) {
+        const { error: insErr } = await supabase
+          .from('ws_user_absences')
+          .upsert(sickDayRows, {
+            onConflict: 'user_email,absence_date,absence_type',
+            ignoreDuplicates: true,
+          })
+        if (insErr) stats.db_errors.push(`sick_day insert: ${insErr.message}`)
+        else stats.upserted += sickDayRows.length
       }
     }
 

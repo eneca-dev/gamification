@@ -256,16 +256,24 @@ OAuth-токены Worksection для пользователей.
 
 Дни отсутствия сотрудников.
 
-| Колонка        | Тип                  | Описание                               |
-| -------------- | -------------------- | -------------------------------------- |
-| `id`           | uuid PK              |                                        |
-| `user_id`      | uuid NULL → ws_users |                                        |
-| `user_email`   | text                 |                                        |
-| `absence_type` | text CHECK           | `vacation` / `sick_leave` / `sick_day` |
-| `absence_date` | date                 |                                        |
-| `synced_at`    | timestamptz          |                                        |
+| Колонка        | Тип                  | Описание                                                                        |
+| -------------- | -------------------- | ------------------------------------------------------------------------------- |
+| `id`           | uuid PK              |                                                                                 |
+| `user_id`      | uuid NULL → ws_users |                                                                                 |
+| `user_email`   | text                 |                                                                                 |
+| `absence_type` | text CHECK           | `vacation` / `sick_leave` / `sick_day`                                          |
+| `absence_date` | date                 |                                                                                 |
+| `synced_at`    | timestamptz          |                                                                                 |
+| `ws_task_id`   | text NULL            | ID подзадачи WS под `4905680` (только для `sick_day`); для расписания — NULL    |
 
-**Частота обновления:** ежедневно. Скрипт `sync-ws-absences` синкает из двух источников: расписание отпусков/больничных (WS API `get_users_schedule`) и задача "Сикдеи" (task ID 4905680). Upsert по (user_email, absence_date). Используется для заморозки стриков и пропуска нарушений.
+UNIQUE `(user_email, absence_date, absence_type)`. Частичный индекс `idx_ws_user_absences_ws_task_id` на `ws_task_id WHERE NOT NULL` — используется для быстрого DELETE при изменении/удалении подзадачи сикдея.
+
+**Частота обновления:** ежедневно. Скрипт `sync-ws-absences` синкает из двух независимых источников:
+
+- **`vacation` / `sick_leave`** — расписание отпусков/больничных, WS API `get_users_schedule` за `targetDate` (вчера). Upsert с `ignoreDuplicates`.
+- **`sick_day`** — события за последние **8 дней** в HR-проекте (WS API `get_events&period=8d&id_project=130340`), фильтр по `object.page` содержит `/4905680/`. На каждый уникальный `task_id` берётся последнее событие. Для `post`/`update` — догрузка `get_task` ради актуальных `user_to`/`date_start`/`date_end` и запись всего диапазона дат подзадачи. Для `delete` — удаление по `ws_task_id`. Перед вставкой все строки текущих затронутых задач предварительно удаляются по `ws_task_id`, чтобы корректно обработать сужение/смещение диапазона. Окно 8d покрывает согласованную с HR границу «не раньше 7 дней до сикдея, не позже даты сикдея» с суточным буфером.
+
+Используется для заморозки стриков и пропуска нарушений.
 
 #### `ws_task_status_changes`
 
@@ -649,7 +657,7 @@ WS-функции удалены — их полностью заменили VP
 | `sync-ws-tasks.ts`         | `ws_tasks_l2`, `ws_tasks_l3`                                                                                                                                                                                         | Парсинг дерева задач L1→L2→L3 из всех проектов                                                                                                                                  |
 | `sync-ws-costs.ts`         | `ws_daily_reports`, `ws_daily_report_tasks`, `ws_task_actual_hours`, `ws_task_actual_hours_l2`                                                                                                                       | Синк таймтрекинга: дневные отчёты + детализация по задачам + фактические часы                                                                                                   |
 | `snapshot-task-percent.ts` | `ws_task_percent_snapshots`                                                                                                                                                                                          | Снапшот текущего % задач L3                                                                                                                                                     |
-| `sync-ws-absences.ts`      | `ws_user_absences`                                                                                                                                                                                                   | Синк отсутствий из расписания + задачи сикдеев                                                                                                                                  |
+| `sync-ws-absences.ts`      | `ws_user_absences`                                                                                                                                                                                                   | Синк отсутствий: vacation/sick_leave из `get_users_schedule` за вчера; sick_day — из `get_events&period=8d&id_project=130340` + `get_task` на каждую затронутую подзадачу под `4905680` |
 | `sync-task-events.ts`      | `ws_task_status_changes`                                                                                                                                                                                             | Синк смен статусов из WS API get_events (period=1d1h). Парсит теги «Система планирования»                                                                                       |
 | `compute-gamification.ts`  | `gamification_event_logs`, `gamification_transactions`, `gamification_balances`, `ws_user_streaks`, `ws_daily_statuses`, `budget_pending`, `deadline_pending`, `ws_task_budget_checkpoints`, `ws_daily_report_tasks` | Основной движок WS-геймификации: нарушения, статусы дней, стрики, бюджеты, дедлайны, транзакции. Пропускает Сб/Вс (кроме `calendar_workdays`) и праздники (`calendar_holidays`) |
 
