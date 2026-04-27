@@ -530,13 +530,15 @@ SET total_coins = COALESCE((SELECT SUM(coins) FROM gamification_transactions t W
 | Колонка             | Тип                | Описание                                                       |
 | ------------------- | ------------------ | -------------------------------------------------------------- |
 | `user_id`           | uuid PK → ws_users |                                                                |
-| `current_streak`    | integer DEFAULT 0  | Календарных дней от streak_start_date                          |
+| `current_streak`    | integer DEFAULT 0  | Снапшот стрика на момент vps-прогона (используется для milestone-сравнения «было/стало»). Источник истины для UI — view `ws_user_streaks_effective` |
 | `longest_streak`    | integer DEFAULT 0  |                                                                |
-| `streak_start_date` | date NULL          | Дата первого зелёного дня текущего стрика. NULL при стрике = 0 |
+| `streak_start_date` | date NULL          | Якорь walk'а: первый день текущего стрика. После Phase 1 finalize устанавливается на `pending_reset_date + 1` (день после red), чтобы выходные между red и следующим зелёным учитывались по +1 |
 | `completed_cycles`  | integer DEFAULT 0  | Счётчик завершённых 90-дневных стриков                         |
+| `pending_reset_date` | date NULL         | Дата red, поставившего стрик в pending (24ч grace)             |
+| `pending_reset_expires_at` | timestamptz NULL | Истечение грейса. Пока активен — view возвращает замороженное `current_streak` |
 | `updated_at`        | timestamptz        |                                                                |
 
-**Частота обновления:** обновляется `compute-gamification` (VPS). При зелёном дне — `current_streak = diffCalendarDays(streak_start_date, date) + 1`. При красном — сброс в 0. При отсутствии — заморозка (ничего не меняется).
+**Источник истины для числа стрика:** view `ws_user_streaks_effective` (read-time расчёт). См. `streak-panel.md` и `gamification-events.md` (раздел «Стрик WS»). Таблица обновляется vps-скриптом раз в сутки как снапшот.
 
 #### `budget_pending` (0 строк)
 

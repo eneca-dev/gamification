@@ -152,9 +152,20 @@ View `view_daily_statuses` агрегирует эту логику.
 
 ### Стрик WS
 
-Обновляется в `ws_user_streaks` скриптом `compute-gamification`, step 3.
+Источник истины для числа стрика — view `ws_user_streaks_effective` (read-time расчёт). Таблица `ws_user_streaks` хранит снапшот на момент vps-прогона: `streak_start_date`, `longest_streak`, `completed_cycles`, pending-поля и `current_streak` (используется vps для milestone-сравнения «было/стало»).
 
-**Подсчёт:** `current_streak = календарные дни от streak_start_date до вчера − дни отсутствий в этом диапазоне`. Выходные и праздники увеличивают стрик (календарные дни тикают). Отсутствия (отпуск, больничный, сик-дей) замораживают стрик — не увеличивают и не сбрасывают.
+**Модель дельт по дням (view):**
+- `ws_daily_statuses.status = 'green'` → `+1`
+- `ws_daily_statuses.status = 'absent'` (отпуск/больничный/sick_day) → `0` (заморозка)
+- нет записи в `ws_daily_statuses` (выходной/праздник) → `+1`
+- `ws_daily_statuses.status = 'red'` → `0` (защитный fallback; в норме не встречается в окне walk)
+
+Walk идёт от `streak_start_date` (или `pending_reset_date + 1`, если pending истёк, но vps ещё не финализировал) до `fn_minsk_today() - 1`. Во время активного грейса (`pending_reset_expires_at > now()`) view возвращает замороженное `current_streak` из таблицы — UI показывает прежнее значение.
+
+**VPS-обновление в `compute-gamification` (step 3):**
+- Phase 1 finalize: при истёкшем грейсе записывает `streak_start_date = pending_reset_date + 1` и обнуляет `current_streak` (раньше ставил `streak_start_date = null`).
+- Phase 2 green: читает актуальный `current_streak` из view, сохраняет как снапшот в таблицу.
+- Milestone-detection: пересечение порога `prev < T <= next` для T ∈ {7, 30, 90}.
 
 **Бонусы за milestones:**
 
