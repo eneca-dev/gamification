@@ -1,3 +1,5 @@
+"use client";
+
 import { Trophy, CheckCircle2, XCircle, Clock, ExternalLink, ClipboardList } from "lucide-react";
 import Link from "next/link";
 
@@ -5,7 +7,7 @@ import { CoinIcon } from "@/components/CoinIcon";
 
 import type { MasterPlannerPanelData, MasterPlannerEvent, PendingBudgetTask } from "../types";
 
-// ─── Streak row (аналогично CompactStreakRow) ───────────────────────────────
+// ─── Streak row ─────────────────────────────────────────────────────────────
 
 function StreakRow({
   label,
@@ -28,7 +30,9 @@ function StreakRow({
   const trackBg = isTeal ? "var(--teal-100)" : "var(--orange-50)";
   const fill = isTeal ? "var(--apex-primary)" : "var(--orange-500)";
 
-  const tooltipText = label === "L3" ? "Задачи 3-го уровня" : "Задачи 2-го уровня";
+  const tooltipText = label === "L3"
+    ? "Задачи 3-го уровня. Серия считается только по задачам с бюджетом"
+    : "Задачи 2-го уровня. Серия считается только по задачам с бюджетом";
 
   return (
     <div className="flex items-center gap-2">
@@ -85,6 +89,12 @@ function EventIcon({ type }: { type: string }) {
   if (type === "master_planner" || type === "master_planner_l2") {
     return <span title={title}><Trophy size={14} style={{ color: "var(--apex-primary)" }} /></span>;
   }
+  if (type === "deadline_ok_l3") {
+    return <span title={title}><CheckCircle2 size={14} style={{ color: "var(--apex-primary)" }} /></span>;
+  }
+  if (type === "deadline_revoked_l3") {
+    return <span title={title}><XCircle size={14} style={{ color: "var(--apex-danger)" }} /></span>;
+  }
   if (type.includes("revoked")) {
     return <span title={title}><Trophy size={14} style={{ color: "var(--apex-danger)" }} /></span>;
   }
@@ -96,6 +106,8 @@ function eventLabel(type: string): string {
   if (type.startsWith("budget_exceeded")) return "Превышение бюджета";
   if (type.startsWith("budget_revoked")) return "Отозвано";
   if (type === "master_planner" || type === "master_planner_l2") return "Бонус";
+  if (type === "deadline_ok_l3") return "Закрыта в срок";
+  if (type === "deadline_revoked_l3") return "Отозвано (срок)";
   if (type.includes("revoked")) return "Бонус отозван";
   return type;
 }
@@ -113,6 +125,12 @@ function RecentEvents({ events }: { events: MasterPlannerEvent[] }) {
           className="flex items-center gap-2 py-1 px-2 rounded-lg"
           style={{ background: "var(--apex-bg)" }}
         >
+          <span
+            className="text-[10px] shrink-0"
+            title={evt.category === "budget" ? "По бюджету" : "По сроку"}
+          >
+            {evt.category === "budget" ? "💲" : "⏳"}
+          </span>
           <EventIcon type={evt.type} />
           <span
             className="text-[10px] font-semibold px-1 py-0.5 rounded"
@@ -182,16 +200,23 @@ function PendingTasks({ tasks }: { tasks: PendingBudgetTask[] }) {
       <div className="flex flex-col gap-1">
         {tasks.slice(0, 3).map((task, i) => (
           <div key={i} className="flex items-center gap-2">
-            <span title="Ожидает 30 дней"><Clock size={12} style={{ color: "var(--apex-text-muted)" }} /></span>
             <span
-              className="text-[10px] font-semibold px-1 py-0.5 rounded"
-              style={{
-                background: task.level === "L3" ? "var(--teal-100)" : "var(--orange-50)",
-                color: task.level === "L3" ? "var(--apex-primary)" : "var(--orange-500)",
-              }}
+              className="text-[10px] shrink-0"
+              title={task.category === "budget" ? "По бюджету" : "По сроку"}
             >
-              {task.level}
+              {task.category === "budget" ? "💲" : "⏳"}
             </span>
+            {task.category === "budget" && (
+              <span
+                className="text-[10px] font-semibold px-1 py-0.5 rounded"
+                style={{
+                  background: task.level === "L3" ? "var(--teal-100)" : "var(--orange-50)",
+                  color: task.level === "L3" ? "var(--apex-primary)" : "var(--orange-500)",
+                }}
+              >
+                {task.level}
+              </span>
+            )}
             {task.taskUrl ? (
               <a
                 href={task.taskUrl}
@@ -208,9 +233,15 @@ function PendingTasks({ tasks }: { tasks: PendingBudgetTask[] }) {
                 {task.taskName}
               </span>
             )}
-            <span className="text-[10px] shrink-0" style={{ color: "var(--apex-text-muted)" }}>
-              {task.daysRemaining}д ост.
-            </span>
+            {task.category === "deadline" ? (
+              <span className="text-[10px] shrink-0" style={{ color: task.closedOnTime ? "var(--apex-primary)" : "var(--apex-danger)" }}>
+                {task.closedOnTime ? "✓" : "✗"}
+              </span>
+            ) : (
+              <span className="text-[10px] shrink-0" style={{ color: "var(--apex-text-muted)" }}>
+                {task.daysRemaining}д ост.
+              </span>
+            )}
           </div>
         ))}
       </div>
@@ -276,9 +307,7 @@ export function MasterPlannerPanel({ data }: MasterPlannerPanelProps) {
 
       {/* Пустое состояние */}
       {isEmpty && (
-        <div
-          className="flex flex-col items-center justify-center flex-1 py-6 rounded-xl mt-2"
-        >
+        <div className="flex flex-col items-center justify-center flex-1 py-6 rounded-xl mt-2">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
             style={{ background: "var(--apex-success-bg)" }}
@@ -295,7 +324,7 @@ export function MasterPlannerPanel({ data }: MasterPlannerPanelProps) {
             className="text-[11px] text-center max-w-[220px]"
             style={{ color: "var(--apex-text-muted)" }}
           >
-            Когда появятся закрытые задачи с бюджетом — они отобразятся здесь
+            Когда появятся закрытые задачи с бюджетом или сроком — они отобразятся здесь
           </span>
         </div>
       )}
@@ -319,7 +348,6 @@ export function MasterPlannerPanel({ data }: MasterPlannerPanelProps) {
           <RecentEvents events={data.recentEvents} />
         </div>
       )}
-
     </div>
   );
 }

@@ -49,6 +49,8 @@ export interface Transaction {
   date: string;
   icon: string;
   plugins?: Array<{ plugin_name: string; launch_count: number }>;
+  subItems?: Array<{ text: string; url?: string }>;
+  inlineLink?: { text: string; url?: string };
 }
 
 // ===== СОРЕВНОВАНИЕ ОТДЕЛОВ =====

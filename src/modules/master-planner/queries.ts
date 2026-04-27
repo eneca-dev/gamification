@@ -25,7 +25,9 @@ interface ViewRow {
   user_id: string
   event_type: string
   event_date: string
+  created_at: string
   level: string
+  category: string
   ws_task_id: string | null
   task_name: string | null
   ws_project_id: string | null
@@ -37,12 +39,15 @@ interface ViewRow {
   milestone_tasks: { id: string; name: string }[] | null
   revoked_tasks: { id: string; name: string }[] | null
   coins: number | null
+  planned_end: string | null
+  date_closed: string | null
 }
 
 function mapRowToEvent(row: ViewRow): MasterPlannerEvent {
   return {
     eventId: row.event_id,
     type: row.event_type,
+    category: (row.category ?? 'budget') as 'budget' | 'deadline',
     level: row.level as 'L3' | 'L2',
     date: row.event_date,
     taskName: row.task_name,
@@ -54,6 +59,8 @@ function mapRowToEvent(row: ViewRow): MasterPlannerEvent {
     milestone: row.milestone,
     milestoneTasks: row.milestone_tasks,
     revokedTasks: row.revoked_tasks,
+    plannedEnd: row.planned_end ?? null,
+    dateClosed: row.date_closed ?? null,
   }
 }
 
@@ -71,7 +78,7 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
   const l3State = stateRows?.find((r) => r.level === 'l3')
   const l2State = stateRows?.find((r) => r.level === 'l2')
 
-  // Последние 5 событий из вью
+  // Последние 5 событий (budget + deadline теперь в одной вью)
   const { data: recentRows } = await supabase
     .from('view_master_planner_history')
     .select('*')
@@ -80,13 +87,46 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
     .order('created_at', { ascending: false })
     .limit(5)
 
-  // Pending из view_budget_pending_status
-  const { data: pendingRows } = await supabase
+  // Budget pending
+  const { data: budgetPendingRows } = await supabase
     .from('view_budget_pending_status')
     .select('level, task_name, ws_project_id, ws_l1_id, ws_task_l3_id, ws_task_l2_id, days_remaining')
     .eq('user_id', userId)
     .eq('status', 'pending')
     .order('eligible_date', { ascending: true })
+
+  // Deadline pending
+  const { data: deadlinePendingRows } = await supabase
+    .from('view_deadline_pending_status')
+    .select('level, task_name, ws_project_id, ws_l1_id, ws_task_l3_id, planned_end, closed_at, closed_on_time, days_remaining, expected_coins')
+    .eq('user_id', userId)
+    .order('days_remaining', { ascending: true })
+
+  const budgetPending: PendingBudgetTask[] = (budgetPendingRows ?? []).map((r) => ({
+    category: 'budget' as const,
+    level: r.level as 'L3' | 'L2',
+    taskName: r.task_name ?? '',
+    taskUrl: buildTaskUrl(r.ws_project_id, r.ws_l1_id, r.ws_task_l3_id ?? r.ws_task_l2_id),
+    daysRemaining: r.days_remaining ?? 0,
+    plannedEnd: null,
+    closedAt: null,
+    closedOnTime: null,
+  }))
+
+  const deadlinePending: PendingBudgetTask[] = (deadlinePendingRows ?? []).map((r) => ({
+    category: 'deadline' as const,
+    level: 'L3' as const,
+    taskName: r.task_name ?? '',
+    taskUrl: buildTaskUrl(r.ws_project_id, r.ws_l1_id, r.ws_task_l3_id),
+    daysRemaining: r.days_remaining ?? 0,
+    plannedEnd: r.planned_end ?? null,
+    closedAt: r.closed_at ?? null,
+    closedOnTime: r.closed_on_time ?? null,
+  }))
+
+  // Объединяем и сортируем по срочности
+  const allPending = [...budgetPending, ...deadlinePending]
+    .sort((a, b) => a.daysRemaining - b.daysRemaining)
 
   return {
     l3: l3State
@@ -96,20 +136,11 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
       ? { currentStreak: l2State.current_streak, completedCycles: l2State.completed_cycles, reward: 400 }
       : { ...DEFAULT_STREAK, reward: 400 },
     recentEvents: (recentRows ?? []).map((r) => mapRowToEvent(r as unknown as ViewRow)),
-    pendingTasks: (pendingRows ?? []).map((r) => ({
-      level: r.level as 'L3' | 'L2',
-      taskName: r.task_name ?? '',
-      taskUrl: buildTaskUrl(
-        r.ws_project_id,
-        r.ws_l1_id,
-        r.ws_task_l3_id ?? r.ws_task_l2_id,
-      ),
-      daysRemaining: r.days_remaining ?? 0,
-    })),
+    pendingTasks: allPending,
   }
 }
 
-// ─── Все pending-задачи (для страницы истории) ─────────────────────────────
+// ─── Все budget pending-задачи (для страницы истории) ─────────────────────
 
 export async function getAllPendingTasks(
   userId: string,
@@ -131,10 +162,37 @@ export async function getAllPendingTasks(
   const { data: rows } = await query
 
   return (rows ?? []).map((r) => ({
+    category: 'budget' as const,
     level: r.level as 'L3' | 'L2',
     taskName: r.task_name ?? '',
     taskUrl: buildTaskUrl(r.ws_project_id, r.ws_l1_id, r.ws_task_l3_id ?? r.ws_task_l2_id),
     daysRemaining: r.days_remaining ?? 0,
+    plannedEnd: null,
+    closedAt: null,
+    closedOnTime: null,
+  }))
+}
+
+// ─── Все deadline pending-задачи (для страницы истории) ───────────────────
+
+export async function getAllDeadlinePendingTasks(userId: string): Promise<PendingBudgetTask[]> {
+  const supabase = await createSupabaseServerClient()
+
+  const { data: rows } = await supabase
+    .from('view_deadline_pending_status')
+    .select('level, task_name, ws_project_id, ws_l1_id, ws_task_l3_id, planned_end, closed_at, closed_on_time, days_remaining')
+    .eq('user_id', userId)
+    .order('days_remaining', { ascending: true })
+
+  return (rows ?? []).map((r) => ({
+    category: 'deadline' as const,
+    level: 'L3' as const,
+    taskName: r.task_name ?? '',
+    taskUrl: buildTaskUrl(r.ws_project_id, r.ws_l1_id, r.ws_task_l3_id),
+    daysRemaining: r.days_remaining ?? 0,
+    plannedEnd: r.planned_end ?? null,
+    closedAt: r.closed_at ?? null,
+    closedOnTime: r.closed_on_time ?? null,
   }))
 }
 
@@ -159,7 +217,6 @@ export async function getMasterPlannerHistory(
   const supabase = await createSupabaseServerClient()
   const offset = (page - 1) * PAGE_SIZE
 
-  // Основной запрос — данные страницы
   let query = supabase
     .from('view_master_planner_history')
     .select('*', { count: 'exact' })
@@ -178,7 +235,6 @@ export async function getMasterPlannerHistory(
   const { data: rows, count } = await query
 
   // Доп. запрос — startPosition для нижней строки страницы
-  // Берём события СТАРШЕ текущей страницы, считаем подряд budget_ok от начала
   let startPosition = 0
   const tailOffset = offset + PAGE_SIZE
 

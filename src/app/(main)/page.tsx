@@ -237,6 +237,8 @@ export default async function DashboardPage() {
       date: new Date(tx.event_date + "T00:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
       icon: getEventIcon(tx.event_type),
       plugins,
+      subItems: tx.subItems,
+      inlineLink: tx.inlineLink,
     }
   });
 
