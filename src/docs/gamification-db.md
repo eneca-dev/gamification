@@ -268,7 +268,7 @@ OAuth-токены Worksection для пользователей.
 
 UNIQUE `(user_email, absence_date, absence_type)`. Частичный индекс `idx_ws_user_absences_ws_task_id` на `ws_task_id WHERE NOT NULL` — используется для быстрого DELETE при изменении/удалении подзадачи сикдея.
 
-**Частота обновления:** ежедневно. Скрипт `sync-ws-absences` синкает из двух независимых источников:
+**Частота обновления:** ежедневно в 00:00 Минска. Скрипт `sync-ws-absences` живёт в VPS-репозитории `gamification-vps-scripts/src/scripts/sync-ws-absences.ts` и запускается там Docker cron'ом как часть пайплайна orchestrator'а (Edge Function для этого синка не используется — была удалена как мёртвый код). Синкает из двух независимых источников:
 
 - **`vacation` / `sick_leave`** — расписание отпусков/больничных, WS API `get_users_schedule` за `targetDate` (вчера). Upsert с `ignoreDuplicates`.
 - **`sick_day`** — события за последние **8 дней** в HR-проекте (WS API `get_events&period=8d&id_project=130340`), фильтр по `object.page` содержит `/4905680/`. На каждый уникальный `task_id` берётся последнее событие. Для `post`/`update` — догрузка `get_task` ради актуальных `user_to`/`date_start`/`date_end` и запись всего диапазона дат подзадачи. Для `delete` — удаление по `ws_task_id`. Перед вставкой все строки текущих затронутых задач предварительно удаляются по `ws_task_id`, чтобы корректно обработать сужение/смещение диапазона. Окно 8d покрывает согласованную с HR границу «не раньше 7 дней до сикдея, не позже даты сикдея» с суточным буфером.
