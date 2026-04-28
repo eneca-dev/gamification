@@ -11,7 +11,9 @@ Impersonation позволяет разработчику просматрива
 `getCurrentUser()` в auth-модуле проверяет эту cookie в dev-режиме и возвращает данные из `ws_users`
 вместо auth/profiles. Все downstream-запросы работают автоматически, т.к. фильтруют по email.
 
-Защита: работает только при `NODE_ENV === 'development'`. Cookie httpOnly.
+Защита: работает при `NODE_ENV === 'development'` (локальная разработка) либо при
+`ENABLE_DEV_TOOLS=true` (dev-стенд, напр. `dev.gamification.eneca.by`). На проде
+обе переменные должны отсутствовать/быть false. Cookie httpOnly.
 
 ## Зависимости
 - `ws_users` — источник списка сотрудников (575 записей)
@@ -28,6 +30,8 @@ Impersonation позволяет разработчику просматрива
 - `getDevUserByEmail(email)` — один пользователь для getCurrentUser
 
 ## Ограничения
-- Только `NODE_ENV === 'development'`
+- Только при `NODE_ENV === 'development'` или `ENABLE_DEV_TOOLS=true`
+- `ENABLE_DEV_TOOLS` — серверная переменная (не `NEXT_PUBLIC_*`), выставляется
+  только на dev-деплое, на продакшене не должна быть выставлена
 - Impersonated пользователь получает `id: 'dev_<email>'` — не настоящий UUID
 - Данные, привязанные к user_id (а не email), не будут видны при impersonation

@@ -12,6 +12,9 @@ interface DepartmentContestProps {
   currentEntityName?: string | null;
   wsTooltip?: string;
   autoTooltip?: string;
+  lastMonthWsWinner?: string | null;
+  lastMonthRevitWinner?: string | null;
+  lastMonthLabel?: string;
 }
 
 function InfoTooltip({ text }: { text: string }) {
@@ -69,6 +72,10 @@ interface DisciplineColumnProps {
   accentColor: string;
   currentName?: string | null;
   tooltip?: string;
+  lastMonthWinner?: string | null;
+  lastMonthLabel?: string;
+  showFraction?: boolean;
+  countTooltip?: string;
 }
 
 function DisciplineColumn({
@@ -84,6 +91,10 @@ function DisciplineColumn({
   accentColor,
   currentName,
   tooltip,
+  lastMonthWinner,
+  lastMonthLabel,
+  showFraction = true,
+  countTooltip,
 }: DisciplineColumnProps) {
   const isFirstOfMonth = new Date().getDate() === 1;
   const leader = sorted[0];
@@ -97,6 +108,27 @@ function DisciplineColumn({
         <span className="text-[12px] font-semibold" style={{ color: accentColor }}>{title}</span>
         {tooltip && <InfoTooltip text={tooltip} />}
       </div>
+
+      {/* Победитель прошлого месяца */}
+      {lastMonthWinner && (
+        <div
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
+          style={{
+            background: "var(--orange-50)",
+            border: "1px solid rgba(255,152,0,0.25)",
+          }}
+        >
+          <span className="text-sm leading-none">🏆</span>
+          <div className="flex-1 min-w-0 flex items-center gap-1.5">
+            <span className="text-[10px] shrink-0" style={{ color: "var(--tag-orange-text)", opacity: 0.7 }}>
+              Победитель {lastMonthLabel}:
+            </span>
+            <span className="text-[11px] font-semibold truncate" style={{ color: "var(--tag-orange-text)" }}>
+              {lastMonthWinner}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Текущая позиция */}
       {currentDept ? (
@@ -235,8 +267,12 @@ function DisciplineColumn({
                     }}
                   />
                 </div>
-                <span className="text-[9px] flex-shrink-0" style={{ color: "var(--apex-text-muted)" }}>
-                  {using}/{dept.totalEmployees}
+                <span
+                  className="text-[9px] flex-shrink-0 cursor-help"
+                  style={{ color: "var(--apex-text-muted)" }}
+                  title={countTooltip}
+                >
+                  {showFraction ? `${using}/${dept.totalEmployees}` : dept.totalEmployees}
                 </span>
               </div>
             </div>
@@ -289,7 +325,7 @@ function pluralizeDays(n: number): string {
   return `${n} дней`;
 }
 
-export function DepartmentContest({ departments, automationDepartments, daysLeft, title = "Соревнование отделов", currentEntityName, wsTooltip, autoTooltip }: DepartmentContestProps) {
+export function DepartmentContest({ departments, automationDepartments, daysLeft, title = "Соревнование отделов", currentEntityName, wsTooltip, autoTooltip, lastMonthWsWinner, lastMonthRevitWinner, lastMonthLabel }: DepartmentContestProps) {
   const sortedWs = [...departments]
     .sort((a, b) => b.contestScore - a.contestScore)
     .map((d, i) => ({ ...d, rank: i + 1 }));
@@ -343,6 +379,10 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
           accentColor="var(--apex-primary)"
           currentName={currentEntityName}
           tooltip={wsTooltip}
+          lastMonthWinner={lastMonthWsWinner}
+          lastMonthLabel={lastMonthLabel}
+          showFraction={false}
+          countTooltip="Сотрудников в отделе сегодня (без учёта отпуска, больничного и отгула)"
         />
         <DisciplineColumn
           title="Revit"
@@ -357,6 +397,10 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
           accentColor="var(--orange-500)"
           currentName={currentEntityName}
           tooltip={autoTooltip}
+          lastMonthWinner={lastMonthRevitWinner}
+          lastMonthLabel={lastMonthLabel}
+          showFraction={true}
+          countTooltip="Использовали Revit / сотрудников в отделе сегодня (без учёта отпуска, больничного и отгула)"
         />
       </div>
     </div>

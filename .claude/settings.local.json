@@ -74,7 +74,14 @@
       "Bash(git remote *)",
       "Bash(git checkout *)",
       "Bash(git pull *)",
-      "Bash(git merge *)"
+      "Bash(git merge *)",
+      "Bash(git -C d:/1work/gamification-vps-scripts log --oneline -15)",
+      "PowerShell(Start-Process powershell -ArgumentList '-NoExit','-Command',\"Set-Location 'd:\\\\1work\\\\worksection-mcp'; uv run python -m worksection_mcp\")",
+      "Bash(where uv *)",
+      "PowerShell(Start-Process powershell -ArgumentList '-NoExit','-Command',\"Set-Location 'd:\\\\1work\\\\worksection-mcp'; & '.\\\\.venv\\\\Scripts\\\\python.exe' -m worksection_mcp\")",
+      "mcp__worksection__get_task",
+      "mcp__worksection__get_activity_log",
+      "mcp__worksection__get_task_discussion"
     ]
   },
   "enableAllProjectMcpServers": true,

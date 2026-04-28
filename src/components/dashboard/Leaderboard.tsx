@@ -12,6 +12,7 @@ interface PanelEntry {
   avatarColor: string;
   value: number;
   isCurrentUser: boolean;
+  rank: number;
 }
 
 const AVATAR_COLORS = [
@@ -97,7 +98,7 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
-function TopFivePanel({
+function LeaderboardPanel({
   title,
   icon,
   entries,
@@ -115,17 +116,16 @@ function TopFivePanel({
   tooltip?: string;
 }) {
   const isFirstOfMonth = new Date().getDate() === 1;
-  const sorted = [...entries].sort((a, b) => b.value - a.value).slice(0, 5);
 
   return (
     <div
-      className="rounded-2xl p-5 h-full"
+      className="rounded-2xl p-5 h-full flex flex-col"
       style={{
         background: "var(--apex-surface)",
         border: "1px solid var(--apex-border)",
       }}
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-2">
           {icon}
           <div className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--apex-text-muted)" }}>
@@ -137,9 +137,9 @@ function TopFivePanel({
           <span
             className="text-[11px] font-bold px-2 py-0.5 rounded-full"
             style={{
-              background: currentUserRank <= 5 ? "var(--apex-success-bg)" : "var(--surface)",
+              background: currentUserRank <= 10 ? "var(--apex-success-bg)" : "var(--surface)",
               color: currentUserRank <= 3 ? accentColor : "var(--apex-text-muted)",
-              border: currentUserRank <= 5
+              border: currentUserRank <= 10
                 ? `1px solid rgba(var(--apex-primary-rgb), 0.15)`
                 : `1px solid var(--apex-border)`,
             }}
@@ -156,7 +156,7 @@ function TopFivePanel({
         )}
       </div>
 
-      {sorted.length === 0 ? (
+      {entries.length === 0 ? (
         <div
           className="flex flex-col items-center justify-center py-8 gap-2 rounded-xl"
           style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
@@ -168,65 +168,61 @@ function TopFivePanel({
         </div>
       ) : null}
 
-      <div className="space-y-1.5">
-        {sorted.map((entry, idx) => {
-            const rank = idx + 1;
+      <div className="space-y-1.5 overflow-y-auto scrollbar-hide max-h-[264px]">
+        {entries.map((entry) => (
+          <div
+            key={entry.name}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+            style={{
+              background: entry.isCurrentUser
+                ? "var(--apex-success-bg)"
+                : entry.rank === 1
+                  ? "var(--orange-50)"
+                  : "transparent",
+              border: entry.isCurrentUser
+                ? `1px solid rgba(var(--apex-primary-rgb), 0.15)`
+                : entry.rank === 1
+                  ? `1px solid rgba(var(--orange-500-rgb), 0.15)`
+                  : "1px solid transparent",
+            }}
+          >
+            <RankBadge rank={entry.rank} />
 
-            return (
-              <div
-                key={entry.name}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                style={{
-                  background: entry.isCurrentUser
-                    ? "var(--apex-success-bg)"
-                    : rank === 1
-                      ? "var(--orange-50)"
-                      : "transparent",
-                  border: entry.isCurrentUser
-                    ? `1px solid rgba(var(--apex-primary-rgb), 0.15)`
-                    : rank === 1
-                      ? `1px solid rgba(var(--orange-500-rgb), 0.15)`
-                      : "1px solid transparent",
-                }}
-              >
-                <RankBadge rank={rank} />
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+              style={{ background: entry.avatarColor }}
+            >
+              {entry.avatar}
+            </div>
 
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
-                  style={{ background: entry.avatarColor }}
-                >
-                  {entry.avatar}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[12px] font-semibold truncate" style={{ color: "var(--apex-text)" }}>
-                      {entry.name}
-                    </span>
-                    {entry.isCurrentUser && (
-                      <span
-                        className="text-[9px] font-semibold px-2 py-0.5 rounded-full shrink-0"
-                        style={{
-                          background: "var(--apex-success-bg)",
-                          color: "var(--apex-primary)",
-                          border: `1px solid rgba(var(--apex-primary-rgb), 0.2)`,
-                        }}
-                      >
-                        Вы
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  <div className="text-[14px] font-bold" style={{ color: accentColor }}>
-                    {entry.value.toLocaleString("ru-RU")}
-                  </div>
-                  {unit}
-                </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[12px] font-semibold truncate" style={{ color: "var(--apex-text)" }}>
+                  {entry.name}
+                </span>
+                {entry.isCurrentUser && (
+                  <span
+                    className="text-[9px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                    style={{
+                      background: "var(--apex-success-bg)",
+                      color: "var(--apex-primary)",
+                      border: `1px solid rgba(var(--apex-primary-rgb), 0.2)`,
+                    }}
+                  >
+                    Вы
+                  </span>
+                )}
               </div>
-            );
-          })}
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              <div className="text-[14px] font-bold" style={{ color: accentColor }}>
+                {entry.value.toLocaleString("ru-RU")}
+              </div>
+              {unit}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -240,40 +236,46 @@ interface LeaderboardProps {
 }
 
 export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
-  const toPanel = (list: AutomationLeaderboardEntry[]): PanelEntry[] =>
-    list.map((e) => ({
-      name: e.fullName || e.email,
-      avatar: getInitials(e.fullName || e.email),
-      avatarColor: emailToColor(e.email || e.fullName),
-      value: e.totalCoins,
-      isCurrentUser: e.isCurrentUser,
-    }));
-
-  // Ранг текущего юзера (может быть за пределами топ-5)
-  const findRank = (list: AutomationLeaderboardEntry[]): number | null => {
+  const toPanel = (list: AutomationLeaderboardEntry[]): PanelEntry[] => {
     const sorted = [...list].sort((a, b) => b.totalCoins - a.totalCoins);
-    const idx = sorted.findIndex((e) => e.isCurrentUser);
-    return idx >= 0 ? idx + 1 : null;
+    let currentRank = 1;
+    return sorted.map((e, idx) => {
+      if (idx > 0 && e.totalCoins < sorted[idx - 1].totalCoins) currentRank = idx + 1;
+      return {
+        name: e.fullName || e.email,
+        avatar: getInitials(e.fullName || e.email),
+        avatarColor: emailToColor(e.email || e.fullName),
+        value: e.totalCoins,
+        isCurrentUser: e.isCurrentUser,
+        rank: currentRank,
+      };
+    });
   };
+
+  const wsPanels = toPanel(entries);
+  const revitPanels = toPanel(automationEntries ?? []);
+
+  const findRank = (panels: PanelEntry[]): number | null =>
+    panels.find((e) => e.isCurrentUser)?.rank ?? null;
 
   return (
     <div className="grid grid-cols-2 gap-5 h-full">
-      <TopFivePanel
-        title="Топ-5 Worksection"
+      <LeaderboardPanel
+        title="Топ Worksection"
         icon={<Crown size={14} style={{ color: "var(--apex-primary)" }} />}
-        entries={toPanel(entries)}
+        entries={wsPanels}
         accentColor="var(--apex-primary)"
         unit={<CoinIcon size={14} />}
-        currentUserRank={findRank(entries)}
+        currentUserRank={findRank(wsPanels)}
         tooltip="Топ формируется по максимальному количеству 💎 за Worksection, полученных за месяц. Сброс каждый месяц."
       />
-      <TopFivePanel
-        title="Топ-5 Revit"
+      <LeaderboardPanel
+        title="Топ Revit"
         icon={<Zap size={14} style={{ color: "var(--orange-500)" }} />}
-        entries={toPanel(automationEntries ?? [])}
+        entries={revitPanels}
         unit={<CoinIcon size={14} />}
         accentColor="var(--orange-500)"
-        currentUserRank={findRank(automationEntries ?? [])}
+        currentUserRank={findRank(revitPanels)}
         tooltip="Топ формируется по максимальному количеству 💎 за использование Revit-плагинов за месяц. Сброс каждый месяц."
       />
     </div>

@@ -13,6 +13,7 @@ export interface UserTransaction {
   details: Record<string, unknown> | null
   created_at: string
   subItems?: TransactionSubItem[]
+  inlineLink?: TransactionSubItem
   productEmoji?: string
   productImageUrl?: string | null
 }
@@ -46,6 +47,8 @@ export const EVENT_ICONS: Record<string, string> = {
   streak_reset_wrong_status: '💔',
   master_planner: '🏆',
   master_planner_reset: '💔',
+  deadline_ok_l3: '⏳',
+  deadline_revoked_l3: '↩️',
   shop_purchase: '🛒',
   shop_refund: '🛒',
   team_contest_top1_bonus: '🥇',

@@ -93,6 +93,14 @@ function GratitudeCard({
               <span className="inline-flex items-center gap-0.5">{isReceived ? '+' : '-'}{item.earned_coins} <CoinIcon size={10} /></span>
             </span>
           )}
+          {!isReceived && item.is_anonymous && (
+            <span
+              className="text-[10px] font-medium px-1.5 py-0.5 rounded-md"
+              style={{ background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+            >
+              анонимно
+            </span>
+          )}
         </div>
       </div>
     </div>

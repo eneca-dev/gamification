@@ -1,11 +1,12 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 
 import { OnboardingSpotlight } from './OnboardingSpotlight'
 import { OnboardingDevPanel } from './OnboardingDevPanel'
 import { isTourSeen, markTourSeen, resetTour, resetAllTours } from '../storage'
+import { getOnboardingSeenSlugs, markTourSeenInDb } from '../actions'
 import { getPageSlug } from '../page-slug'
 import { dashboardTour } from '../tours/dashboard'
 import { achievementsTour } from '../tours/achievements'
@@ -57,6 +58,31 @@ export function OnboardingProvider({ userId, children }: OnboardingProviderProps
   const [activeTour, setActiveTour] = useState<OnboardingTour | null>(null)
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
 
+  // Флаг готовности: true когда данные из БД уже записаны в localStorage.
+  // До этого момента автозапуск туров заблокирован (защита от race condition).
+  const syncedRef = useRef(false)
+
+  // Холодный старт: один запрос к БД при монтировании.
+  // Полученные slug-и записываем в localStorage — дальше всё работает локально.
+  useEffect(() => {
+    let cancelled = false
+
+    async function syncFromDb() {
+      try {
+        const seenSlugs = await getOnboardingSeenSlugs(userId)
+        if (cancelled) return
+        seenSlugs.forEach((slug) => markTourSeen(userId, slug))
+      } catch {
+        // Ошибка сети — работаем с тем что есть в localStorage
+      } finally {
+        if (!cancelled) syncedRef.current = true
+      }
+    }
+
+    syncFromDb()
+    return () => { cancelled = true }
+  }, [userId])
+
   // Dev mode: обработка URL параметров ?onboarding=reset / reset:slug / start:slug
   useEffect(() => {
     if (process.env.NODE_ENV !== 'development') return
@@ -91,23 +117,42 @@ export function OnboardingProvider({ userId, children }: OnboardingProviderProps
     const slug = getPageSlug(pathname)
     if (!slug) return
 
-    // Если тур уже показан — не запускаем
-    if (isTourSeen(userId, slug)) return
+    // Ждём синхронизации с БД перед первой проверкой
+    // Если синхронизация уже завершена — проверяем сразу
+    function tryStart() {
+      if (isTourSeen(userId, slug!)) return
 
-    const tour = TOURS.find((t) => t.pageSlug === slug)
-    if (!tour) return
+      const tour = TOURS.find((t) => t.pageSlug === slug)
+      if (!tour) return
 
-    // Ждём рендер виджетов
-    const timer = setTimeout(() => {
-      // Повторная проверка (race condition с другими табами)
-      if (isTourSeen(userId, slug)) return
+      const timer = setTimeout(() => {
+        if (isTourSeen(userId, slug!)) return
 
-      markTourSeen(userId, slug)
-      setActiveTour(tour)
-      setCurrentStepIndex(0)
-    }, START_DELAY)
+        markTourSeen(userId, slug!)
+        markTourSeenInDb(userId, slug!)
+        setActiveTour(tour)
+        setCurrentStepIndex(0)
+      }, START_DELAY)
 
-    return () => clearTimeout(timer)
+      return timer
+    }
+
+    // Если синхронизация уже готова — запускаем немедленно
+    if (syncedRef.current) {
+      const timer = tryStart()
+      return () => { if (timer) clearTimeout(timer) }
+    }
+
+    // Иначе ждём завершения синхронизации (polling каждые 50мс, max 3с)
+    let elapsed = 0
+    const poll = setInterval(() => {
+      elapsed += 50
+      if (!syncedRef.current && elapsed < 3000) return
+      clearInterval(poll)
+      tryStart()
+    }, 50)
+
+    return () => clearInterval(poll)
   }, [pathname, userId])
 
   const handleNext = useCallback(() => {
@@ -115,24 +160,24 @@ export function OnboardingProvider({ userId, children }: OnboardingProviderProps
 
     const nextIndex = currentStepIndex + 1
     if (nextIndex >= activeTour.steps.length) {
-      // Тур завершён
       setActiveTour(null)
       setCurrentStepIndex(0)
     } else {
       setCurrentStepIndex(nextIndex)
     }
-  }, [activeTour, currentStepIndex, userId])
+  }, [activeTour, currentStepIndex])
 
   const handleSkip = useCallback(() => {
     if (!activeTour) return
     setActiveTour(null)
     setCurrentStepIndex(0)
-  }, [activeTour, userId])
+  }, [activeTour])
 
   const startTour = useCallback((pageSlug: string) => {
     const tour = TOURS.find((t) => t.pageSlug === pageSlug)
     if (!tour) return
     markTourSeen(userId, pageSlug)
+    markTourSeenInDb(userId, pageSlug)
     setActiveTour(tour)
     setCurrentStepIndex(0)
   }, [userId])

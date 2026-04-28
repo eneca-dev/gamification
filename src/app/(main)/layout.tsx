@@ -5,7 +5,9 @@ import { getUserBalance } from '@/modules/shop'
 import { DevBanner } from '@/modules/dev-tools/components/DevBanner'
 import { OnboardingProvider } from '@/modules/onboarding/index.client'
 
-const IS_DEV = process.env.NODE_ENV === 'development'
+const DEV_TOOLS_ENABLED =
+  process.env.NODE_ENV === 'development' ||
+  process.env.ENABLE_DEV_TOOLS === 'true'
 
 export default async function MainLayout({
   children,
@@ -30,7 +32,7 @@ export default async function MainLayout({
           department={user.department}
         />
       )}
-      <Sidebar user={user} balance={balance} showDevSwitcher={IS_DEV} />
+      <Sidebar user={user} balance={balance} showDevSwitcher={DEV_TOOLS_ENABLED} />
       <main className={`flex-1 ml-[260px] p-8 max-w-[1200px] ${user?.isImpersonating ? 'pt-14' : ''}`}>
         {children}
       </main>

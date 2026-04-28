@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, ShoppingBag, Trophy, Users, Settings, LogOut, HelpCircle, Play } from 'lucide-react'
+import { Home, ShoppingBag, Trophy, Users, Settings, LogOut, HelpCircle, PlayCircle } from 'lucide-react'
 
 import { signOut } from '@/modules/auth/index.client'
 import type { AuthUser } from '@/modules/auth/index.client'
@@ -59,7 +59,7 @@ export function Sidebar({ user, balance, showDevSwitcher }: SidebarProps) {
       {/* Logo */}
       <Link
         href="/"
-        className="block px-6 pt-6 pb-5"
+        className="block pl-3.5 pr-4 pt-6 pb-5"
         style={{ borderBottom: '1px solid var(--apex-border)' }}
       >
         <div className="flex items-center gap-1.5">
@@ -134,7 +134,7 @@ export function Sidebar({ user, balance, showDevSwitcher }: SidebarProps) {
                 border: '1px solid transparent',
               }}
             >
-              <Play size={16} />
+              <PlayCircle size={16} />
               Запустить онбординг
             </button>
           )}
@@ -144,9 +144,9 @@ export function Sidebar({ user, balance, showDevSwitcher }: SidebarProps) {
       </nav>
 
       {/* Coin balance */}
-      <div className="px-4 pb-3">
+      <div className="pl-3 pr-5 pb-3">
         <div
-          className="p-3 rounded-xl"
+          className="pt-3 pb-3 pl-5 pr-3 rounded-xl"
           data-onboarding="sidebar-balance"
           style={{
             background: 'var(--apex-success-bg)',
@@ -161,9 +161,9 @@ export function Sidebar({ user, balance, showDevSwitcher }: SidebarProps) {
       </div>
 
       {/* User profile */}
-      <div className="px-4 pb-6">
+      <div className="pl-3 pr-5 pb-6">
         <div
-          className="flex items-center gap-3 p-3 rounded-xl"
+          className="flex items-center gap-3 pt-3 pb-3 pl-5 pr-3 rounded-xl"
           style={{
             background: 'var(--apex-bg)',
             border: '1px solid var(--apex-border)',

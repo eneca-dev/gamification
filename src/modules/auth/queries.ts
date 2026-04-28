@@ -7,7 +7,9 @@ import type { WorksectionTokenRow } from '@/lib/types'
 
 import type { AuthUser } from './types'
 
-const IS_DEV = process.env.NODE_ENV === 'development'
+const DEV_TOOLS_ENABLED =
+  process.env.NODE_ENV === 'development' ||
+  process.env.ENABLE_DEV_TOOLS === 'true'
 const IMPERSONATE_COOKIE = 'dev_impersonate'
 
 export async function getWorksectionTokens(
@@ -33,7 +35,7 @@ export const getCurrentUser = cache(async function getCurrentUser(): Promise<Aut
   if (!user) return null
 
   // Dev-режим: подмена пользователя через cookie
-  if (IS_DEV) {
+  if (DEV_TOOLS_ENABLED) {
     const cookieStore = await cookies()
     const impersonateEmail = cookieStore.get(IMPERSONATE_COOKIE)?.value
     if (impersonateEmail) {

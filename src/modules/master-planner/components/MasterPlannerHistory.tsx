@@ -41,6 +41,20 @@ function getEventStyle(type: string): EventStyle {
       label: "Бонус",
     };
   }
+  if (type === "deadline_ok_l3") {
+    return {
+      bg: "transparent",
+      icon: <CheckCircle2 size={15} style={{ color: "var(--apex-primary)" }} />,
+      label: "Закрыта в срок",
+    };
+  }
+  if (type === "deadline_revoked_l3") {
+    return {
+      bg: "rgba(var(--apex-danger-rgb, 239 68 68), 0.06)",
+      icon: <XCircle size={15} style={{ color: "var(--apex-danger)" }} />,
+      label: "Отозвано (срок)",
+    };
+  }
   if (type.includes("revoked")) {
     return {
       bg: "rgba(var(--apex-danger-rgb, 239 68 68), 0.06)",
@@ -51,10 +65,9 @@ function getEventStyle(type: string): EventStyle {
   return { bg: "transparent", icon: null, label: type };
 }
 
-// ─── Streak position computing ──────────────────────────────────────────────
+// ─── Streak position computing (только для budget событий) ─────────────────
 
 function computePositions(events: MasterPlannerEvent[], startPosition: number): (string | null)[] {
-  // Страница DESC (сверху новые, снизу старые). Проходим снизу вверх (ASC).
   const positions: (string | null)[] = new Array(events.length).fill(null);
   let pos = startPosition;
 
@@ -70,13 +83,42 @@ function computePositions(events: MasterPlannerEvent[], startPosition: number): 
     } else if (type.startsWith("budget_revoked")) {
       positions[i] = "Отозвано";
     } else if (type === "master_planner" || type === "master_planner_l2") {
-      positions[i] = `Бонус`;
+      positions[i] = "Бонус";
     } else if (type.includes("revoked")) {
       positions[i] = "Отозван";
     }
+    // deadline события — позиция остаётся null (покажем "—")
   }
 
   return positions;
+}
+
+// ─── Level badge с тултипом ─────────────────────────────────────────────────
+
+function LevelBadge({ level }: { level: "L3" | "L2" }) {
+  const tooltipText = level === "L3"
+    ? "Задача 3-го уровня. Серия считается только по задачам с бюджетом"
+    : "Задача 2-го уровня. Серия считается только по задачам с бюджетом";
+
+  return (
+    <div className="relative inline-flex group/badge shrink-0">
+      <span
+        className="text-[10px] font-semibold px-1.5 py-0.5 rounded cursor-default"
+        style={{
+          background: level === "L3" ? "var(--teal-100)" : "var(--orange-50)",
+          color: level === "L3" ? "var(--apex-primary)" : "var(--orange-500)",
+        }}
+      >
+        {level}
+      </span>
+      <div
+        className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 rounded-lg text-[10px] whitespace-nowrap opacity-0 group-hover/badge:opacity-100 transition-opacity z-20"
+        style={{ background: "var(--apex-text)", color: "var(--apex-surface)" }}
+      >
+        {tooltipText}
+      </div>
+    </div>
+  );
 }
 
 // ─── Table ──────────────────────────────────────────────────────────────────
@@ -97,6 +139,7 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
         style={{ color: "var(--apex-text-muted)", borderBottom: "1px solid var(--apex-border)" }}
       >
         <div className="w-8 shrink-0" />
+        <span className="shrink-0 w-4" />
         <span className="shrink-0 w-6" />
         <div className="flex-1 min-w-0">Задача</div>
         <span className="shrink-0 w-14 text-center">Серия</span>
@@ -117,23 +160,24 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
             className="flex items-center gap-3 px-3 py-2 rounded-xl transition-colors"
             style={{ background: style.bg }}
           >
-            {/* Иконка */}
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            {/* Иконка события */}
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
               style={{ background: "var(--apex-surface)", border: "1px solid var(--apex-border)" }}
             >
               {style.icon}
             </div>
 
-            {/* Level badge */}
+            {/* Иконка категории 💲 / ⏳ */}
             <span
-              className="text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0"
-              style={{
-                background: evt.level === "L3" ? "var(--teal-100)" : "var(--orange-50)",
-                color: evt.level === "L3" ? "var(--apex-primary)" : "var(--orange-500)",
-              }}
+              className="text-[11px] shrink-0 w-4 text-center"
+              title={evt.category === "budget" ? "По бюджету" : "По сроку"}
             >
-              {evt.level}
+              {evt.category === "budget" ? "💲" : "⏳"}
             </span>
+
+            {/* Level badge */}
+            <LevelBadge level={evt.level} />
 
             {/* Тип + задача */}
             <div className="flex-1 min-w-0">
@@ -157,9 +201,16 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
                   <span style={{ color: "var(--apex-text-muted)" }}>{style.label}</span>
                 )}
               </div>
-              {evt.maxTime != null && evt.actualTime != null && (
+              {/* Budget: часы */}
+              {evt.category === "budget" && evt.maxTime != null && evt.actualTime != null && (
                 <div className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>
                   {evt.actualTime} / {evt.maxTime} ч
+                </div>
+              )}
+              {/* Deadline: план / факт */}
+              {evt.category === "deadline" && evt.plannedEnd && evt.dateClosed && (
+                <div className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>
+                  план: {evt.plannedEnd} · факт: {evt.dateClosed}
                 </div>
               )}
             </div>
@@ -169,7 +220,7 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
               className="text-[11px] font-semibold shrink-0 w-14 text-center"
               style={{ color: "var(--apex-text-muted)" }}
             >
-              {positions[i]}
+              {positions[i] ?? "—"}
             </span>
 
             {/* 💎 */}

@@ -473,15 +473,20 @@ UI-подсказки для view_budget_pending_status:
 - Нет записи в `ws_daily_reports` за вчера → нарушение (факт: не внёс время)
 
 **1b. Динамика задач (правило 2)**
-Для каждой открытой L3 (`date_closed IS NULL`, `max_time > 0`):
+Для каждой открытой L3 (`date_closed IS NULL`, `max_time > 0`, `assignee_id != null`):
 
+- Пропуск: `actual_hours === 0`
 - `budget_percent = (ws_task_actual_hours.total_hours / max_time) * 100`
-- `current_checkpoint = min(floor(budget_percent / 20) * 20, 100)`
+- `current_checkpoint = floor(budget_percent / 20) * 20` — без верхней каппы (20/40/…/100/120/140/…)
 - Сравниваем с `ws_task_budget_checkpoints.last_checkpoint`
+- Если строки в `ws_task_budget_checkpoints` нет и `current_checkpoint > 0` → тихий upsert чекпоинта, **нарушения нет** (первое появление задачи в отслеживании)
+- Если `cp.assignee_id_at_checkpoint != null` и отличается от текущего `assignee_id` → тихий upsert на нового исполнителя, **нарушения нет** (смена ответственного)
+- Если `current_checkpoint < last_checkpoint` → тихий откат чекпоинта, **нарушения нет** (переоткрытие с увеличением `max_time`)
 - Если `current_checkpoint > last_checkpoint`:
   - Проверяем `ws_task_percent_snapshots`: менялась ли метка % с момента предыдущего чекпоинта?
   - Не менялась → событие `task_dynamics_violation` на ответственного L3
-  - Двигаем чекпоинт вперёд в любом случае (update `ws_task_budget_checkpoints`)
+  - L2-раздел добавляется в `sectionViolators` (для правила 3) **только если ассайни L3 не в отпуске/на больничном** — L2-лид не должен получать `section_red` за отсутствующего подчинённого
+  - Двигаем чекпоинт вперёд в любом случае (update `ws_task_budget_checkpoints`, обновляя `assignee_id_at_checkpoint`)
 
 **1c. Дисциплина разделов (правило 3)**
 Для каждого L2:
@@ -572,17 +577,39 @@ L3/L2 с `date_closed IS NULL`, но есть в `budget_pending`:
 
 ### Правило 2: Динамика задач (L3) — контрольные точки бюджета
 
-Контрольные точки: **20%, 40%, 60%, 80%, 100%** от планового бюджета (max_time).
-Между двумя соседними точками требуется минимум 1 обновление метки % готовности.
+Контрольные точки: **кратные 20%** от планового бюджета (max_time), **без верхней границы** — 20/40/60/80/100/120/140/… Между двумя соседними точками требуется минимум 1 обновление метки % готовности. Выше 100% проверки продолжаются, пока задача открыта и бюджет превышается.
 
 ```
-для каждой L3 задачи с date_closed IS NULL и max_time > 0:
-  actual_hours = total_hours FROM ws_task_actual_hours WHERE ws_task_id = X
-  budget_percent = (actual_hours / max_time) * 100
-  current_checkpoint = floor(budget_percent / 20) * 20   // 0, 20, 40, 60, 80, 100
-  current_checkpoint = min(current_checkpoint, 100)
+для каждой L3 задачи с date_closed IS NULL и max_time > 0 и assignee_id != null:
+  если actual_hours = 0:                   continue
 
-  cp = ws_task_budget_checkpoints WHERE ws_task_id = X  // если нет строки — создаём с last_checkpoint=0
+  budget_percent = (actual_hours / max_time) * 100
+  current_checkpoint = floor(budget_percent / 20) * 20   // 0, 20, 40, 60, 80, 100, 120, …
+
+  cp = ws_task_budget_checkpoints WHERE ws_task_id = X
+
+  // Первое появление задачи в отслеживании
+  если cp отсутствует И current_checkpoint > 0:
+    UPSERT ws_task_budget_checkpoints (last_checkpoint = current_checkpoint,
+      percent_at_checkpoint = текущий percent задачи,
+      assignee_id_at_checkpoint = текущий assignee_id, updated_at = now())
+    // нарушения НЕТ: у исполнителя не было шанса обновить метку с прошлого
+    // чекпоинта, потому что прошлого не было
+    continue
+
+  // Смена ответственного — новый исполнитель не должен получать штраф за историю
+  если cp.assignee_id_at_checkpoint != null И cp.assignee_id_at_checkpoint != task.assignee_id:
+    UPSERT ws_task_budget_checkpoints (last_checkpoint = current_checkpoint,
+      percent_at_checkpoint = текущий percent задачи,
+      assignee_id_at_checkpoint = текущий assignee_id, updated_at = now())
+    continue
+
+  // Бюджет упал ниже прошлого чекпоинта (переоткрытие с увеличением max_time)
+  если current_checkpoint < cp.last_checkpoint:
+    UPSERT ws_task_budget_checkpoints (last_checkpoint = current_checkpoint,
+      percent_at_checkpoint = текущий percent задачи,
+      assignee_id_at_checkpoint = текущий assignee_id, updated_at = now())
+    continue
 
   если current_checkpoint > cp.last_checkpoint:
     // Пересечена новая контрольная точка — проверяем, менялась ли метка
@@ -593,12 +620,15 @@ L3/L2 с `date_closed IS NULL`, но есть в `budget_pending`:
 
     если НЕ label_changed:
       событие task_dynamics_violation для ответственного
-      событие streak_reset_dynamics для ответственного
+      // Section_red для L2-лида — только если ассайни L3 не в отпуске/на больничном
+      если assignee НЕ в absentUserIds:
+        добавить задачу в sectionViolators[parent_l2_id]
 
     // В любом случае двигаем чекпоинт вперёд
     UPDATE ws_task_budget_checkpoints SET
       last_checkpoint = current_checkpoint,
       percent_at_checkpoint = текущий percent задачи,
+      assignee_id_at_checkpoint = текущий assignee_id,
       updated_at = now()
 ```
 
@@ -608,6 +638,8 @@ L3/L2 с `date_closed IS NULL`, но есть в `budget_pending`:
 - Бюджет достиг 22% → пересечён чекпоинт 20. Проверяем: менялась ли метка в промежутке 0→20? Если нет → нарушение
 - Бюджет скакнул с 20% до 66% за раз → current_checkpoint = 60. Проверяем: менялась ли метка в промежутке 20→60? Если нет → нарушение (одно, не два)
 - Бюджет с 60% до 85% → пересечён чекпоинт 80. Проверяем промежуток 60→80
+- Бюджет 118% → пересечён чекпоинт 100 (если ещё не был). На 125% — пересечён 120. И так далее, пока задача открыта
+- Задачу переоткрыли, max_time увеличили с 10 до 30 (actual_hours = 12 → budget_percent упал со 120% до 40%) → `current_checkpoint = 40 < last_checkpoint = 120` → тихий откат чекпоинта к 40, без нарушения. На 65% пересечётся новый чекпоинт 60 — проверка как обычно
 
 ### Правило 3: Дисциплина разделов (L2)
 

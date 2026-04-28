@@ -2,7 +2,9 @@ import { createSupabaseAdminClient } from '@/config/supabase'
 
 import type { DevUser } from './types'
 
-const IS_DEV = process.env.NODE_ENV === 'development'
+const DEV_TOOLS_ENABLED =
+  process.env.NODE_ENV === 'development' ||
+  process.env.ENABLE_DEV_TOOLS === 'true'
 
 /**
  * Поиск пользователей в ws_users для dev-переключателя.
@@ -12,7 +14,7 @@ export async function searchDevUsers(
   search: string,
   limit = 30
 ): Promise<DevUser[]> {
-  if (!IS_DEV) return []
+  if (!DEV_TOOLS_ENABLED) return []
 
   const supabase = createSupabaseAdminClient()
 
@@ -53,7 +55,7 @@ export async function searchDevUsers(
 export async function getDevUserByEmail(
   email: string
 ): Promise<DevUser | null> {
-  if (!IS_DEV) return null
+  if (!DEV_TOOLS_ENABLED) return null
 
   const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase

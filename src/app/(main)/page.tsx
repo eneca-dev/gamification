@@ -33,6 +33,7 @@ import { getUserOrders } from "@/modules/shop";
 import { getPendingResets } from "@/modules/streak-shield";
 import { getMasterPlannerPanel } from "@/modules/master-planner";
 import { MasterPlannerPanel } from "@/modules/master-planner/components/MasterPlannerPanel";
+import { getContestWinners } from "@/modules/contests";
 import { GratitudeWidget } from "@/modules/gratitudes/components/GratitudeWidget";
 import type { CalendarDay, CalendarDayStatus, RedReason, StreakPanelData } from "@/modules/streak-panel";
 
@@ -161,6 +162,7 @@ export default async function DashboardPage() {
     senderQuota, gratitudeRecipients, userBalance, myGratitudesNew, userOrders,
     dayStatuses, automationDates, holidays, workdays, pendingResets,
     masterPlannerData,
+    contestWinners,
   ] = await Promise.all([
       wsUserId ? getWsStreakData(wsUserId) : Promise.resolve({
         currentStreak: 0, longestStreak: 0, streakStartDate: null, completedCycles: 0,
@@ -202,6 +204,7 @@ export default async function DashboardPage() {
       getWorkdays(rangeStart, rangeEnd),
       wsUserId ? getPendingResets(wsUserId) : Promise.resolve([]),
       wsUserId ? getMasterPlannerPanel(wsUserId) : Promise.resolve(null),
+      getContestWinners(1),
     ]);
 
   // Собираем Map статусов для быстрого доступа
@@ -220,15 +223,24 @@ export default async function DashboardPage() {
   };
 
   // Транзакции из view_user_transactions (все источники)
-  const allTransactions: Transaction[] = recentTransactions.map((tx, i) => ({
-    id: i + 1,
-    source: tx.source as Transaction["source"],
-    category: "daily_green" as Transaction["category"],
-    description: tx.description,
-    amount: tx.coins,
-    date: new Date(tx.event_date + "T00:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
-    icon: getEventIcon(tx.event_type),
-  }));
+  const allTransactions: Transaction[] = recentTransactions.map((tx, i) => {
+    const details = tx.details as Record<string, unknown> | null
+    const plugins = tx.event_type === 'revit_using_plugins'
+      ? (details?.plugins as Array<{ plugin_name: string; launch_count: number }> | undefined)
+      : undefined
+    return {
+      id: i + 1,
+      source: tx.source as Transaction["source"],
+      category: "daily_green" as Transaction["category"],
+      description: tx.description,
+      amount: tx.coins,
+      date: new Date(tx.event_date + "T00:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
+      icon: getEventIcon(tx.event_type),
+      plugins,
+      subItems: tx.subItems,
+      inlineLink: tx.inlineLink,
+    }
+  });
 
   // Конвертируем RankingEntry[] в формат для Leaderboard
   const toLeaderboardEntries = (entries: typeof wsPersonalRanking) =>
@@ -260,6 +272,16 @@ export default async function DashboardPage() {
     }))
 
   const currentDept = wsDeptCode;
+
+  // Победители прошлого месяца
+  const lastMonthDate = new Date();
+  lastMonthDate.setDate(1);
+  lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
+  const lastMonthKey = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+  const lastMonthLabelStr = lastMonthDate.toLocaleString('ru-RU', { month: 'long' });
+
+  const findWinner = (type: string) =>
+    contestWinners.find((w) => w.contestType === type && w.contestMonth === lastMonthKey)?.winner ?? null;
 
   return (
     <div className="space-y-6">
@@ -319,6 +341,9 @@ export default async function DashboardPage() {
           currentEntityName={wsDeptCode}
           wsTooltip="Формула: сумма 💎 отдела за Worksection / количество людей в отделе. Сброс каждый месяц."
           autoTooltip="Формула: сумма 💎 по Revit в отделе × (кол-во людей, использующих плагины / общее кол-во людей в отделе). Сброс каждый месяц."
+          lastMonthWsWinner={findWinner('ws_dept')}
+          lastMonthRevitWinner={findWinner('revit_dept')}
+          lastMonthLabel={lastMonthLabelStr}
         />
       </div>
 
@@ -332,6 +357,9 @@ export default async function DashboardPage() {
           currentEntityName={wsTeam}
           wsTooltip="Формула: сумма 💎 команды за Worksection / количество людей в команде. Сброс каждый месяц."
           autoTooltip="Формула: сумма 💎 по Revit в команде × (кол-во людей, использующих плагины / общее кол-во людей в команде). Сброс каждый месяц."
+          lastMonthWsWinner={findWinner('ws_team')}
+          lastMonthRevitWinner={findWinner('revit_team')}
+          lastMonthLabel={lastMonthLabelStr}
         />
       </div>
     </div>

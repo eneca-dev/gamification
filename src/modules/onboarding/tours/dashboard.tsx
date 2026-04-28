@@ -25,11 +25,14 @@ export const dashboardTour: OnboardingTour = {
       title: 'Календарь активности',
       description: (
         <span className="flex flex-col gap-2">
-          <span className="flex flex-col gap-1">
+          <span className="font-semibold" style={{ color: 'var(--apex-text)' }}>
+            🔥 Стрик — это серия подряд идущих зелёных дней или звёздочек за использование плагинов.
+          </span>
+          <span className="flex flex-col gap-1" style={{ paddingTop: '2px', borderTop: '1px solid var(--apex-border)' }}>
             <span className="font-semibold" style={{ color: 'var(--apex-primary)' }}>🟢 Зелёный день — все условия WS выполнены:</span>
             <span className="flex flex-col gap-0.5 pl-2" style={{ color: 'var(--text-secondary)' }}>
               <span>✓ Внесён дневной отчёт</span>
-              <span>✓ % готовности обновлён до пересечения 20/40/60/80/100% бюджета</span>
+              <span>✓ % готовности обновлён на каждом 20%-чекпоинте бюджета (20/40/60/80/100/120/…)</span>
               <span>✓ Время в задачах со статусом «В работе»</span>
             </span>
           </span>
@@ -66,6 +69,9 @@ export const dashboardTour: OnboardingTour = {
             <span className="pl-2" style={{ color: 'var(--text-secondary)' }}>Каждый день, когда вы запустили хотя бы один из плагинов, продлевает стрик:</span>
             <span className="pl-2 text-[11px]" style={{ color: 'var(--text-secondary)' }}>
               Auditor, ClashesManager, LinksManager, ShareModel, SDT, ParamOperator, ApartmentLayouts, FasciaCappings, SpacesManager, ResaveModels, AutoOpenings, Finishing, SharedCoordinates, ProfiLay, LookupTables, ViewCloner, LintelsTransfer, SurfaceGen, QuickMount, SchedulesTable.
+            </span>
+            <span className="pl-2 text-[11px] font-semibold" style={{ color: 'var(--apex-warning-text)' }}>
+              ⚠️ Старые версии плагинов могут не передавать данные — обновите плагины перед использованием.
             </span>
           </span>
 

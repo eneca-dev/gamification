@@ -56,6 +56,39 @@ async function _getUserTransactions(
     }
   }
 
+  // Подтягиваем родительские ID для deadline событий (для построения полного URL)
+  const deadlineTaskIds = rows
+    .filter((r) => r.event_type === 'deadline_ok_l3' || r.event_type === 'deadline_revoked_l3')
+    .map((r) => (r.details as Record<string, unknown>)?.ws_task_id as string)
+    .filter(Boolean)
+
+  let deadlineUrlMap = new Map<string, string>()
+  if (deadlineTaskIds.length > 0) {
+    const { data: l3Rows } = await supabase
+      .from('ws_tasks_l3')
+      .select('ws_task_id, ws_project_id, parent_l2_id')
+      .in('ws_task_id', [...new Set(deadlineTaskIds)])
+
+    const l2Ids = [...new Set((l3Rows ?? []).map((r) => r.parent_l2_id).filter(Boolean))]
+    if (l2Ids.length > 0) {
+      const { data: l2Rows } = await supabase
+        .from('ws_tasks_l2')
+        .select('ws_task_id, parent_l1_id')
+        .in('ws_task_id', l2Ids)
+
+      const l2Map = new Map((l2Rows ?? []).map((r) => [r.ws_task_id, r.parent_l1_id]))
+      for (const l3 of l3Rows ?? []) {
+        const l1Id = l2Map.get(l3.parent_l2_id)
+        if (l3.ws_project_id && l1Id) {
+          deadlineUrlMap.set(
+            l3.ws_task_id,
+            `https://eneca.worksection.com/project/${l3.ws_project_id}/${l1Id}/${l3.ws_task_id}/`,
+          )
+        }
+      }
+    }
+  }
+
   // Подтягиваем emoji/image для покупок
   const purchaseProductIds = rows
     .filter((r) => r.event_type === 'shop_purchase' || r.event_type === 'shop_refund')
@@ -81,7 +114,9 @@ async function _getUserTransactions(
 
     const productId = details?.product_id as string | undefined
     const product = productId ? productMap.get(productId) : undefined
-    const enriched = enrichTransaction(eventType, row.description as string, details, redReasons, product?.name)
+    const deadlineTaskId = details?.ws_task_id as string | undefined
+    const taskUrl = deadlineTaskId ? deadlineUrlMap.get(deadlineTaskId) : undefined
+    const enriched = enrichTransaction(eventType, row.description as string, details, redReasons, product?.name, taskUrl)
 
     return {
       id: `${row.created_at}-${i}`,
@@ -93,6 +128,7 @@ async function _getUserTransactions(
       details,
       created_at: row.created_at as string,
       subItems: enriched.subItems,
+      inlineLink: enriched.inlineLink,
       productEmoji: product?.emoji ?? undefined,
       productImageUrl: product?.image_url ?? undefined,
     }
@@ -146,6 +182,7 @@ const RED_REASON_LABELS: Record<string, string> = {
 interface EnrichedResult {
   description: string
   subItems?: TransactionSubItem[]
+  inlineLink?: TransactionSubItem
 }
 
 function enrichTransaction(
@@ -154,6 +191,7 @@ function enrichTransaction(
   details: Record<string, unknown> | null,
   redReasons?: RedReason[],
   productName?: string,
+  taskUrl?: string,
 ): EnrichedResult {
   switch (eventType) {
     case 'shop_purchase': {
@@ -260,6 +298,11 @@ function enrichTransaction(
       return { description: name ? `Отзыв 💎: ${name}` : defaultDesc }
     }
     case 'revit_using_plugins': {
+      const plugins = details?.plugins as Array<{ plugin_name: string; launch_count: number }> | undefined
+      if (plugins && plugins.length > 1) {
+        const total = plugins.reduce((sum, p) => sum + p.launch_count, 0)
+        return { description: `Revit-плагины: ${total} запусков` }
+      }
       const name = details?.plugin_name as string | undefined
       const count = details?.launch_count as number | undefined
       return { description: name ? `${name}: ${count ?? 1} запусков` : defaultDesc }
@@ -267,6 +310,20 @@ function enrichTransaction(
     case 'gratitude_recipient_points': {
       const sender = details?.sender_name as string | undefined
       return { description: sender ? `Благодарность от ${sender}` : defaultDesc }
+    }
+    case 'deadline_ok_l3': {
+      const name = details?.ws_task_name as string | undefined
+      return {
+        description: 'Закрыта до плановой даты:',
+        inlineLink: name ? { text: name, url: taskUrl } : undefined,
+      }
+    }
+    case 'deadline_revoked_l3': {
+      const name = details?.ws_task_name as string | undefined
+      return {
+        description: 'Отзыв бонуса (срок):',
+        inlineLink: name ? { text: name, url: taskUrl } : undefined,
+      }
     }
     default:
       return { description: defaultDesc }

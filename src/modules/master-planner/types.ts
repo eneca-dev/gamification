@@ -11,6 +11,7 @@ export interface MasterPlannerStreakData {
 export interface MasterPlannerEvent {
   eventId: string
   type: string
+  category: 'budget' | 'deadline'
   level: 'L3' | 'L2'
   date: string
   taskName: string | null
@@ -22,15 +23,23 @@ export interface MasterPlannerEvent {
   milestone: number | null
   milestoneTasks: { id: string; name: string }[] | null
   revokedTasks: { id: string; name: string }[] | null
+  // Deadline-специфичные поля (null для budget событий)
+  plannedEnd: string | null
+  dateClosed: string | null
 }
 
-// ─── Pending-задача ─────────────────────────────────────────────────────────
+// ─── Pending-задача (бюджет или срок) ──────────────────────────────────────
 
 export interface PendingBudgetTask {
+  category: 'budget' | 'deadline'
   level: 'L3' | 'L2'
   taskName: string
   taskUrl: string | null
   daysRemaining: number
+  // Deadline-специфичные поля (null для budget задач)
+  plannedEnd: string | null
+  closedAt: string | null
+  closedOnTime: boolean | null
 }
 
 // ─── Данные для панели на дашборде ──────────────────────────────────────────

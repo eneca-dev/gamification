@@ -139,8 +139,11 @@ View `view_daily_statuses` агрегирует эту логику.
 
 **Task dynamics violation** (`task_dynamics_violation`):
 
-- Бюджет задачи расходуется (actual_hours прошёл чекпоинт 20/40/60/80/100%), но процент задачи не изменился
+- Бюджет задачи расходуется (actual_hours прошёл чекпоинт 20/40/60/80/100/120/140/…, без верхней границы), но процент задачи не изменился
 - Проверяется через `ws_task_budget_checkpoints` и `ws_task_percent_snapshots`
+- Пропуск (проверка не запускается): `actual_hours === 0`
+- Тихий upsert чекпоинта без нарушения: первое появление задачи в отслеживании; смена ассайни; падение `budget_percent` ниже прошлого чекпоинта (переоткрытие с увеличением `max_time`)
+- Если ассайни L3 был в отпуске/на больничном — нарушение фиксируется, но L2-раздел **не** попадает в `section_red`
 
 **Section discipline** (`section_red`):
 
@@ -149,9 +152,20 @@ View `view_daily_statuses` агрегирует эту логику.
 
 ### Стрик WS
 
-Обновляется в `ws_user_streaks` скриптом `compute-gamification`, step 3.
+Источник истины для числа стрика — view `ws_user_streaks_effective` (read-time расчёт). Таблица `ws_user_streaks` хранит снапшот на момент vps-прогона: `streak_start_date`, `longest_streak`, `completed_cycles`, pending-поля и `current_streak` (используется vps для milestone-сравнения «было/стало»).
 
-**Подсчёт:** `current_streak = календарные дни от streak_start_date до вчера − дни отсутствий в этом диапазоне`. Выходные и праздники увеличивают стрик (календарные дни тикают). Отсутствия (отпуск, больничный, сик-дей) замораживают стрик — не увеличивают и не сбрасывают.
+**Модель дельт по дням (view):**
+- `ws_daily_statuses.status = 'green'` → `+1`
+- `ws_daily_statuses.status = 'absent'` (отпуск/больничный/sick_day) → `0` (заморозка)
+- нет записи в `ws_daily_statuses` (выходной/праздник) → `+1`
+- `ws_daily_statuses.status = 'red'` → `0` (защитный fallback; в норме не встречается в окне walk)
+
+Walk идёт от `streak_start_date` (или `pending_reset_date + 1`, если pending истёк, но vps ещё не финализировал) до `fn_minsk_today() - 1`. Во время активного грейса (`pending_reset_expires_at > now()`) view возвращает замороженное `current_streak` из таблицы — UI показывает прежнее значение.
+
+**VPS-обновление в `compute-gamification` (step 3):**
+- Phase 1 finalize: при истёкшем грейсе записывает `streak_start_date = pending_reset_date + 1` и обнуляет `current_streak` (раньше ставил `streak_start_date = null`).
+- Phase 2 green: читает актуальный `current_streak` из view, сохраняет как снапшот в таблицу.
+- Milestone-detection: пересечение порога `prev < T <= next` для T ∈ {7, 30, 90}.
 
 **Бонусы за milestones:**
 
@@ -191,23 +205,83 @@ View `view_daily_statuses` агрегирует эту логику.
 
 ---
 
-## 5. Командное соревнование по Revit
+## 5. Ежемесячные конкурсы отделов и команд
 
-**Механизм:** PG-функция `fn_award_department_contest()`, запускается pg_cron 1 числа каждого месяца в 02:00 UTC.
+Четыре независимых конкурса. Победитель определяется 1-го числа каждого месяца в 22:00–22:03 UTC за предыдущий календарный месяц. Каждый активный сотрудник победившей сущности получает **+200 💎**.
 
-**Метрика:** сумма ревит-💎 (`source = 'revit'`) по отделу за прошлый календарный месяц. Отдел с максимальной суммой = победитель.
+Все функции защищены от пустого месяца: если `contest_score = 0` — никто не получает бонус.
 
-**Получатель:** каждый активный сотрудник отдела-победителя.
-**💎:** `team_contest_top1_bonus` → **+200**
+---
+
+### 5a. Revit — отдел
+
+**Функция:** `fn_award_department_contest()` · cron `0 22 1 * *`
+
+**Метрика:** `total_revit_coins × (users_earning / total_employees)` — учитывает вовлечённость отдела
 
 ```
 event_type:      team_contest_top1_bonus
 source:          contest
-details:         { department, contest_month, department_coins }
+details:         { department, contest_month, contest_score }
 idempotency_key: dept_top1_revit_{user_id}_{YYYY-MM}
 ```
 
-**VIEW для UI:** `view_department_revit_contest` — сумма ревит-💎 по отделам за текущий месяц. Используется в `getDepartmentAutomationStats()` для отображения рейтинга на дашборде.
+**VIEW для UI:** `view_department_revit_contest` — текущий месяц, используется в `getDepartmentAutomationStats()`
+
+---
+
+### 5b. Revit — команда
+
+**Функция:** `fn_award_revit_team_contest()` · cron `1 22 1 * *`
+
+**Метрика:** `total_revit_coins × (users_earning / total_employees)` по команде
+
+Исключены: `NULL`, `''`, `Вне команд*`, `Декретный`
+
+```
+event_type:      revit_team_contest_top1_bonus
+source:          contest
+details:         { team, contest_month, contest_score }
+idempotency_key: team_top1_revit_{user_id}_{YYYY-MM}
+```
+
+---
+
+### 5c. Worksection — отдел
+
+**Функция:** `fn_award_ws_dept_contest()` · cron `2 22 1 * *`
+
+**Метрика:** `total_ws_coins / total_employees` — среднее количество WS-монет на сотрудника
+
+```
+event_type:      ws_dept_contest_top1_bonus
+source:          contest
+details:         { department, contest_month, contest_score }
+idempotency_key: dept_top1_ws_{user_id}_{YYYY-MM}
+```
+
+---
+
+### 5d. Worksection — команда
+
+**Функция:** `fn_award_ws_team_contest()` · cron `3 22 1 * *`
+
+**Метрика:** `total_ws_coins / total_employees` по команде
+
+Исключены: `NULL`, `''`, `Вне команд*`, `Декретный`
+
+```
+event_type:      ws_team_contest_top1_bonus
+source:          contest
+details:         { team, contest_month, contest_score }
+idempotency_key: team_top1_ws_{user_id}_{YYYY-MM}
+```
+
+---
+
+### VIEW для истории
+
+`view_contest_monthly_winners` — один победитель на (event_type × contest_month). Читается в `getContestWinners()` (`src/modules/contests/`) для отображения в UI и в блоке `/admin/achievements`.
 
 ---
 
@@ -377,7 +451,7 @@ idempotency_key: deadline_ok_l3_{ws_task_id}_{user_id}
 - `gamification_event_logs` + `gamification_transactions` — append-only, строки не удаляются
 - Если email не найден в `ws_users` — событие молча пропускается
 - `at_gratitudes` с `deleted_in_airtable = true` — начисленные 💎 не отзываются автоматически
-- Отрицательный баланс допустим (штрафы, clawback). Запрет только при покупке (будущий этап)
+- Баланс не уходит ниже 0: `process_gamification_event` clamp'ит штрафы/clawback до доступного, фактическая сумма пишется в `gamification_transactions` (см. `gamification-db.md`)
 - Информационные события (red_day, violations, resets) имеют coins=0 в `gamification_event_types` — записываются в `gamification_event_logs`, но не создают транзакций в `gamification_transactions`
 - `green_day` начисляет +3 💎 (обновлено миграцией 011)
 - Триггеры срабатывают на UPDATE тоже — idempotency_key защищает от повторных начислений при повторных синках

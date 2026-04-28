@@ -38,7 +38,10 @@
 | --------------------------------------- | ------------------------------- | ---------------------------------------------------------------- |
 | `0 1 * * *` (01:00 UTC ежедневно)       | `sync-plugin-launches`          | Синк запусков Revit-плагинов из Elasticsearch                    |
 | `0 */4 * * *` (каждые 4 часа)           | `sync-gratitudes`               | Синк благодарностей из Airtable                                  |
-| `0 2 1 * *` (1 число месяца, 02:00 UTC) | `fn_award_department_contest()` | Начисление бонуса отделу-победителю по ревит-💎 за прошлый месяц |
+| `0 22 1 * *` (1 число месяца, 22:00 UTC) | `fn_award_department_contest()`   | Начисление бонуса отделу-победителю по ревит-💎 за прошлый месяц  |
+| `1 22 1 * *` (1 число месяца, 22:01 UTC) | `fn_award_revit_team_contest()`   | Начисление бонуса команде-победителю по ревит-💎 за прошлый месяц |
+| `2 22 1 * *` (1 число месяца, 22:02 UTC) | `fn_award_ws_dept_contest()`      | Начисление бонуса отделу-победителю по WS-💎 за прошлый месяц     |
+| `3 22 1 * *` (1 число месяца, 22:03 UTC) | `fn_award_ws_team_contest()`      | Начисление бонуса команде-победителю по WS-💎 за прошлый месяц    |
 
 WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-costs`, `snapshot-task-percent`, `sync-ws-absences`, `sync-task-events`, `compute-gamification`) запускаются **VPS-оркестратором**, не через pg_cron.
 
@@ -52,10 +55,13 @@ WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-co
 | `my_ws_user_id()`                       | UUID из `ws_users` по email из JWT                                                                                                                                                            |
 | `get_user_id_by_email(email)`           | UUID из `auth.users` по email                                                                                                                                                                 |
 | `increment_balance(p_user_id, p_coins)` | Атомарный UPSERT баланса в `gamification_balances`. Устаревшая — заменена `process_gamification_event`. Триггеры делают inline UPSERT                                                         |
-| `process_gamification_event(...)`       | Атомарная функция для VPS-скрипта: INSERT event + INSERT transaction + UPSERT balance в одной транзакции. Дубли по idempotency_key пропускаются. SECURITY DEFINER, доступ только service_role |
+| `process_gamification_event(...)`       | Атомарная функция для VPS-скрипта: INSERT event + INSERT transaction + UPSERT balance в одной транзакции. Дубли по idempotency_key пропускаются. При отрицательном `p_coins` списание ограничено текущим балансом (clamp к 0) — в транзакцию пишется фактическая сумма, остаток долга теряется. SECURITY DEFINER, доступ только service_role |
 | `link_ws_user_on_profile_insert()`      | Триггер: при создании `profiles` связывает с `ws_users.user_id`                                                                                                                               |
 | `custom_access_token_hook(event)`       | Auth Hook: добавляет `is_admin` и `ws_user_id` из `ws_users` в JWT claims при каждом выпуске/рефреше токена                                                                                   |
-| `fn_award_department_contest()`         | Ежемесячное начисление бонуса отделу-победителю по ревит-💎                                                                                                                                   |
+| `fn_award_department_contest()`         | Ежемесячное начисление бонуса отделу-победителю по ревит-💎. Метрика: `total_coins × (users_earning / total_employees)`       |
+| `fn_award_revit_team_contest()`         | То же для команды по ревит-💎. Та же формула с вовлечённостью                                                                 |
+| `fn_award_ws_dept_contest()`            | Ежемесячное начисление бонуса отделу-победителю по WS-💎. Метрика: `total_coins / total_employees`                           |
+| `fn_award_ws_team_contest()`            | То же для команды по WS-💎. Та же формула среднего                                                                            |
 
 ---
 
@@ -228,32 +234,46 @@ OAuth-токены Worksection для пользователей.
 
 #### `ws_task_budget_checkpoints` (0 строк)
 
-Чекпоинты бюджета задач L3 (20%/40%/60%/80%/100%).
+Чекпоинты бюджета задач L3 (кратные 20%, без верхней границы: 20/40/60/80/100/120/140/…).
 
-| Колонка                 | Тип                       | Описание                                          |
-| ----------------------- | ------------------------- | ------------------------------------------------- |
-| `id`                    | uuid PK                   |                                                   |
-| `ws_task_id`            | text UNIQUE → ws_tasks_l3 |                                                   |
-| `last_checkpoint`       | smallint DEFAULT 0        | Последний пройденный чекпоинт (0/20/40/60/80/100) |
-| `percent_at_checkpoint` | smallint NULL             | Процент задачи на момент чекпоинта                |
-| `updated_at`            | timestamptz               |                                                   |
+| Колонка                     | Тип                       | Описание                                                                                   |
+| --------------------------- | ------------------------- | ------------------------------------------------------------------------------------------ |
+| `id`                        | uuid PK                   |                                                                                            |
+| `ws_task_id`                | text UNIQUE → ws_tasks_l3 |                                                                                            |
+| `last_checkpoint`           | smallint DEFAULT 0        | Последний пройденный чекпоинт (кратный 20, без верхней каппы — фиксирует и перерасход)     |
+| `percent_at_checkpoint`     | smallint NULL             | Процент задачи на момент чекпоинта                                                         |
+| `assignee_id_at_checkpoint` | uuid NULL                 | Ассайни на момент чекпоинта. Используется для детекта смены исполнителя и тихого сброса    |
+| `updated_at`                | timestamptz               |                                                                                            |
 
 **Частота обновления:** по мере прохождения чекпоинтов в `compute-gamification`. Пока пустая.
+
+**Поведение (тихие upsert'ы без нарушения):**
+- Первое появление задачи в отслеживании — строка создаётся с текущим `assignee_id`.
+- Смена ассайни (`assignee_id_at_checkpoint` != текущий `ws_tasks_l3.assignee_id`) — чекпоинт пересобирается на нового исполнителя.
+- Падение `budget_percent` ниже `last_checkpoint` (переоткрытие с увеличением `max_time`) — чекпоинт откатывается к текущему уровню.
 
 #### `ws_user_absences` (32 строки)
 
 Дни отсутствия сотрудников.
 
-| Колонка        | Тип                  | Описание                               |
-| -------------- | -------------------- | -------------------------------------- |
-| `id`           | uuid PK              |                                        |
-| `user_id`      | uuid NULL → ws_users |                                        |
-| `user_email`   | text                 |                                        |
-| `absence_type` | text CHECK           | `vacation` / `sick_leave` / `sick_day` |
-| `absence_date` | date                 |                                        |
-| `synced_at`    | timestamptz          |                                        |
+| Колонка        | Тип                  | Описание                                                                        |
+| -------------- | -------------------- | ------------------------------------------------------------------------------- |
+| `id`           | uuid PK              |                                                                                 |
+| `user_id`      | uuid NULL → ws_users |                                                                                 |
+| `user_email`   | text                 |                                                                                 |
+| `absence_type` | text CHECK           | `vacation` / `sick_leave` / `sick_day`                                          |
+| `absence_date` | date                 |                                                                                 |
+| `synced_at`    | timestamptz          |                                                                                 |
+| `ws_task_id`   | text NULL            | ID подзадачи WS под `4905680` (только для `sick_day`); для расписания — NULL    |
 
-**Частота обновления:** ежедневно. Скрипт `sync-ws-absences` синкает из двух источников: расписание отпусков/больничных (WS API `get_users_schedule`) и задача "Сикдеи" (task ID 4905680). Upsert по (user_email, absence_date). Используется для заморозки стриков и пропуска нарушений.
+UNIQUE `(user_email, absence_date, absence_type)`. Частичный индекс `idx_ws_user_absences_ws_task_id` на `ws_task_id WHERE NOT NULL` — используется для быстрого DELETE при изменении/удалении подзадачи сикдея.
+
+**Частота обновления:** ежедневно в 00:00 Минска. Скрипт `sync-ws-absences` живёт в VPS-репозитории `gamification-vps-scripts/src/scripts/sync-ws-absences.ts` и запускается там Docker cron'ом как часть пайплайна orchestrator'а (Edge Function для этого синка не используется — была удалена как мёртвый код). Синкает из двух независимых источников:
+
+- **`vacation` / `sick_leave`** — расписание отпусков/больничных, WS API `get_users_schedule` за `targetDate` (вчера). Upsert с `ignoreDuplicates`.
+- **`sick_day`** — события за последние **8 дней** в HR-проекте (WS API `get_events&period=8d&id_project=130340`), фильтр по `object.page` содержит `/4905680/`. На каждый уникальный `task_id` берётся последнее событие. Для `post`/`update` — догрузка `get_task` ради актуальных `user_to`/`date_start`/`date_end` и запись всего диапазона дат подзадачи. Для `delete` — удаление по `ws_task_id`. Перед вставкой все строки текущих затронутых задач предварительно удаляются по `ws_task_id`, чтобы корректно обработать сужение/смещение диапазона. Окно 8d покрывает согласованную с HR границу «не раньше 7 дней до сикдея, не позже даты сикдея» с суточным буфером.
+
+Используется для заморозки стриков и пропуска нарушений.
 
 #### `ws_task_status_changes`
 
@@ -406,17 +426,18 @@ UNIQUE(user_email, ws_task_id, cost_date).
 
 **Информационные (0 💎, фиксируют факт события):**
 
-| key                         | description                                    |
-| --------------------------- | ---------------------------------------------- |
-| `red_day`                   | Красный день (есть нарушения)                  |
-| `task_dynamics_violation`   | Нарушение динамики: метка % не обновлена       |
-| `section_red`               | Дисциплина раздела: нарушение у исполнителя L3 |
-| `budget_exceeded_l3`        | Бюджет L3 превышен при проверке                |
-| `budget_exceeded_l2`        | Бюджет L2 превышен при проверке                |
-| `streak_reset_timetracking` | Стрик сброшен: не внёс время                   |
-| `streak_reset_dynamics`     | Стрик сброшен: нарушение динамики задачи       |
-| `streak_reset_section`      | Стрик сброшен: нарушение в разделе             |
-| `master_planner_reset`      | Серия мастера планирования сброшена            |
+| key                         | description                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------- |
+| `red_day`                   | Красный день (есть нарушения)                                                               |
+| `task_dynamics_violation`   | Нарушение динамики: метка % не обновлена                                                    |
+| `section_red`               | Дисциплина раздела: нарушение у исполнителя L3                                              |
+| `budget_exceeded_l3`        | Бюджет L3 превышен при проверке                                                             |
+| `budget_exceeded_l2`        | Бюджет L2 превышен при проверке                                                             |
+| `streak_reset_timetracking` | Стрик сброшен: не внёс время                                                                |
+| `streak_reset_dynamics`     | Стрик сброшен: нарушение динамики задачи                                                    |
+| `streak_reset_section`      | Стрик сброшен: нарушение в разделе                                                          |
+| `master_planner_reset`      | Серия мастера планирования сброшена                                                         |
+| `balance_correction`        | Разовая техническая коррекция баланса (миграция 028, clamp отрицательных к 0). `is_active = false` |
 
 **Частота обновления:** вручную администратором. Таблица-справочник.
 
@@ -473,13 +494,17 @@ UNIQUE(user_email, ws_task_id, cost_date).
 
 **Частота обновления:** атомарно при каждом начислении через inline UPSERT в триггерах. Upsert — создаётся при первом начислении, далее инкрементируется.
 
+Баланс не уходит ниже 0. `process_gamification_event` при отрицательном `p_coins` ограничивает списание доступным балансом и пишет в `gamification_transactions` фактическую сумму — инвариант `SUM(transactions) = balance` сохраняется. Остаток «долга» теряется (см. event_type `balance_correction` для исторических данных).
+
 Если баланс рассинхронизировался — пересчитать:
 
 ```sql
 UPDATE gamification_balances b
-SET total_coins = (SELECT COALESCE(SUM(coins), 0) FROM gamification_transactions t WHERE t.user_id = b.user_id),
+SET total_coins = COALESCE((SELECT SUM(coins) FROM gamification_transactions t WHERE t.user_id = b.user_id), 0),
     updated_at = now();
 ```
+
+После запуска `process_gamification_event` clamp'ит штрафы по факту, поэтому `SUM(transactions)` уже не может быть отрицательной для новых транзакций.
 
 #### `revit_user_streaks` (267 строк)
 
@@ -505,13 +530,15 @@ SET total_coins = (SELECT COALESCE(SUM(coins), 0) FROM gamification_transactions
 | Колонка             | Тип                | Описание                                                       |
 | ------------------- | ------------------ | -------------------------------------------------------------- |
 | `user_id`           | uuid PK → ws_users |                                                                |
-| `current_streak`    | integer DEFAULT 0  | Календарных дней от streak_start_date                          |
+| `current_streak`    | integer DEFAULT 0  | Снапшот стрика на момент vps-прогона (используется для milestone-сравнения «было/стало»). Источник истины для UI — view `ws_user_streaks_effective` |
 | `longest_streak`    | integer DEFAULT 0  |                                                                |
-| `streak_start_date` | date NULL          | Дата первого зелёного дня текущего стрика. NULL при стрике = 0 |
+| `streak_start_date` | date NULL          | Якорь walk'а: первый день текущего стрика. После Phase 1 finalize устанавливается на `pending_reset_date + 1` (день после red), чтобы выходные между red и следующим зелёным учитывались по +1 |
 | `completed_cycles`  | integer DEFAULT 0  | Счётчик завершённых 90-дневных стриков                         |
+| `pending_reset_date` | date NULL         | Дата red, поставившего стрик в pending (24ч grace)             |
+| `pending_reset_expires_at` | timestamptz NULL | Истечение грейса. Пока активен — view возвращает замороженное `current_streak` |
 | `updated_at`        | timestamptz        |                                                                |
 
-**Частота обновления:** обновляется `compute-gamification` (VPS). При зелёном дне — `current_streak = diffCalendarDays(streak_start_date, date) + 1`. При красном — сброс в 0. При отсутствии — заморозка (ничего не меняется).
+**Источник истины для числа стрика:** view `ws_user_streaks_effective` (read-time расчёт). См. `streak-panel.md` и `gamification-events.md` (раздел «Стрик WS»). Таблица обновляется vps-скриптом раз в сутки как снапшот.
 
 #### `budget_pending` (0 строк)
 
@@ -632,7 +659,7 @@ WS-функции удалены — их полностью заменили VP
 | `sync-ws-tasks.ts`         | `ws_tasks_l2`, `ws_tasks_l3`                                                                                                                                                                                         | Парсинг дерева задач L1→L2→L3 из всех проектов                                                                                                                                  |
 | `sync-ws-costs.ts`         | `ws_daily_reports`, `ws_daily_report_tasks`, `ws_task_actual_hours`, `ws_task_actual_hours_l2`                                                                                                                       | Синк таймтрекинга: дневные отчёты + детализация по задачам + фактические часы                                                                                                   |
 | `snapshot-task-percent.ts` | `ws_task_percent_snapshots`                                                                                                                                                                                          | Снапшот текущего % задач L3                                                                                                                                                     |
-| `sync-ws-absences.ts`      | `ws_user_absences`                                                                                                                                                                                                   | Синк отсутствий из расписания + задачи сикдеев                                                                                                                                  |
+| `sync-ws-absences.ts`      | `ws_user_absences`                                                                                                                                                                                                   | Синк отсутствий: vacation/sick_leave из `get_users_schedule` за вчера; sick_day — из `get_events&period=8d&id_project=130340` + `get_task` на каждую затронутую подзадачу под `4905680` |
 | `sync-task-events.ts`      | `ws_task_status_changes`                                                                                                                                                                                             | Синк смен статусов из WS API get_events (period=1d1h). Парсит теги «Система планирования»                                                                                       |
 | `compute-gamification.ts`  | `gamification_event_logs`, `gamification_transactions`, `gamification_balances`, `ws_user_streaks`, `ws_daily_statuses`, `budget_pending`, `deadline_pending`, `ws_task_budget_checkpoints`, `ws_daily_report_tasks` | Основной движок WS-геймификации: нарушения, статусы дней, стрики, бюджеты, дедлайны, транзакции. Пропускает Сб/Вс (кроме `calendar_workdays`) и праздники (`calendar_holidays`) |
 
@@ -657,7 +684,7 @@ Express-сервер на порту 3000, endpoint `GET /health` → "Working 2
 
 - `gamification_transactions` — append-only, строки не удаляются и не обновляются
 - Email в `ws_users` — всегда нижний регистр (CHECK constraint). Source-таблицы хранят email как есть — сравнение в триггерах через `lower()`
-- Отрицательный баланс допустим (штрафы). Запрет только при покупке (будущий этап)
+- Баланс не уходит ниже 0. Штраф через `process_gamification_event` списывается в пределах доступного (clamp) — в `gamification_transactions` пишется фактическая сумма. Покупки и подарки за свой счёт отдельно проверяют баланс и отклоняются при нехватке. Разовая коррекция существующих минусов выполнена миграцией 028 (event_type `balance_correction`)
 - WS-скрипты запускаются VPS-оркестратором, не pg_cron — из-за ограничений Edge Functions на время выполнения
 - `ws_users` — строки не удаляются физически, только деактивация
 - Все source-таблицы работают через upsert — данные обновляются, не стираются
