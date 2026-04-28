@@ -90,7 +90,7 @@ async function _getRevitStreakData(userId: string): Promise<RevitStreakData> {
   const supabase = createSupabaseAdminClient()
 
   const { data: streakRow } = await supabase
-    .from('revit_user_streaks')
+    .from('revit_user_streaks_effective')
     .select('current_streak')
     .eq('user_id', userId)
     .maybeSingle()

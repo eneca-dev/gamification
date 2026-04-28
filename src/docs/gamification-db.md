@@ -10,16 +10,17 @@
 
 Два параллельных потока начислений:
 
-**Поток 1 — PG-триггеры (Revit + благодарности):**
+**Поток 1 — PG-триггеры (только начисление, не стрики):**
 
-1. Edge functions синкают данные в `elk_plugin_launches` и `at_gratitudes`
-2. Триггеры `trg_award_revit_points` / `trg_award_gratitude_points` мгновенно создают записи в `gamification_event_logs` → `gamification_transactions`, обновляют `gamification_balances` через inline UPSERT, обновляют `revit_user_streaks`
+1. VPS `sync-plugin-launches` синкает запуски в `elk_plugin_launches`. Триггер `trg_award_revit_points` мгновенно начисляет 5 💎 за первый плагин дня (UPSERT баланса inline). Стрики триггер не трогает — это делает `compute-revit-gamification`.
+2. `sync-gratitudes` (pg_cron) синкает благодарности в `at_gratitudes`. Триггер `trg_award_gratitude_points` начисляет +20 получателю и +5 отправителю (UPSERT inline).
 
-**Поток 2 — VPS-скрипты (Worksection):**
+**Поток 2 — VPS-оркестратор (Worksection + Revit + ачивки):**
 
-1. Оркестратор запускает 8 скриптов последовательно: sync-ws-users → sync-ws-projects → sync-ws-tasks → sync-ws-costs → snapshot-task-percent → sync-ws-absences → sync-task-events → compute-gamification
-2. `compute-gamification` анализирует данные и создаёт записи в `gamification_event_logs` → `gamification_transactions` → `gamification_balances`
-3. Скрипты находятся в репозитории **eneca-dev/gamification-vps-scripts** (`src/scripts/`)
+1. Оркестратор запускает два независимых блока. **wsSteps**: sync-ws-users → sync-ws-projects → sync-ws-tasks → sync-ws-costs → sync-task-events → snapshot-task-percent → sync-ws-absences → compute-gamification → compute-achievements. **revitSteps**: sync-plugin-launches → compute-revit-gamification.
+2. `compute-gamification` и `compute-revit-gamification` создают записи через RPC `process_gamification_event` (атомарно: лог + транзакция + баланс).
+3. `compute-achievements` дёргает `fn_ach_snapshot_rankings` + `fn_ach_check_gratitude_achievements`.
+4. Скрипты находятся в репозитории **eneca-dev/gamification-vps-scripts** (`src/scripts/`).
 
 ---
 
@@ -34,16 +35,15 @@
 
 ## Cron-расписание (pg_cron)
 
-| Расписание                              | Edge Function                   | Что делает                                                       |
-| --------------------------------------- | ------------------------------- | ---------------------------------------------------------------- |
-| `0 1 * * *` (01:00 UTC ежедневно)       | `sync-plugin-launches`          | Синк запусков Revit-плагинов из Elasticsearch                    |
-| `0 */4 * * *` (каждые 4 часа)           | `sync-gratitudes`               | Синк благодарностей из Airtable                                  |
+| Расписание                              | Edge Function / RPC               | Что делает                                                       |
+| --------------------------------------- | --------------------------------- | ---------------------------------------------------------------- |
+| `0 */4 * * *` (каждые 4 часа)           | `sync-gratitudes`                 | Синк благодарностей из Airtable                                  |
 | `0 22 1 * *` (1 число месяца, 22:00 UTC) | `fn_award_department_contest()`   | Начисление бонуса отделу-победителю по ревит-💎 за прошлый месяц  |
 | `1 22 1 * *` (1 число месяца, 22:01 UTC) | `fn_award_revit_team_contest()`   | Начисление бонуса команде-победителю по ревит-💎 за прошлый месяц |
 | `2 22 1 * *` (1 число месяца, 22:02 UTC) | `fn_award_ws_dept_contest()`      | Начисление бонуса отделу-победителю по WS-💎 за прошлый месяц     |
 | `3 22 1 * *` (1 число месяца, 22:03 UTC) | `fn_award_ws_team_contest()`      | Начисление бонуса команде-победителю по WS-💎 за прошлый месяц    |
 
-WS-синки (`sync-ws-users`, `sync-ws-projects`, `sync-ws-tasks`, `sync-ws-costs`, `snapshot-task-percent`, `sync-ws-absences`, `sync-task-events`, `compute-gamification`) запускаются **VPS-оркестратором**, не через pg_cron.
+Все синки и расчёты (`sync-ws-*`, `compute-gamification`, `compute-achievements`, `sync-plugin-launches`, `compute-revit-gamification`) запускаются **VPS-оркестратором**, не через pg_cron. Расписание `sync-plugin-launches-daily` через pg_cron снято миграцией 042 после переноса на VPS.
 
 ---
 
@@ -365,9 +365,9 @@ UNIQUE(user_email, ws_task_id, cost_date).
 | `launch_count` | integer CHECK > 0 | Количество запусков за день                                  |
 | `synced_at`    | timestamptz       |                                                              |
 
-**Частота обновления:** ежедневно в 01:00 UTC (pg_cron → edge function `sync-plugin-launches`). Одна строка = один пользователь + один плагин + один день. Upsert по (user_email, work_date, plugin_name). Старые данные не стираются.
+**Частота обновления:** ежедневно VPS-скриптом `sync-plugin-launches` (часть `revitSteps` оркестратора). Одна строка = один пользователь + один плагин + один день. Upsert по (user_email, work_date, plugin_name). Старые данные не стираются.
 
-**Триггер:** `trg_award_revit_points` → `fn_award_revit_points()` — начисляет `revit_using_plugins` (+5), обновляет `revit_user_streaks`, бонус при 7/30.
+**Триггер:** `trg_award_revit_points` → `fn_award_revit_points()` — начисляет `revit_using_plugins` (+5) за первый плагин дня (идемпотентно через `details.plugins[]`). Стрики и milestones — отдельным VPS-скриптом `compute-revit-gamification` (миграция 040).
 
 #### `at_gratitudes` (16 строк)
 
@@ -508,20 +508,27 @@ SET total_coins = COALESCE((SELECT SUM(coins) FROM gamification_transactions t W
 
 #### `revit_user_streaks` (267 строк)
 
-Стрики по использованию Revit-плагинов. Обновляется триггером `fn_award_revit_points()` мгновенно.
+Снапшот стриков по Revit-плагинам. Обновляется VPS-скриптом `compute-revit-gamification`. UI читает не из этой таблицы, а из view `revit_user_streaks_effective` (актуальный walk-расчёт).
 
-| Колонка           | Тип                                  | Описание                        |
-| ----------------- | ------------------------------------ | ------------------------------- |
-| `user_id`         | uuid PK → ws_users ON DELETE CASCADE |                                 |
-| `current_streak`  | integer DEFAULT 0                    | Текущая серия зелёных дней      |
-| `best_streak`     | integer DEFAULT 0                    | Максимальная серия за всё время |
-| `last_green_date` | date NULL                            | Дата последнего зелёного дня    |
-| `is_frozen`       | boolean DEFAULT false                | Заморозка (отпуск/больничный)   |
-| `freeze_reason`   | text NULL                            |                                 |
-| `frozen_at`       | timestamptz NULL                     |                                 |
-| `updated_at`      | timestamptz                          |                                 |
+| Колонка                    | Тип                                  | Описание                                         |
+| -------------------------- | ------------------------------------ | ------------------------------------------------ |
+| `user_id`                  | uuid PK → ws_users ON DELETE CASCADE |                                                  |
+| `current_streak`           | integer DEFAULT 0                    | Снапшот для milestone-сравнения «было/стало»     |
+| `best_streak`              | integer DEFAULT 0                    | Максимальная серия за всё время                  |
+| `streak_start_date`        | date NULL                            | Якорь walk'а — день первого green в текущей серии |
+| `completed_cycles`         | integer DEFAULT 0                    | Сколько раз пройден 30-дневный цикл              |
+| `pending_reset_date`       | date NULL                            | Дата red, грейс на покупку щита 24h              |
+| `pending_reset_expires_at` | timestamptz NULL                     | Когда грейс истечёт                              |
+| `pending_gap_days`         | integer NULL                         | Legacy от старой модели, не используется         |
+| `last_green_date`          | date NULL                            | Legacy от старого триггера, не используется      |
+| `is_frozen`                | boolean DEFAULT false                | Legacy, не используется                          |
+| `updated_at`               | timestamptz                          |                                                  |
 
-**Частота обновления:** при каждом синке `elk_plugin_launches` через триггер. Непрерывность стрика проверяется с учётом выходных и отсутствий: считаются рабочие дни-пропуски между `last_green_date` и `work_date` через `generate_series`, пропуская Сб/Вс (`dow IN (0,6)`) и записи из `ws_user_absences`. Если пропусков нет → `current_streak + 1`; если есть → `current_streak = 1`. При milestone (7/30) создаётся бонусное событие.
+**Частота обновления:** ежедневно VPS-скриптом `compute-revit-gamification` (миграция 040). Phase 1 финализирует просроченные pending. Phase 2 в рабочий день: green → читает `current_streak` из view, выдаёт milestones 7/30 по пересечению порога. Red → ставит pending на 24h, если стрик > 0.
+
+#### `revit_user_streaks_effective` (view)
+
+Актуальный walk-расчёт Revit-стрика на чтение. Зеркало `ws_user_streaks_effective`. Walk идёт от `streak_start_date` до `fn_minsk_today() - 1` прямо по `elk_plugin_launches`, `ws_user_absences`, `calendar_holidays`, `calendar_workdays`. Дельты: green=+1, weekend/holiday=+1, absent=0, red=0. Pending grace: пока `pending_reset_expires_at > now()` — возвращает замороженный `current_streak` из таблицы. После — пересчитанный walk'ом.
 
 #### `ws_user_streaks` (558 строк)
 
@@ -616,7 +623,7 @@ JOIN `gamification_transactions` + `gamification_event_logs` + `gamification_eve
 
 | Триггер                              | Таблица               | Функция                            | Что делает                                                                          |
 | ------------------------------------ | --------------------- | ---------------------------------- | ----------------------------------------------------------------------------------- |
-| `trg_award_revit_points`             | `elk_plugin_launches` | `fn_award_revit_points()`          | +5 за плагин, inline UPSERT баланса, обновляет `revit_user_streaks`, бонус при 7/30 |
+| `trg_award_revit_points`             | `elk_plugin_launches` | `fn_award_revit_points()`          | +5 за первый плагин дня (идемпотентно через `details.plugins[]`), inline UPSERT баланса. Стрики и milestones — не трогает (см. `compute-revit-gamification`) |
 | `trg_award_gratitude_points`         | `at_gratitudes`       | `fn_award_gratitude_points()`      | +20 получателю благодарности, лимит 1/отправитель/неделю, inline UPSERT баланса     |
 | `trg_link_ws_user_on_profile_insert` | `profiles`            | `link_ws_user_on_profile_insert()` | При создании профиля связывает `ws_users.user_id`                                   |
 
@@ -632,13 +639,18 @@ JOIN `gamification_transactions` + `gamification_event_logs` + `gamification_eve
 
 ## Edge Functions (Supabase)
 
-WS-функции удалены — их полностью заменили VPS-скрипты. `sync-plugin` — legacy-версия `sync-plugin-launches` (не используется, подлежит удалению).
+WS-функции удалены — их полностью заменили VPS-скрипты. После миграции 040+ Revit-синк и расчёт стрика тоже на VPS; Edge Function `sync-plugin-launches` оставлена «холодной» для экстренного ручного вызова.
 
-| Функция                | Что делает                                    | Расписание             |
-| ---------------------- | --------------------------------------------- | ---------------------- |
-| `sync-plugin-launches` | Синк запусков Revit-плагинов из Elasticsearch | pg_cron: `0 1 * * *`   |
-| `sync-gratitudes`      | Синк благодарностей из Airtable               | pg_cron: `0 */4 * * *` |
-| `sync-plugin`          | Legacy. Не используется                       | —                      |
+| Функция                | Что делает                                                                | Расписание                         |
+| ---------------------- | ------------------------------------------------------------------------- | ---------------------------------- |
+| `sync-plugin-launches` | Holdover: синк Kibana → `elk_plugin_launches`. Без побочных эффектов     | cron снят (миграция 042)           |
+| `sync-gratitudes`      | Синк благодарностей из Airtable                                           | pg_cron: `0 */4 * * *`             |
+| `sync-plugin`          | Legacy. Не используется                                                   | —                                  |
+
+VPS-скрипты, заменившие Edge Function `sync-plugin-launches`:
+- `sync-plugin-launches` (`src/scripts/sync-plugin-launches.ts`) — Kibana → DB.
+- `compute-revit-gamification` (`src/scripts/compute-revit-gamification.ts`) — финализация pending + milestones.
+- `compute-achievements` (`src/scripts/compute-achievements.ts`) — `fn_ach_snapshot_rankings` + `fn_ach_check_gratitude_achievements`.
 
 ---
 

@@ -18,9 +18,9 @@ export async function getPendingResets(userId: string): Promise<PendingReset[]> 
     .gt('pending_reset_expires_at', now)
     .maybeSingle()
 
-  // Revit pending
+  // Revit pending — view возвращает frozen current_streak во время грейса
   const { data: revitStreak } = await supabase
-    .from('revit_user_streaks')
+    .from('revit_user_streaks_effective')
     .select('pending_reset_date, pending_reset_expires_at, current_streak')
     .eq('user_id', userId)
     .not('pending_reset_date', 'is', null)

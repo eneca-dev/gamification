@@ -1,9 +1,7 @@
-// Стрик пользователя по ревиту
+// Стрик пользователя по ревиту (читается из view revit_user_streaks_effective)
 export interface RevitStreak {
   current_streak: number
   best_streak: number
-  last_green_date: string | null
-  is_frozen: boolean
 }
 
 // Запись в лидерборде автоматизации
