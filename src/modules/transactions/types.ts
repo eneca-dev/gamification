@@ -63,3 +63,10 @@ export const EVENT_ICONS: Record<string, string> = {
 export function getEventIcon(eventType: string): string {
   return EVENT_ICONS[eventType] ?? '💰'
 }
+
+export interface TransactionFilters {
+  sort?: 'date_desc' | 'date_asc'
+  source?: string
+  dateFrom?: string
+  dateTo?: string
+}
