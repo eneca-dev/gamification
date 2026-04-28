@@ -25,6 +25,8 @@ const SOURCE_LABELS: Record<string, string> = {
   revit: 'Revit',
   airtable: 'Благодарности',
   contest: 'Соревнование',
+  achievements: 'Достижения',
+  shop: 'Магазин',
 }
 
 export function TransactionsList({ items }: TransactionsListProps) {

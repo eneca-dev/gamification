@@ -1,7 +1,7 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { cached, CACHE_5M } from '@/lib/server-cache'
 
-import type { UserTransaction, TransactionSubItem } from './types'
+import type { UserTransaction, TransactionSubItem, TransactionFilters } from './types'
 
 const WS_BASE_URL = 'https://eneca.worksection.com/project'
 
@@ -13,15 +13,30 @@ async function _getUserTransactions(
   userEmail: string,
   limit = 10,
   offset = 0,
+  filters: TransactionFilters = {},
 ): Promise<UserTransaction[]> {
   const supabase = createSupabaseAdminClient()
   const normalizedEmail = userEmail.toLowerCase()
+  const { sort = 'date_desc', source, dateFrom, dateTo } = filters
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('view_user_transactions')
     .select('event_date, event_type, source, coins, description, details, created_at')
     .eq('user_email', normalizedEmail)
-    .order('created_at', { ascending: false })
+
+  if (source && source !== 'all') {
+    if (source === 'achievements') {
+      query = query.in('source', ['achievements', 'contest'])
+    } else {
+      query = query.eq('source', source)
+    }
+  }
+  if (dateFrom) query = query.gte('event_date', dateFrom)
+  if (dateTo) query = query.lte('event_date', dateTo)
+
+  const { data, error } = await query
+    .order('event_date', { ascending: sort === 'date_asc' })
+    .order('created_at', { ascending: sort === 'date_asc' })
     .range(offset, offset + limit - 1)
 
   if (error) throw new Error(error.message)
@@ -135,29 +150,44 @@ async function _getUserTransactions(
   })
 }
 
-export const getUserTransactions = (userEmail: string, limit = 10, offset = 0) =>
-  cached(() => _getUserTransactions(userEmail, limit, offset),
-    ['transactions', userEmail, String(limit), String(offset)],
+export const getUserTransactions = (userEmail: string, limit = 10, offset = 0, filters: TransactionFilters = {}) =>
+  cached(
+    () => _getUserTransactions(userEmail, limit, offset, filters),
+    ['transactions', userEmail, String(limit), String(offset), filters.sort ?? 'date_desc', filters.source ?? 'all', filters.dateFrom ?? '', filters.dateTo ?? ''],
     { tags: [`transactions:${userEmail}`], revalidate: CACHE_5M },
   )()
 
-async function _getUserTransactionsCount(userEmail: string): Promise<number> {
+async function _getUserTransactionsCount(userEmail: string, filters: TransactionFilters = {}): Promise<number> {
   const supabase = createSupabaseAdminClient()
   const normalizedEmail = userEmail.toLowerCase()
+  const { source, dateFrom, dateTo } = filters
 
-  const { count, error } = await supabase
+  let query = supabase
     .from('view_user_transactions')
     .select('*', { count: 'exact', head: true })
     .eq('user_email', normalizedEmail)
+
+  if (source && source !== 'all') {
+    if (source === 'achievements') {
+      query = query.in('source', ['achievements', 'contest'])
+    } else {
+      query = query.eq('source', source)
+    }
+  }
+  if (dateFrom) query = query.gte('event_date', dateFrom)
+  if (dateTo) query = query.lte('event_date', dateTo)
+
+  const { count, error } = await query
 
   if (error) throw new Error(error.message)
 
   return count ?? 0
 }
 
-export const getUserTransactionsCount = (userEmail: string) =>
-  cached(() => _getUserTransactionsCount(userEmail),
-    ['transactions-count', userEmail],
+export const getUserTransactionsCount = (userEmail: string, filters: TransactionFilters = {}) =>
+  cached(
+    () => _getUserTransactionsCount(userEmail, filters),
+    ['transactions-count', userEmail, filters.source ?? 'all', filters.dateFrom ?? '', filters.dateTo ?? ''],
     { tags: [`transactions:${userEmail}`], revalidate: CACHE_5M },
   )()
 
