@@ -13,4 +13,10 @@
 --   5. Применить эту миграцию (042).
 --   6. Применить 041_drop_fn_finalize_expired_revit_pendings.sql.
 
-SELECT cron.unschedule('sync-plugin-launches-daily');
+-- Идемпотентно: job мог быть уже снят вручную или предыдущим запуском.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'sync-plugin-launches-daily') THEN
+    PERFORM cron.unschedule('sync-plugin-launches-daily');
+  END IF;
+END $$;
