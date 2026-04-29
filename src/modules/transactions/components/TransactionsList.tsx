@@ -1,6 +1,15 @@
-import { ExternalLink } from 'lucide-react'
+'use client'
+
+import { useState } from 'react'
+import { ChevronDown, ChevronUp, ExternalLink, XCircle } from 'lucide-react'
 
 import type { TransactionSubItem } from '../types'
+
+interface BonusTaskItem {
+  id: string
+  name: string
+  url?: string
+}
 
 interface TransactionItem {
   id: string
@@ -14,6 +23,8 @@ interface TransactionItem {
   inlineLink?: TransactionSubItem
   productEmoji?: string
   productImageUrl?: string | null
+  bonusTasks?: BonusTaskItem[]
+  details?: Record<string, unknown> | null
 }
 
 interface TransactionsListProps {
@@ -30,6 +41,17 @@ const SOURCE_LABELS: Record<string, string> = {
 }
 
 export function TransactionsList({ items }: TransactionsListProps) {
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+
+  function toggleExpanded(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   if (items.length === 0) {
     return (
       <div className="text-center py-12 text-[13px]" style={{ color: 'var(--apex-text-muted)' }}>
@@ -63,6 +85,10 @@ export function TransactionsList({ items }: TransactionsListProps) {
             : tx.productEmoji)
           : tx.icon
 
+        const hasBonusTasks = tx.bonusTasks != null && tx.bonusTasks.length > 0
+        const isExpanded = expandedIds.has(tx.id)
+        const isRevokeRow = tx.event_type.includes('revoked')
+
         return (
           <div key={tx.id} className="flex items-start gap-3 px-3 py-2.5 rounded-xl">
             <div
@@ -77,9 +103,24 @@ export function TransactionsList({ items }: TransactionsListProps) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1 min-w-0 flex-wrap">
-                <span className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>
-                  {tx.description}
-                </span>
+                {hasBonusTasks ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(tx.id)}
+                    className="text-[13px] font-semibold inline-flex items-center gap-1 hover:underline"
+                    style={{ color: 'var(--apex-text)' }}
+                  >
+                    <span>{tx.description}</span>
+                    {isExpanded
+                      ? <ChevronUp size={12} style={{ color: 'var(--apex-text-muted)' }} />
+                      : <ChevronDown size={12} style={{ color: 'var(--apex-text-muted)' }} />
+                    }
+                  </button>
+                ) : (
+                  <span className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>
+                    {tx.description}
+                  </span>
+                )}
                 {tx.inlineLink && (
                   tx.inlineLink.url ? (
                     <a
@@ -99,6 +140,39 @@ export function TransactionsList({ items }: TransactionsListProps) {
                   )
                 )}
               </div>
+
+              {hasBonusTasks && isExpanded && (
+                <div className="mt-2 px-3 py-2 rounded-xl space-y-1" style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}>
+                  {tx.bonusTasks!.map((task, idx) => {
+                    const linkColor = isRevokeRow ? 'var(--apex-danger)' : 'var(--apex-primary)'
+                    const textColor = isRevokeRow ? 'var(--apex-danger)' : 'var(--apex-text)'
+                    return (
+                      <div key={task.id} className="flex items-center gap-2 text-[11px]">
+                        <span className="shrink-0 w-5 text-right" style={{ color: 'var(--apex-text-muted)' }}>
+                          {idx + 1}.
+                        </span>
+                        {isRevokeRow && (
+                          <XCircle size={11} className="flex-shrink-0" style={{ color: 'var(--apex-danger)' }} />
+                        )}
+                        {task.url ? (
+                          <a
+                            href={task.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:underline inline-flex items-center gap-1 min-w-0"
+                            style={{ color: linkColor }}
+                          >
+                            <span className={`truncate ${isRevokeRow ? 'line-through' : ''}`}>{task.name}</span>
+                            <ExternalLink size={10} className="flex-shrink-0" />
+                          </a>
+                        ) : (
+                          <span className={`truncate ${isRevokeRow ? 'line-through' : ''}`} style={{ color: textColor }}>{task.name}</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
 
               {tx.subItems && tx.subItems.length > 0 && (
                 <div className="mt-1 space-y-0.5">

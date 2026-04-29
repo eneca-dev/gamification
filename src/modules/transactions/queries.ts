@@ -9,6 +9,60 @@ function buildTaskUrl(projectId: string, taskId: string): string {
   return `${WS_BASE_URL}/${projectId}/${taskId}/`
 }
 
+const BUDGET_L3_TYPES = new Set([
+  'budget_ok_l3',
+  'budget_ok_l3_lead_bonus',
+  'budget_exceeded_l3',
+  'budget_revoked_l3',
+  'budget_revoked_l3_lead',
+])
+
+const BUDGET_L2_TYPES = new Set([
+  'budget_ok_l2',
+  'budget_exceeded_l2',
+  'budget_revoked_l2',
+])
+
+// Для revoked-событий ws_task_id хранится внутри original_details
+function getBudgetTaskId(eventType: string, details: Record<string, unknown> | null): string | undefined {
+  if (!details) return undefined
+  const source = eventType.startsWith('budget_revoked_')
+    ? (details.original_details as Record<string, unknown> | undefined)
+    : details
+  return source?.ws_task_id as string | undefined
+}
+
+interface BudgetTaskInfo {
+  name: string
+  url?: string
+}
+
+const MASTER_PLANNER_L3_TYPES = new Set(['master_planner', 'master_planner_revoked'])
+const MASTER_PLANNER_L2_TYPES = new Set(['master_planner_l2', 'master_planner_l2_revoked'])
+
+interface BonusTask {
+  id: string
+  name: string
+  url?: string
+}
+
+// Для бонусов: details.tasks (10 задач серии).
+// Для revoked: только details.revoked_tasks — задачи, реально сорвавшие серию (обычно 1).
+// Для bulk-amnesty (нет revoked_tasks) возвращаем null — у амнистии нет «одного виновника»,
+// раскрытие не показывается, чтобы не вводить в заблуждение.
+function getMasterPlannerTasks(
+  eventType: string,
+  details: Record<string, unknown> | null,
+): { id: string; name: string }[] | null {
+  if (!details) return null
+  if (eventType.endsWith('_revoked')) {
+    const revoked = details.revoked_tasks as { id: string; name: string }[] | undefined
+    return revoked && revoked.length > 0 ? revoked : null
+  }
+  const tasks = details.tasks as { id: string; name: string }[] | undefined
+  return tasks && tasks.length > 0 ? tasks : null
+}
+
 async function _getUserTransactions(
   userEmail: string,
   limit = 10,
@@ -104,6 +158,116 @@ async function _getUserTransactions(
     }
   }
 
+  // Подтягиваем имя и URL задачи для budget-событий (детали в БД, не в payload)
+  const budgetL3TaskIds = rows
+    .filter((r) => BUDGET_L3_TYPES.has(r.event_type as string))
+    .map((r) => getBudgetTaskId(r.event_type as string, r.details as Record<string, unknown> | null))
+    .filter((v): v is string => Boolean(v))
+
+  const budgetL2TaskIds = rows
+    .filter((r) => BUDGET_L2_TYPES.has(r.event_type as string))
+    .map((r) => getBudgetTaskId(r.event_type as string, r.details as Record<string, unknown> | null))
+    .filter((v): v is string => Boolean(v))
+
+  const budgetTaskInfoMap = new Map<string, BudgetTaskInfo>()
+
+  if (budgetL3TaskIds.length > 0) {
+    const { data: l3Rows } = await supabase
+      .from('ws_tasks_l3')
+      .select('ws_task_id, ws_project_id, parent_l2_id, name')
+      .in('ws_task_id', [...new Set(budgetL3TaskIds)])
+
+    const parentL2Ids = [...new Set((l3Rows ?? []).map((r) => r.parent_l2_id).filter(Boolean) as string[])]
+    let l2ToL1 = new Map<string, string>()
+    if (parentL2Ids.length > 0) {
+      const { data: l2Parents } = await supabase
+        .from('ws_tasks_l2')
+        .select('ws_task_id, parent_l1_id')
+        .in('ws_task_id', parentL2Ids)
+      l2ToL1 = new Map(
+        (l2Parents ?? []).map((r) => [r.ws_task_id as string, r.parent_l1_id as string]),
+      )
+    }
+
+    for (const l3 of l3Rows ?? []) {
+      if (!l3.name) continue
+      const l1Id = l2ToL1.get(l3.parent_l2_id as string)
+      const url = l3.ws_project_id && l1Id
+        ? `${WS_BASE_URL}/${l3.ws_project_id}/${l1Id}/${l3.ws_task_id}/`
+        : undefined
+      budgetTaskInfoMap.set(`l3:${l3.ws_task_id}`, { name: l3.name as string, url })
+    }
+  }
+
+  if (budgetL2TaskIds.length > 0) {
+    const { data: l2Rows } = await supabase
+      .from('ws_tasks_l2')
+      .select('ws_task_id, ws_project_id, parent_l1_id, name')
+      .in('ws_task_id', [...new Set(budgetL2TaskIds)])
+
+    for (const l2 of l2Rows ?? []) {
+      if (!l2.name) continue
+      const url = l2.ws_project_id && l2.parent_l1_id
+        ? `${WS_BASE_URL}/${l2.ws_project_id}/${l2.parent_l1_id}/${l2.ws_task_id}/`
+        : undefined
+      budgetTaskInfoMap.set(`l2:${l2.ws_task_id}`, { name: l2.name as string, url })
+    }
+  }
+
+  // Подтягиваем имя/URL для master_planner-бонусов (списки в details.tasks / original_details.tasks)
+  const bonusL3Ids = new Set<string>()
+  const bonusL2Ids = new Set<string>()
+
+  for (const r of rows) {
+    const tasks = getMasterPlannerTasks(r.event_type as string, r.details as Record<string, unknown> | null)
+    if (!tasks) continue
+    const target = MASTER_PLANNER_L2_TYPES.has(r.event_type as string) ? bonusL2Ids : bonusL3Ids
+    for (const t of tasks) target.add(t.id)
+  }
+
+  const bonusUrlMap = new Map<string, string>() // key: `${level}:${id}` → url
+
+  if (bonusL3Ids.size > 0) {
+    const { data: l3Rows } = await supabase
+      .from('ws_tasks_l3')
+      .select('ws_task_id, ws_project_id, parent_l2_id')
+      .in('ws_task_id', [...bonusL3Ids])
+
+    const parentL2Ids = [...new Set((l3Rows ?? []).map((r) => r.parent_l2_id).filter(Boolean) as string[])]
+    let l2ToL1 = new Map<string, string>()
+    if (parentL2Ids.length > 0) {
+      const { data: l2Parents } = await supabase
+        .from('ws_tasks_l2')
+        .select('ws_task_id, parent_l1_id')
+        .in('ws_task_id', parentL2Ids)
+      l2ToL1 = new Map(
+        (l2Parents ?? []).map((r) => [r.ws_task_id as string, r.parent_l1_id as string]),
+      )
+    }
+
+    for (const l3 of l3Rows ?? []) {
+      const l1Id = l2ToL1.get(l3.parent_l2_id as string)
+      const url = l3.ws_project_id && l1Id
+        ? `${WS_BASE_URL}/${l3.ws_project_id}/${l1Id}/${l3.ws_task_id}/`
+        : undefined
+      if (url) bonusUrlMap.set(`l3:${l3.ws_task_id}`, url)
+    }
+  }
+
+  if (bonusL2Ids.size > 0) {
+    const { data: l2Rows } = await supabase
+      .from('ws_tasks_l2')
+      .select('ws_task_id, ws_project_id, parent_l1_id')
+      .in('ws_task_id', [...bonusL2Ids])
+
+    for (const l2 of l2Rows ?? []) {
+      const url = l2.ws_project_id && l2.parent_l1_id
+        ? `${WS_BASE_URL}/${l2.ws_project_id}/${l2.parent_l1_id}/${l2.ws_task_id}/`
+        : undefined
+      if (url) bonusUrlMap.set(`l2:${l2.ws_task_id}`, url)
+    }
+  }
+
   // Подтягиваем emoji/image для покупок
   const purchaseProductIds = rows
     .filter((r) => r.event_type === 'shop_purchase' || r.event_type === 'shop_refund')
@@ -131,7 +295,30 @@ async function _getUserTransactions(
     const product = productId ? productMap.get(productId) : undefined
     const deadlineTaskId = details?.ws_task_id as string | undefined
     const taskUrl = deadlineTaskId ? deadlineUrlMap.get(deadlineTaskId) : undefined
-    const enriched = enrichTransaction(eventType, row.description as string, details, redReasons, product?.name, taskUrl)
+
+    let budgetTaskInfo: BudgetTaskInfo | undefined
+    if (BUDGET_L3_TYPES.has(eventType)) {
+      const id = getBudgetTaskId(eventType, details)
+      if (id) budgetTaskInfo = budgetTaskInfoMap.get(`l3:${id}`)
+    } else if (BUDGET_L2_TYPES.has(eventType)) {
+      const id = getBudgetTaskId(eventType, details)
+      if (id) budgetTaskInfo = budgetTaskInfoMap.get(`l2:${id}`)
+    }
+
+    let bonusTasks: BonusTask[] | undefined
+    if (MASTER_PLANNER_L3_TYPES.has(eventType) || MASTER_PLANNER_L2_TYPES.has(eventType)) {
+      const tasks = getMasterPlannerTasks(eventType, details)
+      if (tasks) {
+        const level: 'l3' | 'l2' = MASTER_PLANNER_L2_TYPES.has(eventType) ? 'l2' : 'l3'
+        bonusTasks = tasks.map((t) => ({
+          id: t.id,
+          name: t.name,
+          url: bonusUrlMap.get(`${level}:${t.id}`),
+        }))
+      }
+    }
+
+    const enriched = enrichTransaction(eventType, row.description as string, details, redReasons, product?.name, taskUrl, budgetTaskInfo)
 
     return {
       id: `${row.created_at}-${i}`,
@@ -146,6 +333,7 @@ async function _getUserTransactions(
       inlineLink: enriched.inlineLink,
       productEmoji: product?.emoji ?? undefined,
       productImageUrl: product?.image_url ?? undefined,
+      bonusTasks,
     }
   })
 }
@@ -222,6 +410,7 @@ function enrichTransaction(
   redReasons?: RedReason[],
   productName?: string,
   taskUrl?: string,
+  budgetTaskInfo?: BudgetTaskInfo,
 ): EnrichedResult {
   switch (eventType) {
     case 'shop_purchase': {
@@ -312,20 +501,30 @@ function enrichTransaction(
       }
     }
     case 'budget_ok_l3':
-    case 'budget_ok_l2': {
-      const name = details?.ws_task_name as string | undefined
-      return { description: name ? `Бюджет в норме: ${name}` : defaultDesc }
+    case 'budget_ok_l2':
+    case 'budget_ok_l3_lead_bonus': {
+      if (!budgetTaskInfo) return { description: defaultDesc }
+      return {
+        description: 'Бюджет в норме:',
+        inlineLink: { text: budgetTaskInfo.name, url: budgetTaskInfo.url },
+      }
     }
     case 'budget_exceeded_l3':
     case 'budget_exceeded_l2': {
-      const name = details?.ws_task_name as string | undefined
-      return { description: name ? `Бюджет превышен: ${name}` : defaultDesc }
+      if (!budgetTaskInfo) return { description: defaultDesc }
+      return {
+        description: 'Бюджет превышен:',
+        inlineLink: { text: budgetTaskInfo.name, url: budgetTaskInfo.url },
+      }
     }
     case 'budget_revoked_l3':
     case 'budget_revoked_l2':
     case 'budget_revoked_l3_lead': {
-      const name = details?.ws_task_name as string | undefined
-      return { description: name ? `Отзыв 💎: ${name}` : defaultDesc }
+      if (!budgetTaskInfo) return { description: defaultDesc }
+      return {
+        description: 'Отзыв 💎:',
+        inlineLink: { text: budgetTaskInfo.name, url: budgetTaskInfo.url },
+      }
     }
     case 'revit_using_plugins': {
       const plugins = details?.plugins as Array<{ plugin_name: string; launch_count: number }> | undefined

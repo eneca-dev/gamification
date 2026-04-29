@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckCircle2, XCircle, Trophy, ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, XCircle, Trophy, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 
 import type { MasterPlannerEvent } from "../types";
 
@@ -29,8 +30,8 @@ function getEventStyle(type: string): EventStyle {
   }
   if (type.startsWith("budget_revoked")) {
     return {
-      bg: "rgba(var(--orange-500-rgb), 0.06)",
-      icon: <XCircle size={15} style={{ color: "var(--orange-500)" }} />,
+      bg: "rgba(var(--apex-danger-rgb, 239 68 68), 0.06)",
+      icon: <XCircle size={15} style={{ color: "var(--apex-danger)" }} />,
       label: "Отозвано (доработки)",
     };
   }
@@ -85,7 +86,7 @@ function computePositions(events: MasterPlannerEvent[], startPosition: number): 
     } else if (type === "master_planner" || type === "master_planner_l2") {
       positions[i] = "Бонус";
     } else if (type.includes("revoked")) {
-      positions[i] = "Отозван";
+      positions[i] = "Отозвано";
     }
     // deadline события — позиция остаётся null (покажем "—")
   }
@@ -130,6 +131,16 @@ interface MasterPlannerHistoryProps {
 
 export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHistoryProps) {
   const positions = computePositions(events, startPosition);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  function toggleExpanded(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   return (
     <div className="space-y-0.5">
@@ -153,10 +164,14 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
           day: "numeric",
           month: "short",
         });
+        const bonusTasks = evt.milestoneTasks ?? evt.revokedTasks ?? null;
+        const hasBonusTasks = bonusTasks != null && bonusTasks.length > 0;
+        const isExpanded = expandedIds.has(evt.eventId);
+        const isRevokeRow = evt.type.includes("revoked");
 
         return (
+          <div key={evt.eventId}>
           <div
-            key={evt.eventId}
             className="flex items-center gap-3 px-3 py-2 rounded-xl transition-colors"
             style={{ background: style.bg }}
           >
@@ -197,6 +212,22 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
                   ) : (
                     evt.taskName
                   )
+                ) : hasBonusTasks ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(evt.eventId)}
+                    className="inline-flex items-center gap-1 hover:underline"
+                    style={{ color: "var(--apex-text)" }}
+                  >
+                    <span>{style.label}</span>
+                    <span style={{ color: "var(--apex-text-muted)" }}>
+                      ({bonusTasks!.length} {pluralizeTasks(bonusTasks!.length)})
+                    </span>
+                    {isExpanded
+                      ? <ChevronUp size={12} style={{ color: "var(--apex-text-muted)" }} />
+                      : <ChevronDown size={12} style={{ color: "var(--apex-text-muted)" }} />
+                    }
+                  </button>
                 ) : (
                   <span style={{ color: "var(--apex-text-muted)" }}>{style.label}</span>
                 )}
@@ -204,13 +235,13 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
               {/* Budget: часы */}
               {evt.category === "budget" && evt.maxTime != null && evt.actualTime != null && (
                 <div className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>
-                  {evt.actualTime} / {evt.maxTime} ч
+                  {formatHours(evt.actualTime)} / {formatHours(evt.maxTime)} ч
                 </div>
               )}
               {/* Deadline: план / факт */}
               {evt.category === "deadline" && evt.plannedEnd && evt.dateClosed && (
                 <div className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>
-                  план: {evt.plannedEnd} · факт: {evt.dateClosed}
+                  план: {formatDDMMYYYY(evt.plannedEnd)} · факт: {formatDDMMYYYY(evt.dateClosed)}
                 </div>
               )}
             </div>
@@ -242,8 +273,65 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
               {dateFormatted}
             </span>
           </div>
+
+          {/* Развёрнутый список задач для бонусной/отзывной строки */}
+          {hasBonusTasks && isExpanded && (
+            <div
+              className="mt-1 ml-14 mr-3 mb-2 px-3 py-2 rounded-xl space-y-1"
+              style={{ background: "var(--apex-bg)", border: "1px solid var(--apex-border)" }}
+            >
+              {bonusTasks!.map((task, idx) => {
+                const linkColor = isRevokeRow ? "var(--apex-danger)" : "var(--apex-primary)";
+                const textColor = isRevokeRow ? "var(--apex-danger)" : "var(--apex-text)";
+                return (
+                  <div key={task.id} className="flex items-center gap-2 text-[11px]">
+                    <span className="shrink-0 w-5 text-right" style={{ color: "var(--apex-text-muted)" }}>
+                      {idx + 1}.
+                    </span>
+                    {isRevokeRow && (
+                      <XCircle size={11} className="shrink-0" style={{ color: "var(--apex-danger)" }} />
+                    )}
+                    {task.url ? (
+                      <a
+                        href={task.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline inline-flex items-center gap-1 min-w-0"
+                        style={{ color: linkColor }}
+                      >
+                        <span className={`truncate ${isRevokeRow ? "line-through" : ""}`}>{task.name}</span>
+                        <ExternalLink size={10} className="shrink-0" />
+                      </a>
+                    ) : (
+                      <span className={`truncate ${isRevokeRow ? "line-through" : ""}`} style={{ color: textColor }}>{task.name}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          </div>
         );
       })}
     </div>
   );
+}
+
+function formatDDMMYYYY(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split("-");
+  return `${d}.${m}.${y}`;
+}
+
+// Округляет до 2 знаков, без хвостовых нулей: 145.17000000000002 → 145.17, 120.5 → 120.5, 8 → 8
+function formatHours(value: number): string {
+  return Number(value.toFixed(2)).toString();
+}
+
+function pluralizeTasks(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod100 >= 11 && mod100 <= 14) return "задач";
+  if (mod10 === 1) return "задача";
+  if (mod10 >= 2 && mod10 <= 4) return "задачи";
+  return "задач";
 }

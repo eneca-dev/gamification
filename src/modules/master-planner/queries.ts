@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from '@/config/supabase'
+import { createSupabaseAdminClient, createSupabaseServerClient } from '@/config/supabase'
 
 import type {
   MasterPlannerPanelData,
@@ -18,6 +18,69 @@ function buildTaskUrl(projectId: string | null, l1Id: string | null, taskId: str
   if (!projectId || !taskId) return null
   if (l1Id) return `${WS_BASE}/${projectId}/${l1Id}/${taskId}/`
   return `${WS_BASE}/${projectId}/${taskId}/`
+}
+
+// Подтягивает URL для milestone_tasks/revoked_tasks (id+name приходят из view, без проекта/parent).
+// Уровень задачи определяется по level события: L3 → ws_tasks_l3, L2 → ws_tasks_l2.
+// Использует admin client: на ws_tasks_l3/ws_tasks_l2 включён RLS только для service_role,
+// view_master_planner_history работает через SECURITY DEFINER — прямые запросы из user-сессии вернут 0 строк.
+async function buildBonusTaskUrlMaps(
+  rows: ViewRow[],
+): Promise<{ l3: Map<string, string>; l2: Map<string, string> }> {
+  const supabase = createSupabaseAdminClient()
+  const l3Ids = new Set<string>()
+  const l2Ids = new Set<string>()
+
+  for (const r of rows) {
+    const lists = [r.milestone_tasks, r.revoked_tasks]
+    for (const list of lists) {
+      if (!list) continue
+      const target = r.level === 'L2' ? l2Ids : l3Ids
+      for (const t of list) target.add(t.id)
+    }
+  }
+
+  const l3UrlMap = new Map<string, string>()
+  const l2UrlMap = new Map<string, string>()
+
+  if (l3Ids.size > 0) {
+    const { data: l3Rows } = await supabase
+      .from('ws_tasks_l3')
+      .select('ws_task_id, ws_project_id, parent_l2_id')
+      .in('ws_task_id', [...l3Ids])
+
+    const parentL2Ids = [...new Set((l3Rows ?? []).map((r) => r.parent_l2_id).filter(Boolean) as string[])]
+    let l2ToL1 = new Map<string, string>()
+    if (parentL2Ids.length > 0) {
+      const { data: l2Parents } = await supabase
+        .from('ws_tasks_l2')
+        .select('ws_task_id, parent_l1_id')
+        .in('ws_task_id', parentL2Ids)
+      l2ToL1 = new Map(
+        (l2Parents ?? []).map((r) => [r.ws_task_id as string, r.parent_l1_id as string]),
+      )
+    }
+
+    for (const l3 of l3Rows ?? []) {
+      const l1Id = l2ToL1.get(l3.parent_l2_id as string) ?? null
+      const url = buildTaskUrl(l3.ws_project_id as string | null, l1Id, l3.ws_task_id as string)
+      if (url) l3UrlMap.set(l3.ws_task_id as string, url)
+    }
+  }
+
+  if (l2Ids.size > 0) {
+    const { data: l2Rows } = await supabase
+      .from('ws_tasks_l2')
+      .select('ws_task_id, ws_project_id, parent_l1_id')
+      .in('ws_task_id', [...l2Ids])
+
+    for (const l2 of l2Rows ?? []) {
+      const url = buildTaskUrl(l2.ws_project_id as string | null, l2.parent_l1_id as string | null, l2.ws_task_id as string)
+      if (url) l2UrlMap.set(l2.ws_task_id as string, url)
+    }
+  }
+
+  return { l3: l3UrlMap, l2: l2UrlMap }
 }
 
 interface ViewRow {
@@ -43,7 +106,16 @@ interface ViewRow {
   date_closed: string | null
 }
 
-function mapRowToEvent(row: ViewRow): MasterPlannerEvent {
+function mapRowToEvent(
+  row: ViewRow,
+  bonusUrlMaps?: { l3: Map<string, string>; l2: Map<string, string> },
+): MasterPlannerEvent {
+  const urlMap = row.level === 'L2' ? bonusUrlMaps?.l2 : bonusUrlMaps?.l3
+  const enrich = (
+    list: { id: string; name: string }[] | null,
+  ): { id: string; name: string; url: string | null }[] | null =>
+    list ? list.map((t) => ({ ...t, url: urlMap?.get(t.id) ?? null })) : null
+
   return {
     eventId: row.event_id,
     type: row.event_type,
@@ -57,8 +129,8 @@ function mapRowToEvent(row: ViewRow): MasterPlannerEvent {
     coins: row.coins,
     streakWas: row.streak_was,
     milestone: row.milestone,
-    milestoneTasks: row.milestone_tasks,
-    revokedTasks: row.revoked_tasks,
+    milestoneTasks: enrich(row.milestone_tasks),
+    revokedTasks: enrich(row.revoked_tasks),
     plannedEnd: row.planned_end ?? null,
     dateClosed: row.date_closed ?? null,
   }
@@ -86,6 +158,8 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
     .order('event_date', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(5)
+
+  const recentBonusUrlMaps = await buildBonusTaskUrlMaps((recentRows ?? []) as unknown as ViewRow[])
 
   // Budget pending
   const { data: budgetPendingRows } = await supabase
@@ -135,7 +209,7 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
     l2: l2State
       ? { currentStreak: l2State.current_streak, completedCycles: l2State.completed_cycles, reward: 400 }
       : { ...DEFAULT_STREAK, reward: 400 },
-    recentEvents: (recentRows ?? []).map((r) => mapRowToEvent(r as unknown as ViewRow)),
+    recentEvents: (recentRows ?? []).map((r) => mapRowToEvent(r as unknown as ViewRow, recentBonusUrlMaps)),
     pendingTasks: allPending,
   }
 }
@@ -234,6 +308,8 @@ export async function getMasterPlannerHistory(
 
   const { data: rows, count } = await query
 
+  const historyBonusUrlMaps = await buildBonusTaskUrlMaps((rows ?? []) as unknown as ViewRow[])
+
   // Доп. запрос — startPosition для нижней строки страницы
   let startPosition = 0
   const tailOffset = offset + PAGE_SIZE
@@ -267,7 +343,7 @@ export async function getMasterPlannerHistory(
   }
 
   return {
-    events: (rows ?? []).map((r) => mapRowToEvent(r as unknown as ViewRow)),
+    events: (rows ?? []).map((r) => mapRowToEvent(r as unknown as ViewRow, historyBonusUrlMaps)),
     totalCount: count ?? 0,
     startPosition,
   }
