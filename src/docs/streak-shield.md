@@ -14,11 +14,12 @@
 - Фаза 2: red день → `pending_reset_date = вчера`, `pending_reset_expires_at = now()+24h`. Стрик не трогается.
 - Green день → обычная логика + очистка pending
 
-### Revit стрик (триггер fn_award_revit_points)
+### Revit стрик (VPS-скрипт compute-revit-gamification)
 
-- gap_days > 0 → pending вместо сброса, `last_green_date` обновляется
-- При следующем запуске: если pending expired → сброс; если pending active → skip streak update
-- Ежедневная очистка: `fn_finalize_expired_revit_pendings()` (вызывается из sync-plugin)
+- Phase 1: финализация неразрешённых pending (`pending_reset_date < вчера` → событие `revit_streak_reset`, обнуление стрика, `streak_start_date = pending_reset_date + 1`)
+- Phase 2: red день (нет launches за вчера) → `pending_reset_date = вчера`, `pending_reset_expires_at = now()+24h`. `current_streak` не трогаем (view вернёт его как замороженный во время грейса)
+- Green день → upsert новой длины стрика (читается из view) + очистка pending
+- Триггер `fn_award_revit_points` стрик больше не трогает — только идемпотентный лог + 5 💎 за первый плагин дня
 
 ### Покупка щита (server action buyStreakShield)
 
@@ -32,7 +33,8 @@
 ## Зависимости
 
 - `ws_user_streaks` — pending_reset_date, pending_reset_expires_at
-- `revit_user_streaks` — pending_reset_date, pending_reset_expires_at, pending_gap_days
+- `revit_user_streaks_effective` — view, читается для отображения замороженного `current_streak` во время грейса
+- `revit_user_streaks` — pending_reset_date, pending_reset_expires_at, pending_gap_days (legacy, не используется в новой модели)
 - `shop_products` — колонка `effect` ('streak_shield_ws', 'streak_shield_revit')
 - `streak_shield_log` — история использований
 - `shop_orders` — связь через order_id
@@ -58,6 +60,6 @@
 
 - Щит нельзя купить заранее — только при активном pending
 - Grace period: 24 часа от момента установки pending
-- Для Revit: один щит покрывает один пропущенный рабочий день. Gap > 1 = нужно столько щитов
+- Для Revit: щит покрывает один пропущенный рабочий день (последний red, который вызвал pending). Если уже был pending — повторный red не перезаписывает `expires_at`, грейс не продлевается
 - Стоимость: 500 💎 за каждый тип
 - Товары идентифицируются по `shop_products.effect`, не по ID

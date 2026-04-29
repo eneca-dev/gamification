@@ -20,15 +20,15 @@
 Два параллельных механизма:
 
 ```
-== Поток 1: PG-триггеры (мгновенно при синке) ==
+== Поток 1: PG-триггеры (мгновенно при INSERT/UPSERT) ==
 
-sync-plugin-launches (pg_cron, 01:00 UTC)
+VPS sync-plugin-launches (Kibana → DB, после миграции на VPS — оркестратор)
   → UPSERT elk_plugin_launches
     → trg_award_revit_points
       → fn_award_revit_points()
         → INSERT gamification_event_logs + gamification_transactions
         → UPSERT gamification_balances (inline)
-        → UPDATE revit_user_streaks
+        (стрик не трогает — только +5 💎 за первый плагин дня)
 
 sync-gratitudes (pg_cron, каждые 4 часа)
   → UPSERT at_gratitudes
@@ -37,15 +37,25 @@ sync-gratitudes (pg_cron, каждые 4 часа)
         → INSERT gamification_event_logs + gamification_transactions
         → UPSERT gamification_balances (inline)
 
-== Поток 2: VPS-скрипт compute-gamification (после синка WS-данных) ==
+== Поток 2: VPS оркестратор (последовательно, после синков) ==
 
-orchestrator.ts → compute-gamification.ts:
-  Step 1: Violations (timetracking, task dynamics, section discipline)
-  Step 2: Day status (green/red/absent)
-  Step 3: Streaks (ws_user_streaks: current/longest, milestones 7/30/90)
-  Step 4: Budget (budget_pending: pending→approved/revoked)
-  Step 5: Master planner (10 consecutive budget_ok_l3)
-  Step 6: Transactions → gamification_event_logs + gamification_transactions + gamification_balances
+wsSteps:
+  compute-gamification:
+    Step 1: Violations (timetracking, task dynamics, section discipline)
+    Step 2: Day status (green/red/absent)
+    Step 3: Streaks (ws_user_streaks: current/longest, milestones 7/30/90)
+    Step 4: Budget (budget_pending: pending→approved/revoked)
+    Step 5: Master planner (10 consecutive budget_ok_l3)
+    Step 6: Transactions → gamification_event_logs + gamification_transactions + gamification_balances
+  compute-achievements:
+    fn_ach_snapshot_rankings + fn_ach_check_gratitude_achievements
+
+revitSteps:
+  sync-plugin-launches: Kibana → elk_plugin_launches (триггер начисляет 5 💎 inline)
+  compute-revit-gamification:
+    Phase 1: финализация просроченных pending → событие revit_streak_reset
+    Phase 2: green/red статус вчера → milestones 7/30 (revit_streak_7_bonus / revit_streak_30_bonus)
+    Phase 3: события → process_gamification_event RPC
 ```
 
 ---
@@ -71,23 +81,21 @@ idempotency_key: revit_green_{email}_{work_date}
 
 ### Стрик Revit
 
-Обновляется в `fn_award_revit_points()` в `revit_user_streaks` сразу после успешного INSERT (проверяется через `GET DIAGNOSTICS v_row_count = ROW_COUNT`).
+Считается на чтение через view `revit_user_streaks_effective` (миграция 040, зеркало WS). Walk идёт прямо по `elk_plugin_launches`, `ws_user_absences`, `calendar_holidays`, `calendar_workdays` от `streak_start_date` до `fn_minsk_today() - 1`. Дельты: green=+1, weekend/holiday=+1, absent=0, red=0.
 
-Непрерывность стрика проверяется с учётом **выходных и отсутствий**: считаются рабочие дни-пропуски между `last_green_date` и `work_date` через `generate_series`, пропуская Сб/Вс (`dow IN (0,6)`) и записи из `ws_user_absences`. Если пропусков нет → стрик продолжается.
+Snapshot и milestones обновляет VPS-скрипт `compute-revit-gamification`:
+- Phase 1 (всегда): финализация просроченных pending → событие `revit_streak_reset` (coins=0, ключ `revit_streak_reset_{user_id}_{pending_reset_date}`).
+- Phase 2 (только в рабочий день): green → читаем `current_streak` из view, выдаём milestones по пересечению порога. Red → ставим pending на 24h, если стрик > 0 и pending ещё не было.
 
-| Условие                                                     | Действие                             |
-| ----------------------------------------------------------- | ------------------------------------ |
-| `last_green_date = work_date`                               | уже засчитан — пропустить            |
-| `is_frozen = true`                                          | не трогать                           |
-| между `last_green_date` и `work_date` нет рабочих пропусков | `current_streak + 1`                 |
-| есть рабочие дни без запусков                               | `current_streak = 1` (стрик прерван) |
+**Бонусы за milestones (idempotency keys на user_id):**
 
-**Бонусы за milestones:**
+| Условие пересечения        | event_type              | 💎   | idempotency_key                       |
+| -------------------------- | ----------------------- | ---- | ------------------------------------- |
+| `prev < 7 ∧ 7 ≤ next`      | `revit_streak_7_bonus`  | +25  | `revit_streak_7_{user_id}_{date}`     |
+| `prev < 30 ∧ 30 ≤ next`    | `revit_streak_30_bonus` | +100 | `revit_streak_30_{user_id}_{date}`    |
+| pending грейс истёк (24h)  | `revit_streak_reset`    | 0    | `revit_streak_reset_{user_id}_{date}` |
 
-| current_streak | event_type              | 💎   | idempotency_key                  |
-| -------------- | ----------------------- | ---- | -------------------------------- |
-| 7              | `revit_streak_7_bonus`  | +25  | `revit_streak_7_{email}_{date}`  |
-| 30             | `revit_streak_30_bonus` | +100 | `revit_streak_30_{email}_{date}` |
+После 30 — `current_streak = 0`, `streak_start_date = NULL`, `completed_cycles += 1`.
 
 ---
 

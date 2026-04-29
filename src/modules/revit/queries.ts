@@ -34,7 +34,8 @@ export async function getRevitActiveDates(email: string, days = STREAK_GRID_DAYS
   }
 }
 
-// Стрик из revit_user_streaks через ws_users.email
+// Стрик из view revit_user_streaks_effective через ws_users.email.
+// View считает current_streak walk'ом по сырым данным (см. миграция 040_revit_streak_view.sql).
 export async function getRevitStreak(email: string): Promise<RevitStreak | null> {
   try {
     const supabase = createSupabaseAdminClient()
@@ -50,8 +51,8 @@ export async function getRevitStreak(email: string): Promise<RevitStreak | null>
     if (!user?.id) return null
 
     const { data: streakRow } = await supabase
-      .from('revit_user_streaks')
-      .select('current_streak, best_streak, last_green_date, is_frozen')
+      .from('revit_user_streaks_effective')
+      .select('current_streak, best_streak')
       .eq('user_id', user.id)
       .maybeSingle()
 
@@ -60,8 +61,6 @@ export async function getRevitStreak(email: string): Promise<RevitStreak | null>
     return {
       current_streak: streakRow.current_streak ?? 0,
       best_streak: streakRow.best_streak ?? 0,
-      last_green_date: streakRow.last_green_date ?? null,
-      is_frozen: streakRow.is_frozen ?? false,
     }
   } catch (error) {
     console.error('[revit] getRevitStreak failed:', error)
