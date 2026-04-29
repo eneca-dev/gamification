@@ -9,6 +9,7 @@ interface BonusTaskItem {
   id: string
   name: string
   url?: string
+  dateClosed?: string
 }
 
 interface TransactionItem {
@@ -25,6 +26,7 @@ interface TransactionItem {
   productImageUrl?: string | null
   bonusTasks?: BonusTaskItem[]
   details?: Record<string, unknown> | null
+  taskClosedAt?: string
 }
 
 interface TransactionsListProps {
@@ -147,27 +149,34 @@ export function TransactionsList({ items }: TransactionsListProps) {
                     const linkColor = isRevokeRow ? 'var(--apex-danger)' : 'var(--apex-primary)'
                     const textColor = isRevokeRow ? 'var(--apex-danger)' : 'var(--apex-text)'
                     return (
-                      <div key={task.id} className="flex items-center gap-2 text-[11px]">
-                        <span className="shrink-0 w-5 text-right" style={{ color: 'var(--apex-text-muted)' }}>
+                      <div key={task.id} className="flex items-start gap-2 text-[11px]">
+                        <span className="shrink-0 w-5 text-right pt-0.5" style={{ color: 'var(--apex-text-muted)' }}>
                           {idx + 1}.
                         </span>
                         {isRevokeRow && (
-                          <XCircle size={11} className="flex-shrink-0" style={{ color: 'var(--apex-danger)' }} />
+                          <XCircle size={11} className="flex-shrink-0 mt-0.5" style={{ color: 'var(--apex-danger)' }} />
                         )}
-                        {task.url ? (
-                          <a
-                            href={task.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hover:underline inline-flex items-center gap-1 min-w-0"
-                            style={{ color: linkColor }}
-                          >
-                            <span className={`truncate ${isRevokeRow ? 'line-through' : ''}`}>{task.name}</span>
-                            <ExternalLink size={10} className="flex-shrink-0" />
-                          </a>
-                        ) : (
-                          <span className={`truncate ${isRevokeRow ? 'line-through' : ''}`} style={{ color: textColor }}>{task.name}</span>
-                        )}
+                        <div className="min-w-0 flex-1">
+                          {task.url ? (
+                            <a
+                              href={task.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:underline inline-flex items-center gap-1 min-w-0"
+                              style={{ color: linkColor }}
+                            >
+                              <span className={`truncate ${isRevokeRow ? 'line-through' : ''}`}>{task.name}</span>
+                              <ExternalLink size={10} className="flex-shrink-0" />
+                            </a>
+                          ) : (
+                            <span className={`truncate ${isRevokeRow ? 'line-through' : ''}`} style={{ color: textColor }}>{task.name}</span>
+                          )}
+                          {task.dateClosed && (
+                            <div className="text-[10px]" style={{ color: 'var(--apex-text-muted)' }}>
+                              закрыта: {formatTaskClosedAt(task.dateClosed)}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )
                   })}
@@ -202,6 +211,11 @@ export function TransactionsList({ items }: TransactionsListProps) {
                 <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
                   {tx.dateFormatted}
                 </span>
+                {tx.taskClosedAt && (
+                  <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
+                    · задача закрыта: {formatTaskClosedAt(tx.taskClosedAt)}
+                  </span>
+                )}
                 <span
                   className="px-1.5 py-0.5 rounded text-[9px] font-medium"
                   style={{ background: 'var(--apex-bg)', color: 'var(--apex-text-muted)', border: '1px solid var(--apex-border)' }}
@@ -218,4 +232,9 @@ export function TransactionsList({ items }: TransactionsListProps) {
       })}
     </div>
   )
+}
+
+function formatTaskClosedAt(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split('-')
+  return `${d}.${m}.${y}`
 }

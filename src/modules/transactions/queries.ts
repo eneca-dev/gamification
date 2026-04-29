@@ -35,6 +35,7 @@ function getBudgetTaskId(eventType: string, details: Record<string, unknown> | n
 interface BudgetTaskInfo {
   name: string
   url?: string
+  dateClosed?: string
 }
 
 const MASTER_PLANNER_L3_TYPES = new Set(['master_planner', 'master_planner_revoked'])
@@ -44,6 +45,12 @@ interface BonusTask {
   id: string
   name: string
   url?: string
+  dateClosed?: string
+}
+
+interface BonusTaskInfo {
+  url?: string
+  dateClosed?: string
 }
 
 // Для бонусов: details.tasks (10 задач серии).
@@ -174,7 +181,7 @@ async function _getUserTransactions(
   if (budgetL3TaskIds.length > 0) {
     const { data: l3Rows } = await supabase
       .from('ws_tasks_l3')
-      .select('ws_task_id, ws_project_id, parent_l2_id, name')
+      .select('ws_task_id, ws_project_id, parent_l2_id, name, date_closed')
       .in('ws_task_id', [...new Set(budgetL3TaskIds)])
 
     const parentL2Ids = [...new Set((l3Rows ?? []).map((r) => r.parent_l2_id).filter(Boolean) as string[])]
@@ -195,14 +202,18 @@ async function _getUserTransactions(
       const url = l3.ws_project_id && l1Id
         ? `${WS_BASE_URL}/${l3.ws_project_id}/${l1Id}/${l3.ws_task_id}/`
         : undefined
-      budgetTaskInfoMap.set(`l3:${l3.ws_task_id}`, { name: l3.name as string, url })
+      budgetTaskInfoMap.set(`l3:${l3.ws_task_id}`, {
+        name: l3.name as string,
+        url,
+        dateClosed: (l3.date_closed as string | null) ?? undefined,
+      })
     }
   }
 
   if (budgetL2TaskIds.length > 0) {
     const { data: l2Rows } = await supabase
       .from('ws_tasks_l2')
-      .select('ws_task_id, ws_project_id, parent_l1_id, name')
+      .select('ws_task_id, ws_project_id, parent_l1_id, name, date_closed')
       .in('ws_task_id', [...new Set(budgetL2TaskIds)])
 
     for (const l2 of l2Rows ?? []) {
@@ -210,7 +221,11 @@ async function _getUserTransactions(
       const url = l2.ws_project_id && l2.parent_l1_id
         ? `${WS_BASE_URL}/${l2.ws_project_id}/${l2.parent_l1_id}/${l2.ws_task_id}/`
         : undefined
-      budgetTaskInfoMap.set(`l2:${l2.ws_task_id}`, { name: l2.name as string, url })
+      budgetTaskInfoMap.set(`l2:${l2.ws_task_id}`, {
+        name: l2.name as string,
+        url,
+        dateClosed: (l2.date_closed as string | null) ?? undefined,
+      })
     }
   }
 
@@ -225,12 +240,12 @@ async function _getUserTransactions(
     for (const t of tasks) target.add(t.id)
   }
 
-  const bonusUrlMap = new Map<string, string>() // key: `${level}:${id}` → url
+  const bonusInfoMap = new Map<string, BonusTaskInfo>() // key: `${level}:${id}` → { url, dateClosed }
 
   if (bonusL3Ids.size > 0) {
     const { data: l3Rows } = await supabase
       .from('ws_tasks_l3')
-      .select('ws_task_id, ws_project_id, parent_l2_id')
+      .select('ws_task_id, ws_project_id, parent_l2_id, date_closed')
       .in('ws_task_id', [...bonusL3Ids])
 
     const parentL2Ids = [...new Set((l3Rows ?? []).map((r) => r.parent_l2_id).filter(Boolean) as string[])]
@@ -250,21 +265,27 @@ async function _getUserTransactions(
       const url = l3.ws_project_id && l1Id
         ? `${WS_BASE_URL}/${l3.ws_project_id}/${l1Id}/${l3.ws_task_id}/`
         : undefined
-      if (url) bonusUrlMap.set(`l3:${l3.ws_task_id}`, url)
+      bonusInfoMap.set(`l3:${l3.ws_task_id}`, {
+        url,
+        dateClosed: (l3.date_closed as string | null) ?? undefined,
+      })
     }
   }
 
   if (bonusL2Ids.size > 0) {
     const { data: l2Rows } = await supabase
       .from('ws_tasks_l2')
-      .select('ws_task_id, ws_project_id, parent_l1_id')
+      .select('ws_task_id, ws_project_id, parent_l1_id, date_closed')
       .in('ws_task_id', [...bonusL2Ids])
 
     for (const l2 of l2Rows ?? []) {
       const url = l2.ws_project_id && l2.parent_l1_id
         ? `${WS_BASE_URL}/${l2.ws_project_id}/${l2.parent_l1_id}/${l2.ws_task_id}/`
         : undefined
-      if (url) bonusUrlMap.set(`l2:${l2.ws_task_id}`, url)
+      bonusInfoMap.set(`l2:${l2.ws_task_id}`, {
+        url,
+        dateClosed: (l2.date_closed as string | null) ?? undefined,
+      })
     }
   }
 
@@ -310,12 +331,28 @@ async function _getUserTransactions(
       const tasks = getMasterPlannerTasks(eventType, details)
       if (tasks) {
         const level: 'l3' | 'l2' = MASTER_PLANNER_L2_TYPES.has(eventType) ? 'l2' : 'l3'
-        bonusTasks = tasks.map((t) => ({
-          id: t.id,
-          name: t.name,
-          url: bonusUrlMap.get(`${level}:${t.id}`),
-        }))
+        bonusTasks = tasks.map((t) => {
+          const info = bonusInfoMap.get(`${level}:${t.id}`)
+          return {
+            id: t.id,
+            name: t.name,
+            url: info?.url,
+            dateClosed: info?.dateClosed,
+          }
+        })
       }
+    }
+
+    // Дата закрытия задачи: budget_* — из ws_tasks_*; deadline_ok_l3 — из details;
+    // deadline_revoked_l3 — из original_details.
+    let taskClosedAt: string | undefined
+    if (budgetTaskInfo?.dateClosed) {
+      taskClosedAt = budgetTaskInfo.dateClosed
+    } else if (eventType === 'deadline_ok_l3') {
+      taskClosedAt = (details?.date_closed as string | undefined) ?? undefined
+    } else if (eventType === 'deadline_revoked_l3') {
+      const original = details?.original_details as Record<string, unknown> | undefined
+      taskClosedAt = (original?.date_closed as string | undefined) ?? undefined
     }
 
     const enriched = enrichTransaction(eventType, row.description as string, details, redReasons, product?.name, taskUrl, budgetTaskInfo)
@@ -333,6 +370,7 @@ async function _getUserTransactions(
       inlineLink: enriched.inlineLink,
       productEmoji: product?.emoji ?? undefined,
       productImageUrl: product?.image_url ?? undefined,
+      taskClosedAt,
       bonusTasks,
     }
   })

@@ -20,13 +20,18 @@ function buildTaskUrl(projectId: string | null, l1Id: string | null, taskId: str
   return `${WS_BASE}/${projectId}/${taskId}/`
 }
 
-// Подтягивает URL для milestone_tasks/revoked_tasks (id+name приходят из view, без проекта/parent).
+interface BonusTaskInfo {
+  url: string | null
+  dateClosed: string | null
+}
+
+// Подтягивает URL и дату закрытия для milestone_tasks/revoked_tasks (id+name приходят из view).
 // Уровень задачи определяется по level события: L3 → ws_tasks_l3, L2 → ws_tasks_l2.
 // Использует admin client: на ws_tasks_l3/ws_tasks_l2 включён RLS только для service_role,
 // view_master_planner_history работает через SECURITY DEFINER — прямые запросы из user-сессии вернут 0 строк.
-async function buildBonusTaskUrlMaps(
+async function buildBonusTaskInfoMaps(
   rows: ViewRow[],
-): Promise<{ l3: Map<string, string>; l2: Map<string, string> }> {
+): Promise<{ l3: Map<string, BonusTaskInfo>; l2: Map<string, BonusTaskInfo> }> {
   const supabase = createSupabaseAdminClient()
   const l3Ids = new Set<string>()
   const l2Ids = new Set<string>()
@@ -40,13 +45,13 @@ async function buildBonusTaskUrlMaps(
     }
   }
 
-  const l3UrlMap = new Map<string, string>()
-  const l2UrlMap = new Map<string, string>()
+  const l3Map = new Map<string, BonusTaskInfo>()
+  const l2Map = new Map<string, BonusTaskInfo>()
 
   if (l3Ids.size > 0) {
     const { data: l3Rows } = await supabase
       .from('ws_tasks_l3')
-      .select('ws_task_id, ws_project_id, parent_l2_id')
+      .select('ws_task_id, ws_project_id, parent_l2_id, date_closed')
       .in('ws_task_id', [...l3Ids])
 
     const parentL2Ids = [...new Set((l3Rows ?? []).map((r) => r.parent_l2_id).filter(Boolean) as string[])]
@@ -64,23 +69,67 @@ async function buildBonusTaskUrlMaps(
     for (const l3 of l3Rows ?? []) {
       const l1Id = l2ToL1.get(l3.parent_l2_id as string) ?? null
       const url = buildTaskUrl(l3.ws_project_id as string | null, l1Id, l3.ws_task_id as string)
-      if (url) l3UrlMap.set(l3.ws_task_id as string, url)
+      l3Map.set(l3.ws_task_id as string, {
+        url,
+        dateClosed: (l3.date_closed as string | null) ?? null,
+      })
     }
   }
 
   if (l2Ids.size > 0) {
     const { data: l2Rows } = await supabase
       .from('ws_tasks_l2')
-      .select('ws_task_id, ws_project_id, parent_l1_id')
+      .select('ws_task_id, ws_project_id, parent_l1_id, date_closed')
       .in('ws_task_id', [...l2Ids])
 
     for (const l2 of l2Rows ?? []) {
       const url = buildTaskUrl(l2.ws_project_id as string | null, l2.parent_l1_id as string | null, l2.ws_task_id as string)
-      if (url) l2UrlMap.set(l2.ws_task_id as string, url)
+      l2Map.set(l2.ws_task_id as string, {
+        url,
+        dateClosed: (l2.date_closed as string | null) ?? null,
+      })
     }
   }
 
-  return { l3: l3UrlMap, l2: l2UrlMap }
+  return { l3: l3Map, l2: l2Map }
+}
+
+// Подтягивает date_closed задачи для каждого budget-события (для deadline date_closed уже в details).
+// Берёт ws_task_id из row.ws_task_id (для revoked-вариантов уже COALESCE'нуто на original_details в view).
+async function buildEventTaskClosedAtMap(rows: ViewRow[]): Promise<Map<string, string>> {
+  const supabase = createSupabaseAdminClient()
+  const l3Ids = new Set<string>()
+  const l2Ids = new Set<string>()
+
+  for (const r of rows) {
+    if (r.category !== 'budget' || !r.ws_task_id) continue
+    if (r.level === 'L2') l2Ids.add(r.ws_task_id)
+    else l3Ids.add(r.ws_task_id)
+  }
+
+  const map = new Map<string, string>()
+
+  if (l3Ids.size > 0) {
+    const { data } = await supabase
+      .from('ws_tasks_l3')
+      .select('ws_task_id, date_closed')
+      .in('ws_task_id', [...l3Ids])
+    for (const t of data ?? []) {
+      if (t.date_closed) map.set(`l3:${t.ws_task_id}`, t.date_closed as string)
+    }
+  }
+
+  if (l2Ids.size > 0) {
+    const { data } = await supabase
+      .from('ws_tasks_l2')
+      .select('ws_task_id, date_closed')
+      .in('ws_task_id', [...l2Ids])
+    for (const t of data ?? []) {
+      if (t.date_closed) map.set(`l2:${t.ws_task_id}`, t.date_closed as string)
+    }
+  }
+
+  return map
 }
 
 interface ViewRow {
@@ -108,13 +157,26 @@ interface ViewRow {
 
 function mapRowToEvent(
   row: ViewRow,
-  bonusUrlMaps?: { l3: Map<string, string>; l2: Map<string, string> },
+  bonusInfoMaps?: { l3: Map<string, BonusTaskInfo>; l2: Map<string, BonusTaskInfo> },
+  taskClosedAtMap?: Map<string, string>,
 ): MasterPlannerEvent {
-  const urlMap = row.level === 'L2' ? bonusUrlMaps?.l2 : bonusUrlMaps?.l3
+  const infoMap = row.level === 'L2' ? bonusInfoMaps?.l2 : bonusInfoMaps?.l3
   const enrich = (
     list: { id: string; name: string }[] | null,
-  ): { id: string; name: string; url: string | null }[] | null =>
-    list ? list.map((t) => ({ ...t, url: urlMap?.get(t.id) ?? null })) : null
+  ): { id: string; name: string; url: string | null; dateClosed: string | null }[] | null =>
+    list
+      ? list.map((t) => {
+          const info = infoMap?.get(t.id)
+          return { ...t, url: info?.url ?? null, dateClosed: info?.dateClosed ?? null }
+        })
+      : null
+
+  // Для deadline date_closed уже приходит из details; для budget подмешиваем из ws_tasks_*.
+  let dateClosed: string | null = row.date_closed ?? null
+  if (!dateClosed && row.category === 'budget' && row.ws_task_id) {
+    const key = `${row.level === 'L2' ? 'l2' : 'l3'}:${row.ws_task_id}`
+    dateClosed = taskClosedAtMap?.get(key) ?? null
+  }
 
   return {
     eventId: row.event_id,
@@ -132,7 +194,7 @@ function mapRowToEvent(
     milestoneTasks: enrich(row.milestone_tasks),
     revokedTasks: enrich(row.revoked_tasks),
     plannedEnd: row.planned_end ?? null,
-    dateClosed: row.date_closed ?? null,
+    dateClosed,
   }
 }
 
@@ -159,7 +221,8 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
     .order('created_at', { ascending: false })
     .limit(5)
 
-  const recentBonusUrlMaps = await buildBonusTaskUrlMaps((recentRows ?? []) as unknown as ViewRow[])
+  const recentBonusInfoMaps = await buildBonusTaskInfoMaps((recentRows ?? []) as unknown as ViewRow[])
+  const recentTaskClosedAtMap = await buildEventTaskClosedAtMap((recentRows ?? []) as unknown as ViewRow[])
 
   // Budget pending
   const { data: budgetPendingRows } = await supabase
@@ -209,7 +272,7 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
     l2: l2State
       ? { currentStreak: l2State.current_streak, completedCycles: l2State.completed_cycles, reward: 400 }
       : { ...DEFAULT_STREAK, reward: 400 },
-    recentEvents: (recentRows ?? []).map((r) => mapRowToEvent(r as unknown as ViewRow, recentBonusUrlMaps)),
+    recentEvents: (recentRows ?? []).map((r) => mapRowToEvent(r as unknown as ViewRow, recentBonusInfoMaps, recentTaskClosedAtMap)),
     pendingTasks: allPending,
   }
 }
@@ -308,7 +371,8 @@ export async function getMasterPlannerHistory(
 
   const { data: rows, count } = await query
 
-  const historyBonusUrlMaps = await buildBonusTaskUrlMaps((rows ?? []) as unknown as ViewRow[])
+  const historyBonusInfoMaps = await buildBonusTaskInfoMaps((rows ?? []) as unknown as ViewRow[])
+  const historyTaskClosedAtMap = await buildEventTaskClosedAtMap((rows ?? []) as unknown as ViewRow[])
 
   // Доп. запрос — startPosition для нижней строки страницы
   let startPosition = 0
@@ -343,7 +407,7 @@ export async function getMasterPlannerHistory(
   }
 
   return {
-    events: (rows ?? []).map((r) => mapRowToEvent(r as unknown as ViewRow, historyBonusUrlMaps)),
+    events: (rows ?? []).map((r) => mapRowToEvent(r as unknown as ViewRow, historyBonusInfoMaps, historyTaskClosedAtMap)),
     totalCount: count ?? 0,
     startPosition,
   }

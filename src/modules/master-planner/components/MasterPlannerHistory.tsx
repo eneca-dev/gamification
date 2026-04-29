@@ -232,10 +232,11 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
                   <span style={{ color: "var(--apex-text-muted)" }}>{style.label}</span>
                 )}
               </div>
-              {/* Budget: часы */}
+              {/* Budget: часы + дата закрытия задачи */}
               {evt.category === "budget" && evt.maxTime != null && evt.actualTime != null && (
                 <div className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>
                   {formatHours(evt.actualTime)} / {formatHours(evt.maxTime)} ч
+                  {evt.dateClosed && ` · закрыта: ${formatDDMMYYYY(evt.dateClosed)}`}
                 </div>
               )}
               {/* Deadline: план / факт */}
@@ -284,27 +285,34 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
                 const linkColor = isRevokeRow ? "var(--apex-danger)" : "var(--apex-primary)";
                 const textColor = isRevokeRow ? "var(--apex-danger)" : "var(--apex-text)";
                 return (
-                  <div key={task.id} className="flex items-center gap-2 text-[11px]">
-                    <span className="shrink-0 w-5 text-right" style={{ color: "var(--apex-text-muted)" }}>
+                  <div key={task.id} className="flex items-start gap-2 text-[11px]">
+                    <span className="shrink-0 w-5 text-right pt-0.5" style={{ color: "var(--apex-text-muted)" }}>
                       {idx + 1}.
                     </span>
                     {isRevokeRow && (
-                      <XCircle size={11} className="shrink-0" style={{ color: "var(--apex-danger)" }} />
+                      <XCircle size={11} className="shrink-0 mt-0.5" style={{ color: "var(--apex-danger)" }} />
                     )}
-                    {task.url ? (
-                      <a
-                        href={task.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline inline-flex items-center gap-1 min-w-0"
-                        style={{ color: linkColor }}
-                      >
-                        <span className={`truncate ${isRevokeRow ? "line-through" : ""}`}>{task.name}</span>
-                        <ExternalLink size={10} className="shrink-0" />
-                      </a>
-                    ) : (
-                      <span className={`truncate ${isRevokeRow ? "line-through" : ""}`} style={{ color: textColor }}>{task.name}</span>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      {task.url ? (
+                        <a
+                          href={task.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:underline inline-flex items-center gap-1 min-w-0"
+                          style={{ color: linkColor }}
+                        >
+                          <span className={`truncate ${isRevokeRow ? "line-through" : ""}`}>{task.name}</span>
+                          <ExternalLink size={10} className="shrink-0" />
+                        </a>
+                      ) : (
+                        <span className={`truncate ${isRevokeRow ? "line-through" : ""}`} style={{ color: textColor }}>{task.name}</span>
+                      )}
+                      {task.dateClosed && (
+                        <div className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>
+                          закрыта: {formatDDMMYYYY(task.dateClosed)}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}

@@ -21,8 +21,8 @@ export interface MasterPlannerEvent {
   coins: number | null
   streakWas: number | null
   milestone: number | null
-  milestoneTasks: { id: string; name: string; url: string | null }[] | null
-  revokedTasks: { id: string; name: string; url: string | null }[] | null
+  milestoneTasks: { id: string; name: string; url: string | null; dateClosed: string | null }[] | null
+  revokedTasks: { id: string; name: string; url: string | null; dateClosed: string | null }[] | null
   // Deadline-специфичные поля (null для budget событий)
   plannedEnd: string | null
   dateClosed: string | null
