@@ -139,7 +139,12 @@ export function Sidebar({ user, balance, showDevSwitcher }: SidebarProps) {
             </button>
           )}
 
-          {showDevSwitcher && <DevUserSwitcher />}
+          {showDevSwitcher && (
+            <DevUserSwitcher
+              isImpersonating={user?.isImpersonating ?? false}
+              impersonatedName={user?.fullName ?? null}
+            />
+          )}
         </div>
       </nav>
 

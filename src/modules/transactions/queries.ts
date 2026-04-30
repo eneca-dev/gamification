@@ -500,8 +500,8 @@ function enrichTransaction(
       const statusLabel = status && status !== 'не установлен' ? `(${status})` : null
       const text = [name, statusLabel].filter(Boolean).join(' ')
       return {
-        description: 'Время внесено не в статусе «В работе»',
-        subItems: text ? [{ text, url }] : undefined,
+        description: 'Время внесено не в статусе «В работе»:',
+        inlineLink: text ? { text, url } : undefined,
       }
     }
     case 'task_dynamics_violation': {

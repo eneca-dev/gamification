@@ -139,7 +139,7 @@ export function TransactionsFilters({ currentSort, currentSource, currentDateFro
   }
 
   return (
-    <div className="space-y-2.5 pb-4 mb-2" style={{ borderBottom: '1px solid var(--apex-border)' }}>
+    <div className="space-y-2.5 pb-4 mb-2">
       <FilterRow label="Тип">
         {SOURCE_OPTIONS.map((opt) => (
           <FilterPill

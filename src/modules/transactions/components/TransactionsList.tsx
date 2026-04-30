@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, ExternalLink, XCircle } from 'lucide-react'
+import { ChevronDown, ChevronUp, ExternalLink, XCircle, Briefcase, Building2, Heart, Trophy, Award, ShoppingBag, Tag } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
+import { CoinIcon } from '@/components/CoinIcon'
 import type { TransactionSubItem } from '../types'
 
 interface BonusTaskItem {
@@ -33,13 +35,29 @@ interface TransactionsListProps {
   items: TransactionItem[]
 }
 
-const SOURCE_LABELS: Record<string, string> = {
-  ws: 'Worksection',
-  revit: 'Revit',
-  airtable: 'Благодарности',
-  contest: 'Соревнование',
-  achievements: 'Достижения',
-  shop: 'Магазин',
+interface SourceConfig {
+  icon: LucideIcon
+  label: string
+  bg: string
+  color: string
+}
+
+const SOURCE_CONFIG: Record<string, SourceConfig> = {
+  ws: { icon: Briefcase, label: 'Worksection', bg: 'var(--tag-blue-bg)', color: 'var(--tag-blue-text)' },
+  revit: { icon: Building2, label: 'Revit', bg: 'var(--tag-orange-bg)', color: 'var(--tag-orange-text)' },
+  airtable: { icon: Heart, label: 'Благодарности', bg: 'var(--tag-purple-bg)', color: 'var(--tag-purple-text)' },
+  contest: { icon: Trophy, label: 'Соревнование', bg: 'var(--tag-yellow-bg)', color: 'var(--tag-yellow-text)' },
+  achievements: { icon: Award, label: 'Достижения', bg: 'var(--tag-teal-bg)', color: 'var(--tag-teal-text)' },
+  shop: { icon: ShoppingBag, label: 'Магазин', bg: 'var(--tag-gray-bg)', color: 'var(--tag-gray-text)' },
+}
+
+function getSourceConfig(source: string): SourceConfig {
+  return SOURCE_CONFIG[source] ?? {
+    icon: Tag,
+    label: source,
+    bg: 'var(--tag-gray-bg)',
+    color: 'var(--tag-gray-text)',
+  }
 }
 
 export function TransactionsList({ items }: TransactionsListProps) {
@@ -64,6 +82,33 @@ export function TransactionsList({ items }: TransactionsListProps) {
 
   return (
     <div className="space-y-1">
+      <div
+        className="flex items-center gap-3 px-3 pb-2 mb-1"
+        style={{ borderBottom: '1px solid var(--apex-border)' }}
+      >
+        <div className="w-9 flex-shrink-0" />
+        <div
+          className="flex-1 text-[13px] font-bold uppercase"
+          style={{ color: 'var(--apex-text-muted)' }}
+        >
+          Операция
+        </div>
+        <div
+          className="w-32 flex-shrink-0 text-[13px] font-bold uppercase"
+          style={{ color: 'var(--apex-text-muted)' }}
+        >
+          Тип
+        </div>
+        <div
+          className="w-24 flex-shrink-0 text-[13px] font-bold uppercase"
+          style={{ color: 'var(--apex-text-muted)' }}
+        >
+          Дата
+        </div>
+        <div className="w-24 flex-shrink-0 flex items-center justify-start">
+          <CoinIcon size={18} />
+        </div>
+      </div>
       {items.map((tx) => {
         const isNegative = tx.coins < 0
         const isZero = tx.coins === 0
@@ -90,11 +135,13 @@ export function TransactionsList({ items }: TransactionsListProps) {
         const hasBonusTasks = tx.bonusTasks != null && tx.bonusTasks.length > 0
         const isExpanded = expandedIds.has(tx.id)
         const isRevokeRow = tx.event_type.includes('revoked')
+        const sourceCfg = getSourceConfig(tx.source)
+        const SourceIcon = sourceCfg.icon
 
         return (
-          <div key={tx.id} className="flex items-start gap-3 px-3 py-2.5 rounded-xl">
+          <div key={tx.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0 mt-0.5"
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
               style={{
                 background: iconBg,
                 border: iconBorder,
@@ -104,7 +151,7 @@ export function TransactionsList({ items }: TransactionsListProps) {
               {iconContent}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1 min-w-0 flex-wrap">
+              <div className="flex items-center gap-1 min-w-0 flex-wrap leading-none">
                 {hasBonusTasks ? (
                   <button
                     type="button"
@@ -207,24 +254,33 @@ export function TransactionsList({ items }: TransactionsListProps) {
                 </div>
               )}
 
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
-                  {tx.dateFormatted}
-                </span>
-                {tx.taskClosedAt && (
+              {tx.taskClosedAt && (
+                <div className="mt-1 leading-none">
                   <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
-                    · задача закрыта: {formatTaskClosedAt(tx.taskClosedAt)}
+                    задача закрыта: {formatTaskClosedAt(tx.taskClosedAt)}
                   </span>
-                )}
-                <span
-                  className="px-1.5 py-0.5 rounded text-[9px] font-medium"
-                  style={{ background: 'var(--apex-bg)', color: 'var(--apex-text-muted)', border: '1px solid var(--apex-border)' }}
-                >
-                  {SOURCE_LABELS[tx.source] ?? tx.source}
-                </span>
-              </div>
+                </div>
+              )}
             </div>
-            <div className="text-[14px] font-bold flex-shrink-0 mt-0.5" style={{ color: amountColor }}>
+            <div className="w-32 flex-shrink-0">
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                style={{ background: sourceCfg.bg, color: sourceCfg.color }}
+              >
+                <SourceIcon size={11} />
+                {sourceCfg.label}
+              </span>
+            </div>
+            <div
+              className="w-24 flex-shrink-0 text-[13px] text-left"
+              style={{ color: 'var(--apex-text-muted)' }}
+            >
+              {tx.dateFormatted}
+            </div>
+            <div
+              className="w-24 flex-shrink-0 text-[14px] font-bold text-left"
+              style={{ color: amountColor }}
+            >
               {isZero ? '—' : `${tx.coins > 0 ? '+' : ''}${tx.coins.toLocaleString('ru-RU')}`}
             </div>
           </div>
