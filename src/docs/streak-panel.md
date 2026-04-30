@@ -14,7 +14,7 @@
 
 Рядом с заголовком панели — info-кнопка с тултипом, в котором перечислены критерии зелёного дня (внесён отчёт; % готовности обновляется при пересечении каждого 20%-чекпоинта бюджета задачи, включая проверки в перерасход — 120%, 140% и далее; время вносится в задачи со статусом «В работе») и те же условия в негативе для штрафа. «Процент готовности» и «метка готовности» — одно и то же поле `ws_tasks_l3.percent`.
 
-Под гридом — два стрика: Worksection (из view `ws_user_streaks_effective`) и Автоматизации (из `revit_user_streaks`). Milestones отображаются inline рядом с лейблом стрика. Данные milestones берутся из `gamification_event_types`.
+Под гридом — два стрика: Worksection (из view `ws_user_streaks_effective`) и Автоматизации (из view `revit_user_streaks_effective`). Milestones отображаются inline рядом с лейблом стрика. Данные milestones берутся из `gamification_event_types`.
 
 WS-стрик считается на чтение через view. Модель: green=+1, отсутствие (отпуск/больничный/sick_day)=0 (заморозка), выходной/праздник=+1, red=триггерит pending. View walk'ает от `streak_start_date` (или от `pending_reset_date + 1`, если грейс истёк) до `fn_minsk_today() - 1`, применяя дельты по `ws_daily_statuses`. Во время активного грейса (`pending_reset_expires_at > now()`) view возвращает замороженное `ws_user_streaks.current_streak` (значение «до red»). После истечения грейса — пересчитывается с учётом выходных после red. Истечение происходит ровно в момент `expires_at`, без cron и vps-прогона.
 
@@ -26,7 +26,8 @@ WS-стрик считается на чтение через view. Модель
 - `elk_plugin_launches` — даты автоматизации
 - `ws_user_streaks_effective` — view с актуальным `current_streak` на чтение (источник истины для UI)
 - `ws_user_streaks` — таблица-снапшот: `streak_start_date`, `longest_streak`, `completed_cycles`, `pending_reset_date/expires_at`. Колонка `current_streak` в таблице — снапшот на момент vps-прогона (используется vps для milestone-сравнения «было/стало»), не источник для UI
-- `revit_user_streaks` — стрик Revit (current_streak)
+- `revit_user_streaks_effective` — view с актуальным Revit-стриком (источник истины для UI). Считается так же, как WS-стрик, но walk идёт прямо по `elk_plugin_launches` (без таблицы per-day статусов)
+- `revit_user_streaks` — таблица-снапшот для Revit: те же поля, что и у WS, плюс legacy `last_green_date`, `is_frozen`, `pending_gap_days`. Источник для milestone-сравнения в VPS-скрипте `compute-revit-gamification`
 - `gamification_event_types` — награды milestones (ws_streak_7/30/90, revit_streak_7/30_bonus)
 - `calendar_holidays` — праздники/нерабочие дни (дата → gray в гриде, скрипт пропускает)
 - `calendar_workdays` — рабочие переносы (выходной → рабочий день, скрипт обрабатывает)
@@ -41,11 +42,11 @@ WS-стрик считается на чтение через view. Модель
 
 ## Tooltip красных дней
 
-При наведении на красную ячейку показываются человеко-читаемые причины:
+При наведении на красную ячейку показываются человеко-читаемые причины (дата в тултипе — в формате DD.MM.YYYY):
 - `red_day` → «Не внесён отчёт»
 - `task_dynamics_violation` → «В задаче «{имя}» не был вовремя сменён процент готовности» + ссылка на WS
 - `section_red` → «В задаче «{имя}» не была вовремя сменена метка готовности» + ссылка на WS
-- `wrong_status_report` → «Время внесено в задачу «{имя}» (статус: {статус})» + ссылка на WS
+- `wrong_status_report` → «Время внесено в задачу без статуса «В работе» — «{имя}» ({статус})» + ссылка на WS. Если `task_status` отсутствует — `(не установлен)`
 
 Ссылки строятся: приоритетно из `ws_task_url` (прямая ссылка), иначе по формату `https://eneca.worksection.com/project/{projectId}/{l2Id}/{taskId}/`
 

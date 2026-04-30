@@ -84,7 +84,7 @@ function EventIcon({ type }: { type: string }) {
     return <span title={title}><XCircle size={14} style={{ color: "var(--apex-danger)" }} /></span>;
   }
   if (type.startsWith("budget_revoked")) {
-    return <span title={title}><XCircle size={14} style={{ color: "var(--orange-500)" }} /></span>;
+    return <span title={title}><XCircle size={14} style={{ color: "var(--apex-danger)" }} /></span>;
   }
   if (type === "master_planner" || type === "master_planner_l2") {
     return <span title={title}><Trophy size={14} style={{ color: "var(--apex-primary)" }} /></span>;

@@ -1,6 +1,18 @@
-import { ExternalLink } from 'lucide-react'
+'use client'
 
+import { useState } from 'react'
+import { ChevronDown, ChevronUp, ExternalLink, XCircle, Briefcase, Building2, Heart, Trophy, Award, ShoppingBag, Tag } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+
+import { CoinIcon } from '@/components/CoinIcon'
 import type { TransactionSubItem } from '../types'
+
+interface BonusTaskItem {
+  id: string
+  name: string
+  url?: string
+  dateClosed?: string
+}
 
 interface TransactionItem {
   id: string
@@ -14,20 +26,52 @@ interface TransactionItem {
   inlineLink?: TransactionSubItem
   productEmoji?: string
   productImageUrl?: string | null
+  bonusTasks?: BonusTaskItem[]
+  details?: Record<string, unknown> | null
+  taskClosedAt?: string
 }
 
 interface TransactionsListProps {
   items: TransactionItem[]
 }
 
-const SOURCE_LABELS: Record<string, string> = {
-  ws: 'Worksection',
-  revit: 'Revit',
-  airtable: 'Благодарности',
-  contest: 'Соревнование',
+interface SourceConfig {
+  icon: LucideIcon
+  label: string
+  bg: string
+  color: string
+}
+
+const SOURCE_CONFIG: Record<string, SourceConfig> = {
+  ws: { icon: Briefcase, label: 'Worksection', bg: 'var(--tag-blue-bg)', color: 'var(--tag-blue-text)' },
+  revit: { icon: Building2, label: 'Revit', bg: 'var(--tag-orange-bg)', color: 'var(--tag-orange-text)' },
+  airtable: { icon: Heart, label: 'Благодарности', bg: 'var(--tag-purple-bg)', color: 'var(--tag-purple-text)' },
+  contest: { icon: Trophy, label: 'Соревнование', bg: 'var(--tag-yellow-bg)', color: 'var(--tag-yellow-text)' },
+  achievements: { icon: Award, label: 'Достижения', bg: 'var(--tag-teal-bg)', color: 'var(--tag-teal-text)' },
+  shop: { icon: ShoppingBag, label: 'Магазин', bg: 'var(--tag-gray-bg)', color: 'var(--tag-gray-text)' },
+}
+
+function getSourceConfig(source: string): SourceConfig {
+  return SOURCE_CONFIG[source] ?? {
+    icon: Tag,
+    label: source,
+    bg: 'var(--tag-gray-bg)',
+    color: 'var(--tag-gray-text)',
+  }
 }
 
 export function TransactionsList({ items }: TransactionsListProps) {
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+
+  function toggleExpanded(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   if (items.length === 0) {
     return (
       <div className="text-center py-12 text-[13px]" style={{ color: 'var(--apex-text-muted)' }}>
@@ -38,6 +82,33 @@ export function TransactionsList({ items }: TransactionsListProps) {
 
   return (
     <div className="space-y-1">
+      <div
+        className="flex items-center gap-3 px-3 pb-2 mb-1"
+        style={{ borderBottom: '1px solid var(--apex-border)' }}
+      >
+        <div className="w-9 flex-shrink-0" />
+        <div
+          className="flex-1 text-[13px] font-bold uppercase"
+          style={{ color: 'var(--apex-text-muted)' }}
+        >
+          Операция
+        </div>
+        <div
+          className="w-32 flex-shrink-0 text-[13px] font-bold uppercase"
+          style={{ color: 'var(--apex-text-muted)' }}
+        >
+          Тип
+        </div>
+        <div
+          className="w-24 flex-shrink-0 text-[13px] font-bold uppercase"
+          style={{ color: 'var(--apex-text-muted)' }}
+        >
+          Дата
+        </div>
+        <div className="w-24 flex-shrink-0 flex items-center justify-start">
+          <CoinIcon size={18} />
+        </div>
+      </div>
       {items.map((tx) => {
         const isNegative = tx.coins < 0
         const isZero = tx.coins === 0
@@ -61,10 +132,16 @@ export function TransactionsList({ items }: TransactionsListProps) {
             : tx.productEmoji)
           : tx.icon
 
+        const hasBonusTasks = tx.bonusTasks != null && tx.bonusTasks.length > 0
+        const isExpanded = expandedIds.has(tx.id)
+        const isRevokeRow = tx.event_type.includes('revoked')
+        const sourceCfg = getSourceConfig(tx.source)
+        const SourceIcon = sourceCfg.icon
+
         return (
-          <div key={tx.id} className="flex items-start gap-3 px-3 py-2.5 rounded-xl">
+          <div key={tx.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0 mt-0.5"
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
               style={{
                 background: iconBg,
                 border: iconBorder,
@@ -74,10 +151,25 @@ export function TransactionsList({ items }: TransactionsListProps) {
               {iconContent}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1 min-w-0 flex-wrap">
-                <span className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>
-                  {tx.description}
-                </span>
+              <div className="flex items-center gap-1 min-w-0 flex-wrap leading-none">
+                {hasBonusTasks ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(tx.id)}
+                    className="text-[13px] font-semibold inline-flex items-center gap-1 hover:underline"
+                    style={{ color: 'var(--apex-text)' }}
+                  >
+                    <span>{tx.description}</span>
+                    {isExpanded
+                      ? <ChevronUp size={12} style={{ color: 'var(--apex-text-muted)' }} />
+                      : <ChevronDown size={12} style={{ color: 'var(--apex-text-muted)' }} />
+                    }
+                  </button>
+                ) : (
+                  <span className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>
+                    {tx.description}
+                  </span>
+                )}
                 {tx.inlineLink && (
                   tx.inlineLink.url ? (
                     <a
@@ -97,6 +189,46 @@ export function TransactionsList({ items }: TransactionsListProps) {
                   )
                 )}
               </div>
+
+              {hasBonusTasks && isExpanded && (
+                <div className="mt-2 px-3 py-2 rounded-xl space-y-1" style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}>
+                  {tx.bonusTasks!.map((task, idx) => {
+                    const linkColor = isRevokeRow ? 'var(--apex-danger)' : 'var(--apex-primary)'
+                    const textColor = isRevokeRow ? 'var(--apex-danger)' : 'var(--apex-text)'
+                    return (
+                      <div key={task.id} className="flex items-start gap-2 text-[11px]">
+                        <span className="shrink-0 w-5 text-right pt-0.5" style={{ color: 'var(--apex-text-muted)' }}>
+                          {idx + 1}.
+                        </span>
+                        {isRevokeRow && (
+                          <XCircle size={11} className="flex-shrink-0 mt-0.5" style={{ color: 'var(--apex-danger)' }} />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          {task.url ? (
+                            <a
+                              href={task.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:underline inline-flex items-center gap-1 min-w-0"
+                              style={{ color: linkColor }}
+                            >
+                              <span className={`truncate ${isRevokeRow ? 'line-through' : ''}`}>{task.name}</span>
+                              <ExternalLink size={10} className="flex-shrink-0" />
+                            </a>
+                          ) : (
+                            <span className={`truncate ${isRevokeRow ? 'line-through' : ''}`} style={{ color: textColor }}>{task.name}</span>
+                          )}
+                          {task.dateClosed && (
+                            <div className="text-[10px]" style={{ color: 'var(--apex-text-muted)' }}>
+                              закрыта: {formatTaskClosedAt(task.dateClosed)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
 
               {tx.subItems && tx.subItems.length > 0 && (
                 <div className="mt-1 space-y-0.5">
@@ -122,19 +254,33 @@ export function TransactionsList({ items }: TransactionsListProps) {
                 </div>
               )}
 
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
-                  {tx.dateFormatted}
-                </span>
-                <span
-                  className="px-1.5 py-0.5 rounded text-[9px] font-medium"
-                  style={{ background: 'var(--apex-bg)', color: 'var(--apex-text-muted)', border: '1px solid var(--apex-border)' }}
-                >
-                  {SOURCE_LABELS[tx.source] ?? tx.source}
-                </span>
-              </div>
+              {tx.taskClosedAt && (
+                <div className="mt-1 leading-none">
+                  <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
+                    задача закрыта: {formatTaskClosedAt(tx.taskClosedAt)}
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="text-[14px] font-bold flex-shrink-0 mt-0.5" style={{ color: amountColor }}>
+            <div className="w-32 flex-shrink-0">
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                style={{ background: sourceCfg.bg, color: sourceCfg.color }}
+              >
+                <SourceIcon size={11} />
+                {sourceCfg.label}
+              </span>
+            </div>
+            <div
+              className="w-24 flex-shrink-0 text-[13px] text-left"
+              style={{ color: 'var(--apex-text-muted)' }}
+            >
+              {tx.dateFormatted}
+            </div>
+            <div
+              className="w-24 flex-shrink-0 text-[14px] font-bold text-left"
+              style={{ color: amountColor }}
+            >
               {isZero ? '—' : `${tx.coins > 0 ? '+' : ''}${tx.coins.toLocaleString('ru-RU')}`}
             </div>
           </div>
@@ -142,4 +288,9 @@ export function TransactionsList({ items }: TransactionsListProps) {
       })}
     </div>
   )
+}
+
+function formatTaskClosedAt(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split('-')
+  return `${d}.${m}.${y}`
 }

@@ -96,6 +96,12 @@ function buildWeeksAndMonths(calendarDays: CalendarDay[]) {
   return { weeks, groups };
 }
 
+// Дата YYYY-MM-DD → DD.MM.YYYY
+function formatDate(date: string): string {
+  const [year, month, day] = date.split("-");
+  return `${day}.${month}.${year}`;
+}
+
 // Построение WS URL задачи
 function buildTaskUrl(reason: RedReason): string | null {
   if (reason.ws_task_url) return reason.ws_task_url;
@@ -131,8 +137,8 @@ function formatRedReason(reason: RedReason): string {
     const status = reason.task_status ?? "не установлен";
     const url = buildTaskUrl(reason);
     return url
-      ? `Время внесено в задачу «${taskName}» (статус: ${status}) — ${url}`
-      : `Время внесено в задачу «${taskName}» (статус: ${status})`;
+      ? `Время внесено в задачу без статуса «В работе» — «${taskName}» (${status}) — ${url}`
+      : `Время внесено в задачу без статуса «В работе» — «${taskName}» (${status})`;
   }
   return reason.type;
 }
@@ -141,10 +147,11 @@ function formatRedReason(reason: RedReason): string {
 function getDayTooltip(day: CalendarDay): string | undefined {
   if (day.status === "out") return undefined;
 
-  let text = `${day.date}: ${statusLabels[day.status]}`;
+  const dateLabel = formatDate(day.date);
+  let text = `${dateLabel}: ${statusLabels[day.status]}`;
 
   if (day.status === "frozen" && day.absenceType) {
-    text = `${day.date}: ${absenceLabels[day.absenceType] ?? day.absenceType}`;
+    text = `${dateLabel}: ${absenceLabels[day.absenceType] ?? day.absenceType}`;
   }
 
   if (day.status === "red" && day.redReasons?.length) {

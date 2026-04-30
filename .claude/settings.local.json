@@ -81,7 +81,8 @@
       "PowerShell(Start-Process powershell -ArgumentList '-NoExit','-Command',\"Set-Location 'd:\\\\1work\\\\worksection-mcp'; & '.\\\\.venv\\\\Scripts\\\\python.exe' -m worksection_mcp\")",
       "mcp__worksection__get_task",
       "mcp__worksection__get_activity_log",
-      "mcp__worksection__get_task_discussion"
+      "mcp__worksection__get_task_discussion",
+      "Bash(echo \"Exit: $?\")"
     ]
   },
   "enableAllProjectMcpServers": true,

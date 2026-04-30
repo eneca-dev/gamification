@@ -176,35 +176,14 @@ Deno.serve(async (req) => {
 
   const totalSynced = results.reduce((acc, r) => acc + r.synced, 0);
 
-  // Финализация просроченных revit pending (сброс стриков, у которых истёк grace period)
-  let finalizeResult = null;
-  try {
-    const { data, error } = await supabase.rpc('fn_finalize_expired_revit_pendings');
-    if (error) throw error;
-    finalizeResult = data;
-  } catch (e) {
-    finalizeResult = { error: String(e) };
-  }
-
-  // Снапшот рейтингов для достижений (обновляет materialized views + записывает топы дня)
-  let snapshotResult = null;
-  try {
-    const { data, error } = await supabase.rpc('fn_ach_snapshot_rankings');
-    if (error) throw error;
-    snapshotResult = data;
-  } catch (e) {
-    snapshotResult = { error: String(e) };
-  }
-
-  // Проверка достижений по благодарностям
-  let gratitudeAchResult = null;
-  try {
-    const { data, error } = await supabase.rpc('fn_ach_check_gratitude_achievements');
-    if (error) throw error;
-    gratitudeAchResult = data;
-  } catch (e) {
-    gratitudeAchResult = { error: String(e) };
-  }
+  // ВНИМАНИЕ (декомиссия по плану src/docs-features/revit/streak-vps-migration.md):
+  //   • cron 'sync-plugin-launches-daily' снят миграцией 042.
+  //   • Финализацию просроченных revit pending теперь делает VPS-скрипт
+  //     compute-revit-gamification (phase 1).
+  //   • Ачивки (fn_ach_snapshot_rankings, fn_ach_check_gratitude_achievements)
+  //     теперь делает VPS-скрипт compute-achievements.
+  // Эта функция оставлена как «холодная» на 1-2 недели для экстренного ручного вызова —
+  // только Kibana-синк, без побочных эффектов.
 
   return new Response(
     JSON.stringify({
@@ -212,8 +191,6 @@ Deno.serve(async (req) => {
       days,
       totalSynced,
       results,
-      finalizedPendings: finalizeResult,
-      achievements: { snapshot: snapshotResult, gratitude: gratitudeAchResult },
     }),
     { headers: { 'Content-Type': 'application/json' } },
   );

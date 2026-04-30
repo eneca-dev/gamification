@@ -11,6 +11,9 @@ Impersonation позволяет разработчику просматрива
 `getCurrentUser()` в auth-модуле проверяет эту cookie в dev-режиме и возвращает данные из `ws_users`
 вместо auth/profiles. Все downstream-запросы работают автоматически, т.к. фильтруют по email.
 
+UI: кнопка "Сменить юзера" в сайдбаре (`DevUserSwitcher`) открывает модалку выбора. При активной
+impersonation под кнопкой отображается строка "Вход под: {имя}" с крестиком для очистки cookie.
+
 Защита: работает при `NODE_ENV === 'development'` (локальная разработка) либо при
 `ENABLE_DEV_TOOLS=true` (dev-стенд, напр. `dev.gamification.eneca.by`). На проде
 обе переменные должны отсутствовать/быть false. Cookie httpOnly.
