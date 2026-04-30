@@ -4,18 +4,30 @@ import { useState, useTransition, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Users, Search, X } from 'lucide-react'
 
-import { setImpersonation, searchUsers } from '@/modules/dev-tools/actions'
+import { setImpersonation, searchUsers, clearImpersonation } from '@/modules/dev-tools/actions'
 
 import type { DevUser } from '../types'
 
-export function DevUserSwitcher() {
+interface DevUserSwitcherProps {
+  isImpersonating?: boolean
+  impersonatedName?: string | null
+}
+
+export function DevUserSwitcher({ isImpersonating = false, impersonatedName = null }: DevUserSwitcherProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [users, setUsers] = useState<DevUser[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [isClearing, startClearTransition] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+
+  function handleClear() {
+    startClearTransition(async () => {
+      await clearImpersonation()
+    })
+  }
 
   // Загрузить начальный список при открытии
   useEffect(() => {
@@ -189,6 +201,32 @@ export function DevUserSwitcher() {
         <Users size={16} />
         Сменить юзера
       </button>
+
+      {/* Индикатор активной impersonation */}
+      {isImpersonating && (
+        <div
+          className="mx-3 mt-1 px-3 py-2 rounded-lg flex items-center gap-2 text-[11px]"
+          style={{
+            background: 'rgba(245, 158, 11, 0.12)',
+            color: 'var(--apex-text)',
+            border: '1px solid rgba(245, 158, 11, 0.3)',
+          }}
+        >
+          <span className="flex-1 min-w-0">
+            <span className="opacity-70">Вход под:</span>{' '}
+            <span className="font-semibold truncate">{impersonatedName ?? '—'}</span>
+          </span>
+          <button
+            onClick={handleClear}
+            disabled={isClearing}
+            title="Выйти из режима подмены"
+            className="p-0.5 rounded hover:bg-black/10 transition-colors disabled:opacity-50 flex-shrink-0"
+            style={{ color: 'var(--apex-text-muted)' }}
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
 
       {/* Портал — рендерим модалку в body, чтобы она не обрезалась sidebar */}
       {modal && createPortal(modal, document.body)}

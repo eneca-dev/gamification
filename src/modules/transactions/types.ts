@@ -16,6 +16,8 @@ export interface UserTransaction {
   inlineLink?: TransactionSubItem
   productEmoji?: string
   productImageUrl?: string | null
+  bonusTasks?: { id: string; name: string; url?: string; dateClosed?: string }[]
+  taskClosedAt?: string
 }
 
 // Маппинг event_type → иконка

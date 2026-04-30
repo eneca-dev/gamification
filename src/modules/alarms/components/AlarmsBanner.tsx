@@ -160,7 +160,7 @@ export function AlarmsBanner({ alarms: initialAlarms, showAll = false }: AlarmsB
         </>
       )}
 
-      <div className={`space-y-2 ${showAll ? '' : 'flex-1 flex flex-col justify-end mt-1'}`}>
+      <div className={`space-y-2 ${showAll ? '' : 'flex-1 flex flex-col mt-1'}`}>
       {visible.map((alarm) => {
         const isResolved = resolvedIds.has(alarm.id)
         const config = ALARM_TYPE_CONFIG[alarm.alarm_type] ?? DEFAULT_TYPE_CONFIG

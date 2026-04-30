@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { getCurrentUser } from "@/modules/auth/queries";
 import { getUserTransactions, getUserTransactionsCount, getEventIcon } from "@/modules/transactions";
 import { TransactionsList } from "@/modules/transactions/components/TransactionsList";
@@ -39,8 +39,8 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
     ...tx,
     icon: getEventIcon(tx.event_type),
     dateFormatted: new Date(tx.event_date + "T00:00:00").toLocaleDateString("ru-RU", {
-      day: "numeric",
-      month: "long",
+      day: "2-digit",
+      month: "2-digit",
       year: "numeric",
     }),
   }));
@@ -97,27 +97,53 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
           <TransactionsList items={items} />
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-6">
+            <div className="flex items-center justify-center gap-1.5 mt-6">
               {currentPage > 1 && (
-                <a
-                  href={`/transactions?page=${currentPage - 1}&${paginationBase}`}
-                  className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors"
-                  style={{ background: "var(--apex-bg)", color: "var(--apex-text)", border: "1px solid var(--apex-border)" }}
-                >
-                  ← Назад
-                </a>
+                <>
+                  <a
+                    href={`/transactions?page=1&${paginationBase}`}
+                    aria-label="К первой странице"
+                    title="К первой странице"
+                    className="flex items-center justify-center transition-colors"
+                    style={{ color: "var(--apex-text-muted)" }}
+                  >
+                    <ChevronsLeft size={16} />
+                  </a>
+                  <a
+                    href={`/transactions?page=${currentPage - 1}&${paginationBase}`}
+                    aria-label="Предыдущая страница"
+                    title="Предыдущая страница"
+                    className="flex items-center justify-center transition-colors"
+                    style={{ color: "var(--apex-text-muted)" }}
+                  >
+                    <ChevronLeft size={16} />
+                  </a>
+                </>
               )}
               <span className="text-[12px] font-medium px-3" style={{ color: "var(--apex-text-muted)" }}>
                 {currentPage} / {totalPages}
               </span>
               {currentPage < totalPages && (
-                <a
-                  href={`/transactions?page=${currentPage + 1}&${paginationBase}`}
-                  className="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors"
-                  style={{ background: "var(--apex-bg)", color: "var(--apex-text)", border: "1px solid var(--apex-border)" }}
-                >
-                  Вперёд →
-                </a>
+                <>
+                  <a
+                    href={`/transactions?page=${currentPage + 1}&${paginationBase}`}
+                    aria-label="Следующая страница"
+                    title="Следующая страница"
+                    className="flex items-center justify-center transition-colors"
+                    style={{ color: "var(--apex-text-muted)" }}
+                  >
+                    <ChevronRight size={16} />
+                  </a>
+                  <a
+                    href={`/transactions?page=${totalPages}&${paginationBase}`}
+                    aria-label="К последней странице"
+                    title="К последней странице"
+                    className="flex items-center justify-center transition-colors"
+                    style={{ color: "var(--apex-text-muted)" }}
+                  >
+                    <ChevronsRight size={16} />
+                  </a>
+                </>
               )}
             </div>
           )}
@@ -129,7 +155,7 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
 
 function FiltersSkeleton() {
   return (
-    <div className="space-y-2.5 pb-4 mb-2" style={{ borderBottom: '1px solid var(--apex-border)' }}>
+    <div className="space-y-2.5 pb-4 mb-2">
       <div className="flex items-center gap-3">
         <div className="h-3 w-14 rounded animate-pulse flex-shrink-0" style={{ background: '#E5E7EB' }} />
         <div className="flex gap-1.5">
