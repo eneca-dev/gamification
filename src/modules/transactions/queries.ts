@@ -476,7 +476,7 @@ function enrichTransaction(
           subItems.push({ text, url })
         }
       }
-      return { description: 'Красный день — сброс стрика', subItems: subItems.length > 0 ? subItems : undefined }
+      return { description: 'Красный день', subItems: subItems.length > 0 ? subItems : undefined }
     }
     case 'streak_reset_timetracking':
       return { description: 'Сброс стрика: не внесены часы' }

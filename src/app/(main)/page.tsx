@@ -340,7 +340,7 @@ export default async function DashboardPage() {
           daysLeft={daysLeft}
           currentEntityName={wsDeptCode}
           wsTooltip="Формула: сумма 💎 отдела за Worksection / количество людей в отделе. Сброс каждый месяц."
-          autoTooltip="Формула: сумма 💎 по Revit в отделе × (кол-во людей, использующих плагины / общее кол-во людей в отделе). Сброс каждый месяц."
+          autoTooltip="Формула: (сумма 💎 по Revit × коэффициент вовлечённости) ÷ кол-во людей в отделе. Коэффициент вовлечённости = использующих плагины ÷ всего в отделе. Сброс каждый месяц."
           lastMonthWsWinner={findWinner('ws_dept')}
           lastMonthRevitWinner={findWinner('revit_dept')}
           lastMonthLabel={lastMonthLabelStr}
@@ -356,7 +356,7 @@ export default async function DashboardPage() {
           title="Соревнование команд"
           currentEntityName={wsTeam}
           wsTooltip="Формула: сумма 💎 команды за Worksection / количество людей в команде. Сброс каждый месяц."
-          autoTooltip="Формула: сумма 💎 по Revit в команде × (кол-во людей, использующих плагины / общее кол-во людей в команде). Сброс каждый месяц."
+          autoTooltip="Формула: (сумма 💎 по Revit × коэффициент вовлечённости) ÷ кол-во людей в команде. Коэффициент вовлечённости = использующих плагины ÷ всего в команде. Сброс каждый месяц."
           lastMonthWsWinner={findWinner('ws_team')}
           lastMonthRevitWinner={findWinner('revit_team')}
           lastMonthLabel={lastMonthLabelStr}
