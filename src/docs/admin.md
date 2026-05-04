@@ -61,10 +61,20 @@
 - `getOrders()` — все заказы с данными покупателя, товара (name, emoji, image_url, is_physical через category) и суммой. supabaseAdmin
 - `getCalendarHolidays()` — все записи из calendar_holidays, сортировка по date ASC
 - `getCalendarWorkdays()` — все записи из calendar_workdays, сортировка по date ASC
+- `getEconomyOverview(filters)` — RPC `get_economy_overview`. Возвращает KPI экономики (заработано, отозвано фактически, фактически заработано = earned − revoked, подарено компанией = Σ |expected| − |actual| по revoked-транзакциям, clamped/total counts) + 5 каналов трат (shop, lottery, second_life, paid_gratitudes, quota_gratitudes), каждый с `{ coins, users }`. Бета-фильтр на получателе/покупателе/отправителе соответствующего канала. Revoke-транзакции по задачам, закрытым до `2026-03-25`, не учитываются — дата закрытия резолвится через `LEFT JOIN ws_tasks_l3/l2` по `ws_task_id` из `details` с фоллбеком на `details.original_details.date_closed` и `event_date`
+- `getEconomyTop(filters, source, level)` — RPC `get_economy_top`. Топ-список по одному из 6 источников (`'earned' | 'shop' | 'lottery' | 'second_life' | 'paid_gratitude' | 'revoked'`) на одном из 3 уровней (`'user' | 'team' | 'department'`). Возвращает все строки (slice до 10 на UI). Без `team`/`department` группируются как «Без команды» / «Без отдела». Источник `'revoked'` использует тот же cutoff по дате закрытия задачи (≥ 2026-03-25), что и `getEconomyOverview`
+- `getEconomyCategoryBreakdown(filters)` — RPC `get_economy_category_breakdown`. Категории магазина с агрегатом 💎/orders + JSON-массив товаров категории (для детализации по клику). Возвращает только категории с покупками за период (coins > 0)
+- `resolveEconomyPeriod(preset, customFrom?, customTo?)` — утилита: преобразует пресет периода (`7d/30d/90d/year/all/custom`) в ISO-границы `{from, to}`. `'all'` → `{null, null}`
 
 ## Компоненты
 
-- `AdminNav` — навигация по разделам админки (табы: Overview, Events, Users, Products, Orders, Calendar)
+- `AdminNav` — навигация по разделам админки (табы: Overview, Events, Users, Products, Orders, Calendar, Achievements, Shields, Lottery, Economy, Help)
+- `economy/EconomyDashboard` — серверный контейнер дашборда экономики. Принимает `period`/`customFrom`/`customTo`/`betaOnly`/`topLevel`/`overview`/`categories`/`tops` и рендерит `EconomyFilters` → `KpiSummary` → `SpendingBreakdown` → `CategoryBreakdownChart` → grid из 6 `TopList`
+- `economy/EconomyFilters` — клиентский компонент фильтров: пресеты периода (7д/30д/90д/Год/Всё время/Период), `DateRangePicker` для кастомного диапазона, тоггл «Только бета-тестеры», переключатель уровня топов (Сотрудники/Команды/Отделы). Все изменения через `router.replace` в URL searchParams (`useTransition` для индикации загрузки). Чипсы вынесены в локальный helper `ChipButton`
+- `economy/KpiSummary` — серверный блок «Сводка»: 4 KPI-карточки (заработано / фактически заработано / отозвано фактически / подарено компанией) + строка «Не хватило баланса на полный штраф в N из M отзывов (X%)»
+- `economy/SpendingBreakdown` — серверный блок «Куда уходят 💎»: 5 карточек по каналам (магазин, лотерея, вторая жизнь, платные благодарности, квотные благодарности), каждая с суммой 💎 и количеством участников. Для plurals — локальный helper `pluralize`
+- `economy/TopList` — клиентский переиспользуемый топ: заголовок с иконкой, превью первых 10 позиций, кнопка «Показать всех» открывает модалку (через портал) с полным списком. Опциональный `secondaryLabel` для счётчика транзакций (покупок / отправок / билетов)
+- `economy/CategoryBreakdownChart` — клиентский блок «Категории магазина»: Recharts donut (`PieChart` + `Pie` с innerRadius=60/outerRadius=100) слева и легенда-список справа (grid `1fr_1.2fr`). Цвета — фиксированная палитра `PALETTE` (11 цветов). Hover на сегменте/строке диммирует остальные (fillOpacity 0.4 / opacity 0.5). Клик по сегменту или строке раскрывает inline-список товаров категории (emoji/image, название, кол-во покупок, 💎). Tooltip показывает категорию + 💎 + долю в %. Состояние раскрытия — локальный `useState`, единовременно одна категория. Пустое состояние — карточка «Нет покупок за период»
 - `EventTypesTable` — таблица событий с inline-редактированием (name, coins, description), table-layout: fixed
 - `AdminUsersClient` — обёртка над UsersTable, принимает `AdminUserRow[]`
 - `UsersTable` — таблица пользователей с поиском, фильтрацией по отделу, тогглом «только админы», группировкой по отделам/командам, inline-переключением ролей
@@ -105,6 +115,7 @@
 - `/admin/products` — `getAllProducts()` + `getAllCategories()` параллельно → `ProductsClient`
 - `/admin/orders` — `getOrders()` → `AdminOrdersClient`
 - `/admin/calendar` — `getCalendarHolidays()` + `getCalendarWorkdays()` параллельно → `CalendarClient`
+- `/admin/economy` — Server Component с `checkIsAdmin()` (редирект на `/` для не-админов). Парсит searchParams (`period`, `from`, `to`, `beta`, `topLevel`), резолвит ISO-границы периода через `resolveEconomyPeriod` (для `'custom'` конвертирует YYYY-MM-DD → ISO начала/конца дня). Параллельно (`Promise.all`) вызывает `getEconomyOverview` + 6× `getEconomyTop` (по одному на каждый источник топа). Передаёт URL-state и данные в `EconomyDashboard`. Дефолты: `period='all'`, `betaOnly=true`, `topLevel='user'`
 
 Все страницы с данными имеют `loading.tsx` со скелетонами.
 

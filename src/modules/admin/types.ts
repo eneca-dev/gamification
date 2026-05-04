@@ -222,3 +222,70 @@ export interface ProductFormData {
   stock: number | null
   sort_order: number
 }
+
+// --- Economy Dashboard ---
+
+export type EconomyPeriodPreset = '7d' | '30d' | '90d' | 'year' | 'all' | 'custom'
+
+export interface EconomyFilters {
+  from: string | null
+  to: string | null
+  betaOnly: boolean
+}
+
+export interface EconomyChannel {
+  coins: number
+  users: number
+}
+
+export interface EconomyChannels {
+  shop: EconomyChannel
+  lottery: EconomyChannel
+  second_life: EconomyChannel
+  paid_gratitudes: EconomyChannel
+  quota_gratitudes: EconomyChannel
+}
+
+export interface EconomyOverview {
+  earned: number
+  revoked_actual: number
+  factually_earned: number
+  gifted_by_company: number
+  clamped_count: number
+  total_revoked_count: number
+  channels: EconomyChannels
+}
+
+export type TopSource =
+  | 'earned'
+  | 'shop'
+  | 'lottery'
+  | 'second_life'
+  | 'paid_gratitude'
+  | 'revoked'
+
+export type TopLevel = 'user' | 'team' | 'department'
+
+export interface TopRow {
+  id: string
+  name: string
+  value: number
+  secondary: number | null
+}
+
+export interface CategoryProduct {
+  id: string
+  name: string
+  emoji: string | null
+  image_url: string | null
+  coins: number
+  orders: number
+}
+
+export interface CategoryRow {
+  category_id: string
+  category_name: string
+  coins: number
+  orders: number
+  products: CategoryProduct[]
+}
