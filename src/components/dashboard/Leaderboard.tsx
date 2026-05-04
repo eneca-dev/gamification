@@ -238,16 +238,17 @@ interface LeaderboardProps {
 export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
   const toPanel = (list: AutomationLeaderboardEntry[]): PanelEntry[] => {
     const sorted = [...list].sort((a, b) => b.totalCoins - a.totalCoins);
-    let currentRank = 1;
-    return sorted.map((e, idx) => {
-      if (idx > 0 && e.totalCoins < sorted[idx - 1].totalCoins) currentRank = idx + 1;
+    let denseRank = 0;
+    let prevScore = NaN;
+    return sorted.map((e) => {
+      if (e.totalCoins !== prevScore) { denseRank++; prevScore = e.totalCoins; }
       return {
         name: e.fullName || e.email,
         avatar: getInitials(e.fullName || e.email),
         avatarColor: emailToColor(e.email || e.fullName),
         value: e.totalCoins,
         isCurrentUser: e.isCurrentUser,
-        rank: currentRank,
+        rank: denseRank,
       };
     });
   };

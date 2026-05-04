@@ -326,14 +326,20 @@ function pluralizeDays(n: number): string {
 }
 
 export function DepartmentContest({ departments, automationDepartments, daysLeft, title = "Соревнование отделов", currentEntityName, wsTooltip, autoTooltip, lastMonthWsWinner, lastMonthRevitWinner, lastMonthLabel }: DepartmentContestProps) {
-  const sortedWs = [...departments]
-    .sort((a, b) => b.contestScore - a.contestScore)
-    .map((d, i) => ({ ...d, rank: i + 1 }));
+  const applyDenseRank = (list: DepartmentEntry[]) => {
+    const sorted = [...list].sort((a, b) => b.contestScore - a.contestScore);
+    let denseRank = 0;
+    let prevScore = NaN;
+    return sorted.map((d) => {
+      if (d.contestScore !== prevScore) { denseRank++; prevScore = d.contestScore; }
+      return { ...d, rank: denseRank };
+    });
+  };
+
+  const sortedWs = applyDenseRank(departments);
 
   const autoSource = automationDepartments ?? departments;
-  const sortedAuto = [...autoSource]
-    .sort((a, b) => b.contestScore - a.contestScore)
-    .map((d, i) => ({ ...d, rank: i + 1 }));
+  const sortedAuto = applyDenseRank(autoSource);
 
   return (
     <div
