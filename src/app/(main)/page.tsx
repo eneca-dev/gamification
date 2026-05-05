@@ -339,8 +339,10 @@ export default async function DashboardPage() {
           automationDepartments={toDeptEntries(revitDeptRanking, currentDept)}
           daysLeft={daysLeft}
           currentEntityName={wsDeptCode}
-          wsTooltip="Формула: сумма 💎 отдела за Worksection / количество людей в отделе. Сброс каждый месяц."
-          autoTooltip="Формула: (сумма 💎 по Revit × коэффициент вовлечённости) ÷ кол-во людей в отделе. Коэффициент вовлечённости = использующих плагины ÷ всего в отделе. Сброс каждый месяц."
+          wsTooltip="Среднее количество 💎 на сотрудника отдела за Worksection. Сброс каждый месяц."
+          wsTooltipFormula="Очки = сумма 💎 отдела ÷ кол-во людей в отделе"
+          autoTooltip="Учитывается вовлечённость — доля людей, использующих плагины. Сброс каждый месяц."
+          autoTooltipFormula={"Очки = (сумма 💎 по Revit × коэф. вовлечённости) ÷ кол-во людей в отделе\nКоэф. вовлечённости = сотрудники, использующие плагин ÷ все сотрудники отдела"}
           lastMonthWsWinner={findWinner('ws_dept')}
           lastMonthRevitWinner={findWinner('revit_dept')}
           lastMonthLabel={lastMonthLabelStr}
@@ -355,8 +357,10 @@ export default async function DashboardPage() {
           daysLeft={daysLeft}
           title="Соревнование команд"
           currentEntityName={wsTeam}
-          wsTooltip="Формула: сумма 💎 команды за Worksection / количество людей в команде. Сброс каждый месяц."
-          autoTooltip="Формула: (сумма 💎 по Revit × коэффициент вовлечённости) ÷ кол-во людей в команде. Коэффициент вовлечённости = использующих плагины ÷ всего в команде. Сброс каждый месяц."
+          wsTooltip="Среднее количество 💎 на сотрудника команды за Worksection. Сброс каждый месяц."
+          wsTooltipFormula="Очки = сумма 💎 команды ÷ кол-во людей в команде"
+          autoTooltip="Учитывается вовлечённость — доля людей, использующих плагины. Сброс каждый месяц."
+          autoTooltipFormula={"Очки = (сумма 💎 по Revit × коэф. вовлечённости) ÷ кол-во людей в команде\nКоэф. вовлечённости = сотрудники, использующие плагин ÷ все сотрудники команды"}
           lastMonthWsWinner={findWinner('ws_team')}
           lastMonthRevitWinner={findWinner('revit_team')}
           lastMonthLabel={lastMonthLabelStr}

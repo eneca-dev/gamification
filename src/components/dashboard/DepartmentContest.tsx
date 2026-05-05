@@ -11,13 +11,15 @@ interface DepartmentContestProps {
   title?: string;
   currentEntityName?: string | null;
   wsTooltip?: string;
+  wsTooltipFormula?: string;
   autoTooltip?: string;
+  autoTooltipFormula?: string;
   lastMonthWsWinner?: string | null;
   lastMonthRevitWinner?: string | null;
   lastMonthLabel?: string;
 }
 
-function InfoTooltip({ text }: { text: string }) {
+function InfoTooltip({ text, formula }: { text: string; formula?: string }) {
   const [show, setShow] = useState(false);
 
   return (
@@ -34,7 +36,7 @@ function InfoTooltip({ text }: { text: string }) {
       </span>
       {show && (
         <div
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2.5 rounded-xl text-[11px] font-medium w-64 pointer-events-none"
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2.5 rounded-xl text-[11px] font-medium w-96 pointer-events-none"
           style={{
             zIndex: 100,
             background: "#ffffff",
@@ -46,6 +48,11 @@ function InfoTooltip({ text }: { text: string }) {
           <div className="text-[10px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
             {text}
           </div>
+          {formula && (
+            <div className="text-[10px] font-bold mt-1.5 pt-1.5 whitespace-pre-line" style={{ color: "var(--apex-text)", borderTop: "1px solid var(--apex-border)" }}>
+              {formula}
+            </div>
+          )}
           <div className="text-[9px] mt-1.5 pt-1" style={{ color: "var(--text-muted)", borderTop: "1px solid var(--apex-border)" }}>
             Сотрудники на больничном, в отпуске или отгуле не учитываются.
           </div>
@@ -72,10 +79,12 @@ interface DisciplineColumnProps {
   accentColor: string;
   currentName?: string | null;
   tooltip?: string;
+  tooltipFormula?: string;
   lastMonthWinner?: string | null;
   lastMonthLabel?: string;
   showFraction?: boolean;
   countTooltip?: string;
+  showGapToLeader?: boolean;
 }
 
 function DisciplineColumn({
@@ -91,10 +100,12 @@ function DisciplineColumn({
   accentColor,
   currentName,
   tooltip,
+  tooltipFormula,
   lastMonthWinner,
   lastMonthLabel,
   showFraction = true,
   countTooltip,
+  showGapToLeader = true,
 }: DisciplineColumnProps) {
   const isFirstOfMonth = new Date().getDate() === 1;
   const leader = sorted[0];
@@ -106,7 +117,7 @@ function DisciplineColumn({
       <div className="flex items-center gap-1.5">
         <span className="text-[13px]">{icon}</span>
         <span className="text-[12px] font-semibold" style={{ color: accentColor }}>{title}</span>
-        {tooltip && <InfoTooltip text={tooltip} />}
+        {tooltip && <InfoTooltip text={tooltip} formula={tooltipFormula} />}
       </div>
 
       {/* Победитель прошлого месяца */}
@@ -281,7 +292,7 @@ function DisciplineColumn({
       </div>
 
       {/* Gap to leader */}
-      {currentDept && currentRank !== 1 && (
+      {showGapToLeader && currentDept && currentRank !== 1 && (
         <div
           className="pt-2.5 flex items-center justify-between"
           style={{ borderTop: "1px solid var(--apex-border)" }}
@@ -325,7 +336,7 @@ function pluralizeDays(n: number): string {
   return `${n} дней`;
 }
 
-export function DepartmentContest({ departments, automationDepartments, daysLeft, title = "Соревнование отделов", currentEntityName, wsTooltip, autoTooltip, lastMonthWsWinner, lastMonthRevitWinner, lastMonthLabel }: DepartmentContestProps) {
+export function DepartmentContest({ departments, automationDepartments, daysLeft, title = "Соревнование отделов", currentEntityName, wsTooltip, wsTooltipFormula, autoTooltip, autoTooltipFormula, lastMonthWsWinner, lastMonthRevitWinner, lastMonthLabel }: DepartmentContestProps) {
   const applyDenseRank = (list: DepartmentEntry[]) => {
     const sorted = [...list].sort((a, b) => b.contestScore - a.contestScore);
     let denseRank = 0;
@@ -385,9 +396,11 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
           accentColor="var(--apex-primary)"
           currentName={currentEntityName}
           tooltip={wsTooltip}
+          tooltipFormula={wsTooltipFormula}
           lastMonthWinner={lastMonthWsWinner}
           lastMonthLabel={lastMonthLabel}
           showFraction={false}
+          showGapToLeader={false}
           countTooltip="Сотрудников в отделе сегодня (без учёта отпуска, больничного и отгула)"
         />
         <DisciplineColumn
@@ -403,6 +416,7 @@ export function DepartmentContest({ departments, automationDepartments, daysLeft
           accentColor="var(--orange-500)"
           currentName={currentEntityName}
           tooltip={autoTooltip}
+          tooltipFormula={autoTooltipFormula}
           lastMonthWinner={lastMonthRevitWinner}
           lastMonthLabel={lastMonthLabel}
           showFraction={true}
