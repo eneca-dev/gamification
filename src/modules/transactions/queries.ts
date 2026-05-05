@@ -443,7 +443,7 @@ interface RedReason {
 const RED_REASON_LABELS: Record<string, string> = {
   red_day: 'Не внесены часы',
   task_dynamics_violation: 'Не сменена метка прогресса',
-  section_red: 'Нарушение в секции',
+  section_red: 'Не обновлена метка прогресса в задаче L3 раздела',
   wrong_status_report: 'Время внесено не в статусе «В работе»',
 }
 
@@ -567,12 +567,24 @@ function enrichTransaction(
         inlineLink: { text: budgetTaskInfo.name, url: budgetTaskInfo.url },
       }
     }
-    case 'budget_revoked_l3':
-    case 'budget_revoked_l2':
+    case 'budget_revoked_l3': {
+      if (!budgetTaskInfo) return { description: defaultDesc }
+      return {
+        description: 'Превышен бюджет задачи — баллы отозваны (ранее начисленные 💎 аннулированы):',
+        inlineLink: { text: budgetTaskInfo.name, url: budgetTaskInfo.url },
+      }
+    }
+    case 'budget_revoked_l2': {
+      if (!budgetTaskInfo) return { description: defaultDesc }
+      return {
+        description: 'Превышен бюджет раздела — баллы отозваны (ранее начисленные 💎 аннулированы):',
+        inlineLink: { text: budgetTaskInfo.name, url: budgetTaskInfo.url },
+      }
+    }
     case 'budget_revoked_l3_lead': {
       if (!budgetTaskInfo) return { description: defaultDesc }
       return {
-        description: 'Отзыв 💎:',
+        description: 'Бюджет задачи превышен — бонус тимлида отозван (ранее начисленные 💎 аннулированы):',
         inlineLink: { text: budgetTaskInfo.name, url: budgetTaskInfo.url },
       }
     }
@@ -600,7 +612,7 @@ function enrichTransaction(
     case 'deadline_revoked_l3': {
       const name = details?.ws_task_name as string | undefined
       return {
-        description: 'Отзыв бонуса (срок):',
+        description: 'Задача переоткрыта — бонус за срок отозван (ранее начисленные 💎 аннулированы):',
         inlineLink: name ? { text: name, url: taskUrl } : undefined,
       }
     }
