@@ -285,13 +285,13 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-5 animate-fade-in-up">
-        <div className="shrink-0">
+      <div className="flex flex-wrap gap-5">
+        <div className="shrink-0 animate-fade-in-up">
           <StreakPanel streakData={streakPanelData} pendingResets={pendingResets} userBalance={userBalance} />
         </div>
         {masterPlannerData && (
           <div
-            className="flex-1 min-w-0 rounded-2xl p-5"
+            className="w-[640px] shrink-0 rounded-2xl p-5 animate-fade-in-up"
             data-onboarding="master-planner-panel"
             style={{
               background: "var(--apex-surface)",
@@ -301,13 +301,10 @@ export default async function DashboardPage() {
             <MasterPlannerPanel data={masterPlannerData} />
           </div>
         )}
-      </div>
-
-      <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-1">
-        <div className="col-span-2">
+        <div className="w-[442px] shrink-0 animate-fade-in-up stagger-1">
           <AlarmsBanner alarms={activeAlarms} />
         </div>
-        <div className="col-span-3">
+        <div className="w-[674px] shrink-0 animate-fade-in-up stagger-1">
           {wsUserId && (
             <GratitudeWidget
               senderId={wsUserId}
@@ -321,11 +318,11 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-5 gap-5 animate-fade-in-up stagger-2">
-        <div className="col-span-2">
+      <div className="flex flex-wrap gap-5">
+        <div className="w-[442px] shrink-0 animate-fade-in-up stagger-2">
           <TransactionFeed transactions={allTransactions} />
         </div>
-        <div className="col-span-3" data-onboarding="leaderboard">
+        <div className="w-[674px] shrink-0 animate-fade-in-up stagger-2" data-onboarding="leaderboard">
           <Leaderboard
             entries={toLeaderboardEntries(wsPersonalRanking)}
             automationEntries={toLeaderboardEntries(revitPersonalRanking)}
@@ -333,7 +330,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="animate-fade-in-up stagger-3" data-onboarding="department-contest">
+      <div className="max-w-[1136px] animate-fade-in-up stagger-3" data-onboarding="department-contest">
         <DepartmentContest
           departments={toDeptEntries(wsDeptRanking, currentDept)}
           automationDepartments={toDeptEntries(revitDeptRanking, currentDept)}
@@ -350,7 +347,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Топ команд */}
-      <div className="animate-fade-in-up stagger-4">
+      <div className="max-w-[1136px] animate-fade-in-up stagger-4">
         <DepartmentContest
           departments={toDeptEntries(wsTeamRanking, wsTeam)}
           automationDepartments={toDeptEntries(revitTeamRanking, wsTeam)}

@@ -25,7 +25,7 @@ export default async function MainLayout({
   const layout = (
     <div className="flex min-h-screen">
       <Sidebar user={user} balance={balance} showDevSwitcher={DEV_TOOLS_ENABLED} />
-      <main className="flex-1 ml-[260px] p-8 max-w-[1200px]">
+      <main className="flex-1 ml-[260px] p-8">
         {children}
       </main>
     </div>

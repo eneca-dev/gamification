@@ -43,6 +43,8 @@ export interface ShopProduct {
   id: string
   name: string
   description: string | null
+  cost_byn: number
+  coefficient: number
   price: number
   category_id: string
   image_url: string | null
@@ -63,7 +65,8 @@ export interface ShopProductWithCategory extends ShopProduct {
 export const createProductSchema = z.object({
   name: z.string().min(1, 'Название обязательно').max(200),
   description: z.string().max(1000).nullable().optional(),
-  price: z.number().int().positive('Цена должна быть больше 0'),
+  cost_byn: z.number().positive('Себестоимость должна быть больше 0'),
+  coefficient: z.number().positive('Коэффициент должен быть больше 0').default(1),
   category_id: z.string().uuid(),
   image_url: z.string().url().nullable().optional(),
   emoji: z.string().max(10).nullable().optional(),
@@ -79,6 +82,36 @@ export const updateProductSchema = createProductSchema.partial().extend({
 
 export type CreateProductInput = z.infer<typeof createProductSchema>
 export type UpdateProductInput = z.infer<typeof updateProductSchema>
+
+// --- Курс кристаллов ---
+
+export interface CrystalRate {
+  id: number
+  rate: number
+  created_at: string
+  created_by: string | null
+}
+
+export const setCrystalRateSchema = z.object({
+  rate: z.number().positive('Курс должен быть больше 0'),
+})
+
+export type SetCrystalRateInput = z.infer<typeof setCrystalRateSchema>
+
+export function computePriceCrystals(costByn: number, coefficient: number, rate: number): number {
+  return Math.round(costByn * coefficient * rate)
+}
+
+/** Конвертирует кристаллы → BYN по текущему курсу. Округление до копеек. */
+export function coinsToByn(coins: number, rate: number): number {
+  if (rate <= 0) return 0
+  return Math.round((coins / rate) * 100) / 100
+}
+
+/** Форматирует BYN-сумму для отображения: "1 250,50 BYN". */
+export function formatByn(amount: number): string {
+  return `${amount.toLocaleString('ru-BY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BYN`
+}
 
 // --- Заказы ---
 
