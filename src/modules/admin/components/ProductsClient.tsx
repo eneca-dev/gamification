@@ -12,8 +12,10 @@ import {
   updateProduct,
   deleteProduct,
   deleteProductImage,
+  computePriceCrystals,
 } from '@/modules/shop/index.client'
 
+import { CrystalRatePanel } from './CrystalRatePanel'
 import { ProductFormModal } from './ProductFormModal'
 import type { ProductFormData } from '../types'
 import type { ShopProductWithCategory, ShopCategory } from '@/modules/shop/index.client'
@@ -21,15 +23,22 @@ import type { ShopProductWithCategory, ShopCategory } from '@/modules/shop/index
 interface ProductsClientProps {
   products: ShopProductWithCategory[]
   categories: ShopCategory[]
+  currentRate: number
 }
 
-export function ProductsClient({ products: initialProducts, categories: initialCategories }: ProductsClientProps) {
+type InlineProductField = 'category_id' | 'cost_byn' | 'coefficient' | 'stock'
+
+export function ProductsClient({ products: initialProducts, categories: initialCategories, currentRate }: ProductsClientProps) {
   const [products, setProducts] = useState(initialProducts)
   const [categories, setCategories] = useState(initialCategories)
   const [isCatPending, startCatTransition] = useTransition()
   const [isProductPending, startProductTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [notification, setNotification] = useState<string | null>(null)
+
+  // Курс кристаллов — реальный + preview
+  const [previewRate, setPreviewRate] = useState<number | null>(null)
+  const effectiveRate = previewRate ?? currentRate
 
   // Товары — фильтр, поиск и модал
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -42,7 +51,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   // Inline-редактирование товаров
   const [inlineEdit, setInlineEdit] = useState<{
     productId: string
-    field: 'category_id' | 'price' | 'stock'
+    field: InlineProductField
     value: string
   } | null>(null)
 
@@ -218,7 +227,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
   // --- Inline edit ---
 
-  function startInlineEdit(productId: string, field: 'category_id' | 'price' | 'stock', currentValue: string) {
+  function startInlineEdit(productId: string, field: InlineProductField, currentValue: string) {
     setInlineEdit({ productId, field, value: currentValue })
   }
 
@@ -232,13 +241,20 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
     let updatePayload: Record<string, unknown> = {}
 
-    if (field === 'price') {
-      const num = parseInt(value, 10)
+    if (field === 'cost_byn') {
+      const num = parseFloat(value.replace(',', '.'))
       if (isNaN(num) || num <= 0) {
-        setError('Цена должна быть больше 0')
+        setError('Себестоимость должна быть больше 0')
         return
       }
-      updatePayload = { price: num }
+      updatePayload = { cost_byn: num }
+    } else if (field === 'coefficient') {
+      const num = parseFloat(value.replace(',', '.'))
+      if (isNaN(num) || num <= 0) {
+        setError('Коэффициент должен быть больше 0')
+        return
+      }
+      updatePayload = { coefficient: num }
     } else if (field === 'stock') {
       if (value === '') {
         updatePayload = { stock: null }
@@ -267,6 +283,9 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         if (cat) {
           updated.category = { name: cat.name, slug: cat.slug, is_physical: cat.is_physical, is_countable: cat.is_countable, is_active: cat.is_active }
           updated.category_id = cat.id
+        }
+        if (field === 'cost_byn' || field === 'coefficient') {
+          updated.price = computePriceCrystals(updated.cost_byn, updated.coefficient, effectiveRate)
         }
         return updated
       })
@@ -312,13 +331,14 @@ export function ProductsClient({ products: initialProducts, categories: initialC
       const categoryData = cat
         ? { name: cat.name, slug: cat.slug, is_physical: cat.is_physical, is_countable: cat.is_countable, is_active: cat.is_active }
         : { name: '', slug: '', is_physical: false, is_countable: false, is_active: true }
+      const computedPrice = computePriceCrystals(payload.cost_byn, payload.coefficient, effectiveRate)
 
       // Optimistic update
       const prev = products
       if (editingProduct) {
         setProducts((list) =>
           list.map((p) =>
-            p.id === editingProduct.id ? { ...p, ...payload, category: categoryData } : p
+            p.id === editingProduct.id ? { ...p, ...payload, price: computedPrice, category: categoryData } : p
           )
         )
       } else {
@@ -327,6 +347,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           {
             id: tempId,
             ...payload,
+            price: computedPrice,
             is_active: true,
             created_by: null,
             created_at: new Date().toISOString(),
@@ -395,6 +416,15 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           <button onClick={() => setError(null)} className="ml-3 font-bold">x</button>
         </div>
       )}
+
+      {/* Курс кристаллов */}
+      <CrystalRatePanel
+        currentRate={currentRate}
+        previewRate={previewRate}
+        onPreviewRateChange={setPreviewRate}
+        onError={setError}
+        onApplied={(rate) => showNotification(`Курс изменён: 1 BYN = ${rate} кристаллов`)}
+      />
 
       {/* === КАТЕГОРИИ === */}
       <div
@@ -717,15 +747,17 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           <colgroup>
             <col style={{ width: '60px' }} />
             <col />
+            <col style={{ width: '160px' }} />
+            <col style={{ width: '100px' }} />
+            <col style={{ width: '80px' }} />
+            <col style={{ width: '110px' }} />
+            <col style={{ width: '100px' }} />
             <col style={{ width: '180px' }} />
             <col style={{ width: '120px' }} />
-            <col style={{ width: '130px' }} />
-            <col style={{ width: '200px' }} />
-            <col style={{ width: '130px' }} />
           </colgroup>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--apex-border)' }}>
-              {['', 'Название', 'Категория', 'Цена', 'Остаток', 'Статус', ''].map((h, i) => (
+              {['', 'Название', 'Категория', 'BYN', 'Коэф.', 'Цена', 'Остаток', 'Статус', ''].map((h, i) => (
                 <th
                   key={i}
                   className="text-left text-[12px] font-semibold px-5 py-2.5"
@@ -739,7 +771,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           <tbody>
             {filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-12">
+                <td colSpan={9} className="text-center py-12">
                   <p className="text-[13px] font-medium" style={{ color: 'var(--apex-text-muted)' }}>
                     {searchQuery.trim() ? 'Ничего не найдено' : 'Нет товаров'}
                   </p>
@@ -812,21 +844,48 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                       )}
                     </td>
 
-                    {/* Цена — inline editable */}
+                    {/* BYN (cost_byn) — inline editable */}
                     <td className="px-5 py-2.5">
-                      {isInlineEditing && inlineEdit.field === 'price' ? (
+                      {isInlineEditing && inlineEdit.field === 'cost_byn' ? (
                         <InlineNumberInput
                           value={inlineEdit.value}
                           onChange={(v) => setInlineEdit({ ...inlineEdit, value: v })}
                           onSave={saveInlineEdit}
                           onCancel={cancelInlineEdit}
-                          min={1}
                         />
                       ) : (
-                        <InlineEditableCell onClick={() => startInlineEdit(product.id, 'price', String(product.price))}>
-                          <CoinStatic amount={product.price} size="sm" />
+                        <InlineEditableCell onClick={() => startInlineEdit(product.id, 'cost_byn', String(product.cost_byn))}>
+                          <span className="text-[13px] font-semibold tabular-nums" style={{ color: 'var(--apex-text)' }}>
+                            {product.cost_byn}
+                          </span>
                         </InlineEditableCell>
                       )}
+                    </td>
+
+                    {/* Коэффициент — inline editable */}
+                    <td className="px-5 py-2.5">
+                      {isInlineEditing && inlineEdit.field === 'coefficient' ? (
+                        <InlineNumberInput
+                          value={inlineEdit.value}
+                          onChange={(v) => setInlineEdit({ ...inlineEdit, value: v })}
+                          onSave={saveInlineEdit}
+                          onCancel={cancelInlineEdit}
+                        />
+                      ) : (
+                        <InlineEditableCell onClick={() => startInlineEdit(product.id, 'coefficient', String(product.coefficient))}>
+                          <span className="text-[13px] font-semibold tabular-nums" style={{ color: 'var(--apex-text)' }}>
+                            ×{product.coefficient}
+                          </span>
+                        </InlineEditableCell>
+                      )}
+                    </td>
+
+                    {/* Цена в кристаллах — вычисляется, read-only */}
+                    <td className="px-5 py-2.5">
+                      <CoinStatic
+                        amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
+                        size="sm"
+                      />
                     </td>
 
                     {/* Остаток — inline editable только для исчисляемых товаров */}
@@ -954,6 +1013,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         <ProductFormModal
           product={editingProduct}
           categories={categories}
+          rate={currentRate}
           onSave={handleProductSave}
           onClose={() => {
             setEditingProduct(null)
@@ -1043,8 +1103,13 @@ function InlineNumberInput({
 
   return (
     <div
-      className="flex items-center gap-1"
+      className="relative z-20 inline-flex items-center gap-0.5 rounded-lg px-1 py-0.5"
       onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) onCancel() }}
+      style={{
+        background: 'var(--apex-surface)',
+        border: '1px solid var(--apex-focus)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+      }}
     >
       <input
         ref={ref}
@@ -1055,12 +1120,10 @@ function InlineNumberInput({
           if (e.key === 'Enter') onSave()
           if (e.key === 'Escape') onCancel()
         }}
-        className="w-20 px-2 py-1 rounded-lg text-[13px] outline-none"
+        className="w-14 px-1 py-0.5 rounded text-[13px] outline-none"
         style={{
-          background: 'var(--apex-surface)',
-          border: '1px solid var(--apex-focus)',
+          background: 'transparent',
           color: 'var(--apex-text)',
-          boxShadow: '0 0 0 1px var(--apex-focus)',
         }}
         autoFocus
         min={min}
@@ -1068,17 +1131,17 @@ function InlineNumberInput({
       />
       <button
         onClick={onSave}
-        className="w-6 h-6 rounded-full flex items-center justify-center"
+        className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
         style={{ color: 'var(--apex-success-text)' }}
       >
-        <Check size={14} />
+        <Check size={12} />
       </button>
       <button
         onClick={onCancel}
-        className="w-6 h-6 rounded-full flex items-center justify-center"
+        className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
         style={{ color: 'var(--apex-text-muted)' }}
       >
-        <X size={14} />
+        <X size={12} />
       </button>
     </div>
   )
@@ -1099,8 +1162,13 @@ function InlineSelect({
 }) {
   return (
     <div
-      className="flex items-center gap-1"
+      className="relative z-20 inline-flex items-center gap-0.5 rounded-lg px-1 py-0.5"
       onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) onCancel() }}
+      style={{
+        background: 'var(--apex-surface)',
+        border: '1px solid var(--apex-focus)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+      }}
     >
       <select
         value={value}
@@ -1110,12 +1178,10 @@ function InlineSelect({
         onKeyDown={(e) => {
           if (e.key === 'Escape') onCancel()
         }}
-        className="px-2 py-1 rounded-lg text-[12px] outline-none"
+        className="px-1 py-0.5 rounded text-[12px] outline-none"
         style={{
-          background: 'var(--apex-surface)',
-          border: '1px solid var(--apex-focus)',
+          background: 'transparent',
           color: 'var(--apex-text)',
-          boxShadow: '0 0 0 1px var(--apex-focus)',
         }}
         autoFocus
       >
@@ -1125,17 +1191,17 @@ function InlineSelect({
       </select>
       <button
         onClick={onSave}
-        className="w-6 h-6 rounded-full flex items-center justify-center"
+        className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
         style={{ color: 'var(--apex-success-text)' }}
       >
-        <Check size={14} />
+        <Check size={12} />
       </button>
       <button
         onClick={onCancel}
-        className="w-6 h-6 rounded-full flex items-center justify-center"
+        className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
         style={{ color: 'var(--apex-text-muted)' }}
       >
-        <X size={14} />
+        <X size={12} />
       </button>
     </div>
   )
@@ -1155,25 +1221,46 @@ function CatInlineEdit({
   placeholder?: string
 }) {
   return (
-    <input
-      type="text"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') onSave()
-        if (e.key === 'Escape') onCancel()
-      }}
-      onBlur={onCancel}
-      className="w-full px-2.5 py-1.5 rounded-lg text-[13px] outline-none"
+    <div
+      className="relative z-20 flex items-center gap-0.5 rounded-lg px-1 py-0.5"
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) onCancel() }}
       style={{
         background: 'var(--apex-surface)',
         border: '1px solid var(--apex-focus)',
-        color: 'var(--apex-text)',
-        boxShadow: '0 0 0 1px var(--apex-focus)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
       }}
-      autoFocus
-      placeholder={placeholder}
-    />
+    >
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') onSave()
+          if (e.key === 'Escape') onCancel()
+        }}
+        className="flex-1 min-w-0 px-1 py-0.5 rounded text-[13px] outline-none"
+        style={{
+          background: 'transparent',
+          color: 'var(--apex-text)',
+        }}
+        autoFocus
+        placeholder={placeholder}
+      />
+      <button
+        onClick={onSave}
+        className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+        style={{ color: 'var(--apex-success-text)' }}
+      >
+        <Check size={12} />
+      </button>
+      <button
+        onClick={onCancel}
+        className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+        style={{ color: 'var(--apex-text-muted)' }}
+      >
+        <X size={12} />
+      </button>
+    </div>
   )
 }
 

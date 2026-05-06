@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { getCurrentUser } from '@/modules/auth'
@@ -15,6 +15,7 @@ import {
   updateProductSchema,
   createCategorySchema,
   updateCategorySchema,
+  setCrystalRateSchema,
 } from './types'
 import type { PurchaseResult } from './types'
 
@@ -56,7 +57,7 @@ export async function purchaseProduct(
 
   if (error) {
     const msg = error.message
-    if (msg.includes('Недостаточно 💎')) return { success: false, error: 'Недостаточно 💎' }
+    if (msg.includes('Недостаточно')) return { success: false, error: 'Недостаточно 💎' }
     if (msg.includes('Нет в наличии')) return { success: false, error: 'Нет в наличии' }
     if (msg.includes('недоступен')) return { success: false, error: 'Товар недоступен' }
     return { success: false, error: 'Ошибка при покупке' }
@@ -65,6 +66,35 @@ export async function purchaseProduct(
   revalidatePath('/store')
   revalidatePath('/profile')
   return { success: true, data: data as PurchaseResult }
+}
+
+// --- Курс кристаллов (только админ) ---
+
+export async function setCrystalRate(
+  input: unknown,
+): Promise<{ success: true; rate: number } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const parsed = setCrystalRateSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: 'Невалидный курс' }
+
+  const user = await getCurrentUser()
+  const supabase = createSupabaseAdminClient()
+
+  const { error } = await supabase
+    .from('crystal_rates')
+    .insert({ rate: parsed.data.rate, created_by: user?.wsUserId ?? null })
+
+  if (error) return { success: false, error: error.message }
+
+  // crystal-rate теперь меняет цены всех товаров — обновляем оба тега кэша
+  updateTag('crystal-rate')
+  updateTag('shop-products')
+  revalidatePath('/admin/products')
+  revalidatePath('/admin/economy')
+  revalidatePath('/store')
+  return { success: true, rate: parsed.data.rate }
 }
 
 // --- CRUD категорий (только админ) ---
