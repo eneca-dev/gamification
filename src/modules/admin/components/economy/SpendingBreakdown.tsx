@@ -1,10 +1,12 @@
 import { ShoppingBag, Ticket, Shield, Heart, Sparkles } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
+import { coinsToByn, formatByn } from '@/modules/shop'
 import type { EconomyChannel, EconomyChannels } from '@/modules/admin'
 
 interface SpendingBreakdownProps {
   channels: EconomyChannels
+  rate: number
 }
 
 interface ChannelCardProps {
@@ -12,6 +14,7 @@ interface ChannelCardProps {
   channel: EconomyChannel
   unitLabel: string  // «покупатель», «отправитель», «участник»
   icon: React.ComponentType<{ size?: number }>
+  rate: number
 }
 
 function pluralize(count: number, one: string, few: string, many: string): string {
@@ -23,10 +26,10 @@ function pluralize(count: number, one: string, few: string, many: string): strin
   return many
 }
 
-function ChannelCard({ label, channel, unitLabel, icon: Icon }: ChannelCardProps) {
+function ChannelCard({ label, channel, unitLabel, icon: Icon, rate }: ChannelCardProps) {
   return (
     <div
-      className="rounded-2xl p-4 flex flex-col gap-2.5"
+      className="rounded-2xl p-4 flex flex-col gap-2"
       style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
     >
       <div className="flex items-center gap-2">
@@ -43,6 +46,9 @@ function ChannelCard({ label, channel, unitLabel, icon: Icon }: ChannelCardProps
       <div style={{ color: 'var(--apex-text)' }}>
         <CoinStatic amount={channel.coins} size="md" />
       </div>
+      <div className="text-[11px] tabular-nums" style={{ color: 'var(--apex-text-muted)' }}>
+        ≈ {formatByn(coinsToByn(channel.coins, rate))}
+      </div>
       <div className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
         {channel.users} {unitLabel}
       </div>
@@ -50,7 +56,7 @@ function ChannelCard({ label, channel, unitLabel, icon: Icon }: ChannelCardProps
   )
 }
 
-export function SpendingBreakdown({ channels }: SpendingBreakdownProps) {
+export function SpendingBreakdown({ channels, rate }: SpendingBreakdownProps) {
   const userPlural = (n: number) => pluralize(n, 'покупатель', 'покупателя', 'покупателей')
   const senderPlural = (n: number) => pluralize(n, 'отправитель', 'отправителя', 'отправителей')
   const participantPlural = (n: number) => pluralize(n, 'участник', 'участника', 'участников')
@@ -67,30 +73,35 @@ export function SpendingBreakdown({ channels }: SpendingBreakdownProps) {
           channel={channels.shop}
           unitLabel={userPlural(channels.shop.users)}
           icon={ShoppingBag}
+          rate={rate}
         />
         <ChannelCard
           label="Лотерея"
           channel={channels.lottery}
           unitLabel={participantPlural(channels.lottery.users)}
           icon={Ticket}
+          rate={rate}
         />
         <ChannelCard
           label="Вторая жизнь"
           channel={channels.second_life}
           unitLabel={userPlural(channels.second_life.users)}
           icon={Shield}
+          rate={rate}
         />
         <ChannelCard
           label="Платные благодарности"
           channel={channels.paid_gratitudes}
           unitLabel={senderPlural(channels.paid_gratitudes.users)}
           icon={Heart}
+          rate={rate}
         />
         <ChannelCard
           label="Квотные благодарности"
           channel={channels.quota_gratitudes}
           unitLabel={senderPlural(channels.quota_gratitudes.users)}
           icon={Sparkles}
+          rate={rate}
         />
       </div>
     </section>

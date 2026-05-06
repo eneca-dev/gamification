@@ -5,10 +5,12 @@ import { ChevronDown } from 'lucide-react'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 
 import { CoinStatic } from '@/components/CoinBalance'
+import { coinsToByn, formatByn } from '@/modules/shop/index.client'
 import type { CategoryRow, CategoryProduct } from '@/modules/admin'
 
 interface CategoryBreakdownChartProps {
   categories: CategoryRow[]
+  rate: number
 }
 
 const PALETTE = [
@@ -25,7 +27,7 @@ const PALETTE = [
   '#64748B',
 ]
 
-export function CategoryBreakdownChart({ categories }: CategoryBreakdownChartProps) {
+export function CategoryBreakdownChart({ categories, rate }: CategoryBreakdownChartProps) {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [hovered, setHovered] = useState<string | null>(null)
 
@@ -122,6 +124,9 @@ export function CategoryBreakdownChart({ categories }: CategoryBreakdownChartPro
                       <div className="mt-1" style={{ color: 'var(--apex-text-muted)' }}>
                         {item.value.toLocaleString('ru-RU')} 💎 · {pct}%
                       </div>
+                      <div className="text-[11px] tabular-nums" style={{ color: 'var(--apex-text-muted)' }}>
+                        ≈ {formatByn(coinsToByn(item.value, rate))}
+                      </div>
                     </div>
                   )
                 }}
@@ -142,6 +147,7 @@ export function CategoryBreakdownChart({ categories }: CategoryBreakdownChartPro
               onToggle={() => handleToggle(category.category_id)}
               onHoverChange={(active) => setHovered(active ? category.category_id : null)}
               isLast={idx === categories.length - 1}
+              rate={rate}
             />
           ))}
         </div>
@@ -159,6 +165,7 @@ interface CategoryItemProps {
   onToggle: () => void
   onHoverChange: (active: boolean) => void
   isLast: boolean
+  rate: number
 }
 
 function CategoryItem({
@@ -170,6 +177,7 @@ function CategoryItem({
   onToggle,
   onHoverChange,
   isLast,
+  rate,
 }: CategoryItemProps) {
   const pct = total > 0 ? ((category.coins / total) * 100).toFixed(1) : '0'
 
@@ -214,8 +222,11 @@ function CategoryItem({
         >
           {category.orders} {pluralizeOrders(category.orders)}
         </span>
-        <span className="shrink-0" style={{ color: 'var(--apex-text)' }}>
+        <span className="shrink-0 flex flex-col items-end gap-0.5" style={{ color: 'var(--apex-text)' }}>
           <CoinStatic amount={category.coins} size="sm" />
+          <span className="text-[10px] tabular-nums" style={{ color: 'var(--apex-text-muted)' }}>
+            ≈ {formatByn(coinsToByn(category.coins, rate))}
+          </span>
         </span>
       </button>
 
@@ -234,7 +245,7 @@ function CategoryItem({
           ) : (
             <ul className="flex flex-col">
               {category.products.map((product) => (
-                <ProductRow key={product.id} product={product} />
+                <ProductRow key={product.id} product={product} rate={rate} />
               ))}
             </ul>
           )}
@@ -246,9 +257,10 @@ function CategoryItem({
 
 interface ProductRowProps {
   product: CategoryProduct
+  rate: number
 }
 
-function ProductRow({ product }: ProductRowProps) {
+function ProductRow({ product, rate }: ProductRowProps) {
   return (
     <li
       className="flex items-center gap-3 py-2"
@@ -279,8 +291,11 @@ function ProductRow({ product }: ProductRowProps) {
       >
         {product.orders} {pluralizeOrders(product.orders)}
       </span>
-      <span className="shrink-0" style={{ color: 'var(--apex-text)' }}>
+      <span className="shrink-0 flex flex-col items-end gap-0.5" style={{ color: 'var(--apex-text)' }}>
         <CoinStatic amount={product.coins} size="sm" />
+        <span className="text-[10px] tabular-nums" style={{ color: 'var(--apex-text-muted)' }}>
+          ≈ {formatByn(coinsToByn(product.coins, rate))}
+        </span>
       </span>
     </li>
   )

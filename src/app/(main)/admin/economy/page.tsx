@@ -8,6 +8,7 @@ import {
   resolveEconomyPeriod,
 } from '@/modules/admin'
 import { EconomyDashboard } from '@/modules/admin/components/economy/EconomyDashboard'
+import { getCurrentRate } from '@/modules/shop'
 import type { EconomyPeriodPreset, TopLevel } from '@/modules/admin'
 
 interface EconomyPageProps {
@@ -45,7 +46,7 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
   const { from, to } = resolveEconomyPeriod(period, customFrom, customTo)
   const filters = { from, to, betaOnly }
 
-  const [overview, categories, earnedTop, shopTop, lotteryTop, secondLifeTop, paidGratitudeTop, revokedTop] =
+  const [overview, categories, earnedTop, shopTop, lotteryTop, secondLifeTop, paidGratitudeTop, revokedTop, rate] =
     await Promise.all([
       getEconomyOverview(filters),
       getEconomyCategoryBreakdown(filters),
@@ -55,6 +56,7 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
       getEconomyTop(filters, 'second_life', topLevel),
       getEconomyTop(filters, 'paid_gratitude', topLevel),
       getEconomyTop(filters, 'revoked', topLevel),
+      getCurrentRate(),
     ])
 
   return (
@@ -66,6 +68,7 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
       topLevel={topLevel}
       overview={overview}
       categories={categories}
+      rate={rate}
       tops={{
         earned: earnedTop,
         shop: shopTop,

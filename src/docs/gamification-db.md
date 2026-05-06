@@ -478,6 +478,7 @@ UNIQUE(user_email, ws_task_id, cost_date).
 | `user_email` | text                                  |                                                      |
 | `event_id`   | uuid UNIQUE → gamification_event_logs | 1:1 связь с событием                                 |
 | `coins`      | integer                               | Положительный = начисление, отрицательный = списание |
+| `byn_amount` | numeric(12,2)                         | Эквивалент в BYN на момент создания. Заполняется триггером `trg_set_byn_amount` (BEFORE INSERT) автоматически как `coins / current_crystal_rate()`, если не задано явно |
 | `created_at` | timestamptz                           |                                                      |
 
 **Частота обновления:** при каждом синке вместе с `gamification_event_logs`. Append-only. Одна транзакция = одно событие (UNIQUE на `event_id`).

@@ -215,7 +215,8 @@ export type UpdateGratitudeSettingInput = z.infer<typeof updateGratitudeSettingS
 export interface ProductFormData {
   name: string
   description: string | null
-  price: number
+  cost_byn: number
+  coefficient: number
   category_id: string
   image_url: string | null
   emoji: string | null

@@ -1,6 +1,7 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { cached, CACHE_1H } from '@/lib/server-cache'
 
+import { computePriceCrystals } from './types'
 import type { ShopCategory, ShopProductWithCategory, ShopOrderWithDetails } from './types'
 
 export async function getUserBalance(wsUserId: string): Promise<number> {
@@ -14,6 +15,23 @@ export async function getUserBalance(wsUserId: string): Promise<number> {
 
   return data?.total_coins ?? 0
 }
+
+async function _getCurrentRate(): Promise<number> {
+  const supabase = createSupabaseAdminClient()
+
+  const { data, error } = await supabase
+    .from('crystal_rates')
+    .select('rate')
+    .order('id', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  return Number(data?.rate ?? 80)
+}
+
+export const getCurrentRate = () =>
+  cached(_getCurrentRate, ['crystal-rate-current'], { tags: ['crystal-rate'], revalidate: CACHE_1H })()
 
 async function _getCategories(): Promise<ShopCategory[]> {
   const supabase = createSupabaseAdminClient()
@@ -43,8 +61,23 @@ export async function getAllCategories(): Promise<ShopCategory[]> {
   return data ?? []
 }
 
+function attachComputedPrice<T extends { cost_byn: number | string; coefficient: number | string }>(
+  product: T,
+  rate: number,
+): T & { cost_byn: number; coefficient: number; price: number } {
+  const costByn = Number(product.cost_byn)
+  const coefficient = Number(product.coefficient)
+  return {
+    ...product,
+    cost_byn: costByn,
+    coefficient,
+    price: computePriceCrystals(costByn, coefficient, rate),
+  }
+}
+
 async function _getProducts(categorySlug?: string): Promise<ShopProductWithCategory[]> {
   const supabase = createSupabaseAdminClient()
+  const rate = await getCurrentRate()
 
   let query = supabase
     .from('shop_products')
@@ -63,13 +96,12 @@ async function _getProducts(categorySlug?: string): Promise<ShopProductWithCateg
 
   if (error) throw new Error(error.message)
 
-  // Фильтруем товары с неактивными категориями
   return (data ?? [])
     .filter((p) => p.category?.is_active)
-    .map((p) => ({
-      ...p,
-      category: Array.isArray(p.category) ? p.category[0] : p.category,
-    })) as ShopProductWithCategory[]
+    .map((p) => attachComputedPrice(
+      { ...p, category: Array.isArray(p.category) ? p.category[0] : p.category },
+      rate,
+    )) as ShopProductWithCategory[]
 }
 
 export const getProducts = (categorySlug?: string) =>
@@ -79,6 +111,7 @@ export const getProducts = (categorySlug?: string) =>
 
 export async function getAllProducts(): Promise<ShopProductWithCategory[]> {
   const supabase = createSupabaseAdminClient()
+  const rate = await getCurrentRate()
 
   const { data, error } = await supabase
     .from('shop_products')
@@ -90,14 +123,15 @@ export async function getAllProducts(): Promise<ShopProductWithCategory[]> {
 
   if (error) throw new Error(error.message)
 
-  return (data ?? []).map((p) => ({
-    ...p,
-    category: Array.isArray(p.category) ? p.category[0] : p.category,
-  })) as ShopProductWithCategory[]
+  return (data ?? []).map((p) => attachComputedPrice(
+    { ...p, category: Array.isArray(p.category) ? p.category[0] : p.category },
+    rate,
+  )) as ShopProductWithCategory[]
 }
 
 export async function getProductById(id: string): Promise<ShopProductWithCategory | null> {
   const supabase = createSupabaseAdminClient()
+  const rate = await getCurrentRate()
 
   const { data, error } = await supabase
     .from('shop_products')
@@ -110,10 +144,10 @@ export async function getProductById(id: string): Promise<ShopProductWithCategor
 
   if (error || !data) return null
 
-  return {
-    ...data,
-    category: Array.isArray(data.category) ? data.category[0] : data.category,
-  } as ShopProductWithCategory
+  return attachComputedPrice(
+    { ...data, category: Array.isArray(data.category) ? data.category[0] : data.category },
+    rate,
+  ) as ShopProductWithCategory
 }
 
 export async function getUserOrders(wsUserId: string): Promise<ShopOrderWithDetails[]> {

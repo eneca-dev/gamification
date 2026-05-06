@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
+import { coinsToByn, formatByn } from '@/modules/shop/index.client'
 import type { TopRow } from '@/modules/admin'
 
 export type TopIconName = 'award' | 'shoppingBag' | 'ticket' | 'shield' | 'heart' | 'alertTriangle'
@@ -25,11 +26,12 @@ interface TopListProps {
   items: TopRow[]
   iconName: TopIconName
   secondaryLabel?: string
+  rate: number
 }
 
 const PREVIEW_LIMIT = 10
 
-export function TopList({ title, items, iconName, secondaryLabel }: TopListProps) {
+export function TopList({ title, items, iconName, secondaryLabel, rate }: TopListProps) {
   const Icon = ICON_MAP[iconName]
   const [modalOpen, setModalOpen] = useState(false)
   const preview = items.slice(0, PREVIEW_LIMIT)
@@ -62,7 +64,7 @@ export function TopList({ title, items, iconName, secondaryLabel }: TopListProps
       ) : (
         <ol className="flex flex-col gap-1">
           {preview.map((item, idx) => (
-            <TopRowView key={item.id} rank={idx + 1} item={item} secondaryLabel={secondaryLabel} />
+            <TopRowView key={item.id} rank={idx + 1} item={item} secondaryLabel={secondaryLabel} rate={rate} />
           ))}
         </ol>
       )}
@@ -82,6 +84,7 @@ export function TopList({ title, items, iconName, secondaryLabel }: TopListProps
           title={title}
           items={items}
           secondaryLabel={secondaryLabel}
+          rate={rate}
           onClose={() => setModalOpen(false)}
         />
       )}
@@ -93,9 +96,10 @@ interface TopRowViewProps {
   rank: number
   item: TopRow
   secondaryLabel?: string
+  rate: number
 }
 
-function TopRowView({ rank, item, secondaryLabel }: TopRowViewProps) {
+function TopRowView({ rank, item, secondaryLabel, rate }: TopRowViewProps) {
   return (
     <li
       className="flex items-center gap-2.5 py-1.5"
@@ -118,8 +122,11 @@ function TopRowView({ rank, item, secondaryLabel }: TopRowViewProps) {
           {item.secondary} {secondaryLabel}
         </span>
       )}
-      <span className="shrink-0" style={{ color: 'var(--apex-text)' }}>
+      <span className="shrink-0 flex flex-col items-end gap-0.5" style={{ color: 'var(--apex-text)' }}>
         <CoinStatic amount={item.value} size="sm" />
+        <span className="text-[10px] tabular-nums" style={{ color: 'var(--apex-text-muted)' }}>
+          ≈ {formatByn(coinsToByn(item.value, rate))}
+        </span>
       </span>
     </li>
   )
@@ -129,10 +136,11 @@ interface TopListModalProps {
   title: string
   items: TopRow[]
   secondaryLabel?: string
+  rate: number
   onClose: () => void
 }
 
-function TopListModal({ title, items, secondaryLabel, onClose }: TopListModalProps) {
+function TopListModal({ title, items, secondaryLabel, rate, onClose }: TopListModalProps) {
   const modalContent = (
     <div
       className="fixed inset-0 flex items-center justify-center p-4"
@@ -165,7 +173,7 @@ function TopListModal({ title, items, secondaryLabel, onClose }: TopListModalPro
 
         <ol className="flex-1 overflow-y-auto px-5 py-3">
           {items.map((item, idx) => (
-            <TopRowView key={item.id} rank={idx + 1} item={item} secondaryLabel={secondaryLabel} />
+            <TopRowView key={item.id} rank={idx + 1} item={item} secondaryLabel={secondaryLabel} rate={rate} />
           ))}
         </ol>
       </div>

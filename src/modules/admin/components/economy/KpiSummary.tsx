@@ -1,10 +1,12 @@
 import { Coins, TrendingDown, TrendingUp, Gift } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
+import { coinsToByn, formatByn } from '@/modules/shop'
 import type { EconomyOverview } from '@/modules/admin'
 
 interface KpiSummaryProps {
   overview: EconomyOverview
+  rate: number
 }
 
 interface KpiCardProps {
@@ -13,12 +15,13 @@ interface KpiCardProps {
   icon: React.ComponentType<{ size?: number }>
   accent: string
   bg: string
+  rate: number
 }
 
-function KpiCard({ label, value, icon: Icon, accent, bg }: KpiCardProps) {
+function KpiCard({ label, value, icon: Icon, accent, bg, rate }: KpiCardProps) {
   return (
     <div
-      className="rounded-2xl p-5 flex flex-col gap-3"
+      className="rounded-2xl p-5 flex flex-col gap-2"
       style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
     >
       <div className="flex items-center justify-between">
@@ -35,11 +38,14 @@ function KpiCard({ label, value, icon: Icon, accent, bg }: KpiCardProps) {
       <div style={{ color: 'var(--apex-text)' }}>
         <CoinStatic amount={value} size="lg" />
       </div>
+      <span className="text-[11px] tabular-nums" style={{ color: 'var(--apex-text-muted)' }}>
+        ≈ {formatByn(coinsToByn(value, rate))}
+      </span>
     </div>
   )
 }
 
-export function KpiSummary({ overview }: KpiSummaryProps) {
+export function KpiSummary({ overview, rate }: KpiSummaryProps) {
   const clampedPct =
     overview.total_revoked_count > 0
       ? Math.round((overview.clamped_count / overview.total_revoked_count) * 100)
@@ -58,6 +64,7 @@ export function KpiSummary({ overview }: KpiSummaryProps) {
           icon={Coins}
           accent="var(--apex-primary)"
           bg="var(--apex-success-bg)"
+          rate={rate}
         />
         <KpiCard
           label="Фактически заработано"
@@ -65,6 +72,7 @@ export function KpiSummary({ overview }: KpiSummaryProps) {
           icon={TrendingUp}
           accent="var(--apex-primary)"
           bg="var(--apex-success-bg)"
+          rate={rate}
         />
         <KpiCard
           label="Отозвано фактически"
@@ -72,6 +80,7 @@ export function KpiSummary({ overview }: KpiSummaryProps) {
           icon={TrendingDown}
           accent="var(--apex-danger)"
           bg="rgba(220, 38, 38, 0.08)"
+          rate={rate}
         />
         <KpiCard
           label="Подарено компанией"
@@ -79,6 +88,7 @@ export function KpiSummary({ overview }: KpiSummaryProps) {
           icon={Gift}
           accent="#7c3aed"
           bg="rgba(124, 58, 237, 0.08)"
+          rate={rate}
         />
       </div>
 
