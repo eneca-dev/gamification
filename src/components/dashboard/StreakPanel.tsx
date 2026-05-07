@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Trophy, CheckCircle2, Info } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { sourceColors } from "@/lib/data";
@@ -12,11 +12,7 @@ import type { PendingReset } from "@/modules/streak-shield/types";
 // ─── Layout constants ────────────────────────────────────────────────────────
 const CELL = 18;
 const CELL_GAP = 3;
-const MONTH_SEP = 10;
-const DAY_LABEL_W = 14;
-const DAY_LABEL_MR = 6;
-
-const groupW = (n: number) => n * CELL + (n - 1) * CELL_GAP;
+const MONTH_SEP = 16;
 
 // ─── Status colours ──────────────────────────────────────────────────────────
 const statusColors: Record<CalendarDayStatus, string> = {
@@ -45,55 +41,49 @@ const absenceLabels: Record<string, string> = {
   sick_day:   "SickDay",
 };
 
-interface MonthGroup {
+interface MonthGrid {
   key: string;
   name: string;
-  weekStart: number;
-  weekCount: number;
+  weeks: (CalendarDay | null)[][];
 }
 
-// Разбиваем дни на недели (Пн=0), потом группируем недели по месяцам
-function buildWeeksAndMonths(calendarDays: CalendarDay[]) {
-  const firstDate = new Date(calendarDays[0].date + "T00:00:00");
-  const firstDow = (firstDate.getDay() + 6) % 7;
-
-  const padded: (CalendarDay | null)[] = [];
-  for (let i = 0; i < firstDow; i++) padded.push(null);
-  for (const day of calendarDays) padded.push(day);
-  while (padded.length % 7 !== 0) padded.push(null);
-
-  const weeks: (CalendarDay | null)[][] = [];
-  for (let i = 0; i < padded.length; i += 7) {
-    weeks.push(padded.slice(i, i + 7));
+// Группируем дни по месяцам, каждый месяц превращаем в собственную сетку недель
+// (Пн=0). Дни вне окна календаря в начале/конце месяца не показываются — первая
+// неделя выравнивается паддингом по дню недели первого имеющегося дня.
+function buildMonthGrids(calendarDays: CalendarDay[]): MonthGrid[] {
+  const byMonth = new Map<string, CalendarDay[]>();
+  for (const day of calendarDays) {
+    const m = day.date.slice(0, 7);
+    let arr = byMonth.get(m);
+    if (!arr) {
+      arr = [];
+      byMonth.set(m, arr);
+    }
+    arr.push(day);
   }
 
-  const groups: MonthGroup[] = [];
-  weeks.forEach((week, weekIdx) => {
-    const counts: Record<string, number> = {};
-    week.forEach((day) => {
-      if (day && day.status !== "out") {
-        const m = day.date.slice(0, 7);
-        counts[m] = (counts[m] || 0) + 1;
-      }
-    });
-    const entries = Object.entries(counts).sort(([, a], [, b]) => b - a);
-    if (!entries.length) return;
-    const [key] = entries[0];
-    const last = groups[groups.length - 1];
-    if (last?.key === key) {
-      last.weekCount++;
-    } else {
-      const raw = new Date(key + "-15").toLocaleString("ru-RU", { month: "long" });
-      groups.push({
-        key,
-        name: raw.charAt(0).toUpperCase() + raw.slice(1),
-        weekStart: weekIdx,
-        weekCount: 1,
-      });
-    }
-  });
+  return [...byMonth.keys()].sort().map((key) => {
+    const days = byMonth.get(key)!;
+    const firstDate = new Date(days[0].date + "T00:00:00");
+    const firstDow = (firstDate.getDay() + 6) % 7;
 
-  return { weeks, groups };
+    const padded: (CalendarDay | null)[] = [];
+    for (let i = 0; i < firstDow; i++) padded.push(null);
+    for (const day of days) padded.push(day);
+    while (padded.length % 7 !== 0) padded.push(null);
+
+    const weeks: (CalendarDay | null)[][] = [];
+    for (let i = 0; i < padded.length; i += 7) {
+      weeks.push(padded.slice(i, i + 7));
+    }
+
+    const raw = new Date(key + "-15").toLocaleString("ru-RU", { month: "long" });
+    return {
+      key,
+      name: raw.charAt(0).toUpperCase() + raw.slice(1),
+      weeks,
+    };
+  });
 }
 
 // Дата YYYY-MM-DD → DD.MM.YYYY
@@ -561,10 +551,14 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
     ? Math.round((workingDays.filter((d) => d.automation).length / workingDays.length) * 100)
     : 0;
 
-  const { weeks, groups } = buildWeeksAndMonths(calendarDays);
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Minsk" });
+  const todayDate = new Date(today + "T00:00:00");
+  const visibleMonthKeys = [-1, 0, 1].map((delta) => {
+    const d = new Date(todayDate.getFullYear(), todayDate.getMonth() + delta, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const monthGrids = buildMonthGrids(calendarDays).filter((m) => visibleMonthKeys.includes(m.key));
   const DAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-  const headerOffset = DAY_LABEL_W + DAY_LABEL_MR;
 
   return (
     <div
@@ -633,56 +627,30 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
       <div className="flex gap-6">
         {/* Left: grid + legend + streaks */}
         <div className="shrink-0" data-onboarding="streak-calendar">
-          {/* Month labels */}
-          <div className="flex mb-1" style={{ paddingLeft: headerOffset }}>
-            {groups.map((group, gIdx) => (
-              <Fragment key={group.key}>
-                {gIdx > 0 && <div style={{ width: MONTH_SEP }} />}
-                <div style={{ width: groupW(group.weekCount) }}>
-                  <span
-                    className="text-[9px] font-semibold uppercase tracking-wider"
-                    style={{ color: "var(--apex-text-muted)" }}
-                  >
-                    {group.name}
-                  </span>
-                </div>
-              </Fragment>
-            ))}
-          </div>
-
-          {/* Grid body: rows = days of week, columns = weeks */}
-          <div className="flex items-start">
-            {/* Day labels */}
-            <div
-              className="flex flex-col shrink-0"
-              style={{ width: DAY_LABEL_W, marginRight: DAY_LABEL_MR, gap: CELL_GAP }}
-            >
-              {DAY_LABELS.map((label) => (
+          {/* Months horizontal: each month = block with name, day labels, week rows */}
+          <div className="flex items-start" style={{ gap: MONTH_SEP }}>
+            {monthGrids.map((month) => (
+              <div key={month.key} className="flex flex-col">
                 <div
-                  key={label}
-                  className="flex items-center text-[9px] font-medium"
-                  style={{ height: CELL, color: "var(--apex-text-muted)" }}
+                  className="text-[9px] font-semibold uppercase tracking-wider mb-1.5"
+                  style={{ color: "var(--apex-text-muted)" }}
                 >
-                  {label}
+                  {month.name}
                 </div>
-              ))}
-            </div>
-
-            {/* Week columns grouped by month */}
-            {groups.map((group, gIdx) => (
-              <Fragment key={group.key}>
-                {gIdx > 0 && (
-                  <div style={{ width: MONTH_SEP, display: "flex", justifyContent: "center" }}>
+                <div className="flex mb-1" style={{ gap: CELL_GAP }}>
+                  {DAY_LABELS.map((label) => (
                     <div
-                      style={{ width: 1, alignSelf: "stretch", background: "var(--apex-border)", opacity: 0.7 }}
-                    />
-                  </div>
-                )}
-                <div className="flex" style={{ gap: CELL_GAP }}>
-                  {weeks
-                    .slice(group.weekStart, group.weekStart + group.weekCount)
-                    .map((week, wIdx) => (
-                      <div key={wIdx} className="flex flex-col" style={{ gap: CELL_GAP }}>
+                      key={label}
+                      className="text-[9px] font-medium text-center"
+                      style={{ width: CELL, color: "var(--apex-text-muted)" }}
+                    >
+                      {label}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-col" style={{ gap: CELL_GAP }}>
+                  {month.weeks.map((week, wIdx) => (
+                      <div key={wIdx} className="flex" style={{ gap: CELL_GAP }}>
                         {week.map((day, dayIdx) => {
                           if (!day) {
                             return (
@@ -739,7 +707,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
                       </div>
                     ))}
                 </div>
-              </Fragment>
+              </div>
             ))}
           </div>
 
