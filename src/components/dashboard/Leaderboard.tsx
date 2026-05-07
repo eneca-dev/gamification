@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Crown, Zap, Info } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import type { AutomationLeaderboardEntry } from "@/modules/revit";
@@ -116,16 +116,34 @@ function LeaderboardPanel({
   tooltip?: string;
 }) {
   const isFirstOfMonth = new Date().getDate() === 1;
+  const containerRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLDivElement>(null)
+  const [scrollAreaHeight, setScrollAreaHeight] = useState(264)
+
+  useEffect(() => {
+    const container = containerRef.current
+    const header = headerRef.current
+    if (!container || !header) return
+    const update = () => {
+      // clientHeight включает padding (p-5 = 20+20), mb-2 = 8px
+      const available = container.clientHeight - header.offsetHeight - 48
+      if (available > 0) setScrollAreaHeight(available)
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
   return (
     <div
+      ref={containerRef}
       className="rounded-2xl p-5 h-full flex flex-col"
       style={{
         background: "var(--apex-surface)",
         border: "1px solid var(--apex-border)",
       }}
     >
-      <div className="flex items-center justify-between mb-4 shrink-0">
+      <div ref={headerRef} className="flex items-center justify-between mb-3 shrink-0">
         <div className="flex items-center gap-2">
           {icon}
           <div className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--apex-text-muted)" }}>
@@ -168,7 +186,7 @@ function LeaderboardPanel({
         </div>
       ) : null}
 
-      <div className="space-y-1.5 overflow-y-auto scrollbar-hide max-h-[264px]">
+      <div className="space-y-1.5 overflow-y-auto scrollbar-hide" style={{ maxHeight: scrollAreaHeight }}>
         {entries.map((entry) => (
           <div
             key={entry.name}
@@ -238,16 +256,17 @@ interface LeaderboardProps {
 export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
   const toPanel = (list: AutomationLeaderboardEntry[]): PanelEntry[] => {
     const sorted = [...list].sort((a, b) => b.totalCoins - a.totalCoins);
-    let currentRank = 1;
-    return sorted.map((e, idx) => {
-      if (idx > 0 && e.totalCoins < sorted[idx - 1].totalCoins) currentRank = idx + 1;
+    let denseRank = 0;
+    let prevScore = NaN;
+    return sorted.map((e) => {
+      if (e.totalCoins !== prevScore) { denseRank++; prevScore = e.totalCoins; }
       return {
         name: e.fullName || e.email,
         avatar: getInitials(e.fullName || e.email),
         avatarColor: emailToColor(e.email || e.fullName),
         value: e.totalCoins,
         isCurrentUser: e.isCurrentUser,
-        rank: currentRank,
+        rank: denseRank,
       };
     });
   };

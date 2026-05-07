@@ -2,25 +2,31 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { X, Upload, Trash2, Loader2, ChevronDown, Check } from 'lucide-react'
+
+import { CoinStatic } from '@/components/CoinBalance'
+import { computePriceCrystals } from '@/modules/shop/index.client'
 import type { ShopProductWithCategory, ShopCategory } from '@/modules/shop/index.client'
+
 import type { ProductFormData } from '../types'
 
 interface ProductFormModalProps {
   product: ShopProductWithCategory | null
   categories: ShopCategory[]
+  rate: number
   onSave: (data: ProductFormData, imageFile: File | null) => void
   onClose: () => void
   isPending: boolean
 }
 
-export function ProductFormModal({ product, categories, onSave, onClose, isPending }: ProductFormModalProps) {
+export function ProductFormModal({ product, categories, rate, onSave, onClose, isPending }: ProductFormModalProps) {
   const isEditing = !!product
   const activeCategories = categories.filter((c) => c.is_active || c.id === product?.category_id)
   const defaultCategoryId = product?.category_id ?? activeCategories[0]?.id ?? ''
 
   const [name, setName] = useState(product?.name ?? '')
   const [description, setDescription] = useState(product?.description ?? '')
-  const [price, setPrice] = useState(product?.price ?? 0)
+  const [costByn, setCostByn] = useState<string>(product ? String(product.cost_byn) : '')
+  const [coefficient, setCoefficient] = useState<string>(product ? String(product.coefficient) : '1')
   const [categoryId, setCategoryId] = useState(defaultCategoryId)
   const [emoji, setEmoji] = useState(product?.emoji ?? '')
   const [stock, setStock] = useState<string>(product?.stock != null ? String(product.stock) : '')
@@ -90,10 +96,17 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
+  const costBynNum = parseFloat(costByn.replace(',', '.')) || 0
+  const coefficientNum = parseFloat(coefficient.replace(',', '.')) || 0
+  const priceCrystals = costBynNum > 0 && coefficientNum > 0
+    ? computePriceCrystals(costBynNum, coefficientNum, rate)
+    : 0
+
   function validate(): boolean {
     const errs: Record<string, string> = {}
     if (!name.trim()) errs.name = 'Название обязательно'
-    if (price <= 0) errs.price = 'Цена должна быть больше 0'
+    if (costBynNum <= 0) errs.cost_byn = 'Себестоимость > 0'
+    if (coefficientNum <= 0) errs.coefficient = 'Коэффициент > 0'
     if (!categoryId) errs.category_id = 'Выберите категорию'
     if (isCountable && stock === '') errs.stock = 'Укажите количество'
     if (isCountable && stock !== '') {
@@ -111,7 +124,8 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
     const data: ProductFormData = {
       name: name.trim(),
       description: description.trim() || null,
-      price,
+      cost_byn: costBynNum,
+      coefficient: coefficientNum,
       category_id: categoryId,
       image_url: removeImage ? null : (imagePreview && !imageFile ? product?.image_url ?? null : null),
       emoji: emoji.trim() || null,
@@ -175,16 +189,30 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Цена */}
-            <Field label="Цена (💎)" error={errors.price}>
+          <div className="grid grid-cols-3 gap-4">
+            {/* Себестоимость в BYN */}
+            <Field label="Себестоимость (BYN)" error={errors.cost_byn}>
               <input
-                type="number"
-                value={price || ''}
-                onChange={(e) => setPrice(parseInt(e.target.value, 10) || 0)}
+                type="text"
+                inputMode="decimal"
+                value={costByn}
+                onChange={(e) => setCostByn(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg text-[13px] outline-none"
-                style={inputStyle(errors.price)}
-                min={1}
+                style={inputStyle(errors.cost_byn)}
+                placeholder="0.00"
+              />
+            </Field>
+
+            {/* Коэффициент */}
+            <Field label="Коэффициент" error={errors.coefficient}>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={coefficient}
+                onChange={(e) => setCoefficient(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg text-[13px] outline-none"
+                style={inputStyle(errors.coefficient)}
+                placeholder="1.0"
               />
             </Field>
 
@@ -198,6 +226,17 @@ export function ProductFormModal({ product, categories, onSave, onClose, isPendi
                 error={errors.category_id}
               />
             </Field>
+          </div>
+
+          {/* Превью цены для пользователя */}
+          <div
+            className="rounded-lg px-3 py-2 flex items-center justify-between"
+            style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
+          >
+            <span className="text-[12px]" style={{ color: 'var(--apex-text-secondary)' }}>
+              Цена для пользователя при курсе {rate}
+            </span>
+            <CoinStatic amount={priceCrystals} size="sm" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -1,11 +1,12 @@
-import { getAllProducts, getAllCategories } from '@/modules/shop'
+import { getAllProducts, getAllCategories, getCurrentRate } from '@/modules/shop'
 import { ProductsClient } from '@/modules/admin/components/ProductsClient'
 
 export default async function AdminProductsPage() {
-  const [products, categories] = await Promise.all([
+  const [products, categories, currentRate] = await Promise.all([
     getAllProducts(),
     getAllCategories(),
+    getCurrentRate(),
   ])
 
-  return <ProductsClient products={products} categories={categories} />
+  return <ProductsClient products={products} categories={categories} currentRate={currentRate} />
 }
