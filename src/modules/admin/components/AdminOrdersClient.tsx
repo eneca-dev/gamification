@@ -171,7 +171,8 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
         data-onboarding="admin-orders-table"
         style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
       >
-        <table className="w-full">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[600px]">
           <thead>
             <tr style={{ borderBottom: '1px solid var(--apex-border)' }}>
               {['Покупатель', 'Товар', 'Сумма', 'Статус', 'Дата'].map((h) => (
@@ -332,6 +333,7 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
             )}
           </tbody>
         </table>
+        </div>
 
         <div className="px-5 py-3 text-[12px] font-medium" style={{ color: 'var(--apex-text-muted)' }}>
           {filtered.length} из {orders.length} заказов

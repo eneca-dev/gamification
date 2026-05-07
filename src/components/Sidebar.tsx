@@ -14,6 +14,7 @@ interface SidebarProps {
   user: AuthUser | null
   balance: number
   showDevSwitcher?: boolean
+  isMobileOpen?: boolean
 }
 
 const navItems = [
@@ -43,14 +44,16 @@ function getInitials(fullName: string, email?: string): string {
   return '?'
 }
 
-export function Sidebar({ user, balance, showDevSwitcher }: SidebarProps) {
+export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false }: SidebarProps) {
   const pathname = usePathname()
   const { startTour } = useOnboardingContext()
   const currentTourSlug = getPageSlugWithFallback(pathname)
 
   return (
     <aside
-      className="fixed left-0 top-0 bottom-0 w-[260px] flex flex-col"
+      className={`fixed left-0 top-0 bottom-0 w-[260px] flex flex-col z-40
+        transition-transform duration-300 ease-in-out
+        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
       style={{
         background: 'var(--apex-surface)',
         borderRight: '1px solid var(--apex-border)',

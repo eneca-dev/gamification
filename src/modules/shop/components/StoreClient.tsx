@@ -210,7 +210,7 @@ export function StoreClient({
           <LotteryWinners lotteries={lotteryHistory} />
         </div>
       ) : filtered.length > 0 ? (
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fade-in-up stagger-3">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 animate-fade-in-up stagger-3">
           {filtered.map((product, i) => (
             <ProductCard
               key={product.id}

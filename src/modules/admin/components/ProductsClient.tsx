@@ -545,7 +545,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             )}
 
             {/* Таблица категорий */}
-            <table className="w-full" style={{ tableLayout: 'fixed' }}>
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[500px]" style={{ tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: '22%' }} />
                 <col style={{ width: '17%' }} />
@@ -687,6 +688,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                 })}
               </tbody>
             </table>
+            </div>
           </>
         )}
       </div>
@@ -743,7 +745,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         </div>
 
         {/* Таблица товаров */}
-        <table className="w-full" style={{ tableLayout: 'fixed' }}>
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[700px]" style={{ tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: '60px' }} />
             <col />
@@ -1002,6 +1005,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             )}
           </tbody>
         </table>
+        </div>
 
         <div className="px-5 py-3 text-[12px] font-medium" style={{ color: 'var(--apex-text-muted)' }}>
           {filteredProducts.length} из {products.length} товаров

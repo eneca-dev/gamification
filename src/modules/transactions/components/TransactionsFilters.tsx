@@ -165,11 +165,13 @@ export function TransactionsFilters({ currentSort, currentSource, currentDateFro
 
 function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-[11px] font-medium w-14 flex-shrink-0" style={{ color: 'var(--apex-text-muted)' }}>
+    <div className="flex items-start gap-3">
+      <span className="text-[11px] font-medium w-14 flex-shrink-0 pt-[3px]" style={{ color: 'var(--apex-text-muted)' }}>
         {label}
       </span>
-      {children}
+      <div className="flex flex-wrap gap-1.5">
+        {children}
+      </div>
     </div>
   )
 }
