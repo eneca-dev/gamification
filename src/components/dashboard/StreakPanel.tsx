@@ -568,7 +568,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
 
   return (
     <div
-      className="rounded-2xl p-5"
+      className="rounded-2xl p-5 w-max"
       style={{
         background: "var(--apex-surface)",
         border: "1px solid var(--apex-border)",

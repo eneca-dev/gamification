@@ -30,14 +30,13 @@ export function HelpShell({ folders, children }: HelpShellProps) {
         </div>
 
         {/* Layout: sidebar + content */}
-        <div className="animate-fade-in-up stagger-1 flex gap-6" style={{ minHeight: 'calc(100vh - 140px)' }}>
+        <div className="animate-fade-in-up stagger-1 flex flex-col md:flex-row gap-6" style={{ minHeight: 'calc(100vh - 140px)' }}>
           {/* Sidebar */}
           <div
-            className="w-[260px] shrink-0 rounded-2xl p-4 sticky top-4"
+            className="w-full md:w-[260px] md:shrink-0 rounded-2xl p-4"
             style={{
               background: 'var(--surface-elevated)',
               border: '1px solid var(--border)',
-              alignSelf: 'stretch',
             }}
           >
             <div className="mb-3">

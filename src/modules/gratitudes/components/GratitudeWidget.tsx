@@ -134,7 +134,7 @@ export function GratitudeWidget({
         style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
       >
         {/* Шапка — аналог AlarmsBanner */}
-        <div className="flex items-center justify-between px-1 min-h-[36px] shrink-0">
+        <div className="flex flex-wrap items-center justify-between px-1 min-h-[36px] shrink-0 gap-2">
           <div className="flex items-center gap-2">
             <Heart size={16} style={{ color: 'var(--tag-purple-text)' }} fill="var(--tag-purple-text)" />
             <span className="text-[14px] font-extrabold" style={{ color: 'var(--text-primary)' }}>

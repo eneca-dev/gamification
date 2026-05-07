@@ -83,7 +83,7 @@ export function TransactionsList({ items }: TransactionsListProps) {
   return (
     <div className="space-y-1">
       <div
-        className="flex items-center gap-3 px-3 pb-2 mb-1"
+        className="hidden md:flex items-center gap-3 px-3 pb-2 mb-1"
         style={{ borderBottom: '1px solid var(--apex-border)' }}
       >
         <div className="w-9 flex-shrink-0" />
@@ -139,9 +139,9 @@ export function TransactionsList({ items }: TransactionsListProps) {
         const SourceIcon = sourceCfg.icon
 
         return (
-          <div key={tx.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
+          <div key={tx.id} className="flex items-start gap-3 px-3 py-2.5 rounded-xl">
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0 mt-0.5"
               style={{
                 background: iconBg,
                 border: iconBorder,
@@ -261,8 +261,22 @@ export function TransactionsList({ items }: TransactionsListProps) {
                   </span>
                 </div>
               )}
+
+              {/* Тип + дата — только на мобильных */}
+              <div className="flex items-center gap-2 mt-1.5 md:hidden flex-wrap">
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                  style={{ background: sourceCfg.bg, color: sourceCfg.color }}
+                >
+                  <SourceIcon size={10} />
+                  {sourceCfg.label}
+                </span>
+                <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
+                  {tx.dateFormatted}
+                </span>
+              </div>
             </div>
-            <div className="w-32 flex-shrink-0">
+            <div className="hidden md:flex w-32 flex-shrink-0">
               <span
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
                 style={{ background: sourceCfg.bg, color: sourceCfg.color }}
@@ -272,13 +286,13 @@ export function TransactionsList({ items }: TransactionsListProps) {
               </span>
             </div>
             <div
-              className="w-24 flex-shrink-0 text-[13px] text-left"
+              className="hidden md:block w-24 flex-shrink-0 text-[13px] text-left"
               style={{ color: 'var(--apex-text-muted)' }}
             >
               {tx.dateFormatted}
             </div>
             <div
-              className="w-24 flex-shrink-0 text-[14px] font-bold text-left"
+              className="w-20 md:w-24 flex-shrink-0 text-[14px] font-bold text-right md:text-left"
               style={{ color: amountColor }}
             >
               {isZero ? '—' : `${tx.coins > 0 ? '+' : ''}${tx.coins.toLocaleString('ru-RU')}`}

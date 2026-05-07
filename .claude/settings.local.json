@@ -82,7 +82,8 @@
       "mcp__worksection__get_task",
       "mcp__worksection__get_activity_log",
       "mcp__worksection__get_task_discussion",
-      "Bash(echo \"Exit: $?\")"
+      "Bash(echo \"Exit: $?\")",
+      "mcp__playwright__browser_resize"
     ]
   },
   "enableAllProjectMcpServers": true,

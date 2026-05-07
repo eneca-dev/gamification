@@ -94,7 +94,8 @@ export function EventTypesTable({ eventTypes }: EventTypesTableProps) {
         </div>
       )}
 
-      <table className="w-full" style={{ tableLayout: 'fixed' }}>
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[600px]" style={{ tableLayout: 'fixed' }}>
         <colgroup>
           <col style={{ width: '25%' }} />
           <col style={{ width: '20%' }} />
@@ -268,6 +269,7 @@ export function EventTypesTable({ eventTypes }: EventTypesTableProps) {
           })}
         </tbody>
       </table>
+      </div>
 
       <div
         className="px-5 py-3 text-[12px] font-medium"

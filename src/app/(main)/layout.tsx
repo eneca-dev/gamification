@@ -1,5 +1,5 @@
-import { Sidebar } from '@/components/Sidebar'
 import { BetaAccessDenied } from '@/components/BetaAccessDenied'
+import { LayoutShell } from '@/components/LayoutShell'
 import { getCurrentUser } from '@/modules/auth'
 import { getUserBalance } from '@/modules/shop'
 import { OnboardingProvider } from '@/modules/onboarding/index.client'
@@ -23,12 +23,9 @@ export default async function MainLayout({
   const balance = user?.wsUserId ? await getUserBalance(user.wsUserId) : 0
 
   const layout = (
-    <div className="flex min-h-screen">
-      <Sidebar user={user} balance={balance} showDevSwitcher={DEV_TOOLS_ENABLED} />
-      <main className="flex-1 ml-[260px] p-8 max-w-[1200px]">
-        {children}
-      </main>
-    </div>
+    <LayoutShell user={user} balance={balance} showDevSwitcher={DEV_TOOLS_ENABLED}>
+      {children}
+    </LayoutShell>
   )
 
   return user?.id ? (

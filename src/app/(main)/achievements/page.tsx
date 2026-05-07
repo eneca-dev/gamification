@@ -44,7 +44,7 @@ export default async function AchievementsPage() {
       </div>
 
       {/* 3 блока: Revit / WS / Благодарности */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-fade-in-up stagger-1" data-onboarding="achievement-grid">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 animate-fade-in-up stagger-1" data-onboarding="achievement-grid">
         <div data-onboarding="ranking-block-first">
           <RankingBlock
             area="revit"
