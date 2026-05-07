@@ -291,7 +291,7 @@ export default async function DashboardPage() {
         </div>
         {masterPlannerData && (
           <div
-            className="w-[640px] shrink-0 rounded-2xl p-5 animate-fade-in-up"
+            className="flex-1 min-w-0 rounded-2xl p-5 animate-fade-in-up"
             data-onboarding="master-planner-panel"
             style={{
               background: "var(--apex-surface)",
