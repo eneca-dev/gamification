@@ -31,7 +31,7 @@ const statusColors: Record<CalendarDayStatus, string> = {
 
 const statusLabels: Record<CalendarDayStatus, string> = {
   green:   "Зелёный",
-  red:     "Штраф",
+  red:     "Красный",
   gray:    "Выходной",
   frozen:  "Отпуск",
   future:  "Ещё не наступил",
