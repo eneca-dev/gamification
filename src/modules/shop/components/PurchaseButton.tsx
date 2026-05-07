@@ -32,7 +32,7 @@ export function PurchaseButton({
     if (shieldNoPending) return 'Нет угрозы стрику'
     return (
       <span className="inline-flex items-center gap-1">
-        {price.toLocaleString('ru-RU')} <CoinIcon size={13} />
+        {(price ?? 0).toLocaleString('ru-RU')} <CoinIcon size={13} />
       </span>
     )
   }

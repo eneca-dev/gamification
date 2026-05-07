@@ -180,37 +180,39 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
           )}
 
           {/* Ряд 2: фильтр по статусу */}
-          <div className="flex gap-1 mb-2">
-            {[
-              { label: "Все события", value: undefined },
-              { label: "Ожидают 30 дней", value: "pending" },
-              { label: "Закрыта в бюджете", value: "ok" },
-              { label: "Превышение бюджета", value: "exceeded" },
-              { label: "Отозвано", value: "revoked" },
-            ].map((tab) => {
-              const isActive = statusFilter === tab.value;
-              return (
-                <a
-                  key={tab.label}
-                  href={buildUrl({ status: tab.value ?? "", pendingType: "" })}
-                  className="px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors"
-                  style={{
-                    background: isActive ? "var(--apex-text)" : "var(--apex-bg)",
-                    color: isActive ? "var(--apex-surface)" : "var(--apex-text-muted)",
-                    border: isActive ? "none" : "1px solid var(--apex-border)",
-                  }}
-                >
-                  {tab.label}
-                </a>
-              );
-            })}
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex gap-1 overflow-x-auto flex-nowrap flex-1 min-w-0 pb-0.5">
+              {[
+                { label: "Все события", value: undefined },
+                { label: "Ожидают 30 дней", value: "pending" },
+                { label: "Закрыта в бюджете", value: "ok" },
+                { label: "Превышение бюджета", value: "exceeded" },
+                { label: "Отозвано", value: "revoked" },
+              ].map((tab) => {
+                const isActive = statusFilter === tab.value;
+                return (
+                  <a
+                    key={tab.label}
+                    href={buildUrl({ status: tab.value ?? "", pendingType: "" })}
+                    className="px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors shrink-0"
+                    style={{
+                      background: isActive ? "var(--apex-text)" : "var(--apex-bg)",
+                      color: isActive ? "var(--apex-surface)" : "var(--apex-text-muted)",
+                      border: isActive ? "none" : "1px solid var(--apex-border)",
+                    }}
+                  >
+                    {tab.label}
+                  </a>
+                );
+              })}
+            </div>
             {!isPending && (
-              <span className="ml-auto text-[12px] font-medium self-center" style={{ color: "var(--apex-text-muted)" }}>
+              <span className="shrink-0 text-[12px] font-medium" style={{ color: "var(--apex-text-muted)" }}>
                 {historyData.totalCount} {pluralize(historyData.totalCount)}
               </span>
             )}
             {isPending && (
-              <span className="ml-auto text-[12px] font-medium self-center" style={{ color: "var(--apex-text-muted)" }}>
+              <span className="shrink-0 text-[12px] font-medium" style={{ color: "var(--apex-text-muted)" }}>
                 {pendingTasks.length} {pluralizeTask(pendingTasks.length)}
               </span>
             )}
