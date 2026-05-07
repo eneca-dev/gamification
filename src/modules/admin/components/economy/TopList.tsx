@@ -122,10 +122,15 @@ function TopRowView({ rank, item, secondaryLabel, rate }: TopRowViewProps) {
           {item.secondary} {secondaryLabel}
         </span>
       )}
-      <span className="shrink-0 flex flex-col items-end gap-0.5" style={{ color: 'var(--apex-text)' }}>
-        <CoinStatic amount={item.value} size="sm" />
-        <span className="text-[10px] tabular-nums" style={{ color: 'var(--apex-text-muted)' }}>
-          ≈ {formatByn(coinsToByn(item.value, rate))}
+      <span className="shrink-0 flex flex-col items-end gap-0.5">
+        <span
+          className="text-[12px] font-bold tabular-nums"
+          style={{ color: 'var(--apex-text)' }}
+        >
+          {formatByn(coinsToByn(item.value, rate))}
+        </span>
+        <span style={{ color: 'var(--apex-text-muted)' }}>
+          <CoinStatic amount={item.value} size="xs" />
         </span>
       </span>
     </li>

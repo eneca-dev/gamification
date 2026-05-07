@@ -4,6 +4,8 @@
 
 ## Логика работы
 
+Админ вводит цену билета в BYN. На сервере она конвертируется в кристаллы (`computePriceCrystals`) по текущему курсу из `crystal_rates`, `coefficient` фиксирован на `1`. Сохраняется и в `shop_products` (`cost_byn`, `coefficient`), и закэшированной суммой в `lottery_draws.ticket_price`.
+
 Админ создаёт лотерею на текущий месяц — автоматически создаётся `shop_product` (билет) в категории "Розыгрыши" (slug: `draw`). Покупка билета = стандартный `purchase_product` RPC. Каждый `shop_order` = 1 билет = 1 шанс. Количество билетов не ограничено.
 
 Шанс выигрыша (`мои_билеты / всего_билетов * 100`) показывается только после покупки хотя бы 1 билета.
@@ -18,7 +20,7 @@
 - Категория: `shop_categories` (slug: `draw`)
 - RPC: `purchase_product` (покупка билетов), `draw_lottery_winner` (розыгрыш)
 - Edge Function: `draw-lottery` (крон 1-го числа)
-- Модули: `auth` (getCurrentUser), `admin` (checkIsAdmin), `shop` (purchaseProduct)
+- Модули: `auth` (getCurrentUser), `admin` (checkIsAdmin), `shop` (purchaseProduct, getCurrentRate, computePriceCrystals)
 
 ## Типы
 
@@ -29,8 +31,8 @@
 
 ## Actions
 
-- `createLottery(input)` — создание лотереи на текущий месяц. Автосоздаёт shop_product. Только админ. Revalidate: `/admin/lottery`, `/store`
-- `updateLottery(input)` — обновление приза активной лотереи (name, description, image_url, ticket_price). Обновляет и связанный shop_product. Только админ. Revalidate: `/admin/lottery`, `/store`
+- `createLottery(input)` — создание лотереи на текущий месяц. Принимает `cost_byn` (BYN); конвертирует в кристаллы по текущему курсу. Автосоздаёт shop_product. Только админ. Revalidate: `/admin/lottery`, `/store`
+- `updateLottery(input)` — обновление приза активной лотереи (name, description, image_url, cost_byn). Пересчитывает кристаллы по актуальному курсу. Обновляет и связанный shop_product. Только админ. Revalidate: `/admin/lottery`, `/store`
 
 ## Queries
 
@@ -51,5 +53,6 @@
 - Максимум 1 активная лотерея (UNIQUE на `month`, EXCLUDE на `status = 'active'`)
 - `month` всегда 1-е число (CHECK constraint)
 - Цена билета и приз можно изменить, но с предупреждением если билеты уже куплены
+- Цена для пользователя в магазине считается динамически (`cost_byn × coefficient × rate`); поле `lottery_draws.ticket_price` — закэшированная сумма на момент последнего create/update
 - Отмена лотереи невозможна
 - Возврат 💎 за билеты не производится

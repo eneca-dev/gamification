@@ -43,12 +43,13 @@ export interface UserTicketInfo {
 }
 
 // --- Схема создания лотереи ---
+// Админ вводит цену билета в BYN; сумма в кристаллах вычисляется на сервере по текущему курсу.
 
 export const createLotterySchema = z.object({
   name: z.string().min(1, 'Название приза обязательно').max(200),
   description: z.string().max(1000).nullable().optional(),
   image_url: z.string().url().nullable().optional(),
-  ticket_price: z.number().int().positive('Цена билета должна быть больше 0').default(300),
+  cost_byn: z.number().positive('Цена билета должна быть больше 0'),
 })
 
 export type CreateLotteryInput = z.infer<typeof createLotterySchema>
@@ -60,7 +61,7 @@ export const updateLotterySchema = z.object({
   name: z.string().min(1, 'Название приза обязательно').max(200),
   description: z.string().max(1000).nullable().optional(),
   image_url: z.string().url().nullable().optional(),
-  ticket_price: z.number().int().positive('Цена билета должна быть больше 0'),
+  cost_byn: z.number().positive('Цена билета должна быть больше 0'),
 })
 
 export type UpdateLotteryInput = z.infer<typeof updateLotterySchema>
