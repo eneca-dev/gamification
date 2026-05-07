@@ -121,11 +121,18 @@ export function CategoryBreakdownChart({ categories, rate }: CategoryBreakdownCh
                         <span className="w-2 h-2 rounded-full" style={{ background: item.color }} />
                         {item.name}
                       </div>
-                      <div className="mt-1" style={{ color: 'var(--apex-text-muted)' }}>
-                        {item.value.toLocaleString('ru-RU')} 💎 · {pct}%
+                      <div
+                        className="mt-1 text-[13px] font-bold tabular-nums"
+                        style={{ color: 'var(--apex-text)' }}
+                      >
+                        {formatByn(coinsToByn(item.value, rate))}
                       </div>
-                      <div className="text-[11px] tabular-nums" style={{ color: 'var(--apex-text-muted)' }}>
-                        ≈ {formatByn(coinsToByn(item.value, rate))}
+                      <div
+                        className="flex items-center gap-1.5 tabular-nums"
+                        style={{ color: 'var(--apex-text-muted)' }}
+                      >
+                        <CoinStatic amount={item.value} size="xs" />
+                        <span className="text-[11px]">· {pct}%</span>
                       </div>
                     </div>
                   )
@@ -222,10 +229,15 @@ function CategoryItem({
         >
           {category.orders} {pluralizeOrders(category.orders)}
         </span>
-        <span className="shrink-0 flex flex-col items-end gap-0.5" style={{ color: 'var(--apex-text)' }}>
-          <CoinStatic amount={category.coins} size="sm" />
-          <span className="text-[10px] tabular-nums" style={{ color: 'var(--apex-text-muted)' }}>
-            ≈ {formatByn(coinsToByn(category.coins, rate))}
+        <span className="shrink-0 flex flex-col items-end gap-0.5">
+          <span
+            className="text-[12px] font-bold tabular-nums"
+            style={{ color: 'var(--apex-text)' }}
+          >
+            {formatByn(coinsToByn(category.coins, rate))}
+          </span>
+          <span style={{ color: 'var(--apex-text-muted)' }}>
+            <CoinStatic amount={category.coins} size="xs" />
           </span>
         </span>
       </button>
@@ -291,10 +303,15 @@ function ProductRow({ product, rate }: ProductRowProps) {
       >
         {product.orders} {pluralizeOrders(product.orders)}
       </span>
-      <span className="shrink-0 flex flex-col items-end gap-0.5" style={{ color: 'var(--apex-text)' }}>
-        <CoinStatic amount={product.coins} size="sm" />
-        <span className="text-[10px] tabular-nums" style={{ color: 'var(--apex-text-muted)' }}>
-          ≈ {formatByn(coinsToByn(product.coins, rate))}
+      <span className="shrink-0 flex flex-col items-end gap-0.5">
+        <span
+          className="text-[12px] font-bold tabular-nums"
+          style={{ color: 'var(--apex-text)' }}
+        >
+          {formatByn(coinsToByn(product.coins, rate))}
+        </span>
+        <span style={{ color: 'var(--apex-text-muted)' }}>
+          <CoinStatic amount={product.coins} size="xs" />
         </span>
       </span>
     </li>

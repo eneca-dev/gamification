@@ -5,16 +5,17 @@ import { Plus, Pencil, Ticket, Users, Upload, X, AlertTriangle } from 'lucide-re
 
 import { CoinIcon } from '@/components/CoinIcon'
 import { createLottery, updateLottery } from '@/modules/lottery/index.client'
-import { uploadProductImage } from '@/modules/shop/index.client'
+import { uploadProductImage, computePriceCrystals, coinsToByn } from '@/modules/shop/index.client'
 import { formatLotteryMonth } from '@/modules/lottery/utils'
 
 import type { LotteryWithStats } from '@/modules/lottery/index.client'
 
 interface LotteryAdminProps {
   lotteries: LotteryWithStats[]
+  rate: number
 }
 
-export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps) {
+export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdminProps) {
   const [lotteries, setLotteries] = useState(initialLotteries)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -23,11 +24,11 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
   const [editingLottery, setEditingLottery] = useState<LotteryWithStats | null>(null)
   const [showEditWarning, setShowEditWarning] = useState(false)
 
-  // Форма создания/редактирования
-  const [form, setForm] = useState({
+  // Форма создания/редактирования. cost_byn хранится строкой для свободного ввода ("3,5", "")
+  const [form, setForm] = useState<{ name: string; description: string; cost_byn: string }>({
     name: '',
     description: '',
-    ticket_price: 300,
+    cost_byn: '',
   })
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -75,10 +76,12 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
   }
 
   function startEditing(lottery: LotteryWithStats) {
+    // Восстанавливаем BYN из закэшированных кристаллов по текущему курсу
+    const bynValue = coinsToByn(lottery.ticket_price, rate)
     setForm({
       name: lottery.name,
       description: lottery.description ?? '',
-      ticket_price: lottery.ticket_price,
+      cost_byn: String(bynValue).replace('.', ','),
     })
     setImagePreview(lottery.image_url)
     setImageFile(null)
@@ -93,7 +96,7 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
   function cancelEditing() {
     setEditingLottery(null)
     setShowEditWarning(false)
-    setForm({ name: '', description: '', ticket_price: 300 })
+    setForm({ name: '', description: '', cost_byn: '' })
     handleRemoveImage()
     setError(null)
   }
@@ -110,8 +113,15 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
     return uploadResult.url
   }
 
+  const costBynNum = parseFloat(form.cost_byn.replace(',', '.')) || 0
+  const previewCrystals = costBynNum > 0 ? computePriceCrystals(costBynNum, 1, rate) : 0
+
   function handleCreate() {
     setError(null)
+    if (costBynNum <= 0) {
+      setError('Цена билета должна быть больше 0')
+      return
+    }
     const prev = lotteries
 
     startTransition(async () => {
@@ -122,7 +132,7 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
         name: form.name,
         description: form.description || null,
         image_url: imageUrl,
-        ticket_price: form.ticket_price,
+        cost_byn: costBynNum,
       })
 
       if (!result.success) {
@@ -134,7 +144,7 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
         { ...result.data, total_tickets: 0, total_participants: 0 },
         ...prev,
       ])
-      setForm({ name: '', description: '', ticket_price: 300 })
+      setForm({ name: '', description: '', cost_byn: '' })
       handleRemoveImage()
       setShowForm(false)
       showNotif('Лотерея создана')
@@ -144,6 +154,10 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
   function handleUpdate() {
     if (!editingLottery) return
     setError(null)
+    if (costBynNum <= 0) {
+      setError('Цена билета должна быть больше 0')
+      return
+    }
     const prev = lotteries
 
     startTransition(async () => {
@@ -158,7 +172,7 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
         name: form.name,
         description: form.description || null,
         image_url: finalImageUrl,
-        ticket_price: form.ticket_price,
+        cost_byn: costBynNum,
       })
 
       if (!result.success) {
@@ -243,13 +257,14 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
 
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: 'var(--apex-text-secondary)' }}>
-                  Цена билета <CoinIcon size={12} className="inline" />
+                  Цена билета (BYN)
                 </label>
                 <input
-                  type="number"
-                  value={form.ticket_price}
-                  onChange={(e) => setForm({ ...form, ticket_price: Number(e.target.value) })}
-                  min={1}
+                  type="text"
+                  inputMode="decimal"
+                  value={form.cost_byn}
+                  onChange={(e) => setForm({ ...form, cost_byn: e.target.value })}
+                  placeholder="3,50"
                   className="w-full px-3 py-2 rounded-lg text-sm"
                   style={{
                     background: 'var(--surface)',
@@ -257,6 +272,10 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
                     color: 'var(--apex-text-primary)',
                   }}
                 />
+                <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--apex-text-secondary)' }}>
+                  ≈ {previewCrystals.toLocaleString('ru-RU')} <CoinIcon size={12} />
+                  <span style={{ color: 'var(--apex-text-muted)' }}>(курс 1 BYN = {rate} 💎)</span>
+                </p>
               </div>
             </div>
 
@@ -460,13 +479,14 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
 
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: 'var(--apex-text-secondary)' }}>
-                  Цена билета <CoinIcon size={12} className="inline" />
+                  Цена билета (BYN)
                 </label>
                 <input
-                  type="number"
-                  value={form.ticket_price}
-                  onChange={(e) => setForm({ ...form, ticket_price: Number(e.target.value) })}
-                  min={1}
+                  type="text"
+                  inputMode="decimal"
+                  value={form.cost_byn}
+                  onChange={(e) => setForm({ ...form, cost_byn: e.target.value })}
+                  placeholder="3,50"
                   className="w-full px-3 py-2 rounded-lg text-sm"
                   style={{
                     background: 'var(--surface)',
@@ -474,6 +494,10 @@ export function LotteryAdmin({ lotteries: initialLotteries }: LotteryAdminProps)
                     color: 'var(--apex-text-primary)',
                   }}
                 />
+                <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--apex-text-secondary)' }}>
+                  ≈ {previewCrystals.toLocaleString('ru-RU')} <CoinIcon size={12} />
+                  <span style={{ color: 'var(--apex-text-muted)' }}>(курс 1 BYN = {rate} 💎)</span>
+                </p>
               </div>
             </div>
 

@@ -93,6 +93,7 @@
 
 - `stock` обязателен для исчисляемых категорий (`is_countable = true`), валидация в Server Action, не в БД
 - `stock = NULL` для неисчисляемых (`is_countable = false`) — безлимит, поле скрыто в UI, не редактируемо inline
+- Инвариант `stock=0 ⇒ is_active=false` для исчисляемых: `createProduct` и `updateProduct` принудительно ставят `is_active=false` при `stock=0`. Активация (`is_active=true`) с нулевым остатком блокируется ошибкой. В админке тоггл активности заблокирован, пока остаток = 0 — для активации нужно сначала ввести количество > 0
 - `is_physical` определяет статус заказа (pending/fulfilled), `is_countable` определяет учёт остатков — это независимые флаги
 - Отмена доступна для любого статуса кроме `cancelled`. Idempotency через `shop_refund_{order_id}`
 - Race condition при покупке: защита через `FOR UPDATE` на balance и product
