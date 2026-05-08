@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { getCurrentUser } from '@/modules/auth'
 import { checkIsAdmin } from '@/modules/admin/checkIsAdmin'
+import { getCurrentRate } from '@/modules/shop'
+import { computePriceCrystals } from '@/modules/shop/index.client'
 
 import type { ActionResult } from '@/modules/cache'
 
@@ -40,7 +42,11 @@ export async function createLottery(input: unknown): Promise<ActionResult<Lotter
   }
 
   const supabase = createSupabaseAdminClient()
-  const { name, description, image_url, ticket_price } = parsed.data
+  const { name, description, image_url, cost_byn } = parsed.data
+
+  // Конвертация BYN → кристаллы по текущему курсу. coefficient = 1 (для лотереи без наценки).
+  const rate = await getCurrentRate()
+  const ticketPriceCrystals = computePriceCrystals(cost_byn, 1, rate)
 
   // 1-е число текущего месяца по Минску (UTC+3)
   const nowMinsk = new Date(Date.now() + 3 * 60 * 60 * 1000)
@@ -48,13 +54,14 @@ export async function createLottery(input: unknown): Promise<ActionResult<Lotter
     .toISOString()
     .split('T')[0]
 
-  // 1. Создаём товар-билет
+  // 1. Создаём товар-билет (цена в магазине считается из cost_byn × coefficient × rate)
   const { data: product, error: productError } = await supabase
     .from('shop_products')
     .insert({
       name: `Билет на розыгрыш: ${name}`,
       description: description ?? `Лотерейный билет. Приз: ${name}`,
-      price: ticket_price,
+      cost_byn,
+      coefficient: 1,
       category_id: categoryId,
       emoji: '🎟️',
       is_active: true,
@@ -69,14 +76,14 @@ export async function createLottery(input: unknown): Promise<ActionResult<Lotter
     return { success: false, error: `Ошибка создания билета: ${productError?.message}` }
   }
 
-  // 2. Создаём лотерею
+  // 2. Создаём лотерею (ticket_price — закэшированная цена в кристаллах на момент создания)
   const { data: lottery, error: lotteryError } = await supabase
     .from('lottery_draws')
     .insert({
       name,
       description: description ?? null,
       image_url: image_url ?? null,
-      ticket_price,
+      ticket_price: ticketPriceCrystals,
       product_id: product.id,
       status: 'active',
       month: monthStart,
@@ -114,8 +121,12 @@ export async function updateLottery(input: unknown): Promise<ActionResult<Lotter
     return { success: false, error: parsed.error.errors[0].message }
   }
 
-  const { id, name, description, image_url, ticket_price } = parsed.data
+  const { id, name, description, image_url, cost_byn } = parsed.data
   const supabase = createSupabaseAdminClient()
+
+  // Конвертация BYN → кристаллы по текущему курсу. coefficient = 1.
+  const rate = await getCurrentRate()
+  const ticketPriceCrystals = computePriceCrystals(cost_byn, 1, rate)
 
   // Получаем текущую лотерею
   const { data: current, error: fetchError } = await supabase
@@ -135,7 +146,7 @@ export async function updateLottery(input: unknown): Promise<ActionResult<Lotter
       name,
       description: description ?? null,
       image_url: image_url ?? null,
-      ticket_price,
+      ticket_price: ticketPriceCrystals,
     })
     .eq('id', id)
     .select('*')
@@ -151,7 +162,8 @@ export async function updateLottery(input: unknown): Promise<ActionResult<Lotter
     .update({
       name: `Билет на розыгрыш: ${name}`,
       description: description ?? `Лотерейный билет. Приз: ${name}`,
-      price: ticket_price,
+      cost_byn,
+      coefficient: 1,
       image_url: image_url ?? null,
     })
     .eq('id', current.product_id)

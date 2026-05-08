@@ -196,12 +196,20 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
   // --- Товары ---
 
-  function toggleProductActive(id: string, current: boolean) {
+  function toggleProductActive(product: ShopProductWithCategory) {
+    const next = !product.is_active
+
+    // Запрет активации товара с нулевым остатком (для исчисляемых)
+    if (next && product.category?.is_countable && (product.stock ?? 0) === 0) {
+      setError('Нельзя активировать товар с нулевым остатком. Сначала укажите количество.')
+      return
+    }
+
     const prev = products
-    setProducts((items) => items.map((p) => (p.id === id ? { ...p, is_active: !current } : p)))
+    setProducts((items) => items.map((p) => (p.id === product.id ? { ...p, is_active: next } : p)))
 
     startProductTransition(async () => {
-      const result = await updateProduct({ id, is_active: !current })
+      const result = await updateProduct({ id: product.id, is_active: next })
       if (!result.success) {
         setProducts(prev)
         setError(result.error)
@@ -265,6 +273,10 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           return
         }
         updatePayload = { stock: num }
+        // При обнулении остатка — товар автоматически деактивируется
+        if (num === 0) {
+          updatePayload.is_active = false
+        }
       }
     } else if (field === 'category_id') {
       if (!value) {
@@ -332,14 +344,19 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         ? { name: cat.name, slug: cat.slug, is_physical: cat.is_physical, is_countable: cat.is_countable, is_active: cat.is_active }
         : { name: '', slug: '', is_physical: false, is_countable: false, is_active: true }
       const computedPrice = computePriceCrystals(payload.cost_byn, payload.coefficient, effectiveRate)
+      // Stock = 0 (исчисляемая категория) → товар автоматически неактивен (синхронно с сервером)
+      const forceInactive = !!cat?.is_countable && payload.stock === 0
 
       // Optimistic update
       const prev = products
       if (editingProduct) {
         setProducts((list) =>
-          list.map((p) =>
-            p.id === editingProduct.id ? { ...p, ...payload, price: computedPrice, category: categoryData } : p
-          )
+          list.map((p) => {
+            if (p.id !== editingProduct.id) return p
+            const updated = { ...p, ...payload, price: computedPrice, category: categoryData }
+            if (forceInactive) updated.is_active = false
+            return updated
+          })
         )
       } else {
         const tempId = `temp-${Date.now()}`
@@ -348,7 +365,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             id: tempId,
             ...payload,
             price: computedPrice,
-            is_active: true,
+            is_active: !forceInactive,
             created_by: null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -545,7 +562,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             )}
 
             {/* Таблица категорий */}
-            <table className="w-full" style={{ tableLayout: 'fixed' }}>
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[500px]" style={{ tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: '22%' }} />
                 <col style={{ width: '17%' }} />
@@ -687,6 +705,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                 })}
               </tbody>
             </table>
+            </div>
           </>
         )}
       </div>
@@ -743,7 +762,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         </div>
 
         {/* Таблица товаров */}
-        <table className="w-full" style={{ tableLayout: 'fixed' }}>
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[700px]" style={{ tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: '60px' }} />
             <col />
@@ -924,19 +944,33 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
                     {/* Статус */}
                     <td className="px-5 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <ToggleSwitch
-                          checked={product.is_active}
-                          onChange={() => toggleProductActive(product.id, product.is_active)}
-                          disabled={isProductPending || !product.category?.is_active}
-                          label={product.is_active ? 'Активен' : 'Неактивен'}
-                        />
-                        {!product.category?.is_active && (
-                          <span className="text-[10px] font-medium leading-tight px-1.5 py-0.5 rounded" style={{ background: 'var(--apex-warning-bg)', color: 'var(--apex-warning-text)' }}>
-                            Категория<br />неактивна
-                          </span>
-                        )}
-                      </div>
+                      {(() => {
+                        const isOutOfStock = !!product.category?.is_countable && (product.stock ?? 0) === 0
+                        const lockedByStock = isOutOfStock && !product.is_active
+                        return (
+                          <div className="flex items-center gap-2">
+                            <ToggleSwitch
+                              checked={product.is_active}
+                              onChange={() => toggleProductActive(product)}
+                              disabled={isProductPending || !product.category?.is_active || lockedByStock}
+                              label={product.is_active ? 'Активен' : 'Неактивен'}
+                            />
+                            {!product.category?.is_active && (
+                              <span className="text-[10px] font-medium leading-tight px-1.5 py-0.5 rounded" style={{ background: 'var(--apex-warning-bg)', color: 'var(--apex-warning-text)' }}>
+                                Категория<br />неактивна
+                              </span>
+                            )}
+                            {product.category?.is_active && lockedByStock && (
+                              <span
+                                className="text-[10px] font-medium leading-tight px-1.5 py-0.5 rounded whitespace-nowrap"
+                                style={{ background: 'var(--apex-warning-bg)', color: 'var(--apex-warning-text)' }}
+                              >
+                                Нет в наличии<br />Измените количество
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </td>
 
                     {/* Действия */}
@@ -1002,6 +1036,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             )}
           </tbody>
         </table>
+        </div>
 
         <div className="px-5 py-3 text-[12px] font-medium" style={{ color: 'var(--apex-text-muted)' }}>
           {filteredProducts.length} из {products.length} товаров

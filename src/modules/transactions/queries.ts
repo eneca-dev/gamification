@@ -104,13 +104,20 @@ async function _getUserTransactions(
 
   const rows = data ?? []
 
-  // Подтягиваем red_reasons для red_day событий
-  const redDayDates = rows
-    .filter((r) => r.event_type === 'red_day')
-    .map((r) => r.event_date as string)
+  // Подтягиваем red_reasons для red_day событий.
+  // Триггер trg_fix_ws_event_date добавляет +1 день ко всем WS event_date,
+  // поэтому ищем в ws_daily_statuses по event_date - 1 (реальный рабочий день).
+  const redDayRows = rows.filter((r) => r.event_type === 'red_day')
+  const redDayDateMap = new Map<string, string>() // event_date → actual_date (event_date - 1)
+  for (const r of redDayRows) {
+    const eventDate = r.event_date as string
+    const d = new Date(eventDate + 'T00:00:00Z')
+    d.setUTCDate(d.getUTCDate() - 1)
+    redDayDateMap.set(eventDate, d.toISOString().slice(0, 10))
+  }
 
   let redReasonsMap = new Map<string, RedReason[]>()
-  if (redDayDates.length > 0) {
+  if (redDayDateMap.size > 0) {
     const { data: wsUser } = await supabase
       .from('ws_users')
       .select('id')
@@ -118,16 +125,21 @@ async function _getUserTransactions(
       .maybeSingle()
 
     if (wsUser) {
+      const actualDates = [...redDayDateMap.values()]
       const { data: statuses } = await supabase
         .from('ws_daily_statuses')
         .select('date, red_reasons')
         .eq('user_id', wsUser.id)
-        .in('date', redDayDates)
+        .in('date', actualDates)
 
-      for (const s of statuses ?? []) {
-        if (s.red_reasons) {
-          redReasonsMap.set(s.date as string, s.red_reasons as RedReason[])
-        }
+      // Строим Map по event_date (не по actual_date), чтобы матчить с rows
+      const actualToReasons = new Map((statuses ?? [])
+        .filter((s) => s.red_reasons)
+        .map((s) => [s.date as string, s.red_reasons as RedReason[]]))
+
+      for (const [eventDate, actualDate] of redDayDateMap) {
+        const reasons = actualToReasons.get(actualDate)
+        if (reasons) redReasonsMap.set(eventDate, reasons)
       }
     }
   }
@@ -431,7 +443,7 @@ interface RedReason {
 const RED_REASON_LABELS: Record<string, string> = {
   red_day: 'Не внесены часы',
   task_dynamics_violation: 'Не сменена метка прогресса',
-  section_red: 'Нарушение в секции',
+  section_red: 'Не обновлена метка прогресса в задаче L3 раздела',
   wrong_status_report: 'Время внесено не в статусе «В работе»',
 }
 
@@ -476,7 +488,7 @@ function enrichTransaction(
           subItems.push({ text, url })
         }
       }
-      return { description: 'Красный день — сброс стрика', subItems: subItems.length > 0 ? subItems : undefined }
+      return { description: 'Красный день', subItems: subItems.length > 0 ? subItems : undefined }
     }
     case 'streak_reset_timetracking':
       return { description: 'Сброс стрика: не внесены часы' }
@@ -555,12 +567,24 @@ function enrichTransaction(
         inlineLink: { text: budgetTaskInfo.name, url: budgetTaskInfo.url },
       }
     }
-    case 'budget_revoked_l3':
-    case 'budget_revoked_l2':
+    case 'budget_revoked_l3': {
+      if (!budgetTaskInfo) return { description: defaultDesc }
+      return {
+        description: 'Превышен бюджет задачи — баллы отозваны (ранее начисленные 💎 аннулированы):',
+        inlineLink: { text: budgetTaskInfo.name, url: budgetTaskInfo.url },
+      }
+    }
+    case 'budget_revoked_l2': {
+      if (!budgetTaskInfo) return { description: defaultDesc }
+      return {
+        description: 'Превышен бюджет раздела — баллы отозваны (ранее начисленные 💎 аннулированы):',
+        inlineLink: { text: budgetTaskInfo.name, url: budgetTaskInfo.url },
+      }
+    }
     case 'budget_revoked_l3_lead': {
       if (!budgetTaskInfo) return { description: defaultDesc }
       return {
-        description: 'Отзыв 💎:',
+        description: 'Бюджет задачи превышен — бонус тимлида отозван (ранее начисленные 💎 аннулированы):',
         inlineLink: { text: budgetTaskInfo.name, url: budgetTaskInfo.url },
       }
     }
@@ -588,7 +612,7 @@ function enrichTransaction(
     case 'deadline_revoked_l3': {
       const name = details?.ws_task_name as string | undefined
       return {
-        description: 'Отзыв бонуса (срок):',
+        description: 'Задача переоткрыта — бонус за срок отозван (ранее начисленные 💎 аннулированы):',
         inlineLink: name ? { text: name, url: taskUrl } : undefined,
       }
     }

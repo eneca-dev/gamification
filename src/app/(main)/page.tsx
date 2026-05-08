@@ -285,13 +285,13 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-5">
-        <div className="shrink-0 animate-fade-in-up">
+      <div className="flex flex-col xl:flex-row gap-5 animate-fade-in-up">
+        <div className="xl:shrink-0 overflow-x-auto">
           <StreakPanel streakData={streakPanelData} pendingResets={pendingResets} userBalance={userBalance} />
         </div>
         {masterPlannerData && (
           <div
-            className="w-[640px] shrink-0 rounded-2xl p-5 animate-fade-in-up"
+            className="flex-1 min-w-0 rounded-2xl p-5 animate-fade-in-up"
             data-onboarding="master-planner-panel"
             style={{
               background: "var(--apex-surface)",
@@ -301,10 +301,13 @@ export default async function DashboardPage() {
             <MasterPlannerPanel data={masterPlannerData} />
           </div>
         )}
-        <div className="w-[442px] shrink-0 animate-fade-in-up stagger-1">
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-5 animate-fade-in-up stagger-1">
+        <div className="@container md:col-span-2">
           <AlarmsBanner alarms={activeAlarms} />
         </div>
-        <div className="w-[674px] shrink-0 animate-fade-in-up stagger-1">
+        <div className="@container md:col-span-3">
           {wsUserId && (
             <GratitudeWidget
               senderId={wsUserId}
@@ -318,11 +321,11 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-5">
-        <div className="w-[442px] shrink-0 animate-fade-in-up stagger-2">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-5 animate-fade-in-up stagger-2">
+        <div className="@container md:col-span-2">
           <TransactionFeed transactions={allTransactions} />
         </div>
-        <div className="w-[674px] shrink-0 animate-fade-in-up stagger-2" data-onboarding="leaderboard">
+        <div className="@container md:col-span-3" data-onboarding="leaderboard">
           <Leaderboard
             entries={toLeaderboardEntries(wsPersonalRanking)}
             automationEntries={toLeaderboardEntries(revitPersonalRanking)}
@@ -330,34 +333,40 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="max-w-[1136px] animate-fade-in-up stagger-3" data-onboarding="department-contest">
-        <DepartmentContest
-          departments={toDeptEntries(wsDeptRanking, currentDept)}
-          automationDepartments={toDeptEntries(revitDeptRanking, currentDept)}
-          daysLeft={daysLeft}
-          currentEntityName={wsDeptCode}
-          wsTooltip="Формула: сумма 💎 отдела за Worksection / количество людей в отделе. Сброс каждый месяц."
-          autoTooltip="Формула: сумма 💎 по Revit в отделе × (кол-во людей, использующих плагины / общее кол-во людей в отделе). Сброс каждый месяц."
-          lastMonthWsWinner={findWinner('ws_dept')}
-          lastMonthRevitWinner={findWinner('revit_dept')}
-          lastMonthLabel={lastMonthLabelStr}
-        />
-      </div>
+      {/* На 3xl+ блоки конкурсов рядом, на меньших — стопкой */}
+      <div className="3xl:grid 3xl:grid-cols-2 3xl:gap-5 space-y-6 3xl:space-y-0">
+        <div className="animate-fade-in-up stagger-3" data-onboarding="department-contest">
+          <DepartmentContest
+            departments={toDeptEntries(wsDeptRanking, currentDept)}
+            automationDepartments={toDeptEntries(revitDeptRanking, currentDept)}
+            daysLeft={daysLeft}
+            currentEntityName={wsDeptCode}
+            wsTooltip="Среднее количество 💎 на сотрудника отдела за Worksection. Сброс каждый месяц."
+            wsTooltipFormula="Очки = сумма 💎 отдела ÷ кол-во людей в отделе"
+            autoTooltip="Учитывается вовлечённость — доля людей, использующих плагины. Сброс каждый месяц."
+            autoTooltipFormula={"Очки = (сумма 💎 по Revit × коэф. вовлечённости) ÷ кол-во людей в отделе\nКоэф. вовлечённости = сотрудники, использующие плагин ÷ все сотрудники отдела"}
+            lastMonthWsWinner={findWinner('ws_dept')}
+            lastMonthRevitWinner={findWinner('revit_dept')}
+            lastMonthLabel={lastMonthLabelStr}
+          />
+        </div>
 
-      {/* Топ команд */}
-      <div className="max-w-[1136px] animate-fade-in-up stagger-4">
-        <DepartmentContest
-          departments={toDeptEntries(wsTeamRanking, wsTeam)}
-          automationDepartments={toDeptEntries(revitTeamRanking, wsTeam)}
-          daysLeft={daysLeft}
-          title="Соревнование команд"
-          currentEntityName={wsTeam}
-          wsTooltip="Формула: сумма 💎 команды за Worksection / количество людей в команде. Сброс каждый месяц."
-          autoTooltip="Формула: сумма 💎 по Revit в команде × (кол-во людей, использующих плагины / общее кол-во людей в команде). Сброс каждый месяц."
-          lastMonthWsWinner={findWinner('ws_team')}
-          lastMonthRevitWinner={findWinner('revit_team')}
-          lastMonthLabel={lastMonthLabelStr}
-        />
+        <div className="animate-fade-in-up stagger-4">
+          <DepartmentContest
+            departments={toDeptEntries(wsTeamRanking, wsTeam)}
+            automationDepartments={toDeptEntries(revitTeamRanking, wsTeam)}
+            daysLeft={daysLeft}
+            title="Соревнование команд"
+            currentEntityName={wsTeam}
+            wsTooltip="Среднее количество 💎 на сотрудника команды за Worksection. Сброс каждый месяц."
+            wsTooltipFormula="Очки = сумма 💎 команды ÷ кол-во людей в команде"
+            autoTooltip="Учитывается вовлечённость — доля людей, использующих плагины. Сброс каждый месяц."
+            autoTooltipFormula={"Очки = (сумма 💎 по Revit × коэф. вовлечённости) ÷ кол-во людей в команде\nКоэф. вовлечённости = сотрудники, использующие плагин ÷ все сотрудники команды"}
+            lastMonthWsWinner={findWinner('ws_team')}
+            lastMonthRevitWinner={findWinner('revit_team')}
+            lastMonthLabel={lastMonthLabelStr}
+          />
+        </div>
       </div>
     </div>
   );

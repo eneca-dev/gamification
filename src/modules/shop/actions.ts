@@ -176,9 +176,15 @@ export async function createProduct(
 
   const supabase = createSupabaseAdminClient()
 
+  // Stock = 0 → товар сразу создаётся неактивным
+  const insertData: Record<string, unknown> = { ...parsed.data, created_by: user.wsUserId }
+  if (parsed.data.stock === 0) {
+    insertData.is_active = false
+  }
+
   const { data, error } = await supabase
     .from('shop_products')
-    .insert({ ...parsed.data, created_by: user.wsUserId })
+    .insert(insertData)
     .select('id')
     .single()
 
@@ -200,6 +206,26 @@ export async function updateProduct(
 
   const { id, ...fields } = parsed.data
   const supabase = createSupabaseAdminClient()
+
+  // Stock = 0 → товар автоматически становится неактивным
+  if (fields.stock === 0) {
+    fields.is_active = false
+  }
+
+  // Запрет активации товара с нулевым остатком (для исчисляемых категорий)
+  if (fields.is_active === true) {
+    const { data: current } = await supabase
+      .from('shop_products')
+      .select('stock, category:shop_categories!category_id(is_countable)')
+      .eq('id', id)
+      .single()
+
+    const category = Array.isArray(current?.category) ? current?.category[0] : current?.category
+    const effectiveStock = fields.stock !== undefined ? fields.stock : current?.stock
+    if (category?.is_countable && (effectiveStock ?? 0) === 0) {
+      return { success: false, error: 'Нельзя активировать товар с нулевым остатком. Сначала укажите количество.' }
+    }
+  }
 
   const { data, error } = await supabase
     .from('shop_products')

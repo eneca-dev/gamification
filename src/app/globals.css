@@ -101,12 +101,20 @@
   --radius-md:  10px;
   --radius-lg:  16px;
   --radius-xl:  24px;
+
+  /* ── Layout ─────────────────────────────────────────────── */
+  --sidebar-width: 260px;
 }
 
 @theme inline {
   --color-background: #EEF2F2;
   --color-foreground: #1C2437;
   --font-sans: 'Nunito', sans-serif;
+}
+
+@theme {
+  --breakpoint-3xl: 160rem;       /* 2560px */
+  --breakpoint-ultrawide: 215rem; /* 3440px */
 }
 
 * {

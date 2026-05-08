@@ -35,11 +35,14 @@ function KpiCard({ label, value, icon: Icon, accent, bg, rate }: KpiCardProps) {
           <Icon size={16} />
         </span>
       </div>
-      <div style={{ color: 'var(--apex-text)' }}>
-        <CoinStatic amount={value} size="lg" />
+      <div
+        className="text-[24px] font-bold tabular-nums leading-tight"
+        style={{ color: 'var(--apex-text)' }}
+      >
+        {formatByn(coinsToByn(value, rate))}
       </div>
-      <span className="text-[11px] tabular-nums" style={{ color: 'var(--apex-text-muted)' }}>
-        ≈ {formatByn(coinsToByn(value, rate))}
+      <span style={{ color: 'var(--apex-text-muted)' }}>
+        <CoinStatic amount={value} size="sm" />
       </span>
     </div>
   )

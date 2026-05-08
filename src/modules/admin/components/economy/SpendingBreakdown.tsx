@@ -43,12 +43,15 @@ function ChannelCard({ label, channel, unitLabel, icon: Icon, rate }: ChannelCar
           {label}
         </span>
       </div>
-      <div style={{ color: 'var(--apex-text)' }}>
-        <CoinStatic amount={channel.coins} size="md" />
+      <div
+        className="text-[20px] font-bold tabular-nums leading-tight"
+        style={{ color: 'var(--apex-text)' }}
+      >
+        {formatByn(coinsToByn(channel.coins, rate))}
       </div>
-      <div className="text-[11px] tabular-nums" style={{ color: 'var(--apex-text-muted)' }}>
-        ≈ {formatByn(coinsToByn(channel.coins, rate))}
-      </div>
+      <span style={{ color: 'var(--apex-text-muted)' }}>
+        <CoinStatic amount={channel.coins} size="sm" />
+      </span>
       <div className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
         {channel.users} {unitLabel}
       </div>
@@ -64,7 +67,7 @@ export function SpendingBreakdown({ channels, rate }: SpendingBreakdownProps) {
   return (
     <section className="space-y-3">
       <h2 className="text-[14px] font-bold" style={{ color: 'var(--apex-text)' }}>
-        Куда уходят 💎
+        Куда уходят деньги
       </h2>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
