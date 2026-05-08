@@ -106,6 +106,7 @@ function LeaderboardPanel({
   unit,
   currentUserRank,
   tooltip,
+  emptyRankLabel,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -114,6 +115,7 @@ function LeaderboardPanel({
   unit?: React.ReactNode;
   currentUserRank?: number | null;
   tooltip?: string;
+  emptyRankLabel: string;
 }) {
   const isFirstOfMonth = new Date().getDate() === 1;
   const containerRef = useRef<HTMLDivElement>(null)
@@ -169,7 +171,7 @@ function LeaderboardPanel({
             className="text-[11px] font-bold px-2 py-0.5 rounded-full"
             style={{ background: "var(--surface)", color: "var(--apex-text-muted)", border: `1px solid var(--apex-border)` }}
           >
-            Нет 💎
+            {emptyRankLabel}
           </span>
         )}
       </div>
@@ -287,6 +289,7 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         unit={<CoinIcon size={14} />}
         currentUserRank={findRank(wsPanels)}
         tooltip="Топ формируется по максимальному количеству 💎 за Worksection, полученных за месяц. Сброс каждый месяц."
+        emptyRankLabel="Нет 💎 за WS"
       />
       <LeaderboardPanel
         title="Топ Revit"
@@ -296,6 +299,7 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         accentColor="var(--orange-500)"
         currentUserRank={findRank(revitPanels)}
         tooltip="Топ формируется по максимальному количеству 💎 за использование Revit-плагинов за месяц. Сброс каждый месяц."
+        emptyRankLabel="Нет 💎 за Revit"
       />
     </div>
   );
