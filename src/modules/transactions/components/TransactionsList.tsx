@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, ExternalLink, XCircle, Briefcase, Building2, Heart, Trophy, Award, ShoppingBag, Tag } from 'lucide-react'
+import { ChevronDown, ChevronUp, ExternalLink, XCircle, Briefcase, Building2, Heart, Trophy, Award, ShoppingBag, Tag, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import { CoinIcon } from '@/components/CoinIcon'
@@ -138,17 +138,32 @@ export function TransactionsList({ items }: TransactionsListProps) {
         const sourceCfg = getSourceConfig(tx.source)
         const SourceIcon = sourceCfg.icon
 
+        const gratitudeArrow = tx.event_type === 'gratitude_gift_sent'
+          ? 'sent'
+          : tx.event_type === 'gratitude_recipient_points'
+            ? 'received'
+            : null
+
         return (
-          <div key={tx.id} className="flex items-start gap-3 px-3 py-2.5 rounded-xl">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0 mt-0.5"
-              style={{
-                background: iconBg,
-                border: iconBorder,
-                overflow: 'hidden',
-              }}
-            >
-              {iconContent}
+          <div key={tx.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
+            <div className="relative flex-shrink-0">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-center text-lg leading-none"
+                style={{ background: iconBg, border: iconBorder, overflow: 'hidden' }}
+              >
+                <span className="translate-x-[0.5px] inline-block">{iconContent}</span>
+              </div>
+              {gratitudeArrow && (
+                <div
+                  className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
+                  style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
+                >
+                  {gratitudeArrow === 'sent'
+                    ? <ArrowUpRight size={10} style={{ color: 'var(--apex-text-muted)' }} />
+                    : <ArrowDownLeft size={10} style={{ color: 'var(--apex-primary)' }} />
+                  }
+                </div>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1 min-w-0 flex-wrap leading-none">
@@ -295,7 +310,7 @@ export function TransactionsList({ items }: TransactionsListProps) {
               className="w-20 md:w-24 flex-shrink-0 text-[14px] font-bold text-right md:text-left"
               style={{ color: amountColor }}
             >
-              {isZero ? '—' : `${tx.coins > 0 ? '+' : ''}${tx.coins.toLocaleString('ru-RU')}`}
+              {`${tx.coins > 0 ? '+' : ''}${tx.coins.toLocaleString('ru-RU')}`}
             </div>
           </div>
         )
