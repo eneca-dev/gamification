@@ -73,7 +73,7 @@ function TrophyCell({
       onMouseLeave={() => setShowTooltip(false)}
     >
       <div
-        className="w-full rounded-xl flex flex-col items-center justify-center gap-1 py-4 transition-all cursor-default"
+        className="w-full rounded-xl flex flex-col items-center justify-center gap-1 py-4 2xl:py-8 transition-all cursor-default"
         style={{
           background: earned
             ? entityCfg.bg
@@ -88,7 +88,7 @@ function TrophyCell({
           opacity: isFuture ? 0.4 : earned ? 1 : 0.5,
         }}
       >
-        <span className="text-3xl" style={{ filter: earned ? 'none' : 'grayscale(1) opacity(0.4)' }}>
+        <span className="text-3xl 2xl:text-5xl" style={{ filter: earned ? 'none' : 'grayscale(1) opacity(0.4)' }}>
           {entityCfg.emoji}
         </span>
         <span
@@ -171,7 +171,7 @@ export function TrophyShelf({ awards }: TrophyShelfProps) {
           </Link>
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-5 2xl:space-y-8">
           {areas.map((area) => {
             const areaCfg = AREA_CONFIG[area]
             const Icon = areaCfg.icon

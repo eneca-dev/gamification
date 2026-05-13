@@ -146,18 +146,36 @@ export function StoreClient({
         </button>
         {categories.map((cat) => {
           const isActive = activeFilter === cat.slug
+          const isDraw = cat.slug === 'draw'
           return (
             <button
               key={cat.id}
               onClick={() => setActiveFilter(cat.slug)}
               data-onboarding-category={cat.slug}
-              className="px-4 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"
-              style={{
+              className={`py-2 rounded-xl text-[13px] font-semibold transition-all duration-200${isDraw ? ' relative overflow-hidden' : ' px-4'}`}
+              style={isDraw ? {
+                paddingLeft: '2rem',
+                paddingRight: '1rem',
+                background: 'var(--apex-warning-bg)',
+                color: 'var(--apex-warning-dark)',
+                border: isActive ? '1px solid var(--apex-gold)' : 'none',
+                opacity: isActive ? 1 : 0.75,
+              } : {
                 background: isActive ? 'var(--apex-primary)' : 'var(--surface-elevated)',
                 color: isActive ? 'white' : 'var(--text-secondary)',
                 border: isActive ? 'none' : '1px solid var(--border)',
               }}
             >
+              {isDraw && (
+                <>
+                  {/* Корешок */}
+                  <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '12px', background: 'var(--apex-gold)', pointerEvents: 'none' }} />
+                  {/* Верхний полукруг */}
+                  <span style={{ position: 'absolute', left: '8px', top: '6px', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--apex-warning-bg)', pointerEvents: 'none', zIndex: 1 }} />
+                  {/* Нижний полукруг */}
+                  <span style={{ position: 'absolute', left: '8px', bottom: '6px', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--apex-warning-bg)', pointerEvents: 'none', zIndex: 1 }} />
+                </>
+              )}
               {cat.name}
             </button>
           )
