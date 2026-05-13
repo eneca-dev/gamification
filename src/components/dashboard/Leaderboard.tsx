@@ -115,7 +115,7 @@ function LeaderboardPanel({
   unit?: React.ReactNode;
   currentUserRank?: number | null;
   tooltip?: string;
-  emptyRankLabel: string;
+  emptyRankLabel: React.ReactNode;
 }) {
   const isFirstOfMonth = new Date().getDate() === 1;
   const containerRef = useRef<HTMLDivElement>(null)
@@ -289,7 +289,7 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         unit={<CoinIcon size={14} />}
         currentUserRank={findRank(wsPanels)}
         tooltip="Топ формируется по максимальному количеству 💎 за Worksection, полученных за месяц. Сброс каждый месяц."
-        emptyRankLabel="Нет 💎 за WS"
+        emptyRankLabel={<><span className="2xl:hidden">Нет 💎</span><span className="hidden 2xl:inline">Нет 💎 за WS</span></>}
       />
       <LeaderboardPanel
         title="Топ Revit"
@@ -299,7 +299,7 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         accentColor="var(--orange-500)"
         currentUserRank={findRank(revitPanels)}
         tooltip="Топ формируется по максимальному количеству 💎 за использование Revit-плагинов за месяц. Сброс каждый месяц."
-        emptyRankLabel="Нет 💎 за Revit"
+        emptyRankLabel={<><span className="2xl:hidden">Нет 💎</span><span className="hidden 2xl:inline">Нет 💎 за Revit</span></>}
       />
     </div>
   );
