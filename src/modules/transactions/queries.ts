@@ -482,6 +482,15 @@ interface RedReason {
   task_status?: string
 }
 
+const GRATITUDE_CATEGORY_LABELS: Record<string, string> = {
+  help: 'Помощь и поддержка',
+  quality: 'Профессионализм',
+  mentoring: 'Наставничество',
+  teamwork: 'Командная работа',
+  atmosphere: 'Позитив и атмосфера',
+  other: 'Другое',
+}
+
 const RED_REASON_LABELS: Record<string, string> = {
   red_day: 'Не внесены часы',
   task_dynamics_violation: 'Не сменена метка прогресса',
@@ -677,7 +686,18 @@ function enrichTransaction(
         inlineLink: name ? { text: name, url: taskUrl } : undefined,
       }
     }
-    default:
+    default: {
+      if (eventType.startsWith('ach_gratitude_')) {
+        const slug = eventType.slice('ach_gratitude_'.length)
+        const label = GRATITUDE_CATEGORY_LABELS[slug] ?? slug
+        const threshold = details?.threshold as number | undefined
+        return {
+          description: threshold
+            ? `Получено ${threshold} подарка в категории «${label}» за месяц`
+            : `Достижение по благодарностям: «${label}»`,
+        }
+      }
       return { description: defaultDesc }
+    }
   }
 }
