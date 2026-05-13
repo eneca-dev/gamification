@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { PurchaseButton } from './PurchaseButton'
 import type { ShopProductWithCategory } from '../types'
-import type { PendingReset } from '@/modules/streak-shield/index.client'
+import type { PendingReset, ShieldQuota } from '@/modules/streak-shield/index.client'
 
 interface ProductCardProps {
   product: ShopProductWithCategory
@@ -14,9 +14,10 @@ interface ProductCardProps {
   isPurchasing: boolean
   categoryDescription?: string | null
   pendingResets?: PendingReset[]
+  shieldQuota?: ShieldQuota | null
 }
 
-export function ProductCard({ product, balance, index, onPurchase, isPurchasing, categoryDescription, pendingResets = [] }: ProductCardProps) {
+export function ProductCard({ product, balance, index, onPurchase, isPurchasing, categoryDescription, pendingResets = [], shieldQuota = null }: ProductCardProps) {
   const canAfford = balance >= product.price
   const outOfStock = product.category.is_countable && product.stock !== null && product.stock === 0
   const deficit = product.price - balance
@@ -26,6 +27,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
   const isShield = shieldEffect === 'streak_shield_ws' || shieldEffect === 'streak_shield_revit'
   const shieldType = shieldEffect === 'streak_shield_ws' ? 'ws' : 'revit'
   const hasActivePending = isShield && pendingResets.some((p) => p.type === shieldType)
+  const freeLeft = isShield && shieldQuota ? shieldQuota[shieldType].freeLeft : null
 
   // Раскрытие описания по клику. isTruncated нужен только для курсора
   const descRef = useRef<HTMLParagraphElement>(null)
@@ -122,6 +124,21 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
           </p>
         )}
         {!product.description && <div className="mb-3" />}
+
+        {isShield && freeLeft !== null && (
+          <div
+            className="text-[11px] font-medium mb-2 px-2 py-1 rounded-lg"
+            style={{
+              background: freeLeft > 0 ? 'var(--apex-success-bg)' : 'var(--surface-base)',
+              color: freeLeft > 0 ? 'var(--apex-primary)' : 'var(--text-muted)',
+              border: `1px solid ${freeLeft > 0 ? 'rgba(var(--apex-primary-rgb), 0.15)' : 'var(--border)'}`,
+            }}
+          >
+            {freeLeft > 0
+              ? `${freeLeft} из 2 бесплатных в этом месяце`
+              : 'Бесплатные жизни использованы'}
+          </div>
+        )}
 
         <div className="mt-auto pt-2">
         <PurchaseButton

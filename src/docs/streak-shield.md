@@ -8,6 +8,14 @@
 
 Заранее купить нельзя — только при наличии pending (после красного дня).
 
+### Квота бесплатных использований
+
+Каждый сотрудник получает **2 бесплатных второй жизни в месяц** на каждый тип (ws и revit отдельно). Учёт ведётся в таблице `streak_shield_quota` с ключом `(user_id, shield_type, month)`.
+
+- Если `free_used < 2` → `purchase_product` вызывается с `p_free=true` (цена 0, транзакция создаётся, баланс не списывается)
+- Если `free_used >= 2` → стандартная платная покупка
+- `FREE_SHIELDS_PER_MONTH = 2` — константа в `types.ts`
+
 ### WS стрик (VPS-скрипт compute-gamification)
 
 - Фаза 1: финализация неразрешённых pending (`pending_reset_date IS NOT NULL` → сброс)
@@ -26,9 +34,11 @@
 1. Проверить pending в streak-таблице
 2. Проверить grace period не истёк
 3. Найти товар по `effect` в `shop_products`
-4. `purchase_product` (атомарное списание 💎)
-5. Очистить pending
-6. Записать лог в `streak_shield_log`
+4. Проверить квоту в `streak_shield_quota` (текущий месяц)
+5. `purchase_product(p_free=isFree)` — атомарное списание 💎 или бесплатная транзакция
+6. Upsert `streak_shield_quota` (инкремент free_used или paid_used)
+7. Очистить pending
+8. Записать лог в `streak_shield_log`
 
 ## Зависимости
 
@@ -36,30 +46,35 @@
 - `revit_user_streaks_effective` — view, читается для отображения замороженного `current_streak` во время грейса
 - `revit_user_streaks` — pending_reset_date, pending_reset_expires_at, pending_gap_days (legacy, не используется в новой модели)
 - `shop_products` — колонка `effect` ('streak_shield_ws', 'streak_shield_revit')
-- `streak_shield_log` — история использований
-- `shop_orders` — связь через order_id
-- `gamification_event_types` — 'streak_shield_used'
-- `purchase_product` — DB-функция покупки
+- `streak_shield_log` — история использований (колонка `is_free` для аналитики)
+- `streak_shield_quota` — учёт бесплатных/платных использований по месяцам
+- `shop_orders` — связь через order_id (всегда создаётся, включая бесплатные)
+- `gamification_transactions` — транзакция с coins=0 при бесплатной покупке
+- `purchase_product` — DB-функция покупки (параметр `p_free boolean DEFAULT false`)
 
 ## Типы
 
 - `ShieldType` — 'ws' | 'revit'
-- `PendingReset` — данные для UI: type, pendingResetDate, expiresAt, currentStreak, price, productId
+- `FREE_SHIELDS_PER_MONTH` — константа, текущее значение 2
+- `PendingReset` — данные для UI: type, pendingResetDate, expiresAt, currentStreak, price, productId, freeUsesLeft
+- `ShieldQuota` — квота текущего месяца: `{ ws: { freeUsed, paidUsed, freeLeft }, revit: {...} }`
 - `ShieldLogEntry` — строка лога: userId, userName, shieldType, protectedDate, createdAt
 
 ## Actions
 
-- `buyStreakShield(shieldType)` — покупка щита. Side effects: purchase_product, очистка pending, insert в streak_shield_log, revalidatePath
+- `buyStreakShield(shieldType)` — покупка щита. Side effects: purchase_product, upsert streak_shield_quota, очистка pending, insert в streak_shield_log, revalidatePath
 
 ## Queries
 
-- `getPendingResets(userId)` — pending для WS и Revit (для UI таймера)
+- `getPendingResets(userId)` — pending для WS и Revit с `freeUsesLeft` (для UI таймера)
+- `getShieldQuota(userId)` — квота текущего месяца для обоих типов (для карточки товара)
 - `getShieldLog()` — лог всех использований (для админки, limit 100)
 
 ## Ограничения
 
 - Щит нельзя купить заранее — только при активном pending
 - Grace period: 24 часа от момента установки pending
-- Для Revit: щит покрывает один пропущенный рабочий день (последний red, который вызвал pending). Если уже был pending — повторный red не перезаписывает `expires_at`, грейс не продлевается
-- Стоимость: 500 💎 за каждый тип
+- Для Revit: щит покрывает один пропущенный рабочий день. Если уже был pending — повторный red не перезаписывает `expires_at`
+- Бесплатных жизней: 2 в месяц на каждый тип (ws и revit независимо)
+- Стоимость платной: рассчитывается динамически через `current_crystal_rate()`
 - Товары идентифицируются по `shop_products.effect`, не по ID

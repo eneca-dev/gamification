@@ -1,73 +1,121 @@
 import { createSupabaseServerClient, createSupabaseAdminClient } from '@/config/supabase'
 
-import type { PendingReset, ShieldLogEntry, ShieldType } from './types'
+import { FREE_SHIELDS_PER_MONTH } from './types'
+import type { PendingReset, ShieldLogEntry, ShieldQuota, ShieldType } from './types'
+
+function currentMonthStart(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+}
 
 // Получить pending resets для текущего пользователя (для UI)
 export async function getPendingResets(userId: string): Promise<PendingReset[]> {
   const supabase = await createSupabaseServerClient()
   const result: PendingReset[] = []
 
-  // WS pending
   const now = new Date().toISOString()
+  const month = currentMonthStart()
 
-  const { data: wsStreak } = await supabase
-    .from('ws_user_streaks')
-    .select('pending_reset_date, pending_reset_expires_at, current_streak')
-    .eq('user_id', userId)
-    .not('pending_reset_date', 'is', null)
-    .gt('pending_reset_expires_at', now)
-    .maybeSingle()
+  const [wsStreak, revitStreak, shieldProducts, quotaRows] = await Promise.all([
+    supabase
+      .from('ws_user_streaks')
+      .select('pending_reset_date, pending_reset_expires_at, current_streak')
+      .eq('user_id', userId)
+      .not('pending_reset_date', 'is', null)
+      .gt('pending_reset_expires_at', now)
+      .maybeSingle(),
 
-  // Revit pending — view возвращает frozen current_streak во время грейса
-  const { data: revitStreak } = await supabase
-    .from('revit_user_streaks_effective')
-    .select('pending_reset_date, pending_reset_expires_at, current_streak')
-    .eq('user_id', userId)
-    .not('pending_reset_date', 'is', null)
-    .gt('pending_reset_expires_at', now)
-    .maybeSingle()
+    // Revit pending — view возвращает frozen current_streak во время грейса
+    supabase
+      .from('revit_user_streaks_effective')
+      .select('pending_reset_date, pending_reset_expires_at, current_streak')
+      .eq('user_id', userId)
+      .not('pending_reset_date', 'is', null)
+      .gt('pending_reset_expires_at', now)
+      .maybeSingle(),
 
-  // Товары-щиты (цена + id)
-  const { data: shieldProducts } = await supabase
-    .from('shop_products')
-    .select('id, price, effect')
-    .in('effect', ['streak_shield_ws', 'streak_shield_revit'])
-    .eq('is_active', true)
+    supabase
+      .from('shop_products')
+      .select('id, price, effect')
+      .in('effect', ['streak_shield_ws', 'streak_shield_revit'])
+      .eq('is_active', true),
+
+    supabase
+      .from('streak_shield_quota')
+      .select('shield_type, free_used')
+      .eq('user_id', userId)
+      .eq('month', month),
+  ])
 
   const productMap = new Map<string, { id: string; price: number }>()
-  for (const p of shieldProducts ?? []) {
+  for (const p of shieldProducts.data ?? []) {
     productMap.set(p.effect as string, { id: p.id, price: p.price })
   }
 
-  if (wsStreak) {
+  const quotaMap = new Map<string, number>()
+  for (const q of quotaRows.data ?? []) {
+    quotaMap.set(q.shield_type, q.free_used)
+  }
+
+  if (wsStreak.data) {
     const product = productMap.get('streak_shield_ws')
     if (product) {
+      const freeUsed = quotaMap.get('ws') ?? 0
       result.push({
         type: 'ws',
-        pendingResetDate: wsStreak.pending_reset_date,
-        expiresAt: wsStreak.pending_reset_expires_at,
-        currentStreak: wsStreak.current_streak ?? 0,
+        pendingResetDate: wsStreak.data.pending_reset_date,
+        expiresAt: wsStreak.data.pending_reset_expires_at,
+        currentStreak: wsStreak.data.current_streak ?? 0,
         price: product.price,
         productId: product.id,
+        freeUsesLeft: Math.max(0, FREE_SHIELDS_PER_MONTH - freeUsed),
       })
     }
   }
 
-  if (revitStreak) {
+  if (revitStreak.data) {
     const product = productMap.get('streak_shield_revit')
     if (product) {
+      const freeUsed = quotaMap.get('revit') ?? 0
       result.push({
         type: 'revit',
-        pendingResetDate: revitStreak.pending_reset_date,
-        expiresAt: revitStreak.pending_reset_expires_at,
-        currentStreak: revitStreak.current_streak ?? 0,
+        pendingResetDate: revitStreak.data.pending_reset_date,
+        expiresAt: revitStreak.data.pending_reset_expires_at,
+        currentStreak: revitStreak.data.current_streak ?? 0,
         price: product.price,
         productId: product.id,
+        freeUsesLeft: Math.max(0, FREE_SHIELDS_PER_MONTH - freeUsed),
       })
     }
   }
 
   return result
+}
+
+// Квота бесплатных жизней текущего месяца для UI (карточка товара, профиль)
+export async function getShieldQuota(userId: string): Promise<ShieldQuota> {
+  const supabase = await createSupabaseServerClient()
+  const month = currentMonthStart()
+
+  const { data } = await supabase
+    .from('streak_shield_quota')
+    .select('shield_type, free_used, paid_used')
+    .eq('user_id', userId)
+    .eq('month', month)
+
+  const empty = () => ({ freeUsed: 0, paidUsed: 0, freeLeft: FREE_SHIELDS_PER_MONTH })
+  const quota: ShieldQuota = { ws: empty(), revit: empty() }
+
+  for (const row of data ?? []) {
+    const type = row.shield_type as ShieldType
+    quota[type] = {
+      freeUsed: row.free_used,
+      paidUsed: row.paid_used,
+      freeLeft: Math.max(0, FREE_SHIELDS_PER_MONTH - row.free_used),
+    }
+  }
+
+  return quota
 }
 
 // Лог использований щитов для админки
@@ -83,6 +131,7 @@ export async function getShieldLog(): Promise<ShieldLogEntry[]> {
       protected_date,
       created_at,
       notes,
+      is_free,
       ws_users!streak_shield_log_user_id_fkey (
         first_name,
         last_name,

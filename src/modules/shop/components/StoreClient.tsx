@@ -12,7 +12,7 @@ import { ProductCard } from './ProductCard'
 import { LotteryBanner } from '@/modules/lottery/components/LotteryBanner'
 import { LotteryWinners } from '@/modules/lottery/components/LotteryWinners'
 import type { ShopProductWithCategory, ShopCategory } from '../types'
-import type { PendingReset } from '@/modules/streak-shield/index.client'
+import type { PendingReset, ShieldQuota } from '@/modules/streak-shield/index.client'
 import type { LotteryWithStats, UserTicketInfo } from '@/modules/lottery/index.client'
 
 interface StoreClientProps {
@@ -20,6 +20,7 @@ interface StoreClientProps {
   categories: ShopCategory[]
   balance: number
   pendingResets: PendingReset[]
+  shieldQuota?: ShieldQuota | null
   activeLottery?: LotteryWithStats | null
   ticketInfo?: UserTicketInfo | null
   lotteryHistory?: LotteryWithStats[]
@@ -31,6 +32,7 @@ export function StoreClient({
   categories,
   balance,
   pendingResets,
+  shieldQuota = null,
   activeLottery = null,
   ticketInfo = null,
   lotteryHistory = [],
@@ -239,6 +241,7 @@ export function StoreClient({
               isPurchasing={isPending && purchasingId === product.id}
               categoryDescription={activeFilter === 'all' ? categories.find((c) => c.slug === product.category.slug)?.description : null}
               pendingResets={pendingResets}
+              shieldQuota={shieldQuota}
             />
           ))}
         </div>
