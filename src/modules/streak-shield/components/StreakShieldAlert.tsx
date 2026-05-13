@@ -37,7 +37,7 @@ export function StreakShieldAlert({ pending, userBalance }: StreakShieldAlertPro
 
   const isFree = pending.freeUsesLeft > 0
   const canAfford = isFree || userBalance >= pending.price
-  const label = pending.type === 'ws' ? 'Worksection' : 'Автоматизация'
+  const label = pending.type === 'ws' ? 'Worksection' : 'Автоматизации'
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -107,7 +107,7 @@ export function StreakShieldAlert({ pending, userBalance }: StreakShieldAlertPro
         </div>
         <div className="text-[11px] mt-0.5" style={{ color: isFree ? 'var(--apex-primary)' : 'var(--apex-text-muted)' }}>
           {isFree
-            ? `${pending.freeUsesLeft} из 2 бесплатных жизней на ${label} в этом месяце`
+            ? `Доступны ${pending.freeUsesLeft} из 2 бесплатных жизней на ${label} в этом месяце`
             : 'Бесплатные жизни на этот месяц использованы'}
         </div>
         {error && (
@@ -118,7 +118,7 @@ export function StreakShieldAlert({ pending, userBalance }: StreakShieldAlertPro
       <button
         onClick={handleBuy}
         disabled={isPending || !canAfford}
-        className="px-3 py-1.5 rounded-full text-[11px] font-semibold transition-opacity shrink-0 disabled:opacity-50"
+        className="px-3 py-1.5 rounded-full text-[11px] font-semibold transition-opacity shrink-0 disabled:opacity-50 hover:opacity-90 cursor-pointer disabled:cursor-not-allowed"
         style={{
           background: canAfford ? 'var(--apex-primary)' : 'var(--apex-border)',
           color: canAfford ? 'white' : 'var(--apex-text-muted)',

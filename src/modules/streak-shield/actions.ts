@@ -48,7 +48,7 @@ export async function buyStreakShield(
 
   const { data: product, error: productError } = await supabase
     .from('shop_products')
-    .select('id, price')
+    .select('id')
     .eq('effect', effectKey)
     .eq('is_active', true)
     .single()

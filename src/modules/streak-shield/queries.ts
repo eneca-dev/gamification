@@ -16,7 +16,7 @@ export async function getPendingResets(userId: string): Promise<PendingReset[]> 
   const now = new Date().toISOString()
   const month = currentMonthStart()
 
-  const [wsStreak, revitStreak, shieldProducts, quotaRows] = await Promise.all([
+  const [wsStreak, revitStreak, shieldProducts, crystalRate, quotaRows] = await Promise.all([
     supabase
       .from('ws_user_streaks')
       .select('pending_reset_date, pending_reset_expires_at, current_streak')
@@ -36,9 +36,11 @@ export async function getPendingResets(userId: string): Promise<PendingReset[]> 
 
     supabase
       .from('shop_products')
-      .select('id, price, effect')
+      .select('id, cost_byn, coefficient, effect')
       .in('effect', ['streak_shield_ws', 'streak_shield_revit'])
       .eq('is_active', true),
+
+    supabase.rpc('current_crystal_rate'),
 
     supabase
       .from('streak_shield_quota')
@@ -47,9 +49,11 @@ export async function getPendingResets(userId: string): Promise<PendingReset[]> 
       .eq('month', month),
   ])
 
+  const rate = Number(crystalRate.data ?? 0)
   const productMap = new Map<string, { id: string; price: number }>()
   for (const p of shieldProducts.data ?? []) {
-    productMap.set(p.effect as string, { id: p.id, price: p.price })
+    const price = Math.round(Number(p.cost_byn) * Number(p.coefficient) * rate)
+    productMap.set(p.effect as string, { id: p.id, price })
   }
 
   const quotaMap = new Map<string, number>()
