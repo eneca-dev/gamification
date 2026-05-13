@@ -18,9 +18,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, balance, index, onPurchase, isPurchasing, categoryDescription, pendingResets = [], shieldQuota = null }: ProductCardProps) {
-  const canAfford = balance >= product.price
   const outOfStock = product.category.is_countable && product.stock !== null && product.stock === 0
-  const deficit = product.price - balance
 
   // Для щитов: кнопка активна только при наличии соответствующего pending
   const shieldEffect = product.effect
@@ -28,6 +26,10 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
   const shieldType = shieldEffect === 'streak_shield_ws' ? 'ws' : 'revit'
   const hasActivePending = isShield && pendingResets.some((p) => p.type === shieldType)
   const freeLeft = isShield && shieldQuota ? shieldQuota[shieldType].freeLeft : null
+  const isFreeShield = isShield && freeLeft !== null && freeLeft > 0 && hasActivePending
+
+  const canAfford = isFreeShield || balance >= product.price
+  const deficit = isFreeShield ? 0 : product.price - balance
 
   // Раскрытие описания по клику. isTruncated нужен только для курсора
   const descRef = useRef<HTMLParagraphElement>(null)
@@ -125,20 +127,6 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
         )}
         {!product.description && <div className="mb-3" />}
 
-        {isShield && freeLeft !== null && (
-          <div
-            className="text-[11px] font-medium mb-2 px-2 py-1 rounded-lg"
-            style={{
-              background: freeLeft > 0 ? 'var(--apex-success-bg)' : 'var(--surface-base)',
-              color: freeLeft > 0 ? 'var(--apex-primary)' : 'var(--text-muted)',
-              border: `1px solid ${freeLeft > 0 ? 'rgba(var(--apex-primary-rgb), 0.15)' : 'var(--border)'}`,
-            }}
-          >
-            {freeLeft > 0
-              ? `${freeLeft} из 2 бесплатных в этом месяце`
-              : 'Бесплатные жизни использованы'}
-          </div>
-        )}
 
         <div className="mt-auto pt-2">
         <PurchaseButton
@@ -150,6 +138,8 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
           onPurchase={onPurchase}
           isPurchasing={isPurchasing}
           shieldNoPending={isShield && !hasActivePending}
+          isFree={isFreeShield}
+          freeLeft={freeLeft}
         />
         </div>
       </div>

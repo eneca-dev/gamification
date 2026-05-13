@@ -11,6 +11,8 @@ interface PurchaseButtonProps {
   onPurchase: (productId: string, price: number) => void
   isPurchasing: boolean
   shieldNoPending?: boolean
+  isFree?: boolean
+  freeLeft?: number | null
 }
 
 export function PurchaseButton({
@@ -22,6 +24,8 @@ export function PurchaseButton({
   onPurchase,
   isPurchasing,
   shieldNoPending = false,
+  isFree = false,
+  freeLeft = null,
 }: PurchaseButtonProps) {
   const disabled = !canAfford || outOfStock || isPurchasing || shieldNoPending
   const showDeficit = !canAfford && !outOfStock && !shieldNoPending && !isPurchasing
@@ -30,6 +34,7 @@ export function PurchaseButton({
     if (isPurchasing) return 'Покупаем...'
     if (outOfStock) return 'Нет в наличии'
     if (shieldNoPending) return 'Нет угрозы стрику'
+    if (isFree) return 'Спасти бесплатно'
     return (
       <span className="inline-flex items-center gap-1">
         {(price ?? 0).toLocaleString('ru-RU')} <CoinIcon size={13} />
@@ -52,14 +57,21 @@ export function PurchaseButton({
       >
         {getLabel()}
       </button>
-      {/* Фиксированная высота для зоны дефицита — чтобы все кнопки на одном уровне */}
-      <div className="h-5 mt-1">
+      <div className="min-h-5 mt-1">
         {showDeficit && (
           <div
             className="flex items-center justify-center gap-0.5 text-[11px] font-medium whitespace-nowrap"
             style={{ color: 'var(--apex-danger)' }}
           >
             Не хватает {deficit.toLocaleString('ru-RU')}&nbsp;<CoinIcon size={10} />
+          </div>
+        )}
+        {isFree && freeLeft !== null && (
+          <div
+            className="flex items-center justify-center gap-1 text-[11px] font-medium flex-wrap"
+            style={{ color: 'var(--apex-primary)' }}
+          >
+            Доступны {freeLeft} из 2 бесплатных, далее {price.toLocaleString('ru-RU')}&nbsp;<CoinIcon size={10} />
           </div>
         )}
       </div>
