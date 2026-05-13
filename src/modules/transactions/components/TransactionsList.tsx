@@ -139,16 +139,16 @@ export function TransactionsList({ items }: TransactionsListProps) {
         const SourceIcon = sourceCfg.icon
 
         return (
-          <div key={tx.id} className="flex items-start gap-3 px-3 py-2.5 rounded-xl">
+          <div key={tx.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0 mt-0.5"
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-center text-lg leading-none flex-shrink-0"
               style={{
                 background: iconBg,
                 border: iconBorder,
                 overflow: 'hidden',
               }}
             >
-              {iconContent}
+              <span className="translate-x-[0.5px] inline-block">{iconContent}</span>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1 min-w-0 flex-wrap leading-none">
@@ -295,7 +295,7 @@ export function TransactionsList({ items }: TransactionsListProps) {
               className="w-20 md:w-24 flex-shrink-0 text-[14px] font-bold text-right md:text-left"
               style={{ color: amountColor }}
             >
-              {isZero ? '—' : `${tx.coins > 0 ? '+' : ''}${tx.coins.toLocaleString('ru-RU')}`}
+              {`${tx.coins > 0 ? '+' : ''}${tx.coins.toLocaleString('ru-RU')}`}
             </div>
           </div>
         )
