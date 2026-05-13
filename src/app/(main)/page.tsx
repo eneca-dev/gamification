@@ -10,7 +10,7 @@ import {
   getRevitWidgetData,
   getRevitTransactions,
 } from "@/modules/revit";
-import { getUserTransactions, getEventIcon } from "@/modules/transactions";
+import { getUserTransactions, getEventIcon, getTransactionDisplayDate } from "@/modules/transactions";
 import {
   getRevitPersonalRanking,
   getRevitTeamRanking,
@@ -234,7 +234,7 @@ export default async function DashboardPage() {
       category: "daily_green" as Transaction["category"],
       description: tx.description,
       amount: tx.coins,
-      date: new Date(tx.event_date + "T00:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
+      date: getTransactionDisplayDate(tx.event_type, tx.event_date, { day: "numeric", month: "short" }),
       icon: getEventIcon(tx.event_type),
       plugins,
       subItems: tx.subItems,
