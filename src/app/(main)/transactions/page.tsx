@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { getCurrentUser } from "@/modules/auth/queries";
-import { getUserTransactions, getUserTransactionsCount, getEventIcon, getTransactionDisplayDate } from "@/modules/transactions";
+import { getUserTransactions, getUserTransactionsCount, getUserTransactionsSum, getEventIcon, getTransactionDisplayDate } from "@/modules/transactions";
 import { TransactionsList } from "@/modules/transactions/components/TransactionsList";
 import { TransactionsFilters, SortToggle } from "@/modules/transactions/components/TransactionsFilters";
 import type { TransactionFilters } from "@/modules/transactions";
@@ -28,9 +28,10 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
   const currentUser = await getCurrentUser();
   const userEmail = currentUser?.email ?? "";
 
-  const [transactions, totalCount] = await Promise.all([
+  const [transactions, totalCount, totalSum] = await Promise.all([
     userEmail ? getUserTransactions(userEmail, PAGE_SIZE, offset, filters) : Promise.resolve([]),
     userEmail ? getUserTransactionsCount(userEmail, filters) : Promise.resolve(0),
+    userEmail ? getUserTransactionsSum(userEmail, filters) : Promise.resolve(0),
   ]);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
@@ -81,6 +82,18 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
               />
               <span className="text-[12px] font-medium" style={{ color: "var(--apex-text-muted)" }}>
                 {totalCount} {pluralize(totalCount)}
+              </span>
+              <span
+                className="text-[12px] font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  background: totalSum >= 0 ? "var(--apex-success-bg)" : "var(--apex-error-bg)",
+                  color: totalSum >= 0 ? "var(--apex-primary)" : "var(--apex-danger)",
+                  border: totalSum >= 0
+                    ? "1px solid rgba(var(--apex-primary-rgb), 0.15)"
+                    : "1px solid rgba(var(--apex-danger-rgb), 0.15)",
+                }}
+              >
+                {totalSum > 0 ? "+" : ""}{totalSum.toLocaleString("ru-RU")} 💎
               </span>
             </div>
           </div>

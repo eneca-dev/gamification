@@ -13,7 +13,7 @@
 **Поток 1 — PG-триггеры (только начисление, не стрики):**
 
 1. VPS `sync-plugin-launches` синкает запуски в `elk_plugin_launches`. Триггер `trg_award_revit_points` мгновенно начисляет 5 💎 за первый плагин дня (UPSERT баланса inline). Стрики триггер не трогает — это делает `compute-revit-gamification`.
-2. `sync-gratitudes` (pg_cron) синкает благодарности в `at_gratitudes`. Триггер `trg_award_gratitude_points` начисляет +20 получателю и +5 отправителю (UPSERT inline).
+2. Благодарности записываются через Server Action напрямую в таблицу `gratitudes`. Триггер `trg_award_gratitude_points_v2` начисляет +20 получателю (UPSERT inline).
 
 **Поток 2 — VPS-оркестратор (Worksection + Revit + ачивки):**
 
@@ -29,7 +29,7 @@
 - **Supabase Auth** — `auth.users`: регистрация, сессии, `auth.uid()`, `auth.jwt()`
 - **Worksection API** — источник `ws_users`, `ws_projects`, `ws_tasks_l2/l3`, `ws_daily_reports`, `ws_daily_report_tasks`, `ws_task_actual_hours`, `ws_task_status_changes`, `ws_user_absences`
 - **Elasticsearch / Kibana** — источник `elk_plugin_launches`
-- **Airtable** — источник `at_gratitudes`
+- **Приложение** — источник `gratitudes` (благодарности между сотрудниками)
 
 ---
 
@@ -37,7 +37,6 @@
 
 | Расписание                              | Edge Function / RPC               | Что делает                                                       |
 | --------------------------------------- | --------------------------------- | ---------------------------------------------------------------- |
-| `0 */4 * * *` (каждые 4 часа)           | `sync-gratitudes`                 | Синк благодарностей из Airtable                                  |
 | `0 22 1 * *` (1 число месяца, 22:00 UTC) | `fn_award_department_contest()`   | Начисление бонуса отделу-победителю по ревит-💎 за прошлый месяц  |
 | `1 22 1 * *` (1 число месяца, 22:01 UTC) | `fn_award_revit_team_contest()`   | Начисление бонуса команде-победителю по ревит-💎 за прошлый месяц |
 | `2 22 1 * *` (1 число месяца, 22:02 UTC) | `fn_award_ws_dept_contest()`      | Начисление бонуса отделу-победителю по WS-💎 за прошлый месяц     |
@@ -369,26 +368,9 @@ UNIQUE(user_email, ws_task_id, cost_date).
 
 **Триггер:** `trg_award_revit_points` → `fn_award_revit_points()` — начисляет `revit_using_plugins` (+5) за первый плагин дня (идемпотентно через `details.plugins[]`). Стрики и milestones — отдельным VPS-скриптом `compute-revit-gamification` (миграция 040).
 
-#### `at_gratitudes` (16 строк)
+#### `at_gratitudes` — устаревшая таблица (не используется)
 
-Благодарности из Airtable.
-
-| Колонка               | Тип         | Описание                                    |
-| --------------------- | ----------- | ------------------------------------------- |
-| `id`                  | text PK     | Airtable record ID                          |
-| `sender_email`        | text NULL   |                                             |
-| `recipient_email`     | text NULL   |                                             |
-| `recipient_name`      | text        |                                             |
-| `message`             | text        | Текст благодарности                         |
-| `airtable_created_at` | timestamptz |                                             |
-| `week_start`          | date        | Понедельник недели (для лимита отправителя) |
-| `airtable_status`     | text NULL   |                                             |
-| `deleted_in_airtable` | boolean     | Soft-delete                                 |
-| `synced_at`           | timestamptz |                                             |
-
-**Частота обновления:** каждые 4 часа (pg_cron → edge function `sync-gratitudes`). Синкает только текущий месяц. Upsert по Airtable ID. Удалённые записи помечаются `deleted_in_airtable = true`, не удаляются физически.
-
-**Триггер:** `trg_award_gratitude_points` → `fn_award_gratitude_points()` — начисляет `gratitude_recipient_points` (+20) получателю. Лимит: 1 начисление от одного отправителя за `week_start`. Срабатывает на INSERT и на UPDATE (только при изменении `deleted_in_airtable` или `airtable_status`).
+Устаревшая таблица благодарностей из старой системы. Отключена, будет удалена. Благодарности теперь хранятся в таблице `gratitudes` (см. модуль `gratitudes`).
 
 ---
 
@@ -451,7 +433,7 @@ UNIQUE(user_email, ws_task_id, cost_date).
 | `user_id`         | uuid → ws_users                     |                                                     |
 | `user_email`      | text                                | Денормализовано для удобства                        |
 | `event_type`      | text → gamification_event_types.key |                                                     |
-| `source`          | text                                | Источник: `revit`, `airtable`, `ws`, `shop`         |
+| `source`          | text                                | Источник: `revit`, `gratitudes`, `ws`, `shop`, `contest`, `achievements` |
 | `event_date`      | date                                | Дата события                                        |
 | `details`         | jsonb NULL                          | Детали (plugin_name, launch_count, gratitude_id...) |
 | `idempotency_key` | text UNIQUE NULL                    | Защита от дублей                                    |
@@ -462,7 +444,7 @@ UNIQUE(user_email, ws_task_id, cost_date).
 | source     | Поля details                                       |
 | ---------- | -------------------------------------------------- |
 | `revit`    | `plugin_name`, `launch_count`                      |
-| `airtable` | `gratitude_id`, `sender_email`                     |
+| `gratitudes` | `gratitude_id`, `sender_email`                   |
 | `ws`       | `ws_task_id`, `ws_task_name`, `ws_project_id`, ... |
 
 **Частота обновления:** при каждом синке. Append-only — строки не удаляются и не обновляются. Idempotency key гарантирует отсутствие дублей.
@@ -610,9 +592,9 @@ JOIN `gamification_transactions` + `gamification_event_logs` + `gamification_eve
 
 Статус отложенных бюджетных выплат с данными задач, проектов и оставшимися днями до проверки.
 
-#### `v_gratitudes_feed`
+#### `v_gratitudes_feed` — устаревшая вьюха (не используется)
 
-Лента благодарностей: JOIN `at_gratitudes` + `ws_users` (имя отправителя) + `gamification_event_logs/transactions` (начисленные 💎). Исключает `deleted_in_airtable = true`.
+Устаревшая лента благодарностей на базе `at_gratitudes`. Отключена, будет удалена.
 
 #### `view_department_revit_contest`
 
@@ -645,7 +627,7 @@ WS-функции удалены — их полностью заменили VP
 | Функция                | Что делает                                                                | Расписание                         |
 | ---------------------- | ------------------------------------------------------------------------- | ---------------------------------- |
 | `sync-plugin-launches` | Holdover: синк Kibana → `elk_plugin_launches`. Без побочных эффектов     | cron снят (миграция 042)           |
-| `sync-gratitudes`      | Синк благодарностей из Airtable                                           | pg_cron: `0 */4 * * *`             |
+| `sync-gratitudes`      | Устаревшая. Синк из старой системы. Отключена                             | —                                  |
 | `sync-plugin`          | Legacy. Не используется                                                   | —                                  |
 
 VPS-скрипты, заменившие Edge Function `sync-plugin-launches`:
