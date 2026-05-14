@@ -100,8 +100,8 @@ export interface GratitudeAchProgress {
   threshold: number
   bonus_coins: number
   earned: boolean
-  earned_with_coins: boolean  // выполнено с монетами (первое в периоде)
-  coins_available: boolean    // монеты будут начислены если выполнить
+  earned_with_coins?: boolean  // выполнено с монетами (первое в периоде)
+  coins_available?: boolean    // монеты будут начислены если выполнить
 }
 
 // Полный прогресс с благодарностями
