@@ -27,7 +27,11 @@ export function AwardsFilters({ awards, hideMonthGroups = false }: AwardsFilters
 
   const filtered = useMemo(() => {
     let result = awards
-    if (area !== 'all') result = result.filter((a) => a.area === area)
+    if (area !== 'all') result = result.filter((a) =>
+      area === 'gratitude'
+        ? a.area === 'gratitude' || a.area.startsWith('gratitude_')
+        : a.area === area
+    )
     if (entityType !== 'all') result = result.filter((a) => a.entity_type === entityType)
     return result
   }, [awards, area, entityType])

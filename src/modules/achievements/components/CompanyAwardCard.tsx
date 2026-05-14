@@ -18,9 +18,17 @@ interface CompanyAwardCardProps {
   award: CompanyAward
 }
 
+const GRATITUDE_SUBCATEGORY_LABELS: Record<string, string> = {
+  gratitude_help:      'Поддержка коллег',
+  gratitude_quality:   'Проф. признание',
+  gratitude_mentoring: 'Наставничество',
+}
+
 export function CompanyAwardCard({ award }: CompanyAwardCardProps) {
-  const area = AREA_UI[award.area] ?? AREA_UI.revit
+  const areaKey = award.area.startsWith('gratitude_') ? 'gratitude' : award.area
+  const area = AREA_UI[areaKey as AchievementArea] ?? AREA_UI.gratitude
   const entity = ENTITY_UI[award.entity_type] ?? ENTITY_UI.user
+  const subcategoryLabel = GRATITUDE_SUBCATEGORY_LABELS[award.area]
   const AreaIcon = area.icon
 
   return (
@@ -46,7 +54,7 @@ export function CompanyAwardCard({ award }: CompanyAwardCardProps) {
           >
             <AreaIcon size={9} style={{ color: area.color }} />
             <span className="text-[9px] font-bold" style={{ color: area.color }}>
-              {area.label}
+              {subcategoryLabel ?? area.label}
             </span>
           </div>
           <span

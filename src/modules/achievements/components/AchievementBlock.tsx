@@ -167,7 +167,7 @@ function RankingRow({
 
 // --- Строка достижения по благодарностям ---
 
-function GratitudeRow({ item }: { item: GratitudeAchProgress }) {
+function GratitudeRow({ item, isFirst }: { item: GratitudeAchProgress; isFirst?: boolean }) {
   const [showTip, setShowTip] = useState(false)
   const emoji = GRATITUDE_EMOJIS[item.category] ?? '💬'
   const pct = item.threshold > 0 ? Math.min((item.current_count / item.threshold) * 100, 100) : 0
@@ -187,15 +187,22 @@ function GratitudeRow({ item }: { item: GratitudeAchProgress }) {
             {item.achievement_name}
             {showTip && (
               <div
-                className="absolute bottom-full left-0 mb-1.5 px-3 py-2 rounded-xl text-[11px] font-medium w-60 pointer-events-none"
+                className={`absolute left-0 px-3 py-2 rounded-xl text-[11px] font-medium w-72 pointer-events-none ${isFirst ? 'top-full mt-1.5' : 'bottom-full mb-1.5'}`}
                 style={{ zIndex: 100, background: 'var(--surface-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
               >
+                {isFirst
+                  ? <div className="absolute -top-1 left-4 w-2 h-2 rotate-45" style={{ background: 'var(--surface-elevated)', borderLeft: '1px solid var(--border)', borderTop: '1px solid var(--border)' }} />
+                  : <div className="absolute top-full left-4 w-2 h-2 rotate-45" style={{ background: 'var(--surface-elevated)', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }} />
+                }
                 <div className="font-bold mb-1">{item.achievement_name}</div>
                 <div className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
                   Получите {item.threshold} подарка в этой категории за месяц. Считаются только платные подарки.
                 </div>
-                <div className="text-[10px] font-semibold mt-1 inline-flex items-center gap-0.5" style={{ color: 'var(--tag-purple-text)' }}>Награда: +{item.bonus_coins} <CoinIcon size={10} /></div>
-                <div className="absolute top-full left-4 w-2 h-2 rotate-45" style={{ background: 'var(--surface-elevated)', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }} />
+                <div className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                  Первое выполненное достижение среди трёх категорий приносит{' '}
+                  <span className="inline-flex items-center gap-0.5 align-middle">200 <CoinIcon size={9} /></span>.
+                  {' '}За остальные — только значок 🌟 без <span className="inline-flex items-center align-middle"><CoinIcon size={9} /></span>.
+                </div>
               </div>
             )}
           </span>
@@ -211,7 +218,16 @@ function GratitudeRow({ item }: { item: GratitudeAchProgress }) {
 
       <div className="flex items-center justify-between mt-0.5">
         <span className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>
-          {item.earned ? <span className="inline-flex items-center gap-0.5">Получено! +{item.bonus_coins} <CoinIcon size={9} /></span> : remaining > 0 ? `ещё ${remaining} подарков` : ''}
+          {item.earned
+            ? (item.earned_with_coins ?? true)
+              ? <span className="inline-flex items-center gap-0.5">Получено! +{item.bonus_coins} <CoinIcon size={9} /></span>
+              : <span>🌟 Ты молодец!</span>
+            : remaining > 0
+              ? (item.coins_available ?? true)
+                ? `ещё ${remaining} подарков`
+                : <span style={{ color: 'var(--apex-text-muted)' }}>ещё {remaining} подарков · без монет</span>
+              : ''
+          }
         </span>
       </div>
     </div>
@@ -330,8 +346,8 @@ export function GratitudeBlock({ items }: GratitudeBlockProps) {
 
       {/* Строки достижений */}
       <div className="px-5 pb-4 space-y-1">
-        {displayItems.map((item) => (
-          <GratitudeRow key={item.category} item={item} />
+        {displayItems.map((item, index) => (
+          <GratitudeRow key={item.category} item={item} isFirst={index === 0} />
         ))}
       </div>
     </div>

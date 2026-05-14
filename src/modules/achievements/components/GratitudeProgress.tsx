@@ -36,7 +36,7 @@ export function GratitudeProgressCard({ items, periodLabel }: GratitudeProgressP
         </div>
       ) : (
         <div className="space-y-3">
-          {items.map((item) => {
+          {items.map((item, index) => {
             const cfg = CATEGORY_CONFIG[item.category]
             if (!cfg) return null
 
@@ -48,6 +48,7 @@ export function GratitudeProgressCard({ items, periodLabel }: GratitudeProgressP
                 key={item.category}
                 item={item}
                 cfg={cfg}
+                isFirst={index === 0}
                 pct={pct}
                 remaining={remaining}
                 periodLabel={periodLabel}
@@ -66,12 +67,14 @@ function GratitudeAchItem({
   pct,
   remaining,
   periodLabel,
+  isFirst,
 }: {
   item: GratitudeAchProgress
   cfg: { icon: typeof Heart; label: string; emoji: string; color: string; bg: string }
   pct: number
   remaining: number
   periodLabel: string
+  isFirst?: boolean
 }) {
   const [showTip, setShowTip] = useState(false)
 
@@ -89,26 +92,22 @@ function GratitudeAchItem({
             {item.achievement_name}
             {showTip && (
               <div
-                className="absolute bottom-full left-0 mb-1.5 px-3 py-2 rounded-xl text-[11px] font-medium w-64 pointer-events-none"
-                style={{
-                  zIndex: 100,
-                  background: 'var(--surface-elevated)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border)',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                }}
+                className={`absolute left-0 px-3 py-2 rounded-xl text-[11px] font-medium w-72 pointer-events-none ${isFirst ? 'top-full mt-1.5' : 'bottom-full mb-1.5'}`}
+                style={{ zIndex: 100, background: 'var(--surface-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
               >
+                {isFirst
+                  ? <div className="absolute -top-1 left-4 w-2 h-2 rotate-45" style={{ background: 'var(--surface-elevated)', borderLeft: '1px solid var(--border)', borderTop: '1px solid var(--border)' }} />
+                  : <div className="absolute top-full left-4 w-2 h-2 rotate-45" style={{ background: 'var(--surface-elevated)', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }} />
+                }
                 <div className="font-bold mb-1">{item.achievement_name}</div>
                 <div className="text-[10px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                   Получите {item.threshold} подарка в категории "{cfg.label}" за месяц. Считаются только подарки (с 💎), бесплатные благодарности не учитываются.
                 </div>
-                <div className="text-[10px] font-semibold mt-1 inline-flex items-center gap-0.5" style={{ color: cfg.color }}>
-                  Награда: +{item.bonus_coins} <CoinIcon size={10} />
+                <div className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                  Первое выполненное достижение среди трёх категорий приносит{' '}
+                  <span className="inline-flex items-center gap-0.5 align-middle">200 <CoinIcon size={9} /></span>.
+                  {' '}За остальные — только значок 🌟 без <span className="inline-flex items-center align-middle"><CoinIcon size={9} /></span>.
                 </div>
-                <div
-                  className="absolute top-full left-4 w-2 h-2 rotate-45"
-                  style={{ background: 'var(--surface-elevated)', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}
-                />
               </div>
             )}
           </span>
@@ -133,9 +132,13 @@ function GratitudeAchItem({
       <div className="flex items-center justify-between mt-1">
         <span className="text-[10px] font-medium inline-flex items-center gap-0.5" style={{ color: 'var(--text-muted)' }}>
           {item.earned
-            ? <>Получено! +{item.bonus_coins} <CoinIcon size={10} /></>
+            ? (item.earned_with_coins ?? true)
+              ? <>Получено! +{item.bonus_coins} <CoinIcon size={10} /></>
+              : <>🌟 Ты молодец!</>
             : remaining > 0
-              ? `Осталось ${remaining} подарков`
+              ? (item.coins_available ?? true)
+                ? `Осталось ${remaining} подарков`
+                : `Осталось ${remaining} подарков · без монет`
               : ''
           }
         </span>
