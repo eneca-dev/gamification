@@ -1,10 +1,8 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { getCurrentUser } from "@/modules/auth/queries";
 import { getUserTransactions, getUserTransactionsCount, getUserTransactionsSum, getEventIcon, getTransactionDisplayDate } from "@/modules/transactions";
-import { TransactionsList } from "@/modules/transactions/components/TransactionsList";
-import { TransactionsFilters, SortToggle } from "@/modules/transactions/components/TransactionsFilters";
+import { TransactionsShell } from "@/modules/transactions/components/TransactionsShell";
 import type { TransactionFilters } from "@/modules/transactions";
 
 const PAGE_SIZE = 30;
@@ -46,6 +44,15 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
     }),
   }));
 
+  const toggledSort = sort === 'date_asc' ? 'date_desc' : 'date_asc';
+  const sortHref = `/transactions?${new URLSearchParams({
+    sort: toggledSort,
+    ...(source !== 'all' && { source }),
+    ...(dateFrom && { date_from: dateFrom }),
+    ...(dateTo && { date_to: dateTo }),
+    page: '1',
+  }).toString()}`;
+
   const paginationBase = new URLSearchParams({
     sort,
     ...(source !== 'all' && { source }),
@@ -74,12 +81,6 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
               Все операции
             </h1>
             <div className="flex items-center gap-3">
-              <SortToggle
-                currentSort={sort}
-                currentSource={source}
-                currentDateFrom={dateFrom}
-                currentDateTo={dateTo}
-              />
               <span className="text-[12px] font-medium" style={{ color: "var(--apex-text-muted)" }}>
                 {totalCount} {pluralize(totalCount)}
               </span>
@@ -98,16 +99,14 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
             </div>
           </div>
 
-          <Suspense fallback={<FiltersSkeleton />}>
-            <TransactionsFilters
-              currentSort={sort}
-              currentSource={source}
-              currentDateFrom={dateFrom}
-              currentDateTo={dateTo}
-            />
-          </Suspense>
-
-          <TransactionsList items={items} />
+          <TransactionsShell
+            currentSort={sort}
+            currentSource={source}
+            currentDateFrom={dateFrom}
+            currentDateTo={dateTo}
+            sortHref={sortHref}
+            items={items}
+          />
 
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-1.5 mt-6">
@@ -161,25 +160,6 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
             </div>
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function FiltersSkeleton() {
-  return (
-    <div className="space-y-2.5 pb-4 mb-2">
-      <div className="flex items-center gap-3">
-        <div className="h-3 w-14 rounded animate-pulse flex-shrink-0" style={{ background: '#E5E7EB' }} />
-        <div className="flex gap-1.5">
-          {Array.from({ length: 6 }).map((_, j) => (
-            <div key={j} className="h-6 w-20 rounded-full animate-pulse" style={{ background: '#E5E7EB' }} />
-          ))}
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="h-3 w-14 rounded animate-pulse flex-shrink-0" style={{ background: '#E5E7EB' }} />
-        <div className="h-6 w-28 rounded-full animate-pulse" style={{ background: '#E5E7EB' }} />
       </div>
     </div>
   );
