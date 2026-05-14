@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { PurchaseButton } from './PurchaseButton'
 import type { ShopProductWithCategory } from '../types'
-import type { PendingReset } from '@/modules/streak-shield/index.client'
+import type { PendingReset, ShieldQuota } from '@/modules/streak-shield/index.client'
 
 interface ProductCardProps {
   product: ShopProductWithCategory
@@ -14,18 +14,22 @@ interface ProductCardProps {
   isPurchasing: boolean
   categoryDescription?: string | null
   pendingResets?: PendingReset[]
+  shieldQuota?: ShieldQuota | null
 }
 
-export function ProductCard({ product, balance, index, onPurchase, isPurchasing, categoryDescription, pendingResets = [] }: ProductCardProps) {
-  const canAfford = balance >= product.price
+export function ProductCard({ product, balance, index, onPurchase, isPurchasing, categoryDescription, pendingResets = [], shieldQuota = null }: ProductCardProps) {
   const outOfStock = product.category.is_countable && product.stock !== null && product.stock === 0
-  const deficit = product.price - balance
 
   // Для щитов: кнопка активна только при наличии соответствующего pending
   const shieldEffect = product.effect
   const isShield = shieldEffect === 'streak_shield_ws' || shieldEffect === 'streak_shield_revit'
   const shieldType = shieldEffect === 'streak_shield_ws' ? 'ws' : 'revit'
   const hasActivePending = isShield && pendingResets.some((p) => p.type === shieldType)
+  const freeLeft = isShield && shieldQuota ? shieldQuota[shieldType].freeLeft : null
+  const isFreeShield = isShield && freeLeft !== null && freeLeft > 0 && hasActivePending
+
+  const canAfford = isFreeShield || balance >= product.price
+  const deficit = isFreeShield ? 0 : product.price - balance
 
   // Раскрытие описания по клику. isTruncated нужен только для курсора
   const descRef = useRef<HTMLParagraphElement>(null)
@@ -123,6 +127,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
         )}
         {!product.description && <div className="mb-3" />}
 
+
         <div className="mt-auto pt-2">
         <PurchaseButton
           productId={product.id}
@@ -133,6 +138,8 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
           onPurchase={onPurchase}
           isPurchasing={isPurchasing}
           shieldNoPending={isShield && !hasActivePending}
+          isFree={isFreeShield}
+          freeLeft={freeLeft}
         />
         </div>
       </div>

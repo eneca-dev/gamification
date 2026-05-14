@@ -60,8 +60,8 @@ export function TransactionFeed({ transactions }: TransactionFeedProps) {
           const isPurchase = tx.category === "purchase";
 
           let amountColor = "var(--apex-primary)";
-          if (isPenalty) amountColor = "var(--apex-danger)";
-          else if (isPurchase || tx.amount < 0) amountColor = "var(--apex-text-secondary)";
+          if (tx.amount === 0) amountColor = "var(--apex-text-muted)";
+          else if (tx.amount < 0 || isPenalty || isPurchase) amountColor = "var(--apex-danger)";
 
           const iconBg = isPenalty ? "var(--apex-error-bg)" : "var(--apex-bg)";
           const iconBorder = isPenalty

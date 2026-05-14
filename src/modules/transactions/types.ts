@@ -72,3 +72,18 @@ export interface TransactionFilters {
   dateFrom?: string
   dateTo?: string
 }
+
+// Эти события хранятся с датой +1 (триггер БД), отображаем реальный день
+const DATE_MINUS_ONE_TYPES = new Set(['red_day', 'wrong_status_report'])
+
+export function getTransactionDisplayDate(
+  eventType: string,
+  eventDate: string,
+  options?: Intl.DateTimeFormatOptions,
+): string {
+  const d = new Date(eventDate + 'T00:00:00')
+  if (DATE_MINUS_ONE_TYPES.has(eventType)) {
+    d.setDate(d.getDate() - 1)
+  }
+  return d.toLocaleDateString('ru-RU', options)
+}

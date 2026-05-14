@@ -100,8 +100,8 @@ function GratitudeAchItem({
                   : <div className="absolute top-full left-4 w-2 h-2 rotate-45" style={{ background: 'var(--surface-elevated)', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }} />
                 }
                 <div className="font-bold mb-1">{item.achievement_name}</div>
-                <div className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
-                  Получите {item.threshold} подарков в категории "{cfg.label}" за месяц. Считаются только подарки (с 💎), бесплатные благодарности не учитываются.
+                <div className="text-[10px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                  Получите {item.threshold} подарка в категории "{cfg.label}" за месяц. Считаются только подарки (с 💎), бесплатные благодарности не учитываются.
                 </div>
                 <div className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
                   Первое выполненное достижение среди трёх категорий приносит{' '}

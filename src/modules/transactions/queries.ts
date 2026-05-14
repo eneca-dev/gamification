@@ -319,6 +319,42 @@ async function _getUserTransactions(
     }
   }
 
+  // Подтягиваем имя отправителя для благодарностей (получатель видит от кого)
+  const gratitudeSenderEmails = rows
+    .filter((r) => r.event_type === 'gratitude_recipient_points')
+    .map((r) => (r.details as Record<string, unknown>)?.sender_email as string)
+    .filter(Boolean)
+
+  const senderNameMap = new Map<string, string>()
+  if (gratitudeSenderEmails.length > 0) {
+    const { data: senders } = await supabase
+      .from('ws_users')
+      .select('email, first_name, last_name')
+      .in('email', [...new Set(gratitudeSenderEmails)])
+
+    for (const s of senders ?? []) {
+      senderNameMap.set(s.email, `${s.first_name} ${s.last_name}`.trim())
+    }
+  }
+
+  // Подтягиваем имя получателя для отправленных благодарностей (отправитель видит кому)
+  const giftSentRecipientEmails = rows
+    .filter((r) => r.event_type === 'gratitude_gift_sent')
+    .map((r) => (r.details as Record<string, unknown>)?.recipient_email as string)
+    .filter(Boolean)
+
+  const recipientNameByEmail = new Map<string, string>()
+  if (giftSentRecipientEmails.length > 0) {
+    const { data: recipients } = await supabase
+      .from('ws_users')
+      .select('email, first_name, last_name')
+      .in('email', [...new Set(giftSentRecipientEmails)])
+
+    for (const r of recipients ?? []) {
+      recipientNameByEmail.set(r.email, `${r.first_name} ${r.last_name}`.trim())
+    }
+  }
+
   return rows.map((row, i) => {
     const eventType = row.event_type as string
     const details = row.details as Record<string, unknown> | null
@@ -367,7 +403,13 @@ async function _getUserTransactions(
       taskClosedAt = (original?.date_closed as string | undefined) ?? undefined
     }
 
-    const enriched = enrichTransaction(eventType, row.description as string, details, redReasons, product?.name, taskUrl, budgetTaskInfo)
+    const senderEmail = details?.sender_email as string | undefined
+    const senderName = senderEmail ? senderNameMap.get(senderEmail) : undefined
+
+    const recipientEmailFromDetails = details?.recipient_email as string | undefined
+    const recipientName = recipientEmailFromDetails ? recipientNameByEmail.get(recipientEmailFromDetails) : undefined
+
+    const enriched = enrichTransaction(eventType, row.description as string, details, redReasons, product?.name, taskUrl, budgetTaskInfo, senderName, recipientName)
 
     return {
       id: `${row.created_at}-${i}`,
@@ -440,6 +482,15 @@ interface RedReason {
   task_status?: string
 }
 
+const GRATITUDE_CATEGORY_LABELS: Record<string, string> = {
+  help: 'Помощь и поддержка',
+  quality: 'Профессионализм',
+  mentoring: 'Наставничество',
+  teamwork: 'Командная работа',
+  atmosphere: 'Позитив и атмосфера',
+  other: 'Другое',
+}
+
 const RED_REASON_LABELS: Record<string, string> = {
   red_day: 'Не внесены часы',
   task_dynamics_violation: 'Не сменена метка прогресса',
@@ -461,6 +512,8 @@ function enrichTransaction(
   productName?: string,
   taskUrl?: string,
   budgetTaskInfo?: BudgetTaskInfo,
+  senderName?: string,
+  recipientName?: string,
 ): EnrichedResult {
   switch (eventType) {
     case 'shop_purchase': {
@@ -472,23 +525,38 @@ function enrichTransaction(
       return { description: name ? `Возврат средств: ${name}` : 'Возврат средств за покупку' }
     }
     case 'red_day': {
-      const subItems: TransactionSubItem[] = []
-      if (redReasons && redReasons.length > 0) {
-        const seen = new Set<string>()
-        for (const r of redReasons) {
-          const label = RED_REASON_LABELS[r.type] ?? r.type
-          const text = r.ws_task_name ? `${label}: ${r.ws_task_name}` : label
-          const key = `${r.type}-${r.ws_task_id ?? ''}`
-          if (seen.has(key)) continue
-          seen.add(key)
-
-          const url = r.ws_task_url
-            ?? (r.ws_project_id && r.ws_task_id ? buildTaskUrl(r.ws_project_id, r.ws_task_id) : undefined)
-
-          subItems.push({ text, url })
-        }
+      if (!redReasons || redReasons.length === 0) {
+        return { description: 'Красный день' }
       }
-      return { description: 'Красный день', subItems: subItems.length > 0 ? subItems : undefined }
+
+      const seen = new Set<string>()
+      const unique: Array<{ label: string; taskName?: string; url?: string }> = []
+      for (const r of redReasons) {
+        const key = `${r.type}-${r.ws_task_id ?? ''}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        const label = RED_REASON_LABELS[r.type] ?? r.type
+        const url = r.ws_task_url
+          ?? (r.ws_project_id && r.ws_task_id ? buildTaskUrl(r.ws_project_id, r.ws_task_id) : undefined)
+        unique.push({ label, taskName: r.ws_task_name, url })
+      }
+
+      if (unique.length === 1) {
+        const { label, taskName, url } = unique[0]
+        if (taskName) {
+          return {
+            description: `Красный день: ${label}:`,
+            inlineLink: { text: taskName, url },
+          }
+        }
+        return { description: `Красный день: ${label}` }
+      }
+
+      const subItems: TransactionSubItem[] = unique.map(({ label, taskName, url }) => ({
+        text: taskName ? `${label}: ${taskName}` : label,
+        url,
+      }))
+      return { description: 'Красный день:', subItems }
     }
     case 'streak_reset_timetracking':
       return { description: 'Сброс стрика: не внесены часы' }
@@ -599,8 +667,10 @@ function enrichTransaction(
       return { description: name ? `${name}: ${count ?? 1} запусков` : defaultDesc }
     }
     case 'gratitude_recipient_points': {
-      const sender = details?.sender_name as string | undefined
-      return { description: sender ? `Благодарность от ${sender}` : defaultDesc }
+      return { description: senderName ? `Благодарность от ${senderName}` : defaultDesc }
+    }
+    case 'gratitude_gift_sent': {
+      return { description: recipientName ? `Благодарность для ${recipientName}` : defaultDesc }
     }
     case 'deadline_ok_l3': {
       const name = details?.ws_task_name as string | undefined
@@ -616,7 +686,18 @@ function enrichTransaction(
         inlineLink: name ? { text: name, url: taskUrl } : undefined,
       }
     }
-    default:
+    default: {
+      if (eventType.startsWith('ach_gratitude_')) {
+        const slug = eventType.slice('ach_gratitude_'.length)
+        const label = GRATITUDE_CATEGORY_LABELS[slug] ?? slug
+        const threshold = details?.threshold as number | undefined
+        return {
+          description: threshold
+            ? `Получено ${threshold} подарка в категории «${label}» за месяц`
+            : `Достижение по благодарностям: «${label}»`,
+        }
+      }
       return { description: defaultDesc }
+    }
   }
 }

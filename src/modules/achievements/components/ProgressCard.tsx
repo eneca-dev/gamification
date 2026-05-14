@@ -233,8 +233,8 @@ function GratitudeRow({ item, cfg, isFirst }: {
                   : <div className="absolute top-full left-4 w-2 h-2 rotate-45" style={{ background: 'var(--surface-elevated)', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }} />
                 }
                 <div className="font-bold mb-1">{item.achievement_name}</div>
-                <div className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
-                  Получите {item.threshold} подарков в категории &laquo;{cfg.label}&raquo; за месяц. Считаются только платные подарки.
+                <div className="text-[10px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                  Получите {item.threshold} подарка в категории &laquo;{cfg.label}&raquo; за месяц. Считаются только платные подарки.
                 </div>
                 <div className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
                   Первое выполненное достижение среди трёх категорий приносит{' '}
