@@ -289,7 +289,7 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         unit={<CoinIcon size={14} />}
         currentUserRank={findRank(wsPanels)}
         tooltip="Топ формируется по максимальному количеству 💎 за Worksection, полученных за месяц. Сброс каждый месяц."
-        emptyRankLabel={<><span className="2xl:hidden">Нет 💎</span><span className="hidden 2xl:inline">Нет 💎 за WS</span></>}
+        emptyRankLabel={<><span className="2xl:hidden">💎 ≤ 0</span><span className="hidden 2xl:inline">💎 за WS ≤ 0</span></>}
       />
       <LeaderboardPanel
         title="Топ Revit"

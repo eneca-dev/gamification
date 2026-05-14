@@ -112,7 +112,7 @@ const SOURCE_OPTIONS = [
   { value: 'all', label: 'Все' },
   { value: 'ws', label: 'Worksection' },
   { value: 'revit', label: 'Revit' },
-  { value: 'airtable', label: 'Благодарности' },
+  { value: 'gratitudes', label: 'Благодарности' },
   { value: 'achievements', label: 'Достижения' },
   { value: 'shop', label: 'Магазин' },
 ]

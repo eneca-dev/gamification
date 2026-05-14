@@ -45,7 +45,7 @@ interface SourceConfig {
 const SOURCE_CONFIG: Record<string, SourceConfig> = {
   ws: { icon: Briefcase, label: 'Worksection', bg: 'var(--tag-blue-bg)', color: 'var(--tag-blue-text)' },
   revit: { icon: Building2, label: 'Revit', bg: 'var(--tag-orange-bg)', color: 'var(--tag-orange-text)' },
-  airtable: { icon: Heart, label: 'Благодарности', bg: 'var(--tag-purple-bg)', color: 'var(--tag-purple-text)' },
+  gratitudes: { icon: Heart, label: 'Благодарности', bg: 'var(--tag-purple-bg)', color: 'var(--tag-purple-text)' },
   contest: { icon: Trophy, label: 'Соревнование', bg: 'var(--tag-yellow-bg)', color: 'var(--tag-yellow-text)' },
   achievements: { icon: Award, label: 'Достижения', bg: 'var(--tag-teal-bg)', color: 'var(--tag-teal-text)' },
   shop: { icon: ShoppingBag, label: 'Магазин', bg: 'var(--tag-gray-bg)', color: 'var(--tag-gray-text)' },
