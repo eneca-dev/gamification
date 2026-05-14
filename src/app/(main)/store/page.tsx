@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 
 import { getCurrentUser } from '@/modules/auth'
 import { getProducts, getCategories, getUserBalance } from '@/modules/shop'
-import { getPendingResets } from '@/modules/streak-shield'
+import { getPendingResets, getShieldQuota } from '@/modules/streak-shield'
 import { getActiveLottery, getLotteryHistory, getUserTicketInfo } from '@/modules/lottery'
 import { StoreClient } from '@/modules/shop/components/StoreClient'
 import { LotteryReveal } from '@/modules/lottery/components/LotteryReveal'
@@ -11,11 +11,12 @@ export default async function StorePage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const [products, categories, balance, pendingResets, activeLottery, lotteryHistory] = await Promise.all([
+  const [products, categories, balance, pendingResets, shieldQuota, activeLottery, lotteryHistory] = await Promise.all([
     getProducts(),
     getCategories(),
     user.wsUserId ? getUserBalance(user.wsUserId) : Promise.resolve(0),
     user.wsUserId ? getPendingResets(user.wsUserId) : Promise.resolve([]),
+    user.wsUserId ? getShieldQuota(user.wsUserId) : Promise.resolve(null),
     getActiveLottery(),
     getLotteryHistory(),
   ])
@@ -49,6 +50,7 @@ export default async function StorePage() {
         categories={categories}
         balance={balance}
         pendingResets={pendingResets}
+        shieldQuota={shieldQuota}
         activeLottery={activeLottery}
         ticketInfo={ticketInfo}
         lotteryHistory={lotteryHistory}

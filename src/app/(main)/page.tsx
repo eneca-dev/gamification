@@ -10,7 +10,7 @@ import {
   getRevitWidgetData,
   getRevitTransactions,
 } from "@/modules/revit";
-import { getUserTransactions, getEventIcon } from "@/modules/transactions";
+import { getUserTransactions, getEventIcon, getTransactionDisplayDate } from "@/modules/transactions";
 import {
   getRevitPersonalRanking,
   getRevitTeamRanking,
@@ -234,7 +234,7 @@ export default async function DashboardPage() {
       category: "daily_green" as Transaction["category"],
       description: tx.description,
       amount: tx.coins,
-      date: new Date(tx.event_date + "T00:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "short" }),
+      date: getTransactionDisplayDate(tx.event_type, tx.event_date, { day: "numeric", month: "short" }),
       icon: getEventIcon(tx.event_type),
       plugins,
       subItems: tx.subItems,
@@ -290,46 +290,53 @@ export default async function DashboardPage() {
           <StreakPanel streakData={streakPanelData} pendingResets={pendingResets} userBalance={userBalance} />
         </div>
         {masterPlannerData && (
-          <div
-            className="flex-1 min-w-0 rounded-2xl p-5 animate-fade-in-up"
-            data-onboarding="master-planner-panel"
-            style={{
-              background: "var(--apex-surface)",
-              border: "1px solid var(--apex-border)",
-            }}
-          >
-            <MasterPlannerPanel data={masterPlannerData} />
+          <div className="flex-1 min-w-0 grid grid-cols-1 3xl:grid-cols-5 gap-5">
+            <div
+              className="3xl:col-span-3 rounded-2xl p-5 animate-fade-in-up"
+              data-onboarding="master-planner-panel"
+              style={{
+                background: "var(--apex-surface)",
+                border: "1px solid var(--apex-border)",
+              }}
+            >
+              <MasterPlannerPanel data={masterPlannerData} />
+            </div>
+            <div className="hidden 3xl:block 3xl:col-span-2">
+              <AlarmsBanner alarms={activeAlarms} />
+            </div>
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-5 animate-fade-in-up stagger-1">
-        <div className="@container md:col-span-2">
-          <AlarmsBanner alarms={activeAlarms} />
+      <div className="3xl:grid 3xl:grid-cols-2 3xl:gap-5 space-y-6 3xl:space-y-0">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-5 animate-fade-in-up stagger-1">
+          <div className="@container md:col-span-2 3xl:hidden">
+            <AlarmsBanner alarms={activeAlarms} />
+          </div>
+          <div className="@container md:col-span-3 3xl:col-span-5">
+            {wsUserId && (
+              <GratitudeWidget
+                senderId={wsUserId}
+                currentUserEmail={userEmail}
+                quota={senderQuota}
+                recipients={gratitudeRecipients}
+                balance={userBalance}
+                myGratitudes={myGratitudesNew}
+              />
+            )}
+          </div>
         </div>
-        <div className="@container md:col-span-3">
-          {wsUserId && (
-            <GratitudeWidget
-              senderId={wsUserId}
-              currentUserEmail={userEmail}
-              quota={senderQuota}
-              recipients={gratitudeRecipients}
-              balance={userBalance}
-              myGratitudes={myGratitudesNew}
-            />
-          )}
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-5 animate-fade-in-up stagger-2">
-        <div className="@container md:col-span-2">
-          <TransactionFeed transactions={allTransactions} />
-        </div>
-        <div className="@container md:col-span-3" data-onboarding="leaderboard">
-          <Leaderboard
-            entries={toLeaderboardEntries(wsPersonalRanking)}
-            automationEntries={toLeaderboardEntries(revitPersonalRanking)}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-5 animate-fade-in-up stagger-2">
+          <div className="@container md:col-span-2">
+            <TransactionFeed transactions={allTransactions} />
+          </div>
+          <div className="@container md:col-span-3" data-onboarding="leaderboard">
+            <Leaderboard
+              entries={toLeaderboardEntries(wsPersonalRanking)}
+              automationEntries={toLeaderboardEntries(revitPersonalRanking)}
+            />
+          </div>
         </div>
       </div>
 

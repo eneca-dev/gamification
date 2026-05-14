@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { getCurrentUser } from "@/modules/auth/queries";
-import { getUserTransactions, getUserTransactionsCount, getEventIcon } from "@/modules/transactions";
+import { getUserTransactions, getUserTransactionsCount, getEventIcon, getTransactionDisplayDate } from "@/modules/transactions";
 import { TransactionsList } from "@/modules/transactions/components/TransactionsList";
 import { TransactionsFilters, SortToggle } from "@/modules/transactions/components/TransactionsFilters";
 import type { TransactionFilters } from "@/modules/transactions";
@@ -38,7 +38,7 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
   const items = transactions.map((tx) => ({
     ...tx,
     icon: getEventIcon(tx.event_type),
-    dateFormatted: new Date(tx.event_date + "T00:00:00").toLocaleDateString("ru-RU", {
+    dateFormatted: getTransactionDisplayDate(tx.event_type, tx.event_date, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
