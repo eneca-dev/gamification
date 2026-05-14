@@ -100,6 +100,8 @@ export interface GratitudeAchProgress {
   threshold: number
   bonus_coins: number
   earned: boolean
+  earned_with_coins: boolean  // выполнено с монетами (первое в периоде)
+  coins_available: boolean    // монеты будут начислены если выполнить
 }
 
 // Полный прогресс с благодарностями
@@ -121,11 +123,12 @@ export interface CompanyProgressEntry {
 }
 
 // Достижение компании (для ленты)
+// area может быть 'revit' | 'ws' | 'gratitude' | 'gratitude_help' | 'gratitude_quality' | 'gratitude_mentoring'
 export interface CompanyAward {
   id: string
   entity_id: string
   entity_type: AchievementEntityType
-  area: AchievementArea
+  area: string
   period_start: string
   days_in_top: number
   awarded_at: string
