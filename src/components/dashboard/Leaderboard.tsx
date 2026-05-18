@@ -107,6 +107,7 @@ function LeaderboardPanel({
   currentUserRank,
   tooltip,
   emptyRankLabel,
+  rankHref,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -116,6 +117,7 @@ function LeaderboardPanel({
   currentUserRank?: number | null;
   tooltip?: string;
   emptyRankLabel: React.ReactNode;
+  rankHref?: string;
 }) {
   const isFirstOfMonth = new Date().getDate() === 1;
   const containerRef = useRef<HTMLDivElement>(null)
@@ -154,8 +156,9 @@ function LeaderboardPanel({
           {tooltip && <InfoTooltip text={tooltip} />}
         </div>
         {currentUserRank != null ? (
-          <span
-            className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+          <a
+            href={rankHref}
+            className="text-[11px] font-bold px-2 py-0.5 rounded-full transition-opacity hover:opacity-70"
             style={{
               background: currentUserRank <= 10 ? "var(--apex-success-bg)" : "var(--surface)",
               color: currentUserRank <= 3 ? accentColor : "var(--apex-text-muted)",
@@ -165,14 +168,15 @@ function LeaderboardPanel({
             }}
           >
             Вы: #{currentUserRank}
-          </span>
+          </a>
         ) : (
-          <span
-            className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+          <a
+            href={rankHref}
+            className="text-[11px] font-bold px-2 py-0.5 rounded-full transition-opacity hover:opacity-70"
             style={{ background: "var(--surface)", color: "var(--apex-text-muted)", border: `1px solid var(--apex-border)` }}
           >
             {emptyRankLabel}
-          </span>
+          </a>
         )}
       </div>
 
@@ -279,6 +283,10 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
   const findRank = (panels: PanelEntry[]): number | null =>
     panels.find((e) => e.isCurrentUser)?.rank ?? null;
 
+  const now = new Date();
+  const dateFrom = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  const dateTo = now.toISOString().slice(0, 10);
+
   return (
     <div className="grid grid-cols-2 gap-5 h-full">
       <LeaderboardPanel
@@ -289,7 +297,8 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         unit={<CoinIcon size={14} />}
         currentUserRank={findRank(wsPanels)}
         tooltip="Топ формируется по максимальному количеству 💎 за Worksection, полученных за месяц. Сброс каждый месяц."
-        emptyRankLabel={<><span className="2xl:hidden">Нет 💎</span><span className="hidden 2xl:inline">Нет 💎 за WS</span></>}
+        emptyRankLabel={<><span className="2xl:hidden">💎 ≤ 0</span><span className="hidden 2xl:inline">💎 за WS ≤ 0</span></>}
+        rankHref={`/transactions?source=ws&date_from=${dateFrom}&date_to=${dateTo}`}
       />
       <LeaderboardPanel
         title="Топ Revit"
@@ -300,6 +309,7 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         currentUserRank={findRank(revitPanels)}
         tooltip="Топ формируется по максимальному количеству 💎 за использование Revit-плагинов за месяц. Сброс каждый месяц."
         emptyRankLabel={<><span className="2xl:hidden">Нет 💎</span><span className="hidden 2xl:inline">Нет 💎 за Revit</span></>}
+        rankHref={`/transactions?source=revit&date_from=${dateFrom}&date_to=${dateTo}`}
       />
     </div>
   );

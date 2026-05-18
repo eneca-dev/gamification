@@ -99,33 +99,27 @@ Snapshot и milestones обновляет VPS-скрипт `compute-revit-gamifi
 
 ---
 
-## 2. Благодарности (Airtable)
+## 2. Благодарности
 
-**Механизм:** PG-триггер `trg_award_gratitude_points` на `at_gratitudes`
+**Механизм:** PG-триггер `trg_award_gratitude_points_v2` на таблице `gratitudes`
 
 ### Получатель
 
 **💎:** `gratitude_recipient_points` → **+20**
-**Лимит:** 1 начисление от одного `sender_email` за `week_start`. Если от этого отправителя уже есть запись в `gamification_event_logs` с `event_type = 'gratitude_recipient_points'` за ту же `week_start` — начисление пропускается.
+**Лимит:** 1 начисление от одного отправителя за `week_start`. Если от этого отправителя уже есть запись в `gamification_event_logs` с `event_type = 'gratitude_recipient_points'` за ту же `week_start` — начисление пропускается.
 
 ```
 event_type:      gratitude_recipient_points
-source:          airtable
+source:          gratitudes
 details:         { gratitude_id, sender_email }
-idempotency_key: gratitude_recipient_{airtable_record_id}
+idempotency_key: gratitude_recipient_{gratitude_id}
 ```
-
-### Условия срабатывания триггера
-
-Триггер срабатывает на INSERT и UPDATE. На UPDATE — только если изменились `deleted_in_airtable` или `airtable_status`. Это предотвращает повторные начисления при обычных re-sync.
 
 ### Edge cases
 
-- `sender_email` или `recipient_email` = NULL → начисление пропускается
-- `sender_email` или `recipient_email` не найден в `ws_users` (is_active=true) → начисление пропускается
-- `deleted_in_airtable = true` → пропускается целиком
-- Уже начисленные 💎 за удалённые благодарности не отзываются автоматически
-- Email в `ws_users` хранятся в нижнем регистре. Airtable может присылать любой регистр — `lower()` в JOIN обязателен
+- `sender_id` или `recipient_id` не найден в `ws_users` (is_active=true) → начисление пропускается
+- Уже начисленные 💎 не отзываются при удалении благодарности
+- Email в `ws_users` хранятся в нижнем регистре — `lower()` в JOIN обязателен
 
 ---
 
@@ -359,7 +353,7 @@ idempotency_key: deadline_ok_l3_{ws_task_id}_{user_id}
 | `budget_ok_l3`               | +50  | ws       | compute-gamification                  |
 | `revit_streak_7_bonus`       | +25  | revit    | PG-триггер                            |
 | `ws_streak_7`                | +25  | ws       | compute-gamification                  |
-| `gratitude_recipient_points` | +20  | airtable | PG-триггер                            |
+| `gratitude_recipient_points` | +20  | gratitudes | PG-триггер                          |
 | `revit_using_plugins`        | +5   | revit    | PG-триггер                            |
 | `budget_ok_l3_lead_bonus`    | +5   | ws       | compute-gamification                  |
 | `green_day`                  | +3   | ws       | compute-gamification                  |
@@ -404,7 +398,7 @@ idempotency_key: deadline_ok_l3_{ws_task_id}_{user_id}
 
 | Событие                | Формат ключа                        |
 | ---------------------- | ----------------------------------- |
-| Благодарность получена | `gratitude_recipient_{airtable_id}` |
+| Благодарность получена | `gratitude_recipient_{gratitude_id}` |
 
 **WS — дневные статусы (compute-gamification):**
 
@@ -460,7 +454,7 @@ idempotency_key: deadline_ok_l3_{ws_task_id}_{user_id}
 
 - `gamification_event_logs` + `gamification_transactions` — append-only, строки не удаляются
 - Если email не найден в `ws_users` — событие молча пропускается
-- `at_gratitudes` с `deleted_in_airtable = true` — начисленные 💎 не отзываются автоматически
+- Начисленные 💎 за благодарности не отзываются автоматически при их удалении
 - Баланс не уходит ниже 0: `process_gamification_event` clamp'ит штрафы/clawback до доступного, фактическая сумма пишется в `gamification_transactions` (см. `gamification-db.md`)
 - Информационные события (red_day, violations, resets) имеют coins=0 в `gamification_event_types` — записываются в `gamification_event_logs`, но не создают транзакций в `gamification_transactions`
 - `green_day` начисляет +3 💎 (обновлено миграцией 011)

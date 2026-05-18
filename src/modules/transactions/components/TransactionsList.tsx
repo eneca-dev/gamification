@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronDown, ChevronUp, ExternalLink, XCircle, Briefcase, Building2, Heart, Trophy, Award, ShoppingBag, Tag, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -14,7 +14,7 @@ interface BonusTaskItem {
   dateClosed?: string
 }
 
-interface TransactionItem {
+export interface TransactionItem {
   id: string
   event_type: string
   source: string
@@ -33,6 +33,10 @@ interface TransactionItem {
 
 interface TransactionsListProps {
   items: TransactionItem[]
+  currentSort?: string
+  sortHref?: string
+  isPending?: boolean
+  onNavigate?: (url: string) => void
 }
 
 interface SourceConfig {
@@ -45,7 +49,7 @@ interface SourceConfig {
 const SOURCE_CONFIG: Record<string, SourceConfig> = {
   ws: { icon: Briefcase, label: 'Worksection', bg: 'var(--tag-blue-bg)', color: 'var(--tag-blue-text)' },
   revit: { icon: Building2, label: 'Revit', bg: 'var(--tag-orange-bg)', color: 'var(--tag-orange-text)' },
-  airtable: { icon: Heart, label: 'Благодарности', bg: 'var(--tag-purple-bg)', color: 'var(--tag-purple-text)' },
+  gratitudes: { icon: Heart, label: 'Благодарности', bg: 'var(--tag-purple-bg)', color: 'var(--tag-purple-text)' },
   contest: { icon: Trophy, label: 'Соревнование', bg: 'var(--tag-yellow-bg)', color: 'var(--tag-yellow-text)' },
   achievements: { icon: Award, label: 'Достижения', bg: 'var(--tag-teal-bg)', color: 'var(--tag-teal-text)' },
   shop: { icon: ShoppingBag, label: 'Магазин', bg: 'var(--tag-gray-bg)', color: 'var(--tag-gray-text)' },
@@ -60,8 +64,19 @@ function getSourceConfig(source: string): SourceConfig {
   }
 }
 
-export function TransactionsList({ items }: TransactionsListProps) {
+export function TransactionsList({ items, currentSort, sortHref, isPending = false, onNavigate }: TransactionsListProps) {
+  const [rotated, setRotated] = useState(currentSort === 'date_asc')
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    setRotated(currentSort === 'date_asc')
+  }, [currentSort])
+
+  const handleSortClick = () => {
+    if (!sortHref || !onNavigate) return
+    setRotated(r => !r)
+    onNavigate(sortHref)
+  }
 
   function toggleExpanded(id: string) {
     setExpandedIds((prev) => {
@@ -99,17 +114,39 @@ export function TransactionsList({ items }: TransactionsListProps) {
         >
           Тип
         </div>
-        <div
-          className="w-24 flex-shrink-0 text-[13px] font-bold uppercase"
-          style={{ color: 'var(--apex-text-muted)' }}
-        >
-          Дата
-        </div>
+        {sortHref ? (
+          <button
+            onClick={handleSortClick}
+            className="w-24 flex-shrink-0 inline-flex items-center gap-1 text-[13px] font-bold uppercase cursor-pointer hover:opacity-70 transition-opacity"
+            style={{ color: 'var(--apex-text-muted)' }}
+          >
+            Дата
+            <span
+              style={{
+                fontSize: '14px',
+                lineHeight: 1,
+                fontWeight: 100,
+                display: 'inline-block',
+                transform: rotated ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.3s ease',
+              }}
+            >⇅</span>
+          </button>
+        ) : (
+          <div
+            className="w-24 flex-shrink-0 text-[13px] font-bold uppercase"
+            style={{ color: 'var(--apex-text-muted)' }}
+          >
+            Дата
+          </div>
+        )}
         <div className="w-24 flex-shrink-0 flex items-center justify-start">
           <CoinIcon size={18} />
         </div>
       </div>
-      {items.map((tx) => {
+      {isPending ? (
+        <TransactionsListSkeleton />
+      ) : items.map((tx) => {
         const isNegative = tx.coins < 0
         const isZero = tx.coins === 0
 
@@ -315,6 +352,31 @@ export function TransactionsList({ items }: TransactionsListProps) {
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function TransactionsListSkeleton() {
+  return (
+    <div className="space-y-1">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
+          <div className="w-9 h-9 rounded-xl flex-shrink-0 animate-pulse" style={{ background: '#E5E7EB' }} />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3 w-48 rounded animate-pulse" style={{ background: '#E5E7EB' }} />
+            <div className="h-2.5 w-24 rounded animate-pulse" style={{ background: '#E5E7EB' }} />
+          </div>
+          <div className="hidden md:block w-32 flex-shrink-0">
+            <div className="h-5 w-20 rounded-full animate-pulse" style={{ background: '#E5E7EB' }} />
+          </div>
+          <div className="hidden md:block w-24 flex-shrink-0">
+            <div className="h-3 w-16 rounded animate-pulse" style={{ background: '#E5E7EB' }} />
+          </div>
+          <div className="w-24 flex-shrink-0 flex justify-start">
+            <div className="h-3 w-12 rounded animate-pulse" style={{ background: '#E5E7EB' }} />
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

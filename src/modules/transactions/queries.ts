@@ -471,6 +471,39 @@ export const getUserTransactionsCount = (userEmail: string, filters: Transaction
     { tags: [`transactions:${userEmail}`], revalidate: CACHE_5M },
   )()
 
+async function _getUserTransactionsSum(userEmail: string, filters: TransactionFilters = {}): Promise<number> {
+  const supabase = createSupabaseAdminClient()
+  const normalizedEmail = userEmail.toLowerCase()
+  const { source, dateFrom, dateTo } = filters
+
+  let query = supabase
+    .from('view_user_transactions')
+    .select('coins')
+    .eq('user_email', normalizedEmail)
+
+  if (source && source !== 'all') {
+    if (source === 'achievements') {
+      query = query.in('source', ['achievements', 'contest'])
+    } else {
+      query = query.eq('source', source)
+    }
+  }
+  if (dateFrom) query = query.gte('event_date', dateFrom)
+  if (dateTo) query = query.lte('event_date', dateTo)
+
+  const { data, error } = await query
+  if (error) throw new Error(error.message)
+
+  return (data ?? []).reduce((sum, row) => sum + (row.coins as number), 0)
+}
+
+export const getUserTransactionsSum = (userEmail: string, filters: TransactionFilters = {}) =>
+  cached(
+    () => _getUserTransactionsSum(userEmail, filters),
+    ['transactions-sum', userEmail, filters.source ?? 'all', filters.dateFrom ?? '', filters.dateTo ?? ''],
+    { tags: [`transactions:${userEmail}`], revalidate: CACHE_5M },
+  )()
+
 // ==================== Обогащение ====================
 
 interface RedReason {
