@@ -117,7 +117,7 @@ export function TransactionsList({ items, currentSort, sortHref, isPending = fal
         {sortHref ? (
           <button
             onClick={handleSortClick}
-            className="w-24 flex-shrink-0 inline-flex items-center gap-1 text-[13px] font-bold uppercase"
+            className="w-24 flex-shrink-0 inline-flex items-center gap-1 text-[13px] font-bold uppercase cursor-pointer hover:opacity-70 transition-opacity"
             style={{ color: 'var(--apex-text-muted)' }}
           >
             Дата

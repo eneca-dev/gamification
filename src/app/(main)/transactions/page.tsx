@@ -81,9 +81,6 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
               Все операции
             </h1>
             <div className="flex items-center gap-3">
-              <span className="text-[12px] font-medium" style={{ color: "var(--apex-text-muted)" }}>
-                {totalCount} {pluralize(totalCount)}
-              </span>
               <span
                 className="text-[12px] font-bold px-2 py-0.5 rounded-full"
                 style={{
@@ -165,11 +162,3 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
   );
 }
 
-function pluralize(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod100 >= 11 && mod100 <= 14) return "операций";
-  if (mod10 === 1) return "операция";
-  if (mod10 >= 2 && mod10 <= 4) return "операции";
-  return "операций";
-}
