@@ -36,6 +36,7 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
   }
 
   const isPending = statusFilter === "pending";
+  const isAllEvents = statusFilter === undefined;
   const historyStatus = isPending ? undefined : statusFilter as HistoryStatusFilter | undefined;
 
   // Загружаем данные в зависимости от режима
@@ -44,18 +45,20 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
     isPending
       ? Promise.resolve({ events: [], totalCount: 0, startPosition: 0 })
       : getMasterPlannerHistory(wsUserId, currentPage, levelFilter, historyStatus),
-    isPending
+    isPending || isAllEvents
       ? (async (): Promise<PendingBudgetTask[]> => {
-          if (pendingTypeFilter === "budget") {
-            return getAllPendingTasks(wsUserId, levelFilter);
+          if (isPending) {
+            if (pendingTypeFilter === "budget") {
+              return getAllPendingTasks(wsUserId, levelFilter);
+            }
+            if (pendingTypeFilter === "deadline") {
+              return getAllDeadlinePendingTasks(wsUserId);
+            }
           }
-          if (pendingTypeFilter === "deadline") {
-            return getAllDeadlinePendingTasks(wsUserId);
-          }
-          // Оба типа: объединяем и сортируем
+          // Все события или isPending без фильтра типа: оба типа, с учётом levelFilter
           const [budget, deadline] = await Promise.all([
             getAllPendingTasks(wsUserId, levelFilter),
-            getAllDeadlinePendingTasks(wsUserId),
+            levelFilter !== "L2" ? getAllDeadlinePendingTasks(wsUserId) : Promise.resolve([] as PendingBudgetTask[]),
           ]);
           return [...budget, ...deadline].sort((a, b) => a.daysRemaining - b.daysRemaining);
         })()
@@ -206,16 +209,6 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
                 );
               })}
             </div>
-            {!isPending && (
-              <span className="shrink-0 text-[12px] font-medium" style={{ color: "var(--apex-text-muted)" }}>
-                {historyData.totalCount} {pluralize(historyData.totalCount)}
-              </span>
-            )}
-            {isPending && (
-              <span className="shrink-0 text-[12px] font-medium" style={{ color: "var(--apex-text-muted)" }}>
-                {pendingTasks.length} {pluralizeTask(pendingTasks.length)}
-              </span>
-            )}
           </div>
 
           {/* Ряд 3: суб-фильтр по типу (только в режиме "Ожидают 30 дней") */}
@@ -248,116 +241,7 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
           {/* Контент */}
           {isPending ? (
             pendingTasks.length > 0 ? (
-              <div className="space-y-0.5">
-                {/* Заголовки */}
-                <div
-                  className="flex items-center gap-3 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider"
-                  style={{ color: "var(--apex-text-muted)", borderBottom: "1px solid var(--apex-border)" }}
-                >
-                  <div className="w-8 shrink-0" />
-                  <span className="shrink-0 w-4" />
-                  <span className="shrink-0 w-6" />
-                  <div className="flex-1 min-w-0">Задача</div>
-                  {pendingTypeFilter !== "budget" && (
-                    <span className="shrink-0 w-20 text-center">Плановая дата</span>
-                  )}
-                  <span className="shrink-0 text-right">
-                    {pendingTypeFilter === "deadline" ? "Вовремя?" : "дней до начисления"}
-                  </span>
-                </div>
-
-                {pendingTasks.map((task, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 px-3 py-2 rounded-xl"
-                    style={{ background: "var(--apex-bg)" }}
-                  >
-                    {/* Иконка категории */}
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: "var(--apex-surface)", border: "1px solid var(--apex-border)" }}
-                    >
-                      {task.category === "budget"
-                        ? <Clock size={15} style={{ color: "var(--apex-text-muted)" }} />
-                        : <CalendarCheck size={15} style={{ color: "var(--apex-primary)" }} />
-                      }
-                    </div>
-
-                    {/* Тип задачи 💲/⏳ */}
-                    <span
-                      className="text-[11px] shrink-0 w-4 text-center"
-                      title={task.category === "budget" ? "По бюджету" : "По сроку"}
-                    >
-                      {task.category === "budget" ? "💲" : "⏳"}
-                    </span>
-
-                    {/* Level badge (только для budget или mixed) */}
-                    {task.category === "budget" && (
-                      <span
-                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0"
-                        style={{
-                          background: task.level === "L3" ? "var(--teal-100)" : "var(--orange-50)",
-                          color: task.level === "L3" ? "var(--apex-primary)" : "var(--orange-500)",
-                        }}
-                      >
-                        {task.level}
-                      </span>
-                    )}
-                    {task.category === "deadline" && (
-                      <span
-                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0"
-                        style={{ background: "var(--teal-100)", color: "var(--apex-primary)" }}
-                      >
-                        L3
-                      </span>
-                    )}
-
-                    {/* Название задачи */}
-                    <div className="flex-1 min-w-0">
-                      {task.taskUrl ? (
-                        <a
-                          href={task.taskUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[12px] font-medium hover:underline inline-flex items-center gap-1 min-w-0"
-                          style={{ color: "var(--apex-text)" }}
-                        >
-                          <span className="truncate">{task.taskName}</span>
-                          <ExternalLink size={10} className="shrink-0" />
-                        </a>
-                      ) : (
-                        <span className="text-[12px] font-medium truncate block" style={{ color: "var(--apex-text)" }}>
-                          {task.taskName}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Плановая дата (для deadline и mixed) */}
-                    {pendingTypeFilter !== "budget" && (
-                      <span className="text-[11px] shrink-0 w-20 text-center" style={{ color: "var(--apex-text-muted)" }}>
-                        {task.category === "deadline" && task.plannedEnd
-                          ? new Date(task.plannedEnd + "T00:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "short" })
-                          : "—"
-                        }
-                      </span>
-                    )}
-
-                    {/* Статус / дни */}
-                    {task.category === "deadline" ? (
-                      <span
-                        className="text-[11px] font-semibold shrink-0"
-                        style={{ color: task.closedOnTime ? "var(--apex-primary)" : "var(--apex-danger)" }}
-                      >
-                        {task.closedOnTime ? "✓ вовремя" : "✗ просрочено"}
-                      </span>
-                    ) : (
-                      <span className="text-[11px] font-semibold shrink-0" style={{ color: "var(--apex-text-muted)" }}>
-                        {task.daysRemaining}д
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
+              <PendingRows tasks={pendingTasks} showPlannedDate={pendingTypeFilter !== "budget"} lastColLabel={pendingTypeFilter === "deadline" ? "Вовремя?" : "дней до начисления"} />
             ) : (
               <div className="flex flex-col items-center justify-center py-8">
                 <div
@@ -374,26 +258,46 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
                 </span>
               </div>
             )
-          ) : historyData.events.length > 0 ? (
-            <MasterPlannerHistory
-              events={historyData.events}
-              startPosition={historyData.startPosition}
-            />
           ) : (
-            <div className="flex flex-col items-center justify-center py-8">
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
-                style={{ background: "var(--apex-success-bg)" }}
-              >
-                <Trophy size={24} style={{ color: "var(--apex-primary)" }} />
-              </div>
-              <span className="text-[13px] font-semibold" style={{ color: "var(--apex-text)" }}>
-                Нет событий
-              </span>
-              <span className="text-[11px] mt-1" style={{ color: "var(--apex-text-muted)" }}>
-                История событий появится после первых задач
-              </span>
-            </div>
+            <>
+              {isAllEvents && pendingTasks.length > 0 && (
+                <div className="mb-3">
+                  <div
+                    className="text-[10px] font-semibold uppercase tracking-wider px-3 py-1.5"
+                    style={{ color: "var(--apex-text-muted)" }}
+                  >
+                    Ожидают начисления · {pendingTasks.length} {pluralizeTask(pendingTasks.length)}
+                  </div>
+                  <PendingRows tasks={pendingTasks} showPlannedDate lastColLabel="дней до начисления" />
+                </div>
+              )}
+              {historyData.events.length > 0 ? (
+                <>
+                  {isAllEvents && pendingTasks.length > 0 && (
+                    <div className="mb-2" style={{ borderTop: "1px solid var(--apex-border)" }} />
+                  )}
+                  <MasterPlannerHistory
+                    events={historyData.events}
+                    startPosition={historyData.startPosition}
+                  />
+                </>
+              ) : (!isAllEvents || pendingTasks.length === 0) && (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
+                    style={{ background: "var(--apex-success-bg)" }}
+                  >
+                    <Trophy size={24} style={{ color: "var(--apex-primary)" }} />
+                  </div>
+                  <span className="text-[13px] font-semibold" style={{ color: "var(--apex-text)" }}>
+                    Нет событий
+                  </span>
+                  <span className="text-[11px] mt-1" style={{ color: "var(--apex-text-muted)" }}>
+                    История событий появится после первых задач
+                  </span>
+                </div>
+              )}
+            </>
           )}
 
           {/* Пагинация */}
@@ -428,13 +332,123 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
   );
 }
 
-function pluralize(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod100 >= 11 && mod100 <= 14) return "событий";
-  if (mod10 === 1) return "событие";
-  if (mod10 >= 2 && mod10 <= 4) return "события";
-  return "событий";
+interface PendingRowsProps {
+  tasks: PendingBudgetTask[];
+  showPlannedDate: boolean;
+  lastColLabel: string;
+}
+
+function PendingRows({ tasks, showPlannedDate, lastColLabel }: PendingRowsProps) {
+  return (
+    <div className="space-y-0.5">
+      <div
+        className="flex items-center gap-3 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider"
+        style={{ color: "var(--apex-text-muted)", borderBottom: "1px solid var(--apex-border)" }}
+      >
+        <div className="w-8 shrink-0" />
+        <span className="shrink-0 w-4" />
+        <span className="shrink-0 w-6" />
+        <div className="flex-1 min-w-0">Задача</div>
+        {showPlannedDate && <span className="shrink-0 w-24 text-center">Дата закрытия</span>}
+        {showPlannedDate && <span className="shrink-0 w-24 text-center">Статус</span>}
+        <span className="shrink-0 w-24 text-right">{lastColLabel}</span>
+      </div>
+
+      {tasks.map((task, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-3 px-3 py-2 rounded-xl"
+          style={{ background: "var(--apex-bg)" }}
+        >
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ background: "var(--apex-surface)", border: "1px solid var(--apex-border)" }}
+          >
+            {task.category === "budget"
+              ? <Clock size={15} style={{ color: "var(--apex-text-muted)" }} />
+              : <CalendarCheck size={15} style={{ color: "var(--apex-primary)" }} />
+            }
+          </div>
+
+          <span
+            className="text-[11px] shrink-0 w-4 text-center"
+            title={task.category === "budget" ? "По бюджету" : "По сроку"}
+          >
+            {task.category === "budget" ? "💲" : "⏳"}
+          </span>
+
+          <div className="shrink-0 w-6 flex justify-center">
+            <span
+              className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+              style={{
+                background: task.level === "L3" ? "var(--teal-100)" : "var(--orange-50)",
+                color: task.level === "L3" ? "var(--apex-primary)" : "var(--orange-500)",
+              }}
+            >
+              {task.level}
+            </span>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            {task.taskUrl ? (
+              <a
+                href={task.taskUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[12px] font-medium hover:underline inline-flex items-center gap-1 min-w-0"
+                style={{ color: "var(--apex-text)" }}
+              >
+                <span className="truncate">{task.taskName}</span>
+                <ExternalLink size={10} className="shrink-0" />
+              </a>
+            ) : (
+              <span className="text-[12px] font-medium truncate block" style={{ color: "var(--apex-text)" }}>
+                {task.taskName}
+              </span>
+            )}
+          </div>
+
+          {showPlannedDate && (
+            <span className="text-[11px] shrink-0 w-24 text-center" style={{ color: "var(--apex-text-muted)" }}>
+              {task.category === "deadline" && task.closedAt
+                ? new Date(task.closedAt).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })
+                : "—"
+              }
+            </span>
+          )}
+
+          {showPlannedDate && (
+            <span
+              className="text-[11px] font-semibold shrink-0 w-24 text-center"
+              style={{
+                color: task.category === "deadline"
+                  ? (task.closedOnTime ? "var(--apex-primary)" : "var(--apex-danger)")
+                  : (task.withinBudget === true ? "var(--apex-primary)" : task.withinBudget === false ? "var(--apex-danger)" : "var(--apex-text-muted)"),
+              }}
+            >
+              {task.category === "deadline"
+                ? (task.closedOnTime ? "✓ вовремя" : "✗ просрочено")
+                : (task.withinBudget === true ? "✓ в бюджете" : task.withinBudget === false ? "✗ превышено" : "—")
+              }
+            </span>
+          )}
+
+          {lastColLabel === "Вовремя?" ? (
+            <span
+              className="text-[11px] font-semibold shrink-0 w-24 text-right"
+              style={{ color: task.closedOnTime ? "var(--apex-primary)" : "var(--apex-danger)" }}
+            >
+              {task.closedOnTime ? "✓ вовремя" : "✗ просрочено"}
+            </span>
+          ) : (
+            <span className="text-[11px] font-semibold shrink-0 w-24 text-right" style={{ color: "var(--apex-text-muted)" }}>
+              {task.daysRemaining}д
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function pluralizeTask(count: number): string {

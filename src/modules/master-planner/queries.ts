@@ -227,7 +227,7 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
   // Budget pending
   const { data: budgetPendingRows } = await supabase
     .from('view_budget_pending_status')
-    .select('level, task_name, ws_project_id, ws_l1_id, ws_task_l3_id, ws_task_l2_id, days_remaining')
+    .select('level, task_name, ws_project_id, ws_l1_id, ws_task_l3_id, ws_task_l2_id, days_remaining, within_budget')
     .eq('user_id', userId)
     .eq('status', 'pending')
     .order('eligible_date', { ascending: true })
@@ -248,6 +248,7 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
     plannedEnd: null,
     closedAt: null,
     closedOnTime: null,
+    withinBudget: r.within_budget ?? null,
   }))
 
   const deadlinePending: PendingBudgetTask[] = (deadlinePendingRows ?? []).map((r) => ({
@@ -259,6 +260,7 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
     plannedEnd: r.planned_end ?? null,
     closedAt: r.closed_at ?? null,
     closedOnTime: r.closed_on_time ?? null,
+    withinBudget: null,
   }))
 
   // Объединяем и сортируем по срочности
@@ -287,7 +289,7 @@ export async function getAllPendingTasks(
 
   let query = supabase
     .from('view_budget_pending_status')
-    .select('level, task_name, ws_project_id, ws_l1_id, ws_task_l3_id, ws_task_l2_id, days_remaining')
+    .select('level, task_name, ws_project_id, ws_l1_id, ws_task_l3_id, ws_task_l2_id, days_remaining, within_budget')
     .eq('user_id', userId)
     .eq('status', 'pending')
     .order('eligible_date', { ascending: true })
@@ -307,6 +309,7 @@ export async function getAllPendingTasks(
     plannedEnd: null,
     closedAt: null,
     closedOnTime: null,
+    withinBudget: r.within_budget ?? null,
   }))
 }
 
@@ -330,6 +333,7 @@ export async function getAllDeadlinePendingTasks(userId: string): Promise<Pendin
     plannedEnd: r.planned_end ?? null,
     closedAt: r.closed_at ?? null,
     closedOnTime: r.closed_on_time ?? null,
+    withinBudget: null,
   }))
 }
 
