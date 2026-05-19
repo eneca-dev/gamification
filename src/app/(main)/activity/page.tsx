@@ -59,7 +59,8 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
   const team = wsCtx.team
 
   const hasDepartment = Boolean(department)
-  const hasTeam = Boolean(team)
+  // Показываем вкладку команды всем, у кого есть отдел — даже без команды (покажем «Вне команд»)
+  const hasTeam = Boolean(department)
 
   // ── Данные для вкладки отдела ────────────────────────────────────────────
   if (tab === 'dept') {
@@ -89,7 +90,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
           icon={<Trophy size={14} style={{ color: 'var(--tag-orange-text)' }} />}
         >
           {deptData.awards.length === 0 ? (
-            <EmptyFeed text="В этом месяце нет достижений в отделе" />
+            <EmptyFeed emoji="🏆" text="Нет достижений" subtitle="Достижения появятся здесь, когда отдел проведёт достаточно дней в топе" />
           ) : (
             <AwardsFilters
               awards={deptData.awards.filter((a) => a.entity_type === 'department' || a.entity_type === 'user')}
@@ -105,7 +106,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
           icon={<Handshake size={14} style={{ color: 'var(--tag-teal-text)' }} />}
         >
           {deptData.feedGratitudes.length === 0 ? (
-            <EmptyFeed text="В этом месяце нет благодарностей в отделе" />
+            <EmptyFeed emoji="🤝" text="Нет благодарностей" subtitle="Благодарности появятся здесь, когда кто-то из коллег отправит благодарность" />
           ) : (
             <CompanyGratitudeList items={deptData.feedGratitudes} pageSize={20} />
           )}
@@ -116,17 +117,17 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
 
   // ── Данные для вкладки команды ───────────────────────────────────────────
   if (tab === 'team') {
-    if (!team || !department) {
+    if (!department) {
       return (
         <div className="space-y-6">
           <Header hasDepartment={hasDepartment} hasTeam={false} tab={tab} />
-          <EmptyProfile message="Команда не указана в вашем профиле" />
+          <EmptyProfile message="Отдел не указан в вашем профиле" />
         </div>
       )
     }
 
     const teamData = await getTeamFeedData(
-      team,
+      team || null,   // '' и null оба → null → «Вне команд»
       department,
       monthRange.start,
       monthRange.end,
@@ -143,7 +144,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
           icon={<Trophy size={14} style={{ color: 'var(--tag-orange-text)' }} />}
         >
           {teamData.awards.length === 0 ? (
-            <EmptyFeed text="В этом месяце нет достижений в команде" />
+            <EmptyFeed emoji="🏆" text="Нет достижений" subtitle="Достижения появятся здесь, когда команда проведёт достаточно дней в топе" />
           ) : (
             <AwardsFilters
               awards={teamData.awards.filter((a) => a.entity_type === 'team' || a.entity_type === 'user')}
@@ -159,7 +160,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
           icon={<Handshake size={14} style={{ color: 'var(--tag-teal-text)' }} />}
         >
           {teamData.feedGratitudes.length === 0 ? (
-            <EmptyFeed text="В этом месяце нет благодарностей в команде" />
+            <EmptyFeed emoji="🤝" text="Нет благодарностей" subtitle="Благодарности появятся здесь, когда кто-то из коллег отправит благодарность" />
           ) : (
             <CompanyGratitudeList items={teamData.feedGratitudes} pageSize={20} />
           )}
@@ -357,13 +358,14 @@ function FeedSection({
   )
 }
 
-function EmptyFeed({ text }: { text: string }) {
+function EmptyFeed({ emoji = '💬', text, subtitle }: { emoji?: string; text: string; subtitle?: string }) {
   return (
-    <div
-      className="rounded-2xl py-8 text-center"
-      style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
-    >
+    <div className="py-8 text-center">
+      <div className="text-3xl mb-3">{emoji}</div>
       <div className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>{text}</div>
+      {subtitle && (
+        <div className="text-[12px] font-medium mt-1" style={{ color: 'var(--text-muted)' }}>{subtitle}</div>
+      )}
     </div>
   )
 }
