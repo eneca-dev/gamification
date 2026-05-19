@@ -55,7 +55,7 @@ export function AwardsFilters({
     )
     if (entityType !== 'all') result = result.filter((a) => a.entity_type === entityType)
     return limit ? result.slice(0, limit) : result
-  }, [awards, area, entityType])
+  }, [awards, area, entityType, limit])
 
   // Группировка по месяцам
   const grouped = useMemo(() => {
