@@ -61,7 +61,7 @@ export function TeamFeedTable({ data, monthLabel }: TeamFeedTableProps) {
           <Users size={12} style={{ color: 'var(--apex-primary)', flexShrink: 0 }} />
           <span className="text-[12px] font-bold whitespace-nowrap" style={{ color: 'var(--apex-primary)' }}>
             {data.team}
-            <span className="ml-1 text-[11px] font-medium opacity-50">({data.members.length})</span>
+            <span className="ml-1 text-[11px] font-medium opacity-50">({data.members.length}) · {monthLabel}</span>
           </span>
         </div>
         <div className={`${CELL} justify-center`} style={{ ...ROW_STYLE, ...COIN_GAP }}>
