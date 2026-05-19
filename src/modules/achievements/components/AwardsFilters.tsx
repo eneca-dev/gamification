@@ -11,6 +11,18 @@ const MONTH_NAMES = [
   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
 ]
 
+const AREA_FILTERS: { value: AchievementArea | 'all'; label: string }[] = [
+  { value: 'all', label: 'Все области' },
+  ...ACHIEVEMENT_AREAS.map((a) => ({ value: a.area, label: a.label })),
+]
+
+const ALL_ENTITY_FILTERS: { value: AchievementEntityType | 'all'; label: string }[] = [
+  { value: 'all', label: 'Все уровни' },
+  { value: 'user', label: 'Личные' },
+  { value: 'team', label: 'Командные' },
+  { value: 'department', label: 'Отдел' },
+]
+
 function getMonthLabel(periodStart: string): string {
   const [year, month] = periodStart.split('-').map(Number)
   return `${MONTH_NAMES[month - 1]} ${year}`
@@ -19,11 +31,20 @@ function getMonthLabel(periodStart: string): string {
 interface AwardsFiltersProps {
   awards: CompanyAward[]
   hideMonthGroups?: boolean
+  allowedEntityTypes?: AchievementEntityType[]
+  defaultEntityType?: AchievementEntityType | 'all'
+  limit?: number
 }
 
-export function AwardsFilters({ awards, hideMonthGroups = false }: AwardsFiltersProps) {
+export function AwardsFilters({
+  awards,
+  hideMonthGroups = false,
+  limit,
+  allowedEntityTypes,
+  defaultEntityType = 'all',
+}: AwardsFiltersProps) {
   const [area, setArea] = useState<AchievementArea | 'all'>('all')
-  const [entityType, setEntityType] = useState<AchievementEntityType | 'all'>('all')
+  const [entityType, setEntityType] = useState<AchievementEntityType | 'all'>(defaultEntityType)
 
   const filtered = useMemo(() => {
     let result = awards
@@ -33,7 +54,7 @@ export function AwardsFilters({ awards, hideMonthGroups = false }: AwardsFilters
         : a.area === area
     )
     if (entityType !== 'all') result = result.filter((a) => a.entity_type === entityType)
-    return result
+    return limit ? result.slice(0, limit) : result
   }, [awards, area, entityType])
 
   // Группировка по месяцам
@@ -47,23 +68,15 @@ export function AwardsFilters({ awards, hideMonthGroups = false }: AwardsFilters
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]))
   }, [filtered])
 
-  const areaFilters: { value: AchievementArea | 'all'; label: string }[] = [
-    { value: 'all', label: 'Все области' },
-    ...ACHIEVEMENT_AREAS.map((a) => ({ value: a.area, label: a.label })),
-  ]
-
-  const entityFilters: { value: AchievementEntityType | 'all'; label: string }[] = [
-    { value: 'all', label: 'Все уровни' },
-    { value: 'user', label: 'Личные' },
-    { value: 'team', label: 'Командные' },
-    { value: 'department', label: 'Отдел' },
-  ]
+  const entityFilters = allowedEntityTypes
+    ? ALL_ENTITY_FILTERS.filter((f) => f.value === 'all' || allowedEntityTypes.includes(f.value as AchievementEntityType))
+    : ALL_ENTITY_FILTERS
 
   return (
     <div className="space-y-5 animate-fade-in-up stagger-1">
       {/* Фильтры */}
       <div className="flex flex-wrap gap-2">
-        {areaFilters.map((f) => (
+        {AREA_FILTERS.map((f) => (
           <button
             key={f.value}
             onClick={() => setArea(f.value)}
@@ -85,11 +98,11 @@ export function AwardsFilters({ awards, hideMonthGroups = false }: AwardsFilters
             key={f.value}
             onClick={() => setEntityType(f.value)}
             className="px-3 py-1.5 rounded-full text-[12px] font-bold transition-all"
-            style={{
-              background: entityType === f.value ? 'var(--apex-success-bg)' : 'var(--surface-elevated)',
-              color: entityType === f.value ? 'var(--apex-success-text)' : 'var(--text-muted)',
-              border: entityType === f.value ? '1px solid var(--teal-100)' : '1px solid var(--border)',
-            }}
+            style={
+              entityType === f.value
+                ? { background: 'var(--apex-primary)', color: 'var(--apex-surface)', border: '1px solid var(--apex-primary)' }
+                : { background: 'var(--surface-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border)' }
+            }
           >
             {f.label}
           </button>
@@ -107,7 +120,11 @@ export function AwardsFilters({ awards, hideMonthGroups = false }: AwardsFilters
             Нет достижений
           </div>
           <div className="text-[12px] font-medium mt-1" style={{ color: 'var(--text-muted)' }}>
-            Достижения появятся здесь, когда кто-то проведёт достаточно дней в топе
+            {entityType === 'team'
+              ? 'Достижения появятся здесь, когда команда проведёт достаточно дней в топе'
+              : entityType === 'department'
+              ? 'Достижения появятся здесь, когда отдел проведёт достаточно дней в топе'
+              : 'Достижения появятся здесь, когда кто-то проведёт достаточно дней в топе'}
           </div>
         </div>
       ) : hideMonthGroups ? (
