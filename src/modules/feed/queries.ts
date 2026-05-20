@@ -109,6 +109,44 @@ function buildFeedMaps(
   return { revitMap, wsMap, usersNameMap, earnedSet, awards, snapCountMap, thresholdMap }
 }
 
+// ── Хелперы для дат и прямого запроса транзакций ────────────────────────────
+
+function getMinskyDates() {
+  const ms = Date.now() + 3 * 60 * 60 * 1000 // UTC+3, Минск без DST
+  const today = new Date(ms)
+  const yesterday = new Date(ms - 86_400_000)
+  const fmt = (d: Date) => d.toISOString().slice(0, 10)
+  return {
+    wsStart: `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, '0')}-01`,
+    wsEnd: fmt(today),
+    revitStart: `${yesterday.getUTCFullYear()}-${String(yesterday.getUTCMonth() + 1).padStart(2, '0')}-01`,
+    revitEnd: fmt(yesterday),
+  }
+}
+
+async function fetchMonthlyCoins(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  userIds: string[],
+  source: 'revit' | 'ws',
+  start: string,
+  end: string,
+): Promise<Array<{ user_id: string; total_coins: number }>> {
+  if (userIds.length === 0) return []
+  const { data } = await supabase
+    .from('gamification_transactions')
+    .select('user_id, coins, gamification_event_logs!inner(source, event_date)')
+    .in('user_id', userIds)
+    .eq('gamification_event_logs.source', source)
+    .gte('gamification_event_logs.event_date', start)
+    .lte('gamification_event_logs.event_date', end)
+  const totals = new Map<string, number>()
+  for (const row of data ?? []) {
+    const uid = String(row.user_id)
+    totals.set(uid, (totals.get(uid) ?? 0) + Number(row.coins))
+  }
+  return [...totals.entries()].map(([user_id, total_coins]) => ({ user_id, total_coins }))
+}
+
 // ── getDepartmentFeedData ─────────────────────────────────────────────────────
 
 async function _getDepartmentFeedData(
@@ -137,10 +175,11 @@ async function _getDepartmentFeedData(
   const allEntityIds = [...userIds, ...teams, departmentCode]
 
   // Шаг 2 — все данные параллельно
-  const [revitPersonal, wsPersonal, awardsRes, gratitudesRes, snapshotsRes, settingsRes] =
+  const minskyDates = getMinskyDates()
+  const [revitCoinsData, wsCoinsData, awardsRes, gratitudesRes, snapshotsRes, settingsRes] =
     await Promise.all([
-      supabase.from('view_top_pers_revit').select('user_id, total_coins').eq('department_code', departmentCode),
-      supabase.from('view_top_pers_ws').select('user_id, total_coins').eq('department_code', departmentCode),
+      fetchMonthlyCoins(supabase, userIds, 'revit', minskyDates.revitStart, minskyDates.revitEnd),
+      fetchMonthlyCoins(supabase, userIds, 'ws', minskyDates.wsStart, minskyDates.wsEnd),
       supabase
         .from('ach_awards')
         .select('id, entity_id, entity_type, area, period_start, days_in_top, awarded_at, score')
@@ -165,7 +204,7 @@ async function _getDepartmentFeedData(
     ])
 
   const { revitMap, wsMap, earnedSet, awards, snapCountMap, thresholdMap } =
-    buildFeedMaps(userList, revitPersonal.data, wsPersonal.data, awardsRes.data, snapshotsRes.data, settingsRes.data)
+    buildFeedMaps(userList, revitCoinsData, wsCoinsData, awardsRes.data, snapshotsRes.data, settingsRes.data)
 
   const feedGratitudes = (gratitudesRes.data ?? []) as GratitudeNew[]
 
@@ -284,16 +323,11 @@ async function _getTeamFeedData(
     ? (userIds.length > 0 ? [...userIds, team] : [team])
     : (userIds.length > 0 ? userIds : [nonExistentId])
 
-  const [revitPersonal, wsPersonal, awardsRes, gratitudesRes, snapshotsRes, settingsRes] =
+  const minskyDates = getMinskyDates()
+  const [revitCoinsData, wsCoinsData, awardsRes, gratitudesRes, snapshotsRes, settingsRes] =
     await Promise.all([
-      supabase
-        .from('view_top_pers_revit')
-        .select('user_id, total_coins')
-        .in('user_id', userIds.length > 0 ? userIds : [nonExistentId]),
-      supabase
-        .from('view_top_pers_ws')
-        .select('user_id, total_coins')
-        .in('user_id', userIds.length > 0 ? userIds : [nonExistentId]),
+      fetchMonthlyCoins(supabase, userIds, 'revit', minskyDates.revitStart, minskyDates.revitEnd),
+      fetchMonthlyCoins(supabase, userIds, 'ws', minskyDates.wsStart, minskyDates.wsEnd),
       supabase
         .from('ach_awards')
         .select('id, entity_id, entity_type, area, period_start, days_in_top, awarded_at, score')
@@ -318,7 +352,7 @@ async function _getTeamFeedData(
     ])
 
   const { revitMap, wsMap, earnedSet, awards, snapCountMap, thresholdMap } =
-    buildFeedMaps(userList, revitPersonal.data, wsPersonal.data, awardsRes.data, snapshotsRes.data, settingsRes.data)
+    buildFeedMaps(userList, revitCoinsData, wsCoinsData, awardsRes.data, snapshotsRes.data, settingsRes.data)
 
   // Фильтрация благодарностей только для членов команды
   const teamUserNames = new Set(
