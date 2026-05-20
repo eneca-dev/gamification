@@ -5,16 +5,16 @@ import { getCurrentUser } from "@/modules/auth/queries";
 import { getMasterPlannerPanel, getMasterPlannerHistory, getAllPendingTasks, getAllDeadlinePendingTasks } from "@/modules/master-planner";
 import { MasterPlannerHistory } from "@/modules/master-planner/components/MasterPlannerHistory";
 
-import type { HistoryStatusFilter } from "@/modules/master-planner";
+import type { HistoryStatusFilter, HistoryCategoryFilter } from "@/modules/master-planner";
 import type { PendingBudgetTask } from "@/modules/master-planner";
 
 const PAGE_SIZE = 20;
 
 const VALID_STATUSES = new Set<string>(["pending", "ok", "exceeded", "revoked"]);
-const VALID_PENDING_TYPES = new Set<string>(["budget", "deadline"]);
+const VALID_CATEGORIES = new Set<string>(["budget", "deadline"]);
 
 interface MasterPlannerPageProps {
-  searchParams: Promise<{ page?: string; level?: string; status?: string; pendingType?: string }>;
+  searchParams: Promise<{ page?: string; level?: string; status?: string; category?: string }>;
 }
 
 export default async function MasterPlannerPage({ searchParams }: MasterPlannerPageProps) {
@@ -22,7 +22,7 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
   const currentPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
   const levelFilter = params.level === "L3" || params.level === "L2" ? params.level : undefined;
   const statusFilter = VALID_STATUSES.has(params.status ?? "") ? params.status as HistoryStatusFilter | "pending" : undefined;
-  const pendingTypeFilter = VALID_PENDING_TYPES.has(params.pendingType ?? "") ? params.pendingType as "budget" | "deadline" : undefined;
+  const categoryFilter = VALID_CATEGORIES.has(params.category ?? "") ? params.category as HistoryCategoryFilter : undefined;
 
   const currentUser = await getCurrentUser();
   const wsUserId = currentUser?.wsUserId;
@@ -44,18 +44,16 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
     getMasterPlannerPanel(wsUserId),
     isPending
       ? Promise.resolve({ events: [], totalCount: 0, startPosition: 0 })
-      : getMasterPlannerHistory(wsUserId, currentPage, levelFilter, historyStatus),
+      : getMasterPlannerHistory(wsUserId, currentPage, levelFilter, historyStatus, categoryFilter),
     isPending || isAllEvents
       ? (async (): Promise<PendingBudgetTask[]> => {
-          if (isPending) {
-            if (pendingTypeFilter === "budget") {
-              return getAllPendingTasks(wsUserId, levelFilter);
-            }
-            if (pendingTypeFilter === "deadline") {
-              return getAllDeadlinePendingTasks(wsUserId);
-            }
+          if (categoryFilter === "budget") {
+            return getAllPendingTasks(wsUserId, levelFilter);
           }
-          // Все события или isPending без фильтра типа: оба типа, с учётом levelFilter
+          if (categoryFilter === "deadline") {
+            return levelFilter !== "L2" ? getAllDeadlinePendingTasks(wsUserId) : [];
+          }
+          // без фильтра типа: оба типа, с учётом levelFilter
           const [budget, deadline] = await Promise.all([
             getAllPendingTasks(wsUserId, levelFilter),
             levelFilter !== "L2" ? getAllDeadlinePendingTasks(wsUserId) : Promise.resolve([] as PendingBudgetTask[]),
@@ -67,7 +65,7 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
 
   const totalPages = isPending ? 0 : Math.ceil(historyData.totalCount / PAGE_SIZE);
 
-  function buildUrl(overrides: { page?: number; level?: string; status?: string; pendingType?: string }) {
+  function buildUrl(overrides: { page?: number; level?: string; status?: string; category?: string }) {
     const p = new URLSearchParams();
     const pg = overrides.page ?? (overrides.status !== undefined || overrides.level !== undefined ? undefined : currentPage);
     if (pg && pg > 1) p.set("page", String(pg));
@@ -75,8 +73,8 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
     if (lv) p.set("level", lv);
     const st = overrides.status !== undefined ? overrides.status : statusFilter;
     if (st) p.set("status", st);
-    const pt = overrides.pendingType !== undefined ? overrides.pendingType : (overrides.status === "pending" ? pendingTypeFilter : undefined);
-    if (pt) p.set("pendingType", pt);
+    const cat = overrides.category !== undefined ? overrides.category : categoryFilter;
+    if (cat) p.set("category", cat);
     const qs = p.toString();
     return `/master-planner${qs ? `?${qs}` : ""}`;
   }
@@ -155,9 +153,38 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
             </div>
           </div>
 
-          {/* Ряд 1: фильтр по уровню (скрываем при deadline-only pending) */}
-          {!(isPending && pendingTypeFilter === "deadline") && (
-            <div className="flex gap-1 mb-2" data-onboarding="mp-filters">
+          {/* Ряд 1: фильтр по статусу */}
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex gap-1 overflow-x-auto flex-nowrap flex-1 min-w-0 pb-0.5">
+              {[
+                { label: "Все события", value: undefined },
+                { label: "Ожидают 30 дней", value: "pending" },
+                { label: "Закрыта в бюджете / в срок", value: "ok" },
+                { label: "Превышение бюджета / срока", value: "exceeded" },
+                { label: "Отозвано", value: "revoked" },
+              ].map((tab) => {
+                const isActive = statusFilter === tab.value;
+                return (
+                  <a
+                    key={tab.label}
+                    href={buildUrl({ status: tab.value ?? "", category: "" })}
+                    className="px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors shrink-0"
+                    style={{
+                      background: isActive ? "var(--apex-text)" : "var(--apex-bg)",
+                      color: isActive ? "var(--apex-surface)" : "var(--apex-text-muted)",
+                      border: isActive ? "none" : "1px solid var(--apex-border)",
+                    }}
+                  >
+                    {tab.label}
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Ряд 2: уровень + тип в одну строку */}
+          <div className="flex items-center gap-3 mb-4" data-onboarding="mp-filters">
+            <div className="flex gap-1">
               {[
                 { label: "Все", value: undefined },
                 { label: "L3", value: "L3" },
@@ -180,24 +207,21 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
                 );
               })}
             </div>
-          )}
 
-          {/* Ряд 2: фильтр по статусу */}
-          <div className="flex items-center gap-2 mb-2">
-            <div className="flex gap-1 overflow-x-auto flex-nowrap flex-1 min-w-0 pb-0.5">
+            <div className="w-px h-4 shrink-0 mx-2" style={{ background: "var(--apex-border)" }} />
+
+            <div className="flex gap-1">
               {[
-                { label: "Все события", value: undefined },
-                { label: "Ожидают 30 дней", value: "pending" },
-                { label: "Закрыта в бюджете", value: "ok" },
-                { label: "Превышение бюджета", value: "exceeded" },
-                { label: "Отозвано", value: "revoked" },
+                { label: "Все типы", value: undefined },
+                { label: "💲 Бюджет", value: "budget" },
+                { label: "⏳ Срок", value: "deadline" },
               ].map((tab) => {
-                const isActive = statusFilter === tab.value;
+                const isActive = categoryFilter === tab.value;
                 return (
                   <a
                     key={tab.label}
-                    href={buildUrl({ status: tab.value ?? "", pendingType: "" })}
-                    className="px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors shrink-0"
+                    href={buildUrl({ category: tab.value ?? "" })}
+                    className="px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors"
                     style={{
                       background: isActive ? "var(--apex-text)" : "var(--apex-bg)",
                       color: isActive ? "var(--apex-surface)" : "var(--apex-text-muted)",
@@ -211,37 +235,10 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
             </div>
           </div>
 
-          {/* Ряд 3: суб-фильтр по типу (только в режиме "Ожидают 30 дней") */}
-          {isPending && (
-            <div className="flex gap-1 mb-4">
-              {[
-                { label: "Все типы", value: undefined },
-                { label: "💲 Бюджет", value: "budget" },
-                { label: "⏳ Срок", value: "deadline" },
-              ].map((tab) => {
-                const isActive = pendingTypeFilter === tab.value;
-                return (
-                  <a
-                    key={tab.label}
-                    href={buildUrl({ pendingType: tab.value ?? "" })}
-                    className="px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors"
-                    style={{
-                      background: isActive ? "var(--apex-text)" : "var(--apex-bg)",
-                      color: isActive ? "var(--apex-surface)" : "var(--apex-text-muted)",
-                      border: isActive ? "none" : "1px solid var(--apex-border)",
-                    }}
-                  >
-                    {tab.label}
-                  </a>
-                );
-              })}
-            </div>
-          )}
-
           {/* Контент */}
           {isPending ? (
             pendingTasks.length > 0 ? (
-              <PendingRows tasks={pendingTasks} showPlannedDate={pendingTypeFilter !== "budget"} lastColLabel={pendingTypeFilter === "deadline" ? "Вовремя?" : "дней до начисления"} />
+              <PendingRows tasks={pendingTasks} showPlannedDate={categoryFilter !== "budget"} lastColLabel={categoryFilter === "deadline" ? "Вовремя?" : "дней до начисления"} />
             ) : (
               <div className="flex flex-col items-center justify-center py-8">
                 <div
