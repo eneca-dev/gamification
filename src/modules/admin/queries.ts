@@ -5,7 +5,7 @@ import type {
   RankingSettingRow, GratitudeSettingRow,
   CalendarHolidayRow, CalendarWorkdayRow,
   EconomyFilters, EconomyOverview, TopSource, TopLevel, TopRow, CategoryRow,
-  EconomyPeriodPreset,
+  EconomyPeriodPreset, DepartmentGroupRow, LowBalanceUser,
 } from './types'
 
 // gamification_balances — связь 1:1, но Supabase может вернуть объект или массив
@@ -241,6 +241,58 @@ export async function getEconomyCategoryBreakdown(
   })
   if (error) throw new Error(error.message)
   return (data ?? []) as CategoryRow[]
+}
+
+export async function getDepartmentGroups(): Promise<DepartmentGroupRow[]> {
+  const supabase = createSupabaseAdminClient()
+  const { data, error } = await supabase
+    .from('admin_department_groups')
+    .select('department, group_type')
+  if (error) throw new Error(error.message)
+  return (data ?? []) as DepartmentGroupRow[]
+}
+
+export async function getAllDepartments(): Promise<string[]> {
+  const supabase = createSupabaseAdminClient()
+  const { data, error } = await supabase
+    .from('ws_users')
+    .select('department')
+    .eq('is_active', true)
+    .not('department', 'is', null)
+  if (error) throw new Error(error.message)
+  const all = (data ?? []).map((u) => u.department as string)
+  return [...new Set(all)].sort()
+}
+
+export async function getLowBalanceUsers(betaOnly: boolean): Promise<LowBalanceUser[]> {
+  const supabase = createSupabaseAdminClient()
+
+  let query = supabase
+    .from('ws_users')
+    .select('id, first_name, last_name, email, department, team, is_beta_tester, gamification_balances(total_coins)')
+    .eq('is_active', true)
+    .not('team', 'eq', 'Декретный')
+
+  if (betaOnly) query = query.eq('is_beta_tester', true)
+
+  const { data, error } = await query
+  if (error) throw new Error(error.message)
+
+  const users = (data ?? []).map((row) => ({
+    id: row.id,
+    first_name: row.first_name,
+    last_name: row.last_name,
+    email: row.email,
+    department: row.department as string | null,
+    team: row.team as string | null,
+    is_beta_tester: row.is_beta_tester,
+    total_coins: extractCoins(row.gamification_balances),
+    group_type: null as 'designer' | 'non_designer' | null,
+  }))
+
+  users.sort((a, b) => a.total_coins - b.total_coins)
+  const count = Math.max(1, Math.ceil(users.length * 0.1))
+  return users.slice(0, count)
 }
 
 // YYYY-MM-DD → ISO начало дня (UTC). Возвращает null для невалидной даты

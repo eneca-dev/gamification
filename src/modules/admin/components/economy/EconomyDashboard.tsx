@@ -1,14 +1,19 @@
 import type {
   CategoryRow,
+  DepartmentGroupRow,
+  DesignerFilter,
   EconomyOverview,
   EconomyPeriodPreset,
+  LowBalanceUser,
   TopLevel,
   TopRow,
 } from '@/modules/admin'
 
 import { CategoryBreakdownChart } from './CategoryBreakdownChart'
+import { DepartmentGroupsManager } from './DepartmentGroupsManager'
 import { EconomyFilters } from './EconomyFilters'
 import { KpiSummary } from './KpiSummary'
+import { LowBalanceSection } from './LowBalanceSection'
 import { SpendingBreakdown } from './SpendingBreakdown'
 import { TopList } from './TopList'
 
@@ -18,6 +23,7 @@ interface EconomyDashboardProps {
   customTo: string
   betaOnly: boolean
   topLevel: TopLevel
+  designerFilter: DesignerFilter
   overview: EconomyOverview
   categories: CategoryRow[]
   rate: number
@@ -29,6 +35,9 @@ interface EconomyDashboardProps {
     paid_gratitude: TopRow[]
     revoked: TopRow[]
   }
+  lowBalance: LowBalanceUser[]
+  allDepartments: string[]
+  deptGroups: DepartmentGroupRow[]
 }
 
 export function EconomyDashboard({
@@ -37,10 +46,14 @@ export function EconomyDashboard({
   customTo,
   betaOnly,
   topLevel,
+  designerFilter,
   overview,
   categories,
   rate,
   tops,
+  lowBalance,
+  allDepartments,
+  deptGroups,
 }: EconomyDashboardProps) {
   return (
     <div className="space-y-6">
@@ -57,6 +70,14 @@ export function EconomyDashboard({
       <SpendingBreakdown channels={overview.channels} rate={rate} />
 
       <CategoryBreakdownChart categories={categories} rate={rate} />
+
+      <LowBalanceSection
+        users={lowBalance}
+        designerFilter={designerFilter}
+        totalCount={lowBalance.length}
+      />
+
+      <DepartmentGroupsManager departments={allDepartments} initialGroups={deptGroups} />
 
       <section className="space-y-3">
         <h2 className="text-[14px] font-bold" style={{ color: 'var(--apex-text)' }}>

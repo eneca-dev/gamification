@@ -228,6 +228,25 @@ export interface ProductFormData {
 
 export type EconomyPeriodPreset = '7d' | '30d' | '90d' | 'year' | 'all' | 'custom'
 
+export type DesignerFilter = 'all' | 'designer' | 'non_designer'
+
+export interface DepartmentGroupRow {
+  department: string
+  group_type: 'designer' | 'non_designer'
+}
+
+export interface LowBalanceUser {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  department: string | null
+  team: string | null
+  is_beta_tester: boolean
+  total_coins: number
+  group_type: 'designer' | 'non_designer' | null
+}
+
 export interface EconomyFilters {
   from: string | null
   to: string | null
