@@ -36,10 +36,10 @@ export interface PendingBudgetTask {
   taskName: string
   taskUrl: string | null
   daysRemaining: number
-  // Deadline-специфичные поля (null для budget задач)
   plannedEnd: string | null
   closedAt: string | null
-  closedOnTime: boolean | null
+  closedOnTime: boolean | null  // deadline: закрыта в срок; null для budget
+  withinBudget: boolean | null  // budget: в рамках бюджета; null для deadline
 }
 
 // ─── Данные для панели на дашборде ──────────────────────────────────────────

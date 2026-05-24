@@ -5,6 +5,8 @@ export {
   getWorkdays,
   getWsStreakData,
   getRevitStreakData,
+  getGridRange,
+  buildCalendarDays,
 } from './queries'
 
 export type {

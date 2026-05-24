@@ -324,7 +324,7 @@ export function MasterPlannerPanel({ data }: MasterPlannerPanelProps) {
             className="text-[11px] text-center max-w-[220px]"
             style={{ color: "var(--apex-text-muted)" }}
           >
-            Когда появятся закрытые задачи с бюджетом или сроком — они отобразятся здесь
+            Когда появятся закрытые задачи с плановым бюджетом или плановым сроком — они отобразятся здесь
           </span>
         </div>
       )}

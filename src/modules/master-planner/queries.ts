@@ -227,7 +227,7 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
   // Budget pending
   const { data: budgetPendingRows } = await supabase
     .from('view_budget_pending_status')
-    .select('level, task_name, ws_project_id, ws_l1_id, ws_task_l3_id, ws_task_l2_id, days_remaining')
+    .select('level, task_name, ws_project_id, ws_l1_id, ws_task_l3_id, ws_task_l2_id, days_remaining, within_budget')
     .eq('user_id', userId)
     .eq('status', 'pending')
     .order('eligible_date', { ascending: true })
@@ -248,6 +248,7 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
     plannedEnd: null,
     closedAt: null,
     closedOnTime: null,
+    withinBudget: r.within_budget ?? null,
   }))
 
   const deadlinePending: PendingBudgetTask[] = (deadlinePendingRows ?? []).map((r) => ({
@@ -259,6 +260,7 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
     plannedEnd: r.planned_end ?? null,
     closedAt: r.closed_at ?? null,
     closedOnTime: r.closed_on_time ?? null,
+    withinBudget: null,
   }))
 
   // Объединяем и сортируем по срочности
@@ -287,7 +289,7 @@ export async function getAllPendingTasks(
 
   let query = supabase
     .from('view_budget_pending_status')
-    .select('level, task_name, ws_project_id, ws_l1_id, ws_task_l3_id, ws_task_l2_id, days_remaining')
+    .select('level, task_name, ws_project_id, ws_l1_id, ws_task_l3_id, ws_task_l2_id, days_remaining, within_budget')
     .eq('user_id', userId)
     .eq('status', 'pending')
     .order('eligible_date', { ascending: true })
@@ -307,6 +309,7 @@ export async function getAllPendingTasks(
     plannedEnd: null,
     closedAt: null,
     closedOnTime: null,
+    withinBudget: r.within_budget ?? null,
   }))
 }
 
@@ -330,6 +333,7 @@ export async function getAllDeadlinePendingTasks(userId: string): Promise<Pendin
     plannedEnd: r.planned_end ?? null,
     closedAt: r.closed_at ?? null,
     closedOnTime: r.closed_on_time ?? null,
+    withinBudget: null,
   }))
 }
 
@@ -338,11 +342,29 @@ export async function getAllDeadlinePendingTasks(userId: string): Promise<Pendin
 const PAGE_SIZE = 20
 
 export type HistoryStatusFilter = 'ok' | 'exceeded' | 'revoked'
+export type HistoryCategoryFilter = 'budget' | 'deadline'
 
-const STATUS_FILTER_PATTERNS: Record<HistoryStatusFilter, string> = {
-  ok: 'budget_ok%',
-  exceeded: 'budget_exceeded%',
-  revoked: 'budget_revoked%',
+function buildEventTypeOrFilter(
+  status?: HistoryStatusFilter,
+  category?: HistoryCategoryFilter,
+): string | null {
+  const conds: string[] = []
+
+  if (status === 'ok') {
+    if (!category || category === 'budget') conds.push('event_type.like.budget_ok%')
+    if (!category || category === 'deadline') conds.push('event_type.eq.deadline_ok_l3')
+  } else if (status === 'exceeded') {
+    conds.push('event_type.like.budget_exceeded%')
+  } else if (status === 'revoked') {
+    if (!category || category === 'budget') conds.push('event_type.like.budget_revoked%')
+    if (!category || category === 'deadline') conds.push('event_type.eq.deadline_revoked_l3')
+  } else if (category === 'budget') {
+    conds.push('event_type.like.budget%', 'event_type.like.master_planner%')
+  } else if (category === 'deadline') {
+    conds.push('event_type.like.deadline%')
+  }
+
+  return conds.length > 0 ? conds.join(',') : null
 }
 
 export async function getMasterPlannerHistory(
@@ -350,6 +372,7 @@ export async function getMasterPlannerHistory(
   page: number,
   level?: 'L3' | 'L2',
   status?: HistoryStatusFilter,
+  category?: HistoryCategoryFilter,
 ): Promise<MasterPlannerHistoryData> {
   const supabase = await createSupabaseServerClient()
   const offset = (page - 1) * PAGE_SIZE
@@ -365,8 +388,9 @@ export async function getMasterPlannerHistory(
   if (level) {
     query = query.eq('level', level)
   }
-  if (status) {
-    query = query.like('event_type', STATUS_FILTER_PATTERNS[status])
+  const orFilter = buildEventTypeOrFilter(status, category)
+  if (orFilter) {
+    query = query.or(orFilter)
   }
 
   const { data: rows, count } = await query
@@ -390,8 +414,9 @@ export async function getMasterPlannerHistory(
     if (level) {
       tailQuery = tailQuery.eq('level', level)
     }
-    if (status) {
-      tailQuery = tailQuery.like('event_type', STATUS_FILTER_PATTERNS[status])
+    const tailOrFilter = buildEventTypeOrFilter(status, category)
+    if (tailOrFilter) {
+      tailQuery = tailQuery.or(tailOrFilter)
     }
 
     const { data: tailRows } = await tailQuery

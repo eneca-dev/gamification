@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { ChevronDown, ChevronUp, ExternalLink, XCircle, Briefcase, Building2, Heart, Trophy, Award, ShoppingBag, Tag, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ChevronDown, ChevronUp, ExternalLink, XCircle, Briefcase, Building2, Heart, Trophy, Award, ShoppingBag, Tag, ArrowUpRight, ArrowDownLeft, Check } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import { CoinIcon } from '@/components/CoinIcon'
@@ -14,7 +14,7 @@ interface BonusTaskItem {
   dateClosed?: string
 }
 
-interface TransactionItem {
+export interface TransactionItem {
   id: string
   event_type: string
   source: string
@@ -33,6 +33,11 @@ interface TransactionItem {
 
 interface TransactionsListProps {
   items: TransactionItem[]
+  currentSort?: string
+  sortHref?: string
+  isPending?: boolean
+  onNavigate?: (url: string) => void
+  showId?: boolean
 }
 
 interface SourceConfig {
@@ -60,8 +65,26 @@ function getSourceConfig(source: string): SourceConfig {
   }
 }
 
-export function TransactionsList({ items }: TransactionsListProps) {
+export function TransactionsList({ items, currentSort, sortHref, isPending = false, onNavigate, showId = false }: TransactionsListProps) {
+  const [rotated, setRotated] = useState(currentSort === 'date_asc')
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  function handleCopyId(id: string) {
+    navigator.clipboard.writeText(id)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(prev => prev === id ? null : prev), 2500)
+  }
+
+  useEffect(() => {
+    setRotated(currentSort === 'date_asc')
+  }, [currentSort])
+
+  const handleSortClick = () => {
+    if (!sortHref || !onNavigate) return
+    setRotated(r => !r)
+    onNavigate(sortHref)
+  }
 
   function toggleExpanded(id: string) {
     setExpandedIds((prev) => {
@@ -99,17 +122,39 @@ export function TransactionsList({ items }: TransactionsListProps) {
         >
           Тип
         </div>
-        <div
-          className="w-24 flex-shrink-0 text-[13px] font-bold uppercase"
-          style={{ color: 'var(--apex-text-muted)' }}
-        >
-          Дата
-        </div>
+        {sortHref ? (
+          <button
+            onClick={handleSortClick}
+            className="w-24 flex-shrink-0 inline-flex items-center gap-1 text-[13px] font-bold uppercase cursor-pointer hover:opacity-70 transition-opacity"
+            style={{ color: 'var(--apex-text-muted)' }}
+          >
+            Дата
+            <span
+              style={{
+                fontSize: '14px',
+                lineHeight: 1,
+                fontWeight: 100,
+                display: 'inline-block',
+                transform: rotated ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.3s ease',
+              }}
+            >⇅</span>
+          </button>
+        ) : (
+          <div
+            className="w-24 flex-shrink-0 text-[13px] font-bold uppercase"
+            style={{ color: 'var(--apex-text-muted)' }}
+          >
+            Дата
+          </div>
+        )}
         <div className="w-24 flex-shrink-0 flex items-center justify-start">
           <CoinIcon size={18} />
         </div>
       </div>
-      {items.map((tx) => {
+      {isPending ? (
+        <TransactionsListSkeleton />
+      ) : items.map((tx, idx) => {
         const isNegative = tx.coins < 0
         const isZero = tx.coins === 0
 
@@ -145,7 +190,22 @@ export function TransactionsList({ items }: TransactionsListProps) {
             : null
 
         return (
-          <div key={tx.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
+          <div key={idx} className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
+            {showId && (
+              <button
+                type="button"
+                title={`${tx.id} — нажмите для копирования`}
+                onClick={() => handleCopyId(tx.id)}
+                className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer"
+                style={{
+                  background: copiedId === tx.id ? 'var(--apex-primary-bg)' : 'var(--apex-bg)',
+                  border: `1px solid ${copiedId === tx.id ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
+                  color: copiedId === tx.id ? 'var(--apex-primary)' : 'var(--apex-text-muted)',
+                }}
+              >
+                {copiedId === tx.id ? <Check size={10} /> : '#'}
+              </button>
+            )}
             <div className="relative flex-shrink-0">
               <div
                 className="w-9 h-9 rounded-xl flex items-center justify-center text-center text-lg leading-none"
@@ -315,6 +375,31 @@ export function TransactionsList({ items }: TransactionsListProps) {
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function TransactionsListSkeleton() {
+  return (
+    <div className="space-y-1">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
+          <div className="w-9 h-9 rounded-xl flex-shrink-0 animate-pulse" style={{ background: '#E5E7EB' }} />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3 w-48 rounded animate-pulse" style={{ background: '#E5E7EB' }} />
+            <div className="h-2.5 w-24 rounded animate-pulse" style={{ background: '#E5E7EB' }} />
+          </div>
+          <div className="hidden md:block w-32 flex-shrink-0">
+            <div className="h-5 w-20 rounded-full animate-pulse" style={{ background: '#E5E7EB' }} />
+          </div>
+          <div className="hidden md:block w-24 flex-shrink-0">
+            <div className="h-3 w-16 rounded animate-pulse" style={{ background: '#E5E7EB' }} />
+          </div>
+          <div className="w-24 flex-shrink-0 flex justify-start">
+            <div className="h-3 w-12 rounded animate-pulse" style={{ background: '#E5E7EB' }} />
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

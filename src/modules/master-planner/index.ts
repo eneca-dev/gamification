@@ -1,5 +1,5 @@
 export { getMasterPlannerPanel, getMasterPlannerHistory, getAllPendingTasks, getAllDeadlinePendingTasks } from './queries'
-export type { HistoryStatusFilter } from './queries'
+export type { HistoryStatusFilter, HistoryCategoryFilter } from './queries'
 
 export type {
   MasterPlannerPanelData,

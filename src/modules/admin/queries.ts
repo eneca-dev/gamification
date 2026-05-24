@@ -5,7 +5,7 @@ import type {
   RankingSettingRow, GratitudeSettingRow,
   CalendarHolidayRow, CalendarWorkdayRow,
   EconomyFilters, EconomyOverview, TopSource, TopLevel, TopRow, CategoryRow,
-  EconomyPeriodPreset,
+  EconomyPeriodPreset, DepartmentGroupRow, LowBalanceUser,
 } from './types'
 
 // gamification_balances — связь 1:1, но Supabase может вернуть объект или массив
@@ -241,6 +241,100 @@ export async function getEconomyCategoryBreakdown(
   })
   if (error) throw new Error(error.message)
   return (data ?? []) as CategoryRow[]
+}
+
+export async function getDepartmentGroups(): Promise<DepartmentGroupRow[]> {
+  const supabase = createSupabaseAdminClient()
+  const { data, error } = await supabase
+    .from('admin_department_groups')
+    .select('department, group_type')
+  if (error) throw new Error(error.message)
+  return (data ?? []) as DepartmentGroupRow[]
+}
+
+export async function getAllDepartments(): Promise<string[]> {
+  const supabase = createSupabaseAdminClient()
+  const { data, error } = await supabase
+    .from('ws_users')
+    .select('department')
+    .eq('is_active', true)
+    .not('department', 'is', null)
+  if (error) throw new Error(error.message)
+  const all = (data ?? []).map((u) => u.department as string)
+  return [...new Set(all)].sort()
+}
+
+const GRATITUDE_ACH_TYPES = ['ach_gratitude_help', 'ach_gratitude_mentoring', 'ach_gratitude_quality'] as const
+const GRATITUDE_ACH_COINS = 200
+
+// Излишек монет за дублирующиеся достижения за благодарности у бета-пользователей.
+// Для каждого бета-юзера: если достижений >= 1, считаем только 1. Излишек = (count - 1) × 200.
+// Возвращает Record<userId, excessCoins> — только пользователи с излишком > 0.
+export async function getGratitudeAchievementExcess(filters: EconomyFilters): Promise<Record<string, number>> {
+  const supabase = createSupabaseAdminClient()
+
+  const { data: betaUsers, error: betaErr } = await supabase
+    .from('ws_users')
+    .select('id')
+    .eq('is_beta_tester', true)
+    .eq('is_active', true)
+  if (betaErr) throw new Error(betaErr.message)
+
+  const betaIds = (betaUsers ?? []).map((u) => u.id)
+  if (betaIds.length === 0) return {}
+
+  let query = supabase
+    .from('view_user_transactions')
+    .select('user_id')
+    .in('event_type', GRATITUDE_ACH_TYPES)
+    .in('user_id', betaIds)
+
+  if (filters.from) query = query.gte('created_at', filters.from)
+  if (filters.to) query = query.lte('created_at', filters.to)
+
+  const { data, error } = await query
+  if (error) throw new Error(error.message)
+
+  const countByUser = new Map<string, number>()
+  for (const row of data ?? []) {
+    countByUser.set(row.user_id, (countByUser.get(row.user_id) ?? 0) + 1)
+  }
+
+  const result: Record<string, number> = {}
+  for (const [userId, count] of countByUser.entries()) {
+    if (count > 1) result[userId] = (count - 1) * GRATITUDE_ACH_COINS
+  }
+  return result
+}
+
+export async function getUsersSortedByBalance(betaOnly: boolean): Promise<LowBalanceUser[]> {
+  const supabase = createSupabaseAdminClient()
+
+  let query = supabase
+    .from('ws_users')
+    .select('id, first_name, last_name, email, department, team, is_beta_tester, gamification_balances(total_coins)')
+    .eq('is_active', true)
+    .not('team', 'eq', 'Декретный')
+
+  if (betaOnly) query = query.eq('is_beta_tester', true)
+
+  const { data, error } = await query
+  if (error) throw new Error(error.message)
+
+  const users = (data ?? []).map((row) => ({
+    id: row.id,
+    first_name: row.first_name,
+    last_name: row.last_name,
+    email: row.email,
+    department: row.department as string | null,
+    team: row.team as string | null,
+    is_beta_tester: row.is_beta_tester,
+    total_coins: extractCoins(row.gamification_balances),
+    group_type: null as 'designer' | 'non_designer' | null,
+  }))
+
+  users.sort((a, b) => a.total_coins - b.total_coins)
+  return users
 }
 
 // YYYY-MM-DD → ISO начало дня (UTC). Возвращает null для невалидной даты
