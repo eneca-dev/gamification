@@ -1,9 +1,11 @@
-/** Маппинг pathname → pageSlug тура */
+/** Маппинг pathname (+ опционально search) → pageSlug тура */
 export const PAGE_SLUG_MAP: Record<string, string> = {
   '/': 'dashboard',
   '/achievements': 'achievements',
   '/store': 'store',
   '/activity': 'activity',
+  '/activity?feed=dept': 'activity-dept',
+  '/activity?feed=team': 'activity-team',
   '/admin': 'admin',
   '/admin/users': 'admin-users',
   '/admin/products': 'admin-products',
@@ -17,8 +19,15 @@ export const PAGE_SLUG_MAP: Record<string, string> = {
   '/master-planner': 'master-planner',
 }
 
-/** Точное совпадение pathname → slug. Используется для автозапуска. */
-export function getPageSlug(pathname: string): string | null {
+/**
+ * Точное совпадение pathname (+ search) → slug.
+ * Более специфичный ключ (с search) имеет приоритет над базовым pathname.
+ */
+export function getPageSlug(pathname: string, search?: string): string | null {
+  if (search) {
+    const full = `${pathname}${search}`
+    if (PAGE_SLUG_MAP[full]) return PAGE_SLUG_MAP[full]
+  }
   return PAGE_SLUG_MAP[pathname] ?? null
 }
 
