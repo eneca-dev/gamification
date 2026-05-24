@@ -2,7 +2,7 @@ export {
   getEventTypes, getRankingSettings, getGratitudeSettings, getUsers, getUserDetail, getOrders,
   getCalendarHolidays, getCalendarWorkdays, getUsersLight,
   getEconomyOverview, getEconomyTop, getEconomyCategoryBreakdown, resolveEconomyPeriod,
-  getDepartmentGroups, getAllDepartments, getLowBalanceUsers,
+  getDepartmentGroups, getAllDepartments, getUsersSortedByBalance,
 } from './queries'
 export {
   updateEventType, updateRankingSetting, updateGratitudeSetting,

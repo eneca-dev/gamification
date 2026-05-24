@@ -36,6 +36,7 @@ interface EconomyDashboardProps {
     revoked: TopRow[]
   }
   lowBalance: LowBalanceUser[]
+  lowBalanceTotalCount: number
   allDepartments: string[]
   deptGroups: DepartmentGroupRow[]
 }
@@ -52,6 +53,7 @@ export function EconomyDashboard({
   rate,
   tops,
   lowBalance,
+  lowBalanceTotalCount,
   allDepartments,
   deptGroups,
 }: EconomyDashboardProps) {
@@ -74,7 +76,7 @@ export function EconomyDashboard({
       <LowBalanceSection
         users={lowBalance}
         designerFilter={designerFilter}
-        totalCount={lowBalance.length}
+        totalCount={lowBalanceTotalCount}
       />
 
       <DepartmentGroupsManager departments={allDepartments} initialGroups={deptGroups} />

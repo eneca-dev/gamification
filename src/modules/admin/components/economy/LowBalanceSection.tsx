@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useTransition } from 'react'
 
@@ -66,6 +67,7 @@ export function LowBalanceSection({ users, designerFilter, totalCount }: LowBala
           </h2>
           <p className="text-[12px] mt-0.5" style={{ color: 'var(--apex-text-muted)' }}>
             Нижние 10% по балансу кристаллов — {totalCount} чел.
+            {designerFilter !== 'all' && ` · показано ${users.length}`}
           </p>
         </div>
         <div className="flex gap-1">
@@ -87,10 +89,17 @@ export function LowBalanceSection({ users, designerFilter, totalCount }: LowBala
       >
         {users.length === 0 ? (
           <div
-            className="px-5 py-8 text-center text-[13px]"
+            className="px-5 py-8 text-center text-[13px] space-y-1"
             style={{ color: 'var(--apex-text-muted)' }}
           >
-            Нет данных по выбранному фильтру
+            <div>
+              {designerFilter !== 'all' && totalCount > 0
+                ? `Среди нижних 10% (${totalCount} чел.) нет сотрудников из ${designerFilter === 'designer' ? 'проектировщиков' : 'непроектировщиков'}`
+                : 'Нет данных'}
+            </div>
+            {designerFilter !== 'all' && totalCount > 0 && (
+              <div className="text-[12px]">Попробуйте настроить группировку отделов ниже или переключиться на «Все»</div>
+            )}
           </div>
         ) : (
           <table className="w-full text-[13px]">
@@ -144,9 +153,13 @@ export function LowBalanceSection({ users, designerFilter, totalCount }: LowBala
                     {idx + 1}
                   </td>
                   <td className="px-4 py-2.5" style={{ color: 'var(--apex-text)' }}>
-                    <span className="font-medium">
+                    <Link
+                      href={`/admin/users/${user.id}`}
+                      className="font-medium hover:underline"
+                      style={{ color: 'var(--apex-text)' }}
+                    >
                       {user.last_name} {user.first_name}
-                    </span>
+                    </Link>
                     {user.is_beta_tester && (
                       <span
                         className="ml-2 text-[11px] px-1.5 py-0.5 rounded-full font-medium"

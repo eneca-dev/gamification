@@ -6,7 +6,7 @@ import {
   getEconomyOverview,
   getEconomyTop,
   resolveEconomyPeriod,
-  getLowBalanceUsers,
+  getUsersSortedByBalance,
   getDepartmentGroups,
   getAllDepartments,
 } from '@/modules/admin'
@@ -68,7 +68,7 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
     paidGratitudeTop,
     revokedTop,
     rate,
-    lowBalanceRaw,
+    sortedUsers,
     deptGroups,
     allDepartments,
   ] = await Promise.all([
@@ -81,23 +81,26 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
     getEconomyTop(filters, 'paid_gratitude', topLevel),
     getEconomyTop(filters, 'revoked', topLevel),
     getCurrentRate(),
-    getLowBalanceUsers(betaOnly),
+    getUsersSortedByBalance(betaOnly),
     getDepartmentGroups(),
     getAllDepartments(),
   ])
 
-  // Обогащаем низкобалансовых пользователей группой отдела
+  // Обогащаем пользователей группой отдела
   const deptGroupMap = new Map(deptGroups.map((g) => [g.department, g.group_type]))
-  const lowBalanceWithGroups = lowBalanceRaw.map((u) => ({
+  const allWithGroups = sortedUsers.map((u) => ({
     ...u,
     group_type: u.department ? (deptGroupMap.get(u.department) ?? 'non_designer' as const) : null,
   }))
 
-  // Применяем фильтр по группе дизайнеров
-  const lowBalance =
+  // Формируем пул: сначала фильтр по группе, потом берём нижние 10%
+  const pool =
     designerFilter === 'all'
-      ? lowBalanceWithGroups
-      : lowBalanceWithGroups.filter((u) => u.group_type === designerFilter)
+      ? allWithGroups
+      : allWithGroups.filter((u) => u.group_type === designerFilter)
+
+  const bottomCount = Math.max(1, Math.ceil(pool.length * 0.1))
+  const lowBalance = pool.slice(0, bottomCount)
 
   return (
     <EconomyDashboard
@@ -119,6 +122,7 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
         revoked: revokedTop,
       }}
       lowBalance={lowBalance}
+      lowBalanceTotalCount={pool.length}
       allDepartments={allDepartments}
       deptGroups={deptGroups}
     />

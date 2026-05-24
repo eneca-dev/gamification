@@ -264,7 +264,7 @@ export async function getAllDepartments(): Promise<string[]> {
   return [...new Set(all)].sort()
 }
 
-export async function getLowBalanceUsers(betaOnly: boolean): Promise<LowBalanceUser[]> {
+export async function getUsersSortedByBalance(betaOnly: boolean): Promise<LowBalanceUser[]> {
   const supabase = createSupabaseAdminClient()
 
   let query = supabase
@@ -291,8 +291,7 @@ export async function getLowBalanceUsers(betaOnly: boolean): Promise<LowBalanceU
   }))
 
   users.sort((a, b) => a.total_coins - b.total_coins)
-  const count = Math.max(1, Math.ceil(users.length * 0.1))
-  return users.slice(0, count)
+  return users
 }
 
 // YYYY-MM-DD → ISO начало дня (UTC). Возвращает null для невалидной даты

@@ -26,6 +26,8 @@ import {
   getWorkdays,
   getWsStreakData,
   getRevitStreakData,
+  getGridRange,
+  buildCalendarDays,
 } from "@/modules/streak-panel";
 import { getActiveAlarms } from "@/modules/alarms";
 import { getMyGratitudesNew, getSenderQuota, getGratitudeRecipients, getUserBalance } from "@/modules/gratitudes";
@@ -35,94 +37,13 @@ import { getMasterPlannerPanel } from "@/modules/master-planner";
 import { MasterPlannerPanel } from "@/modules/master-planner/components/MasterPlannerPanel";
 import { getContestWinners } from "@/modules/contests";
 import { GratitudeWidget } from "@/modules/gratitudes/components/GratitudeWidget";
-import type { CalendarDay, CalendarDayStatus, RedReason, StreakPanelData } from "@/modules/streak-panel";
+import type { RedReason, StreakPanelData } from "@/modules/streak-panel";
 
 const DEPT_COLORS = [
   "#e91e63", "#2196f3", "#ff9800", "#4caf50", "#9c27b0",
   "#00bcd4", "#795548", "#607d8b", "#f44336", "#3f51b5",
   "#8bc34a", "#ff5722", "#009688", "#673ab7", "#ffc107",
 ];
-
-function toIsoDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-// Границы грида: 4 месяца по двухмесячным блокам
-// Янв-Фев → Дек-Мар, Мар-Апр → Фев-Май, Май-Июн → Апр-Июл, и т.д.
-function getGridRange(): { rangeStart: string; rangeEnd: string } {
-  const now = new Date();
-  const startMonth = Math.floor((now.getMonth()) / 2) * 2; // 0-indexed, округлён к паре
-  const rangeStart = new Date(now.getFullYear(), startMonth - 1, 1);
-  const rangeEnd = new Date(now.getFullYear(), startMonth + 3, 0); // последний день startMonth+2
-  return { rangeStart: toIsoDate(rangeStart), rangeEnd: toIsoDate(rangeEnd) };
-}
-
-// Сборка календарных дней для грида (4 месяца)
-function buildCalendarDays(
-  rangeStart: string,
-  rangeEnd: string,
-  statusMap: Map<string, { status: string; absence_type: string | null; red_reasons: RedReason[] | null }>,
-  automationDates: Set<string>,
-  holidays: Set<string>,
-  workdays: Set<string>,
-): CalendarDay[] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const days: CalendarDay[] = [];
-  const start = new Date(rangeStart + "T00:00:00");
-  const end = new Date(rangeEnd + "T00:00:00");
-
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const dateStr = toIsoDate(d);
-    const dow = d.getDay();
-    const isWeekend = dow === 0 || dow === 6;
-
-    const isDayOff = (isWeekend && !workdays.has(dateStr)) || (!isWeekend && holidays.has(dateStr));
-    if (isDayOff) {
-      days.push({ date: dateStr, status: "gray", automation: false });
-      continue;
-    }
-
-    const isFuture = d > today;
-    if (isFuture) {
-      days.push({ date: dateStr, status: "future", automation: false });
-      continue;
-    }
-
-    const row = statusMap.get(dateStr);
-    if (!row) {
-      days.push({ date: dateStr, status: "no_data", automation: automationDates.has(dateStr) });
-      continue;
-    }
-
-    let uiStatus: CalendarDayStatus;
-    let absenceType: string | null = null;
-    let redReasons: RedReason[] | null = null;
-
-    if (row.status === "green") {
-      uiStatus = "green";
-    } else if (row.status === "red") {
-      uiStatus = "red";
-      redReasons = row.red_reasons;
-    } else if (row.status === "absent") {
-      uiStatus = "frozen";
-      absenceType = row.absence_type;
-    } else {
-      uiStatus = "no_data";
-    }
-
-    days.push({
-      date: dateStr,
-      status: uiStatus,
-      automation: automationDates.has(dateStr) && uiStatus !== "frozen",
-      absenceType,
-      redReasons,
-    });
-  }
-
-  return days;
-}
 
 export default async function DashboardPage() {
   const currentUser = await getCurrentUser();

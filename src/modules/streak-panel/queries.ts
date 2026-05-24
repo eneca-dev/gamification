@@ -1,7 +1,85 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { cached, CACHE_5M } from '@/lib/server-cache'
 
-import type { DayStatusRow, StreakMilestone, WsStreakData, RevitStreakData } from './types'
+import type { DayStatusRow, StreakMilestone, WsStreakData, RevitStreakData, CalendarDay, CalendarDayStatus, RedReason } from './types'
+
+function toIsoDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+export function getGridRange(): { rangeStart: string; rangeEnd: string } {
+  const now = new Date()
+  const startMonth = Math.floor(now.getMonth() / 2) * 2
+  const rangeStart = new Date(now.getFullYear(), startMonth - 1, 1)
+  const rangeEnd = new Date(now.getFullYear(), startMonth + 3, 0)
+  return { rangeStart: toIsoDate(rangeStart), rangeEnd: toIsoDate(rangeEnd) }
+}
+
+export function buildCalendarDays(
+  rangeStart: string,
+  rangeEnd: string,
+  statusMap: Map<string, { status: string; absence_type: string | null; red_reasons: RedReason[] | null }>,
+  automationDates: Set<string>,
+  holidays: Set<string>,
+  workdays: Set<string>,
+): CalendarDay[] {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const days: CalendarDay[] = []
+  const start = new Date(rangeStart + 'T00:00:00')
+  const end = new Date(rangeEnd + 'T00:00:00')
+
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dateStr = toIsoDate(d)
+    const dow = d.getDay()
+    const isWeekend = dow === 0 || dow === 6
+
+    const isDayOff = (isWeekend && !workdays.has(dateStr)) || (!isWeekend && holidays.has(dateStr))
+    if (isDayOff) {
+      days.push({ date: dateStr, status: 'gray', automation: false })
+      continue
+    }
+
+    const isFuture = d > today
+    if (isFuture) {
+      days.push({ date: dateStr, status: 'future', automation: false })
+      continue
+    }
+
+    const row = statusMap.get(dateStr)
+    if (!row) {
+      days.push({ date: dateStr, status: 'no_data', automation: automationDates.has(dateStr) })
+      continue
+    }
+
+    let uiStatus: CalendarDayStatus
+    let absenceType: string | null = null
+    let redReasons: RedReason[] | null = null
+
+    if (row.status === 'green') {
+      uiStatus = 'green'
+    } else if (row.status === 'red') {
+      uiStatus = 'red'
+      redReasons = row.red_reasons
+    } else if (row.status === 'absent') {
+      uiStatus = 'frozen'
+      absenceType = row.absence_type
+    } else {
+      uiStatus = 'no_data'
+    }
+
+    days.push({
+      date: dateStr,
+      status: uiStatus,
+      automation: automationDates.has(dateStr) && uiStatus !== 'frozen',
+      absenceType,
+      redReasons,
+    })
+  }
+
+  return days
+}
 
 // --- Внутренние функции (без кэша) ---
 
