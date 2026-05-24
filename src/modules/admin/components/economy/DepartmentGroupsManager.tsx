@@ -129,6 +129,7 @@ export function DepartmentGroupsManager({
   departments,
   initialGroups,
 }: DepartmentGroupsManagerProps) {
+  const [isOpen, setIsOpen] = useState(false)
   const [groupMap, setGroupMap] = useState<GroupMap>(() => {
     const m = new Map<string, GroupType>()
     for (const dept of departments) m.set(dept, 'non_designer')
@@ -175,47 +176,66 @@ export function DepartmentGroupsManager({
 
   return (
     <section className="space-y-3">
-      <div>
-        <h2 className="text-[14px] font-bold" style={{ color: 'var(--apex-text)' }}>
-          Группировка отделов
-        </h2>
-        <p className="text-[12px] mt-0.5" style={{ color: 'var(--apex-text-muted)' }}>
-          Перетащите отдел между группами — настройка применяется к фильтрации группы риска
-        </p>
-      </div>
-
-      <div
-        className={`rounded-2xl p-4 transition-opacity ${isPending ? 'opacity-80' : ''}`}
-        style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
+      <button
+        onClick={() => setIsOpen((v) => !v)}
+        className="flex items-center justify-between w-full text-left px-3 py-2.5 rounded-xl transition-colors"
+        style={{ background: 'transparent' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--apex-surface)' }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
       >
-        <div className="flex gap-4">
-          <DropZone
-            group="designer"
-            label="Проектировщики"
-            departments={designers}
-            onDrop={(e) => handleDrop(e, 'designer')}
-            isDragOver={dragOverGroup === 'designer'}
-            onDragOver={(e) => handleDragOver(e, 'designer')}
-            onDragLeave={() => setDragOverGroup(null)}
-            onMoveChip={(dept) => moveDept(dept, 'designer')}
-            onChipDragStart={(dept) => setDragItem(dept)}
-            pendingDept={pendingDept}
-          />
-          <div className="w-px self-stretch" style={{ background: 'var(--apex-border)' }} />
-          <DropZone
-            group="non_designer"
-            label="Непроектировщики"
-            departments={nonDesigners}
-            onDrop={(e) => handleDrop(e, 'non_designer')}
-            isDragOver={dragOverGroup === 'non_designer'}
-            onDragOver={(e) => handleDragOver(e, 'non_designer')}
-            onDragLeave={() => setDragOverGroup(null)}
-            onMoveChip={(dept) => moveDept(dept, 'non_designer')}
-            onChipDragStart={(dept) => setDragItem(dept)}
-            pendingDept={pendingDept}
-          />
+        <div>
+          <h2 className="text-[14px] font-bold" style={{ color: 'var(--apex-text)' }}>
+            Группировка отделов
+          </h2>
+          <p className="text-[12px] mt-0.5" style={{ color: 'var(--apex-text-muted)' }}>
+            Перетащите отдел между группами — настройка применяется к фильтрации группы риска
+          </p>
         </div>
-      </div>
+        <span
+          className="text-[24px] leading-none transition-transform duration-200 ml-3 shrink-0"
+          style={{
+            color: 'var(--apex-text-muted)',
+            transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+          }}
+        >
+          ›
+        </span>
+      </button>
+
+      {isOpen && (
+        <div
+          className={`rounded-2xl p-4 transition-opacity ${isPending ? 'opacity-80' : ''}`}
+          style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
+        >
+          <div className="flex gap-4">
+            <DropZone
+              group="designer"
+              label="Проектировщики"
+              departments={designers}
+              onDrop={(e) => handleDrop(e, 'designer')}
+              isDragOver={dragOverGroup === 'designer'}
+              onDragOver={(e) => handleDragOver(e, 'designer')}
+              onDragLeave={() => setDragOverGroup(null)}
+              onMoveChip={(dept) => moveDept(dept, 'designer')}
+              onChipDragStart={(dept) => setDragItem(dept)}
+              pendingDept={pendingDept}
+            />
+            <div className="w-px self-stretch" style={{ background: 'var(--apex-border)' }} />
+            <DropZone
+              group="non_designer"
+              label="Непроектировщики"
+              departments={nonDesigners}
+              onDrop={(e) => handleDrop(e, 'non_designer')}
+              isDragOver={dragOverGroup === 'non_designer'}
+              onDragOver={(e) => handleDragOver(e, 'non_designer')}
+              onDragLeave={() => setDragOverGroup(null)}
+              onMoveChip={(dept) => moveDept(dept, 'non_designer')}
+              onChipDragStart={(dept) => setDragItem(dept)}
+              pendingDept={pendingDept}
+            />
+          </div>
+        </div>
+      )}
     </section>
   )
 }

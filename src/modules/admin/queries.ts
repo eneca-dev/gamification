@@ -264,6 +264,49 @@ export async function getAllDepartments(): Promise<string[]> {
   return [...new Set(all)].sort()
 }
 
+const GRATITUDE_ACH_TYPES = ['ach_gratitude_help', 'ach_gratitude_mentoring', 'ach_gratitude_quality'] as const
+const GRATITUDE_ACH_COINS = 200
+
+// Излишек монет за дублирующиеся достижения за благодарности у бета-пользователей.
+// Для каждого бета-юзера: если достижений >= 1, считаем только 1. Излишек = (count - 1) × 200.
+// Возвращает Record<userId, excessCoins> — только пользователи с излишком > 0.
+export async function getGratitudeAchievementExcess(filters: EconomyFilters): Promise<Record<string, number>> {
+  const supabase = createSupabaseAdminClient()
+
+  const { data: betaUsers, error: betaErr } = await supabase
+    .from('ws_users')
+    .select('id')
+    .eq('is_beta_tester', true)
+    .eq('is_active', true)
+  if (betaErr) throw new Error(betaErr.message)
+
+  const betaIds = (betaUsers ?? []).map((u) => u.id)
+  if (betaIds.length === 0) return {}
+
+  let query = supabase
+    .from('view_user_transactions')
+    .select('user_id')
+    .in('event_type', GRATITUDE_ACH_TYPES)
+    .in('user_id', betaIds)
+
+  if (filters.from) query = query.gte('created_at', filters.from)
+  if (filters.to) query = query.lte('created_at', filters.to)
+
+  const { data, error } = await query
+  if (error) throw new Error(error.message)
+
+  const countByUser = new Map<string, number>()
+  for (const row of data ?? []) {
+    countByUser.set(row.user_id, (countByUser.get(row.user_id) ?? 0) + 1)
+  }
+
+  const result: Record<string, number> = {}
+  for (const [userId, count] of countByUser.entries()) {
+    if (count > 1) result[userId] = (count - 1) * GRATITUDE_ACH_COINS
+  }
+  return result
+}
+
 export async function getUsersSortedByBalance(betaOnly: boolean): Promise<LowBalanceUser[]> {
   const supabase = createSupabaseAdminClient()
 

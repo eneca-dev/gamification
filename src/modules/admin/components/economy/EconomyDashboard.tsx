@@ -24,6 +24,7 @@ interface EconomyDashboardProps {
   betaOnly: boolean
   topLevel: TopLevel
   designerFilter: DesignerFilter
+  capGratitudeAch: boolean
   overview: EconomyOverview
   categories: CategoryRow[]
   rate: number
@@ -49,6 +50,7 @@ export function EconomyDashboard({
   betaOnly,
   topLevel,
   designerFilter,
+  capGratitudeAch,
   overview,
   categories,
   rate,
@@ -67,6 +69,7 @@ export function EconomyDashboard({
         customTo={customTo}
         betaOnly={betaOnly}
         topLevel={topLevel}
+        capGratitudeAch={capGratitudeAch}
       />
 
       <KpiSummary overview={overview} rate={rate} />

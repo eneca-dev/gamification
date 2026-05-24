@@ -9,10 +9,42 @@ import {
   getUsersSortedByBalance,
   getDepartmentGroups,
   getAllDepartments,
+  getGratitudeAchievementExcess,
 } from '@/modules/admin'
 import { EconomyDashboard } from '@/modules/admin/components/economy/EconomyDashboard'
 import { getCurrentRate } from '@/modules/shop'
-import type { EconomyPeriodPreset, TopLevel, DesignerFilter } from '@/modules/admin'
+import type { EconomyPeriodPreset, TopLevel, DesignerFilter, TopRow, LowBalanceUser } from '@/modules/admin'
+
+// Вычитает излишек из топа «Заработавшие» с учётом уровня группировки.
+function applyExcessToEarnedTop(
+  rows: TopRow[],
+  topLevel: TopLevel,
+  excessByUser: Record<string, number>,
+  users: LowBalanceUser[],
+): TopRow[] {
+  if (Object.keys(excessByUser).length === 0) return rows
+
+  let excessByKey: Record<string, number>
+
+  if (topLevel === 'user') {
+    excessByKey = excessByUser
+  } else {
+    // Агрегируем излишек по команде или отделу
+    excessByKey = {}
+    for (const user of users) {
+      const userExcess = excessByUser[user.id]
+      if (!userExcess) continue
+      const key = topLevel === 'team'
+        ? (user.team ?? 'Без команды')
+        : (user.department ?? 'Без отдела')
+      excessByKey[key] = (excessByKey[key] ?? 0) + userExcess
+    }
+  }
+
+  return rows
+    .map((row) => ({ ...row, value: row.value - (excessByKey[row.id] ?? 0) }))
+    .sort((a, b) => b.value - a.value)
+}
 
 interface EconomyPageProps {
   searchParams: Promise<{
@@ -22,6 +54,7 @@ interface EconomyPageProps {
     beta?: string
     topLevel?: string
     designerFilter?: string
+    capGratAch?: string
   }>
 }
 
@@ -54,12 +87,13 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
   const designerFilter: DesignerFilter = isDesignerFilter(params.designerFilter)
     ? params.designerFilter
     : 'all'
+  const capGratitudeAch = params.capGratAch === 'on'
 
   const { from, to } = resolveEconomyPeriod(period, customFrom, customTo)
   const filters = { from, to, betaOnly }
 
   const [
-    overview,
+    overviewRaw,
     categories,
     earnedTop,
     shopTop,
@@ -71,6 +105,7 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
     sortedUsers,
     deptGroups,
     allDepartments,
+    gratitudeExcess,
   ] = await Promise.all([
     getEconomyOverview(filters),
     getEconomyCategoryBreakdown(filters),
@@ -84,16 +119,35 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
     getUsersSortedByBalance(betaOnly),
     getDepartmentGroups(),
     getAllDepartments(),
+    getGratitudeAchievementExcess(filters),
   ])
 
-  // Обогащаем пользователей группой отдела
-  const deptGroupMap = new Map(deptGroups.map((g) => [g.department, g.group_type]))
-  const allWithGroups = sortedUsers.map((u) => ({
-    ...u,
-    group_type: u.department ? (deptGroupMap.get(u.department) ?? 'non_designer' as const) : null,
-  }))
+  const excessByUser = capGratitudeAch ? gratitudeExcess : {}
+  const totalExcess = Object.values(excessByUser).reduce((a, b) => a + b, 0)
 
-  // Формируем пул: сначала фильтр по группе, потом берём нижние 10%
+  // KPI: вычитаем суммарный излишек из заработанного
+  const overview = totalExcess > 0
+    ? {
+        ...overviewRaw,
+        earned: overviewRaw.earned - totalExcess,
+        factually_earned: overviewRaw.factually_earned - totalExcess,
+      }
+    : overviewRaw
+
+  // Заработавшие: корректируем с учётом уровня группировки
+  const earnedTopAdjusted = applyExcessToEarnedTop(earnedTop, topLevel, excessByUser, sortedUsers)
+
+  // Обогащаем пользователей группой отдела и вычитаем излишек из баланса
+  const deptGroupMap = new Map(deptGroups.map((g) => [g.department, g.group_type]))
+  const allWithGroups = sortedUsers
+    .map((u) => ({
+      ...u,
+      total_coins: u.total_coins - (excessByUser[u.id] ?? 0),
+      group_type: u.department ? (deptGroupMap.get(u.department) ?? 'non_designer' as const) : null,
+    }))
+    .sort((a, b) => a.total_coins - b.total_coins)  // пересортировка после коррекции
+
+  // Формируем пул: сначала фильтр по группе, потом берём нижние/верхние 10%
   const pool =
     designerFilter === 'all'
       ? allWithGroups
@@ -111,11 +165,12 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
       betaOnly={betaOnly}
       topLevel={topLevel}
       designerFilter={designerFilter}
+      capGratitudeAch={capGratitudeAch}
       overview={overview}
       categories={categories}
       rate={rate}
       tops={{
-        earned: earnedTop,
+        earned: earnedTopAdjusted,
         shop: shopTop,
         lottery: lotteryTop,
         second_life: secondLifeTop,
