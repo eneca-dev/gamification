@@ -99,8 +99,9 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
       ? allWithGroups
       : allWithGroups.filter((u) => u.group_type === designerFilter)
 
-  const bottomCount = Math.max(1, Math.ceil(pool.length * 0.1))
-  const lowBalance = pool.slice(0, bottomCount)
+  const edgeCount = Math.max(1, Math.ceil(pool.length * 0.1))
+  const lowBalance = pool.slice(0, edgeCount)
+  const highBalance = pool.slice(pool.length - edgeCount).reverse()
 
   return (
     <EconomyDashboard
@@ -122,7 +123,8 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
         revoked: revokedTop,
       }}
       lowBalance={lowBalance}
-      lowBalanceTotalCount={pool.length}
+      highBalance={highBalance}
+      poolSize={pool.length}
       allDepartments={allDepartments}
       deptGroups={deptGroups}
     />

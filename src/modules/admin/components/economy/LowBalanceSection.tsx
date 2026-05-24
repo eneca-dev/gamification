@@ -11,6 +11,9 @@ interface LowBalanceSectionProps {
   users: LowBalanceUser[]
   designerFilter: DesignerFilter
   totalCount: number
+  title: string
+  subtitle: string
+  showFilter?: boolean
 }
 
 const FILTER_OPTIONS: { value: DesignerFilter; label: string }[] = [
@@ -44,7 +47,7 @@ function FilterChip({
   )
 }
 
-export function LowBalanceSection({ users, designerFilter, totalCount }: LowBalanceSectionProps) {
+export function LowBalanceSection({ users, designerFilter, totalCount, title, subtitle, showFilter = false }: LowBalanceSectionProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -63,24 +66,26 @@ export function LowBalanceSection({ users, designerFilter, totalCount }: LowBala
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-[14px] font-bold" style={{ color: 'var(--apex-text)' }}>
-            Группа риска
+            {title}
           </h2>
           <p className="text-[12px] mt-0.5" style={{ color: 'var(--apex-text-muted)' }}>
-            Нижние 10% по балансу кристаллов — {totalCount} чел.
+            {subtitle} — {totalCount} чел.
             {designerFilter !== 'all' && ` · показано ${users.length}`}
           </p>
         </div>
-        <div className="flex gap-1">
-          {FILTER_OPTIONS.map((opt) => (
-            <FilterChip
-              key={opt.value}
-              active={designerFilter === opt.value}
-              onClick={() => handleFilter(opt.value)}
-            >
-              {opt.label}
-            </FilterChip>
-          ))}
-        </div>
+        {showFilter && (
+          <div className="flex gap-1">
+            {FILTER_OPTIONS.map((opt) => (
+              <FilterChip
+                key={opt.value}
+                active={designerFilter === opt.value}
+                onClick={() => handleFilter(opt.value)}
+              >
+                {opt.label}
+              </FilterChip>
+            ))}
+          </div>
+        )}
       </div>
 
       <div
@@ -94,7 +99,7 @@ export function LowBalanceSection({ users, designerFilter, totalCount }: LowBala
           >
             <div>
               {designerFilter !== 'all' && totalCount > 0
-                ? `Среди нижних 10% (${totalCount} чел.) нет сотрудников из ${designerFilter === 'designer' ? 'проектировщиков' : 'непроектировщиков'}`
+                ? `Среди 10% (${totalCount} чел.) нет сотрудников из ${designerFilter === 'designer' ? 'проектировщиков' : 'непроектировщиков'}`
                 : 'Нет данных'}
             </div>
             {designerFilter !== 'all' && totalCount > 0 && (

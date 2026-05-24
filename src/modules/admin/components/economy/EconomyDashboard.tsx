@@ -36,7 +36,8 @@ interface EconomyDashboardProps {
     revoked: TopRow[]
   }
   lowBalance: LowBalanceUser[]
-  lowBalanceTotalCount: number
+  highBalance: LowBalanceUser[]
+  poolSize: number
   allDepartments: string[]
   deptGroups: DepartmentGroupRow[]
 }
@@ -53,7 +54,8 @@ export function EconomyDashboard({
   rate,
   tops,
   lowBalance,
-  lowBalanceTotalCount,
+  highBalance,
+  poolSize,
   allDepartments,
   deptGroups,
 }: EconomyDashboardProps) {
@@ -76,7 +78,18 @@ export function EconomyDashboard({
       <LowBalanceSection
         users={lowBalance}
         designerFilter={designerFilter}
-        totalCount={lowBalanceTotalCount}
+        totalCount={poolSize}
+        title="Группа риска"
+        subtitle="Нижние 10% по балансу кристаллов"
+        showFilter
+      />
+
+      <LowBalanceSection
+        users={highBalance}
+        designerFilter={designerFilter}
+        totalCount={poolSize}
+        title="Самые богатые"
+        subtitle="Топ 10% по балансу кристаллов"
       />
 
       <DepartmentGroupsManager departments={allDepartments} initialGroups={deptGroups} />
