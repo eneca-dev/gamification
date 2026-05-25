@@ -356,3 +356,25 @@ export async function deleteCalendarWorkday(
   revalidatePath('/admin/calendar')
   return { success: true }
 }
+
+export async function updateDepartmentGroup(
+  department: string,
+  groupType: 'designer' | 'non_designer',
+): Promise<{ success: true } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  if (!department || !['designer', 'non_designer'].includes(groupType)) {
+    return { success: false, error: 'Невалидные данные' }
+  }
+
+  const supabase = createSupabaseAdminClient()
+  const { error } = await supabase
+    .from('admin_department_groups')
+    .upsert({ department, group_type: groupType })
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/admin/economy')
+  return { success: true }
+}

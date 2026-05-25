@@ -82,7 +82,7 @@ async function _getUserTransactions(
 
   let query = supabase
     .from('view_user_transactions')
-    .select('event_date, event_type, source, coins, description, details, created_at')
+    .select('transaction_id, event_date, event_type, source, coins, description, details, created_at')
     .eq('user_email', normalizedEmail)
 
   if (source && source !== 'all') {
@@ -412,7 +412,7 @@ async function _getUserTransactions(
     const enriched = enrichTransaction(eventType, row.description as string, details, redReasons, product?.name, taskUrl, budgetTaskInfo, senderName, recipientName)
 
     return {
-      id: `${row.created_at}-${i}`,
+      id: row.transaction_id as string,
       event_type: eventType,
       source: row.source as string,
       event_date: row.event_date as string,
@@ -717,6 +717,24 @@ function enrichTransaction(
       return {
         description: 'Задача переоткрыта — бонус за срок отозван (ранее начисленные 💎 аннулированы):',
         inlineLink: name ? { text: name, url: taskUrl } : undefined,
+      }
+    }
+    case 'ach_personal': {
+      const areaLabels: Record<string, string> = { revit: 'Revit', ws: 'Worksection' }
+      const area = details?.area as string | undefined
+      const areaLabel = area ? (areaLabels[area] ?? area) : null
+      return {
+        description: areaLabel ? `Личное достижение: топ-10 в рейтинге ${areaLabel}` : defaultDesc,
+      }
+    }
+    case 'ach_department': {
+      const areaLabels: Record<string, string> = { revit: 'Revit', ws: 'Worksection' }
+      const area = details?.area as string | undefined
+      const department = details?.department as string | undefined
+      const areaLabel = area ? (areaLabels[area] ?? area) : null
+      const deptLabel = department ? ` (отдел ${department})` : ''
+      return {
+        description: areaLabel ? `Достижение отдела: топ-5 в рейтинге ${areaLabel}${deptLabel}` : defaultDesc,
       }
     }
     default: {

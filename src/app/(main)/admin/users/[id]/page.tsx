@@ -1,10 +1,25 @@
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Coins } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
-import { getUserDetail, formatTransactionReason } from '@/modules/admin'
+import { getUserDetail } from '@/modules/admin'
 import { RoleProvider, RoleBadge, RoleSwitch } from '@/modules/admin/components/RoleToggle'
-import { CoinBalance, CoinStatic } from '@/components/CoinBalance'
+import { BetaProvider, BetaSwitch } from '@/modules/admin/components/BetaToggle'
+import { CoinStatic } from '@/components/CoinBalance'
+import { StreakPanel } from '@/components/dashboard/StreakPanel'
+import { getEventIcon, getTransactionDisplayDate, getUserTransactions } from '@/modules/transactions'
+import { TransactionsList } from '@/modules/transactions/components/TransactionsList'
+import {
+  getStreakDayStatuses,
+  getAutomationDays,
+  getHolidays,
+  getWorkdays,
+  getWsStreakData,
+  getRevitStreakData,
+  getGridRange,
+  buildCalendarDays,
+} from '@/modules/streak-panel'
+import type { StreakPanelData, RedReason } from '@/modules/streak-panel'
 
 interface UserDetailPageProps {
   params: Promise<{ id: string }>
@@ -16,7 +31,31 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 
   if (!detail) notFound()
 
-  const { user, transactions } = detail
+  const { user } = detail
+
+  const { rangeStart, rangeEnd } = getGridRange()
+  const [transactions, dayStatuses, automationDates, holidays, workdays, wsStreak, revitStreak] = await Promise.all([
+    getUserTransactions(user.email, 50, 0),
+    getStreakDayStatuses(user.id, rangeStart, rangeEnd),
+    getAutomationDays(user.email, rangeStart, rangeEnd),
+    getHolidays(rangeStart, rangeEnd),
+    getWorkdays(rangeStart, rangeEnd),
+    getWsStreakData(user.id),
+    getRevitStreakData(user.id),
+  ])
+
+  const statusMap = new Map<string, { status: string; absence_type: string | null; red_reasons: RedReason[] | null }>()
+  for (const row of dayStatuses) {
+    statusMap.set(row.date, { status: row.status, absence_type: row.absence_type, red_reasons: row.red_reasons })
+  }
+  const calendarDays = buildCalendarDays(rangeStart, rangeEnd, statusMap, automationDates, holidays, workdays)
+
+  const streakPanelData: StreakPanelData = {
+    calendarDays,
+    completedCycles: wsStreak.completedCycles,
+    ws: wsStreak,
+    revit: revitStreak,
+  }
 
   return (
     <div className="space-y-5 animate-fade-in-up">
@@ -30,62 +69,60 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
         Назад к списку
       </Link>
 
-      {/* Header card */}
+      <BetaProvider userId={user.id} initialIsBeta={user.is_beta_tester}>
       <RoleProvider userId={user.id} initialIsAdmin={user.is_admin}>
-        <div
-          className="rounded-2xl p-6"
-          style={{
-            background: 'var(--apex-surface)',
-            border: '1px solid var(--apex-border)',
-          }}
-        >
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <h2
-                className="text-[20px] font-bold"
-                style={{ color: 'var(--apex-text)' }}
-              >
-                {user.last_name} {user.first_name}
-              </h2>
-              <p
-                className="text-[13px] mt-0.5"
-                style={{ color: 'var(--apex-text-muted)' }}
-              >
-                {user.email}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
+        <div className="flex gap-5 items-stretch">
+          {/* Left: same height as grid */}
+          <div
+            className="flex-1 rounded-2xl p-5 flex flex-col justify-between"
+            style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-[16px] font-bold" style={{ color: 'var(--apex-text)' }}>
+                  {user.last_name} {user.first_name}
+                </h2>
+                <p className="text-[12px] mt-0.5 break-all" style={{ color: 'var(--apex-text-muted)' }}>
+                  {user.email}
+                </p>
+              </div>
               <RoleBadge />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <InfoCard label="Баланс" accent>
+                <CoinStatic amount={user.total_coins} size="sm" />
+              </InfoCard>
+              <InfoCard label="Отдел">
+                <span className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>
+                  {user.department ?? '—'}
+                </span>
+              </InfoCard>
+              <InfoCard label="Команда">
+                <span className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>
+                  {user.team ?? '—'}
+                </span>
+              </InfoCard>
+              <InfoCard label="Роль">
+                <RoleSwitch />
+              </InfoCard>
+              <InfoCard label="Лучший стрик">
+                <span className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>
+                  {wsStreak.longestStreak} дн.
+                </span>
+              </InfoCard>
+              <InfoCard label="Бета-тестирование">
+                <BetaSwitch />
+              </InfoCard>
             </div>
           </div>
 
-          {/* Info grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
-            <InfoCard label="Баланс" accent>
-              <CoinStatic amount={user.total_coins} size="sm" />
-            </InfoCard>
-            <InfoCard label="Отдел">
-              <span
-                className="text-[13px] font-semibold"
-                style={{ color: 'var(--apex-text)' }}
-              >
-                {user.department ?? '—'}
-              </span>
-            </InfoCard>
-            <InfoCard label="Команда">
-              <span
-                className="text-[13px] font-semibold"
-                style={{ color: 'var(--apex-text)' }}
-              >
-                {user.team ?? '—'}
-              </span>
-            </InfoCard>
-            <InfoCard label="Роль">
-              <RoleSwitch />
-            </InfoCard>
+          {/* Right: streak grid */}
+          <div className="shrink-0 overflow-x-auto">
+            <StreakPanel streakData={streakPanelData} userBalance={user.total_coins} />
           </div>
         </div>
       </RoleProvider>
+      </BetaProvider>
 
       {/* Transactions */}
       <div
@@ -107,53 +144,17 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           </h3>
         </div>
 
-        {transactions.length === 0 ? (
-          <div
-            className="py-10 text-center text-[13px]"
-            style={{ color: 'var(--apex-text-muted)' }}
-          >
-            Нет транзакций
-          </div>
-        ) : (
-          <div>
-            {transactions.map((tx, i) => {
-              const reason = formatTransactionReason(tx)
-              return (
-                <div
-                  key={i}
-                  className="flex items-center justify-between px-5 py-3 transition-colors"
-                  style={{
-                    borderBottom:
-                      i < transactions.length - 1
-                        ? '1px solid var(--apex-border)'
-                        : 'none',
-                  }}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div
-                      className="text-[13px] font-medium truncate"
-                      style={{ color: 'var(--apex-text)' }}
-                    >
-                      {tx.description ?? tx.event_type}
-                    </div>
-                    {reason && (
-                      <TransactionReason text={reason} />
-                    )}
-                    <div
-                      className="text-[11px] mt-0.5"
-                      style={{ color: 'var(--apex-text-muted)' }}
-                    >
-                      {tx.event_date} · {tx.source}
-                    </div>
-                  </div>
-                  <div className="shrink-0 ml-4">
-                    <CoinBalance amount={tx.coins} size="sm" />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
+        <div className="px-3 py-2">
+          <TransactionsList showId items={transactions.map((tx) => ({
+            ...tx,
+            icon: getEventIcon(tx.event_type),
+            dateFormatted: getTransactionDisplayDate(tx.event_type, tx.event_date, {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+            }),
+          }))} />
+        </div>
 
         {transactions.length > 0 && (
           <div
@@ -167,41 +168,6 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           </div>
         )}
       </div>
-    </div>
-  )
-}
-
-// Причина красного дня — с кликабельной ссылкой на задачу WS
-function TransactionReason({ text }: { text: string }) {
-  const urlMatch = text.match(/(https:\/\/eneca\.worksection\.com\/\S+)/)
-  if (!urlMatch) {
-    return (
-      <div
-        className="text-[11px] mt-0.5"
-        style={{ color: 'var(--apex-danger)' }}
-      >
-        {text}
-      </div>
-    )
-  }
-
-  const url = urlMatch[1]
-  const before = text.slice(0, urlMatch.index)
-  return (
-    <div
-      className="text-[11px] mt-0.5"
-      style={{ color: 'var(--apex-danger)' }}
-    >
-      {before}
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="underline"
-        style={{ color: 'var(--apex-info-text)' }}
-      >
-        открыть задачу
-      </a>
     </div>
   )
 }

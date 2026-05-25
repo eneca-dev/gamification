@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronDown, ChevronUp, ExternalLink, XCircle, Briefcase, Building2, Heart, Trophy, Award, ShoppingBag, Tag, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
+import { ChevronDown, ChevronUp, ExternalLink, XCircle, Briefcase, Building2, Heart, Trophy, Award, ShoppingBag, Tag, ArrowUpRight, ArrowDownLeft, Check } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import { CoinIcon } from '@/components/CoinIcon'
@@ -37,6 +37,7 @@ interface TransactionsListProps {
   sortHref?: string
   isPending?: boolean
   onNavigate?: (url: string) => void
+  showId?: boolean
 }
 
 interface SourceConfig {
@@ -64,9 +65,16 @@ function getSourceConfig(source: string): SourceConfig {
   }
 }
 
-export function TransactionsList({ items, currentSort, sortHref, isPending = false, onNavigate }: TransactionsListProps) {
+export function TransactionsList({ items, currentSort, sortHref, isPending = false, onNavigate, showId = false }: TransactionsListProps) {
   const [rotated, setRotated] = useState(currentSort === 'date_asc')
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  function handleCopyId(id: string) {
+    navigator.clipboard.writeText(id)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(prev => prev === id ? null : prev), 2500)
+  }
 
   useEffect(() => {
     setRotated(currentSort === 'date_asc')
@@ -146,7 +154,7 @@ export function TransactionsList({ items, currentSort, sortHref, isPending = fal
       </div>
       {isPending ? (
         <TransactionsListSkeleton />
-      ) : items.map((tx) => {
+      ) : items.map((tx, idx) => {
         const isNegative = tx.coins < 0
         const isZero = tx.coins === 0
 
@@ -182,7 +190,22 @@ export function TransactionsList({ items, currentSort, sortHref, isPending = fal
             : null
 
         return (
-          <div key={tx.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
+          <div key={idx} className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
+            {showId && (
+              <button
+                type="button"
+                title={`${tx.id} — нажмите для копирования`}
+                onClick={() => handleCopyId(tx.id)}
+                className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer"
+                style={{
+                  background: copiedId === tx.id ? 'var(--apex-primary-bg)' : 'var(--apex-bg)',
+                  border: `1px solid ${copiedId === tx.id ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
+                  color: copiedId === tx.id ? 'var(--apex-primary)' : 'var(--apex-text-muted)',
+                }}
+              >
+                {copiedId === tx.id ? <Check size={10} /> : '#'}
+              </button>
+            )}
             <div className="relative flex-shrink-0">
               <div
                 className="w-9 h-9 rounded-xl flex items-center justify-center text-center text-lg leading-none"

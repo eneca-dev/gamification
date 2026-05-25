@@ -39,7 +39,6 @@ export interface GratitudeNew {
   gift_source: GiftSource | null
   category: string | null
   coins_amount: number
-  is_anonymous: boolean
   sender_email: string
   sender_name: string
   sender_department: string | null
@@ -61,7 +60,6 @@ export const sendGratitudeSchema = z.object({
   type: z.enum(['thanks', 'gift']),
   gift_source: z.enum(['quota', 'balance']).nullable(),
   coins_amount: z.number().int().min(0).max(1000).default(0),
-  is_anonymous: z.boolean().default(false),
 }).refine(
   (data) => {
     if (data.type === 'thanks') return data.gift_source === null && data.coins_amount === 0

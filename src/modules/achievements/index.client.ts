@@ -11,3 +11,4 @@ export type {
 } from './types'
 
 export { ACHIEVEMENT_AREAS, ACHIEVEMENT_BONUSES } from './types'
+export { AwardsFilters } from './components/AwardsFilters'

@@ -2,6 +2,7 @@ export {
   updateEventType, updateRankingSetting, updateGratitudeSetting,
   toggleAdmin, toggleBetaTester, updateOrderStatus, cancelOrder,
   addCalendarHoliday, deleteCalendarHoliday, addCalendarWorkday, deleteCalendarWorkday,
+  updateDepartmentGroup,
 } from './actions'
 export { formatTransactionReason } from './types'
 export type {
@@ -11,4 +12,5 @@ export type {
   AdminUserRow, UserDetail, UserTransaction,
   AdminOrderRow, UpdateOrderStatusInput,
   CalendarHolidayRow, CalendarWorkdayRow,
+  DesignerFilter, DepartmentGroupRow, LowBalanceUser,
 } from './types'
