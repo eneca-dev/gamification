@@ -66,6 +66,7 @@ export async function submitFeedback(
       airtable_id: airtableId,
       user_id: user.id,
       user_name: user.fullName,
+      user_email: user.email ?? null,
       user_department: user.department ?? null,
       user_team: user.team ?? null,
     })
@@ -79,4 +80,19 @@ export async function submitFeedback(
   revalidatePath('/admin/feedback')
 
   return { success: true, data: { id: row.id } }
+}
+
+export async function deleteFeedbackItems(ids: string[]): Promise<ActionResult<null>> {
+  const user = await getCurrentUser()
+  if (!user?.isAdmin) return { success: false, error: 'Недостаточно прав' }
+
+  if (ids.length === 0) return { success: true, data: null }
+
+  const supabase = createSupabaseAdminClient()
+  const { error } = await supabase.from('feedback').delete().in('id', ids)
+
+  if (error) return { success: false, error: 'Ошибка удаления' }
+
+  revalidatePath('/admin/feedback')
+  return { success: true, data: null }
 }

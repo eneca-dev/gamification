@@ -4,9 +4,9 @@
 
 ## Логика работы
 
-Пользователь открывает модал через плавающую кнопку (видна на всех страницах). Выбирает тип (bug / suggestion), заполняет форму, опционально прикрепляет несколько скриншотов. При отправке: клиент загружает изображения в Supabase Storage bucket `feedback-images` и получает публичные URL. Затем вызывается Server Action `submitFeedback`, который создаёт запись в Airtable (с вложениями) и зеркалирует в Supabase таблицу `feedback`. Данные пользователя (имя, отдел, команда) берутся из сессии автоматически. Ошибка Airtable не блокирует сохранение в Supabase.
+Пользователь открывает модал через плавающую кнопку (видна на всех страницах). Выбирает тип (bug / suggestion), заполняет форму, опционально прикрепляет несколько скриншотов. При отправке: клиент загружает изображения в Supabase Storage bucket `feedback-images` и получает публичные URL. Затем вызывается Server Action `submitFeedback`, который создаёт запись в Airtable (с вложениями) и зеркалирует в Supabase таблицу `feedback`. Данные пользователя (имя, email, отдел, команда) берутся из сессии автоматически. Ошибка Airtable не блокирует сохранение в Supabase.
 
-Администраторы видят все записи на странице `/admin/feedback`. Данные читаются из Supabase через `createSupabaseAdminClient` (обходит RLS).
+Администраторы видят все записи на странице `/admin/feedback`. Данные читаются из Supabase через `createSupabaseAdminClient` (обходит RLS). Страница поддерживает мультиселект и удаление строк. Картинки отображаются превьюшками с лайтбоксом. Имя автора — ссылка на `/admin/users/[user_id]`.
 
 ## Зависимости
 
@@ -20,11 +20,12 @@
 
 `FeedbackType` = `'bug' | 'suggestion'`  
 `FeedbackInput` — валидируется через `FeedbackSchema` (Zod)  
-`FeedbackRecord` — строка таблицы `feedback` из Supabase
+`FeedbackRecord` — строка таблицы `feedback` из Supabase; включает `user_id`, `user_name`, `user_email`, `user_department`, `user_team`
 
 ## Actions
 
 - `submitFeedback(input)` — создаёт запись в Airtable + зеркало в Supabase, revalidate `/admin/feedback`. Возвращает `ActionResult<{ id: string }>`.
+- `deleteFeedbackItems(ids)` — удаляет записи по массиву id, только для `is_admin`, revalidate `/admin/feedback`.
 
 ## Queries
 
@@ -36,3 +37,5 @@
 - `expected_behavior` заполняется только для `type = 'bug'`.
 - Максимум 5 изображений, не более 10 МБ каждое.
 - Поля `user_name/user_department/user_team` в Airtable — Single Select с `typecast: true`, новые варианты создаются автоматически.
+- `user_email` хранится только в Supabase, в Airtable не передаётся.
+- `user_name` берётся из `user.fullName` → `raw_user_meta_data.full_name` в auth.users. Если поле пустое, имя в записи будет пустой строкой.

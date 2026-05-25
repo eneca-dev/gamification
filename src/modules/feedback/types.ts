@@ -23,6 +23,7 @@ export interface FeedbackRecord {
   airtable_id: string | null
   user_id: string | null
   user_name: string | null
+  user_email: string | null
   user_department: string | null
   user_team: string | null
 }
