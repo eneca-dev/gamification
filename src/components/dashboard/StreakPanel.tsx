@@ -156,28 +156,20 @@ function getDayTooltip(day: CalendarDay): string | undefined {
   return text;
 }
 
-// ─── Criteria tooltip ───────────────────────────────────────────────────────
+// ─── Criteria tooltip icon (controlled) ─────────────────────────────────────
 
-function DayCriteriaTooltip() {
-  const [show, setShow] = useState(false);
-
-  const greenCriteria = [
-    "Внесён дневной отчёт в Worksection",
-    "% готовности обновлён до пересечения каждого 20%-чекпоинта бюджета задачи (20 / 40 / 60 / 80 / 100 / 120 / … — проверки продолжаются и в перерасход)",
-    "Время вносится в задачи со статусом «В работе»",
-  ];
-
-  const redCriteria = [
-    "Не внесён дневной отчёт",
-    "Бюджет задачи пересёк очередной 20%-чекпоинт (включая 120 / 140 / …), но % готовности не был изменён",
-    "Время внесено в задачу со статусом отличным от «В работе» (План, Пауза, Готово и т.п.)",
-  ];
-
+function DayCriteriaIcon({
+  onMouseEnter,
+  onMouseLeave,
+}: {
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}) {
   return (
     <span
-      className="relative inline-flex cursor-help"
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
+      className="inline-flex cursor-help"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       <span
         className="w-4 h-4 rounded-full flex items-center justify-center"
@@ -185,99 +177,24 @@ function DayCriteriaTooltip() {
       >
         <Info size={10} style={{ color: "var(--apex-text-muted)" }} />
       </span>
-      {show && (
-        <div
-          className="absolute bottom-full left-0 mb-2 px-3 py-2.5 rounded-xl w-72 pointer-events-none"
-          style={{
-            zIndex: 100,
-            background: "#ffffff",
-            border: "1px solid var(--apex-border)",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-          }}
-        >
-          <div className="mb-2">
-            <div
-              className="flex items-start gap-1.5 text-[10px] font-semibold uppercase tracking-wider mb-1.5 leading-[1.2]"
-              style={{ color: "var(--apex-primary)" }}
-            >
-              <span
-                className="w-2 h-2 rounded-xs shrink-0 mt-[2px]"
-                style={{ background: "var(--apex-primary)" }}
-              />
-              Зелёный день — все условия выполнены
-            </div>
-            <ul className="flex flex-col gap-1">
-              {greenCriteria.map((text) => (
-                <li
-                  key={text}
-                  className="text-[10px] leading-relaxed pl-3 relative"
-                  style={{ color: "var(--apex-text-secondary)" }}
-                >
-                  <span className="absolute left-0" style={{ color: "var(--apex-primary)" }}>✓</span>
-                  {text}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="pt-2" style={{ borderTop: "1px solid var(--apex-border)" }}>
-            <div
-              className="flex items-start gap-1.5 text-[10px] font-semibold uppercase tracking-wider mb-1.5 leading-[1.2]"
-              style={{ color: "var(--apex-danger)" }}
-            >
-              <span
-                className="w-2 h-2 rounded-xs shrink-0 mt-[2px]"
-                style={{ background: "var(--apex-danger)" }}
-              />
-              Штраф — нарушено любое из условий
-            </div>
-            <ul className="flex flex-col gap-1">
-              {redCriteria.map((text) => (
-                <li
-                  key={text}
-                  className="text-[10px] leading-relaxed pl-3 relative"
-                  style={{ color: "var(--apex-text-secondary)" }}
-                >
-                  <span className="absolute left-0" style={{ color: "var(--apex-danger)" }}>✕</span>
-                  {text}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div
-            className="absolute top-full left-3"
-            style={{
-              width: 8,
-              height: 8,
-              background: "#ffffff",
-              borderRight: "1px solid var(--apex-border)",
-              borderBottom: "1px solid var(--apex-border)",
-              transform: "translateY(-50%) rotate(45deg)",
-            }}
-          />
-        </div>
-      )}
     </span>
   );
 }
 
-// ─── Automation plugins tooltip ──────────────────────────────────────────────
+// ─── Automation plugins icon (controlled) ────────────────────────────────────
 
-function AutomationPluginsTooltip() {
-  const [show, setShow] = useState(false);
-
-  const plugins = [
-    "Auditor", "ClashesManager", "LinksManager", "ShareModel",
-    "SDT", "ParamOperator", "ApartmentLayouts", "FasciaCappings",
-    "SpacesManager", "ResaveModels", "AutoOpenings", "Finishing",
-    "SharedCoordinates", "ProfiLay", "LookupTables", "ViewCloner",
-    "LintelsTransfer", "SurfaceGen", "QuickMount", "SchedulesTable",
-  ];
-
+function AutomationPluginsIcon({
+  onMouseEnter,
+  onMouseLeave,
+}: {
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}) {
   return (
     <span
-      className="relative inline-flex cursor-help"
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
+      className="inline-flex cursor-help"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       <span
         className="w-4 h-4 rounded-full flex items-center justify-center"
@@ -285,43 +202,6 @@ function AutomationPluginsTooltip() {
       >
         <Info size={10} style={{ color: "var(--apex-text-muted)" }} />
       </span>
-      {show && (
-        <div
-          className="absolute bottom-full left-0 mb-2 px-3 py-2.5 rounded-xl pointer-events-none"
-          style={{
-            zIndex: 100,
-            background: "#ffffff",
-            border: "1px solid var(--apex-border)",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-            width: 220,
-          }}
-        >
-          <div
-            className="text-[10px] font-semibold uppercase tracking-wider mb-2"
-            style={{ color: "var(--orange-500)" }}
-          >
-            Плагины автоматизации
-          </div>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-            {plugins.map((p) => (
-              <div key={p} className="text-[10px]" style={{ color: "var(--apex-text-secondary)" }}>
-                {p}
-              </div>
-            ))}
-          </div>
-          <div
-            className="absolute top-full left-3"
-            style={{
-              width: 8,
-              height: 8,
-              background: "#ffffff",
-              borderRight: "1px solid var(--apex-border)",
-              borderBottom: "1px solid var(--apex-border)",
-              transform: "translateY(-50%) rotate(45deg)",
-            }}
-          />
-        </div>
-      )}
     </span>
   );
 }
@@ -542,6 +422,26 @@ interface StreakPanelProps {
 
 export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBalance = 0 }: StreakPanelProps) {
   const { calendarDays, completedCycles, ws, revit } = streakData;
+  const [showCriteriaTooltip, setShowCriteriaTooltip] = useState(false);
+  const [showAutomationTooltip, setShowAutomationTooltip] = useState(false);
+
+  const greenCriteria = [
+    "Внесён дневной отчёт в Worksection",
+    "% готовности обновлён до пересечения каждого 20%-чекпоинта бюджета задачи (20 / 40 / 60 / 80 / 100 / 120 / … — проверки продолжаются и в перерасход)",
+    "Время вносится в задачи со статусом «В работе»",
+  ];
+  const redCriteria = [
+    "Не внесён дневной отчёт",
+    "Бюджет задачи пересёк очередной 20%-чекпоинт (включая 120 / 140 / …), но % готовности не был изменён",
+    "Время внесено в задачу со статусом отличным от «В работе» (План, Пауза, Готово и т.п.)",
+  ];
+  const automationPlugins = [
+    "Auditor", "ClashesManager", "LinksManager", "ShareModel",
+    "SDT", "ParamOperator", "ApartmentLayouts", "FasciaCappings",
+    "SpacesManager", "ResaveModels", "AutoOpenings", "Finishing",
+    "SharedCoordinates", "ProfiLay", "LookupTables", "ViewCloner",
+    "LintelsTransfer", "SurfaceGen", "QuickMount", "SchedulesTable",
+  ];
 
   const workingDays = calendarDays.filter((d) => d.status === "green" || d.status === "red");
   const greenPct = workingDays.length > 0
@@ -626,7 +526,76 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
       {/* Main layout: grid+streaks left, quests right */}
       <div className="flex gap-6">
         {/* Left: grid + legend + streaks */}
-        <div className="shrink-0" data-onboarding="streak-calendar">
+        <div className="shrink-0 relative" data-onboarding="streak-calendar">
+          {/* Criteria tooltip overlay */}
+          {showCriteriaTooltip && (
+            <div
+              className="absolute top-0 right-0 px-3 py-2.5 rounded-xl w-72 pointer-events-none"
+              style={{
+                zIndex: 100,
+                background: "#ffffff",
+                border: "1px solid var(--apex-border)",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+              }}
+            >
+              <div className="mb-2">
+                <div
+                  className="flex items-start gap-1.5 text-[10px] font-semibold uppercase tracking-wider mb-1.5 leading-[1.2]"
+                  style={{ color: "var(--apex-primary)" }}
+                >
+                  <span className="w-2 h-2 rounded-xs shrink-0 mt-[2px]" style={{ background: "var(--apex-primary)" }} />
+                  Зелёный день — все условия выполнены
+                </div>
+                <ul className="flex flex-col gap-1">
+                  {greenCriteria.map((text) => (
+                    <li key={text} className="text-[10px] leading-relaxed pl-3 relative" style={{ color: "var(--apex-text-secondary)" }}>
+                      <span className="absolute left-0" style={{ color: "var(--apex-primary)" }}>✓</span>
+                      {text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="pt-2" style={{ borderTop: "1px solid var(--apex-border)" }}>
+                <div
+                  className="flex items-start gap-1.5 text-[10px] font-semibold uppercase tracking-wider mb-1.5 leading-[1.2]"
+                  style={{ color: "var(--apex-danger)" }}
+                >
+                  <span className="w-2 h-2 rounded-xs shrink-0 mt-[2px]" style={{ background: "var(--apex-danger)" }} />
+                  Штраф — нарушено любое из условий
+                </div>
+                <ul className="flex flex-col gap-1">
+                  {redCriteria.map((text) => (
+                    <li key={text} className="text-[10px] leading-relaxed pl-3 relative" style={{ color: "var(--apex-text-secondary)" }}>
+                      <span className="absolute left-0" style={{ color: "var(--apex-danger)" }}>✕</span>
+                      {text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+          {/* Automation plugins tooltip overlay */}
+          {showAutomationTooltip && (
+            <div
+              className="absolute top-0 right-0 px-3 py-2.5 rounded-xl pointer-events-none"
+              style={{
+                zIndex: 100,
+                background: "#ffffff",
+                border: "1px solid var(--apex-border)",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                width: 220,
+              }}
+            >
+              <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--orange-500)" }}>
+                Плагины автоматизации
+              </div>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                {automationPlugins.map((p) => (
+                  <div key={p} className="text-[10px]" style={{ color: "var(--apex-text-secondary)" }}>{p}</div>
+                ))}
+              </div>
+            </div>
+          )}
           {/* Months horizontal: each month = block with name, day labels, week rows */}
           <div className="flex items-start" style={{ gap: MONTH_SEP }}>
             {monthGrids.map((month) => (
@@ -754,14 +723,24 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
               currentDays={ws.currentStreak}
               milestones={ws.milestones}
               variant="teal"
-              labelSuffix={<DayCriteriaTooltip />}
+              labelSuffix={
+                <DayCriteriaIcon
+                  onMouseEnter={() => setShowCriteriaTooltip(true)}
+                  onMouseLeave={() => setShowCriteriaTooltip(false)}
+                />
+              }
             />
             <CompactStreakRow
               label="Автоматизации ★"
               currentDays={revit.currentStreak}
               milestones={revit.milestones}
               variant="orange"
-              labelSuffix={<AutomationPluginsTooltip />}
+              labelSuffix={
+                <AutomationPluginsIcon
+                  onMouseEnter={() => setShowAutomationTooltip(true)}
+                  onMouseLeave={() => setShowAutomationTooltip(false)}
+                />
+              }
             />
           </div>
         </div>
