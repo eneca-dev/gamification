@@ -2,8 +2,8 @@ const BASE_URL = 'https://api.airtable.com/v0'
 const BASE_ID = 'appKHrxgAJFFZeeQO'
 
 function getApiKey(): string {
-  const key = process.env.AIRTABLE_API_KEY
-  if (!key) throw new Error('AIRTABLE_API_KEY is not set')
+  const key = process.env.AIRTABLE_FEEDBACK_TOKEN
+  if (!key) throw new Error('AIRTABLE_FEEDBACK_TOKEN is not set')
   return key
 }
 

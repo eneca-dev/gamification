@@ -21,11 +21,13 @@
 ### Этап 1: Инфраструктура
 
 **Файлы:**
+
 - `src/config/airtable.ts` — типизированный клиент (fetch-обёртка над REST API Airtable)
 - Миграция Supabase: таблица `feedback`
 - Supabase Storage: bucket `feedback-images` (public)
 
 **Схема таблицы `feedback`:**
+
 ```
 id            uuid PRIMARY KEY DEFAULT gen_random_uuid()
 created_at    timestamptz DEFAULT now()
@@ -38,6 +40,7 @@ user_id       uuid REFERENCES auth.users(id)
 ```
 
 **Airtable таблица (ID: `tblchPw2DdhHkD0FD`, base: `appKHrxgAJFFZeeQO`):**
+
 ```
 header           (fldbTgkgheVDnlfes) — text — заголовок
 description      (fldz90unwgy7fAw7L) — long text — описание / что происходит
@@ -52,6 +55,7 @@ row_number       (fldwKxgnhR2WcjYTy) — formula — авто, read-only
 number           (fldhSw8tvhRdUolIk) — auto number — авто, read-only
 created_at       (fldCkXdsdrnz7i4Wt) — created time — авто, read-only
 ```
+
 Поля `user_name`, `user_department`, `user_team`, `status` — Single Select с `typecast: true`
 (создаём новые варианты при первой записи).
 
@@ -62,6 +66,7 @@ created_at       (fldCkXdsdrnz7i4Wt) — created time — авто, read-only
 ### Этап 2: Серверная логика
 
 **Файлы:**
+
 - `src/modules/feedback/types.ts` — Zod схема `FeedbackSchema`, типы `FeedbackRecord`, `FeedbackType`
 - `src/modules/feedback/actions.ts` — `submitFeedback(data)`:
   1. Валидация через Zod `safeParse`
@@ -79,6 +84,7 @@ created_at       (fldCkXdsdrnz7i4Wt) — created time — авто, read-only
 ### Этап 3: UI — форма (плавающая кнопка + модал)
 
 **Файлы:**
+
 - `src/modules/feedback/components/FeedbackButton.tsx` — плавающая кнопка (`'use client'`), позиция `fixed bottom-6 right-6`
 - `src/modules/feedback/components/FeedbackModal.tsx` — модальное окно (`'use client'`):
   - Переключатель типа: Баг / Предложение (2 кнопки-таба)
@@ -97,6 +103,7 @@ created_at       (fldCkXdsdrnz7i4Wt) — created time — авто, read-only
 ### Этап 4: Страница админки
 
 **Файлы:**
+
 - `src/app/(main)/admin/feedback/page.tsx` — Server Component, читает через `getFeedbackList()`
 - `src/app/(main)/admin/feedback/loading.tsx` — скелетон таблицы
 - `src/modules/feedback/components/FeedbackTable.tsx` — таблица с колонками: тип (бейдж), заголовок, описание (truncated), автор, дата, скриншот (ссылка)
@@ -109,6 +116,7 @@ created_at       (fldCkXdsdrnz7i4Wt) — created time — авто, read-only
 ### Этап 5: Документация и финал
 
 **Файлы:**
+
 - `src/docs/feedback.md` — документация модуля
 
 **Зависимости:** Этапы 1–4
@@ -118,7 +126,7 @@ created_at       (fldCkXdsdrnz7i4Wt) — created time — авто, read-only
 ## Переменные окружения
 
 ```env
-AIRTABLE_API_KEY=pat...                     # Personal Access Token
+AIRTABLE_FEEDBACK_TOKEN=pat...                     # Personal Access Token
 AIRTABLE_BASE_ID=appKHrxgAJFFZeeQO          # ID базы (зафиксирован)
 AIRTABLE_FEEDBACK_TABLE_ID=tblchPw2DdhHkD0FD  # ID таблицы (зафиксирован)
 ```

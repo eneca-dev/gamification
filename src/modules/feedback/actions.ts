@@ -35,6 +35,7 @@ export async function submitFeedback(
       header: data.header,
       type: data.type,
       user_name: user.fullName,
+      user_email: user.email,
       user_department: user.department ?? '',
       user_team: user.team ?? '',
       status: 'new',

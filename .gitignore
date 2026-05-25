@@ -48,3 +48,5 @@ certificates
 
 # mcp config
 .mcp.json
+
+.playwright-mcp

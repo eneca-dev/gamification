@@ -12,7 +12,7 @@
 
 - Supabase Storage bucket `feedback-images` (публичный) — создаётся вручную
 - Airtable база `appKHrxgAJFFZeeQO`, таблица `tblchPw2DdhHkD0FD`
-- `AIRTABLE_API_KEY` в `.env.local`
+- `AIRTABLE_FEEDBACK_TOKEN` в `.env.local`
 - `src/config/airtable.ts` — HTTP-клиент Airtable
 - `src/modules/auth/queries.ts` — `getCurrentUser()`
 
