@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath, updateTag } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { getCurrentUser } from '@/modules/auth'
@@ -88,9 +88,37 @@ export async function setCrystalRate(
 
   if (error) return { success: false, error: error.message }
 
+  // Обновляем ticket_price активных лотерей по новому курсу
+  const newRate = parsed.data.rate
+  const { data: activeLotteries } = await supabase
+    .from('lottery_draws')
+    .select('id, product_id')
+    .eq('status', 'active')
+
+  if (activeLotteries && activeLotteries.length > 0) {
+    const productIds = activeLotteries.map((l) => l.product_id)
+    const { data: products } = await supabase
+      .from('shop_products')
+      .select('id, cost_byn, coefficient')
+      .in('id', productIds)
+
+    if (products) {
+      for (const lottery of activeLotteries) {
+        const product = products.find((p) => p.id === lottery.product_id)
+        if (product) {
+          const newPrice = Math.round(Number(product.cost_byn) * Number(product.coefficient) * newRate)
+          await supabase
+            .from('lottery_draws')
+            .update({ ticket_price: newPrice })
+            .eq('id', lottery.id)
+        }
+      }
+    }
+  }
+
   // crystal-rate теперь меняет цены всех товаров — обновляем оба тега кэша
-  updateTag('crystal-rate')
-  updateTag('shop-products')
+  revalidateTag('crystal-rate', 'max')
+  revalidateTag('shop-products', 'max')
   revalidatePath('/admin/products')
   revalidatePath('/admin/economy')
   revalidatePath('/store')
