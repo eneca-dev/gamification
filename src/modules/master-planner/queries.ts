@@ -1,4 +1,4 @@
-import { createSupabaseAdminClient, createSupabaseServerClient } from '@/config/supabase'
+import { createSupabaseAdminClient } from '@/config/supabase'
 
 import type {
   MasterPlannerPanelData,
@@ -201,7 +201,7 @@ function mapRowToEvent(
 // ─── Панель на дашборде ─────────────────────────────────────────────────────
 
 export async function getMasterPlannerPanel(userId: string): Promise<MasterPlannerPanelData> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
 
   // Стрики из master_planner_state
   const { data: stateRows } = await supabase
@@ -285,7 +285,7 @@ export async function getAllPendingTasks(
   userId: string,
   level?: 'L3' | 'L2',
 ): Promise<PendingBudgetTask[]> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
 
   let query = supabase
     .from('view_budget_pending_status')
@@ -316,7 +316,7 @@ export async function getAllPendingTasks(
 // ─── Все deadline pending-задачи (для страницы истории) ───────────────────
 
 export async function getAllDeadlinePendingTasks(userId: string): Promise<PendingBudgetTask[]> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
 
   const { data: rows } = await supabase
     .from('view_deadline_pending_status')
@@ -374,7 +374,7 @@ export async function getMasterPlannerHistory(
   status?: HistoryStatusFilter,
   category?: HistoryCategoryFilter,
 ): Promise<MasterPlannerHistoryData> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
   const offset = (page - 1) * PAGE_SIZE
 
   let query = supabase

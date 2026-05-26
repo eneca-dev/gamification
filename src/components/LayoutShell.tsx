@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Menu } from 'lucide-react'
 
 import { Sidebar } from '@/components/Sidebar'
+import { FeedbackButton } from '@/modules/feedback/components/FeedbackButton'
 import type { AuthUser } from '@/modules/auth/index.client'
 
 interface LayoutShellProps {
@@ -61,6 +62,8 @@ export function LayoutShell({ user, balance, showDevSwitcher, children }: Layout
           {children}
         </main>
       </div>
+
+      <FeedbackButton />
     </div>
   )
 }
