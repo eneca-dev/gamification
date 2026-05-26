@@ -40,7 +40,8 @@ export async function middleware(request: NextRequest) {
     let isAdmin = false
     if (session?.access_token) {
       try {
-        const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+        const b64 = session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+        const payload = JSON.parse(atob(b64))
         isAdmin = payload.is_admin === true || payload.app_metadata?.is_admin === true
       } catch {
         // невалидный JWT — не админ
