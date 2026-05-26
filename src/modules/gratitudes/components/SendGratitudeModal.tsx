@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useMemo } from 'react'
+import { useState, useTransition, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Heart, Gift, Search, Send, Sparkles, Coins, CheckCircle } from 'lucide-react'
 import { CoinIcon } from '@/components/CoinIcon'
@@ -46,8 +46,8 @@ export function SendGratitudeModal({
   const [recipientId, setRecipientId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [showBalanceInput, setShowBalanceInput] = useState(false)
-  const [coinsAmount, setCoinsAmount] = useState(10)
-  const [customInput, setCustomInput] = useState(false)
+  const [coinsAmount, setCoinsAmount] = useState(0)
+  const coinsInputRef = useRef<HTMLInputElement>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -70,8 +70,7 @@ export function SendGratitudeModal({
     setRecipientId(null)
     setMessage('')
     setShowBalanceInput(false)
-    setCoinsAmount(10)
-    setCustomInput(false)
+    setCoinsAmount(0)
     setSearchQuery('')
     setShowDropdown(false)
     setError(null)
@@ -301,69 +300,62 @@ export function SendGratitudeModal({
                 className="px-3 py-3 rounded-xl"
                 style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <Coins size={14} style={{ color: 'var(--orange-500)' }} />
-                    <span className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>Сумма подарка</span>
-                  </div>
-                  <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
-                    <span className="inline-flex items-center gap-0.5">Баланс: {balance.toLocaleString('ru-RU')} <CoinIcon size={11} /></span>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                    Сумма
+                  </span>
+                  <span className="text-[11px] font-medium inline-flex items-center gap-0.5" style={{ color: 'var(--text-muted)' }}>
+                    Баланс: {balance.toLocaleString('ru-RU')} <CoinIcon size={11} />
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  {[10, 20, 50, 100].map((amount) => {
-                    const isPreset = coinsAmount === amount && !customInput
-                    return (
-                      <button
-                        key={amount}
-                        onClick={() => { setCoinsAmount(amount); setCustomInput(false) }}
-                        className="flex-1 py-2 rounded-lg text-[12px] font-bold transition-all"
-                        style={{
-                          background: isPreset ? 'var(--apex-success-bg)' : 'var(--surface-elevated)',
-                          border: isPreset ? '1.5px solid var(--teal-100)' : '1.5px solid var(--border)',
-                          color: isPreset ? 'var(--apex-success-text)' : 'var(--text-secondary)',
-                        }}
-                      >
-                        {amount}
-                      </button>
-                    )
-                  })}
-                  <button
-                    onClick={() => { setCustomInput(true); setCoinsAmount(0) }}
-                    className="flex-1 py-2 rounded-lg text-[12px] font-bold transition-all"
-                    style={{
-                      background: customInput ? 'var(--apex-success-bg)' : 'var(--surface-elevated)',
-                      border: customInput ? '1.5px solid var(--teal-100)' : '1.5px solid var(--border)',
-                      color: customInput ? 'var(--apex-success-text)' : 'var(--text-secondary)',
-                    }}
-                  >
-                    Своя
-                  </button>
+
+                {/* Дисплей суммы */}
+                <div
+                  className="rounded-xl py-2.5 px-3 mb-3 cursor-text"
+                  style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
+                  onClick={() => coinsInputRef.current?.focus()}
+                >
+                  <input
+                    ref={coinsInputRef}
+                    type="number"
+                    value={coinsAmount || ''}
+                    onChange={(e) => setCoinsAmount(Math.min(balance, Math.max(0, Number(e.target.value))))}
+                    min={0}
+                    max={balance}
+                    placeholder="0"
+                    className="w-full bg-transparent text-[12px] font-bold leading-none outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    style={{ color: 'var(--text-primary)' }}
+                  />
                 </div>
-                {customInput && (
-                  <div className="mt-2">
-                    <input
-                      type="number"
-                      value={coinsAmount || ''}
-                      onChange={(e) => setCoinsAmount(Math.max(0, Number(e.target.value)))}
-                      min={1}
-                      max={balance}
-                      autoFocus
-                      className="w-full px-3 py-2 rounded-lg text-[13px] font-medium outline-none"
-                      style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                      placeholder="Введите сумму"
-                    />
-                  </div>
-                )}
+
+                {/* Кнопки быстрого добавления */}
+                <div className="flex items-center gap-2 mb-3">
+                  {[5, 10, 20, 50].map((amount) => (
+                    <button
+                      key={amount}
+                      onClick={() => setCoinsAmount((prev) => Math.min(balance, prev + amount))}
+                      disabled={coinsAmount >= balance}
+                      className="flex-1 py-2 rounded-lg text-[12px] font-bold transition-all disabled:opacity-40"
+                      style={{
+                        background: 'var(--surface-elevated)',
+                        border: '1.5px solid var(--border)',
+                        color: 'var(--text-secondary)',
+                      }}
+                    >
+                      +{amount}
+                    </button>
+                  ))}
+                </div>
+
                 {coinsAmount > balance && (
-                  <p className="text-[11px] font-medium mt-1" style={{ color: 'var(--apex-danger)' }}>
+                  <p className="text-[11px] font-medium mb-2" style={{ color: 'var(--apex-danger)' }}>
                     <span className="inline-flex items-center gap-0.5">Недостаточно 💎 (баланс: {balance} <CoinIcon size={11} />)</span>
                   </p>
                 )}
                 <button
                   onClick={handleSendBalanceGift}
                   disabled={isPending || coinsAmount < 1 || coinsAmount > balance}
-                  className="w-full mt-3 flex items-center justify-center gap-2 py-2.5 rounded-full text-[12px] font-bold transition-all disabled:opacity-40"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full text-[12px] font-bold transition-all disabled:opacity-40"
                   style={{ background: 'var(--apex-primary)', color: 'white' }}
                 >
                   {isPending ? 'Отправляется...' : (
