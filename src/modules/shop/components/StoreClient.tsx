@@ -218,10 +218,10 @@ export function StoreClient({
             >
               <div className="text-4xl mb-3">🎰</div>
               <p className="text-[14px] font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                Сейчас нет активного розыгрыша
+                Сейчас нет активной eneca-game
               </p>
               <p className="text-[12px] mt-1" style={{ color: 'var(--text-secondary)' }}>
-                Следующий розыгрыш будет объявлен в начале месяца
+                Следующая eneca-game будет объявлена в начале месяца
               </p>
             </div>
           )}

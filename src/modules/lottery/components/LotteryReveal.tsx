@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
+import { declineRaz } from '../utils'
 import type { LotteryWithStats } from '../types'
 
 interface LotteryRevealProps {
@@ -13,7 +14,7 @@ interface LotteryRevealProps {
 const LOCALSTORAGE_PREFIX = 'lottery_revealed_'
 
 /**
- * Анимация раскрытия результата лотереи.
+ * Анимация раскрытия результата eneca-game.
  * Показывается на месте баннера, один раз для участников.
  * После анимации записывает в localStorage что юзер уже видел.
  */
@@ -59,7 +60,7 @@ export function LotteryReveal({ lottery, wasParticipant }: LotteryRevealProps) {
       >
         <span className="text-2xl">🏆</span>
         <div>
-          <h2 className="text-white font-bold text-base">Розыгрыш завершён!</h2>
+          <h2 className="text-white font-bold text-base">eneca-game завершён!</h2>
           <p className="text-white/70 text-xs">{lottery.name}</p>
         </div>
       </div>
@@ -174,7 +175,7 @@ export function LotteryReveal({ lottery, wasParticipant }: LotteryRevealProps) {
                 className="text-xs font-medium uppercase tracking-wider"
                 style={{ color: 'var(--apex-text-secondary)' }}
               >
-                Победитель розыгрыша
+                Победитель eneca-game
               </motion.p>
 
               <motion.h3
@@ -210,7 +211,7 @@ export function LotteryReveal({ lottery, wasParticipant }: LotteryRevealProps) {
               >
                 <span>🎁 {lottery.name}</span>
                 <span>·</span>
-                <span>{lottery.total_tickets} билетов</span>
+                <span>Сыграли {lottery.total_tickets} {declineRaz(lottery.total_tickets)}</span>
               </motion.div>
 
               <motion.button

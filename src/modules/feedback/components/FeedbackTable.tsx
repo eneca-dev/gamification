@@ -287,7 +287,7 @@ export function FeedbackTable({ items: initialItems }: FeedbackTableProps) {
               )}
             </div>
 
-            <span className="text-xs" style={{ color: 'var(--apex-text-secondary)' }}>
+            <span className="text-xs" style={{ color: 'var(--apex-text-secondary)' }} suppressHydrationWarning>
               {formatDate(item.created_at)}
             </span>
 
