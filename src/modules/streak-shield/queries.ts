@@ -1,4 +1,4 @@
-import { createSupabaseServerClient, createSupabaseAdminClient } from '@/config/supabase'
+import { createSupabaseAdminClient } from '@/config/supabase'
 
 import { FREE_SHIELDS_PER_MONTH } from './types'
 import type { PendingReset, ShieldLogEntry, ShieldQuota, ShieldType } from './types'
@@ -10,7 +10,10 @@ function currentMonthStart(): string {
 
 // Получить pending resets для текущего пользователя (для UI)
 export async function getPendingResets(userId: string): Promise<PendingReset[]> {
-  const supabase = await createSupabaseServerClient()
+  // Admin client: streak_shield_quota RLS требует my_ws_user_id() совпадающего
+  // с auth email, что ломается при несовпадающих email (admin, dev impersonation).
+  // Функция вызывается только серверно с уже аутентифицированным userId.
+  const supabase = createSupabaseAdminClient()
   const result: PendingReset[] = []
 
   const now = new Date().toISOString()
@@ -98,7 +101,7 @@ export async function getPendingResets(userId: string): Promise<PendingReset[]> 
 
 // Квота бесплатных жизней текущего месяца для UI (карточка товара, профиль)
 export async function getShieldQuota(userId: string): Promise<ShieldQuota> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
   const month = currentMonthStart()
 
   const { data } = await supabase
@@ -120,6 +123,30 @@ export async function getShieldQuota(userId: string): Promise<ShieldQuota> {
   }
 
   return quota
+}
+
+// Даты, где был использован щит (для календаря)
+export async function getShieldDatesInRange(
+  userId: string,
+  rangeStart: string,
+  rangeEnd: string,
+): Promise<Map<string, ShieldType>> {
+  const supabase = createSupabaseAdminClient()
+
+  const { data, error } = await supabase
+    .from('streak_shield_log')
+    .select('protected_date, shield_type')
+    .eq('user_id', userId)
+    .gte('protected_date', rangeStart)
+    .lte('protected_date', rangeEnd)
+
+  if (error) return new Map()
+
+  const map = new Map<string, ShieldType>()
+  for (const row of data ?? []) {
+    map.set(row.protected_date as string, row.shield_type as ShieldType)
+  }
+  return map
 }
 
 // Лог использований щитов для админки

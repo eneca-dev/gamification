@@ -8,6 +8,8 @@
 
 Статусы дней определяются из таблицы `ws_daily_statuses`: green/red/absent → green/red/frozen. Рабочий день без записи → `no_data` (скрипт ещё не обработал). Выходные → `gray`. Будущие → `future`. Звёзды автоматизации — из `elk_plugin_launches`. Звёзды показываются на любых ячейках (включая `no_data`), на `no_data` — со stroke-контуром.
 
+Дни, где использован щит (`streak_shield_log`), отображаются в форме щита (SVG-путь вместо прямоугольника). Цвет ячейки сохраняется статусным (green/red/etc). Звёздочка автоматизации внутри щита рендерится через SVG `<text>`. Тултип дополняется строкой «Использована вторая жизнь Revit/Worksection». В легенде — отдельный элемент «Вторая жизнь».
+
 Выходные/праздники/переносы: Сб/Вс → `gray` по умолчанию. Даты из `calendar_holidays` → `gray` (праздник = выходной). Даты из `calendar_workdays` → рабочий день (перенос, суббота = рабочая). Приоритет: `calendar_workdays` перекрывает выходной, `calendar_holidays` перекрывает будний.
 
 В шапке панели — два процентных показателя за текущий период: % зелёных дней из рабочих и % дней с автоматизациями из рабочих. Заменяют прежний счётчик «дней подряд».
@@ -37,7 +39,7 @@ WS-стрик считается на чтение через view. Модель
 
 - `RedReason` — причина красного дня (jsonb из `ws_daily_statuses.red_reasons`): `{ type, ws_task_id?, ws_task_name?, ws_project_id?, ws_l2_id?, ws_task_url?, task_status? }`
 - `CalendarDayStatus` — union: green | red | gray | frozen | future | out | no_data
-- `CalendarDay` — день грида: date, status, automation, absenceType?, redReasons? (RedReason[])
+- `CalendarDay` — день грида: date, status, automation, absenceType?, redReasons? (RedReason[]), shieldUsed?, shieldSource? ('ws' | 'revit')
 - `StreakPanelData` — все данные для компонента: calendarDays, completedCycles, ws, revit
 
 ## Tooltip красных дней
@@ -60,6 +62,7 @@ WS-стрик считается на чтение через view. Модель
 - `getHolidays(gridStart, gridEnd)` — Set дат из calendar_holidays
 - `getWorkdays(gridStart, gridEnd)` — Set дат из calendar_workdays
 - `getRevitStreakData(userId)` — стрик Revit + milestones
+- `buildCalendarDays(rangeStart, rangeEnd, statusMap, automationDates, holidays, workdays, shieldDates?)` — сборка CalendarDay[]; shieldDates — Map<date, 'ws'|'revit'> из streak-shield модуля, опциональный
 
 ## Ограничения
 

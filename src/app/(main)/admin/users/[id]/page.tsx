@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
 import { getUserDetail } from '@/modules/admin'
+import { getShieldDatesInRange } from '@/modules/streak-shield'
 import { RoleProvider, RoleBadge, RoleSwitch } from '@/modules/admin/components/RoleToggle'
 import { BetaProvider, BetaSwitch } from '@/modules/admin/components/BetaToggle'
 import { CoinStatic } from '@/components/CoinBalance'
@@ -34,7 +35,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const { user } = detail
 
   const { rangeStart, rangeEnd } = getGridRange()
-  const [transactions, dayStatuses, automationDates, holidays, workdays, wsStreak, revitStreak] = await Promise.all([
+  const [transactions, dayStatuses, automationDates, holidays, workdays, wsStreak, revitStreak, shieldDates] = await Promise.all([
     getUserTransactions(user.email, 50, 0),
     getStreakDayStatuses(user.id, rangeStart, rangeEnd),
     getAutomationDays(user.email, rangeStart, rangeEnd),
@@ -42,13 +43,14 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
     getWorkdays(rangeStart, rangeEnd),
     getWsStreakData(user.id),
     getRevitStreakData(user.id),
+    getShieldDatesInRange(user.id, rangeStart, rangeEnd),
   ])
 
   const statusMap = new Map<string, { status: string; absence_type: string | null; red_reasons: RedReason[] | null }>()
   for (const row of dayStatuses) {
     statusMap.set(row.date, { status: row.status, absence_type: row.absence_type, red_reasons: row.red_reasons })
   }
-  const calendarDays = buildCalendarDays(rangeStart, rangeEnd, statusMap, automationDates, holidays, workdays)
+  const calendarDays = buildCalendarDays(rangeStart, rangeEnd, statusMap, automationDates, holidays, workdays, shieldDates)
 
   const streakPanelData: StreakPanelData = {
     calendarDays,

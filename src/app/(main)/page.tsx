@@ -32,7 +32,7 @@ import {
 import { getActiveAlarms } from "@/modules/alarms";
 import { getMyGratitudesNew, getSenderQuota, getGratitudeRecipients, getUserBalance } from "@/modules/gratitudes";
 import { getUserOrders } from "@/modules/shop";
-import { getPendingResets } from "@/modules/streak-shield";
+import { getPendingResets, getShieldDatesInRange } from "@/modules/streak-shield";
 import { getMasterPlannerPanel } from "@/modules/master-planner";
 import { MasterPlannerPanel } from "@/modules/master-planner/components/MasterPlannerPanel";
 import { getContestWinners } from "@/modules/contests";
@@ -82,6 +82,7 @@ export default async function DashboardPage() {
     activeAlarms,
     senderQuota, gratitudeRecipients, userBalance, myGratitudesNew, userOrders,
     dayStatuses, automationDates, holidays, workdays, pendingResets,
+    shieldDates,
     masterPlannerData,
     contestWinners,
   ] = await Promise.all([
@@ -124,6 +125,7 @@ export default async function DashboardPage() {
       getHolidays(rangeStart, rangeEnd),
       getWorkdays(rangeStart, rangeEnd),
       wsUserId ? getPendingResets(wsUserId) : Promise.resolve([]),
+      wsUserId ? getShieldDatesInRange(wsUserId, rangeStart, rangeEnd) : Promise.resolve(new Map<string, 'ws' | 'revit'>()),
       wsUserId ? getMasterPlannerPanel(wsUserId) : Promise.resolve(null),
       getContestWinners(1),
     ]);
@@ -134,7 +136,7 @@ export default async function DashboardPage() {
     statusMap.set(row.date, { status: row.status, absence_type: row.absence_type, red_reasons: row.red_reasons });
   }
 
-  const calendarDays = buildCalendarDays(rangeStart, rangeEnd, statusMap, automationDates, holidays, workdays);
+  const calendarDays = buildCalendarDays(rangeStart, rangeEnd, statusMap, automationDates, holidays, workdays, shieldDates);
 
   const streakPanelData: StreakPanelData = {
     calendarDays,
