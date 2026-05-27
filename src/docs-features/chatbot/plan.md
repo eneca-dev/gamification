@@ -227,39 +227,50 @@ Webhook срабатывает на каждый INSERT — агент сам п
 
 ## Фаза 6 — Деплой агента на VPS
 
-> Блокирует VPS доступ. Выполнить после получения доступа.
+VPS: Python 3.10, pip3, **Docker** (уже используется для orchestrator). nginx и pm2 отсутствуют.
+Деплоим через Docker — это уже принятый подход на сервере.
 
-### Что нужно проверить на VPS
-```bash
-python3 --version       # нужен 3.10+
-which pip3
-which nginx
-pm2 list                # или: systemctl list-units --state=running
+### Dockerfile
+```dockerfile
+FROM python:3.10-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
 ```
 
 ### Запуск
 ```bash
-cd chat_agent
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8001
+docker build -t chat-agent .
+docker run -d \
+  --name chat-agent \
+  --restart unless-stopped \
+  -p 8001:8001 \
+  --env-file .env \
+  chat-agent
 ```
 
-### Nginx конфиг (если уже есть nginx)
-```nginx
-location /process-message {
-    proxy_pass http://127.0.0.1:8001;
-}
+### .env на сервере
+```
+SUPABASE_URL=...
+SUPABASE_SERVICE_KEY=...
+OPENAI_API_KEY=...
+WEBHOOK_SECRET=...
 ```
 
-### Process manager
-Предпочтительно `pm2` (если уже используется) или `systemd` сервис.
+### Supabase Webhook URL
+`http://<vps-ip>:8001/process-message`
+
+> Порт 8001 должен быть открыт в firewall сервера.
+> Для HTTPS позже можно добавить nginx (apt install) как reverse proxy.
 
 ---
 
 ## Порядок выполнения
 
 ```
-[ ] 1.1–1.4   Миграции БД: pgvector, chat_messages, help_article_chunks, RPC
+[x] 1.1–1.4   Миграции БД: pgvector, chat_messages, help_article_chunks, RPC
 [ ] 2         Chat UI: модуль, страница /chat, Server Action, Realtime
 [ ] 3         Скрипт векторизации: написать, запустить, проверить чанки в БД
 [ ] 4         Python агент: реализовать без RAG, проверить LLM-ответ
@@ -274,5 +285,5 @@ location /process-message {
 
 - [ ] Уточнить `shield_price_ws` и `shield_price_revit` из `shop_products`
 - [x] LLM: OpenAI `gpt-4o-mini` + embeddings `text-embedding-3-small` (один ключ)
-- [ ] Получить доступ к VPS: проверить Python, nginx, pm2
+- [x] VPS: Python 3.10, pip3, Docker. Nginx и pm2 отсутствуют — деплой через Docker
 - [ ] Решить кнопку «Начать сначала» (очистить историю чата) — нужна на MVP или нет
