@@ -6,10 +6,10 @@ import { Ticket, Clock } from 'lucide-react'
 import { CoinStatic } from '@/components/CoinBalance'
 import { CoinIcon } from '@/components/CoinIcon'
 import { purchaseProduct } from '@/modules/shop/index.client'
-
+import { declineRaz } from '../utils'
 import type { LotteryWithStats, UserTicketInfo } from '../types'
 
-// Розыгрыш — 1-е число следующего месяца в 12:00 по Минску (UTC+3)
+// eneca-game — 1-е число следующего месяца в 12:00 по Минску (UTC+3)
 const DRAW_HOUR_UTC = 9 // 12:00 Minsk = 09:00 UTC
 
 interface LotteryBannerProps {
@@ -77,7 +77,7 @@ export function LotteryBanner({ lottery, ticketInfo: initialTicketInfo, balance,
     const prevTickets = ticketInfo
     const prevBalance = currentBalance
 
-    // Optimistic: обновляем билеты и баланс мгновенно
+    // Optimistic: обновляем счётчик и баланс мгновенно
     setCurrentBalance(currentBalance - lottery.ticket_price)
     if (ticketInfo) {
       setTicketInfo({
@@ -101,7 +101,7 @@ export function LotteryBanner({ lottery, ticketInfo: initialTicketInfo, balance,
         setCurrentBalance(prevBalance)
         setNotification({ type: 'error', message: result.error })
       } else {
-        setNotification({ type: 'success', message: 'Билет куплен!' })
+        setNotification({ type: 'success', message: 'Вы в игре!' })
       }
       setTimeout(() => setNotification(null), 3000)
     })
@@ -109,6 +109,7 @@ export function LotteryBanner({ lottery, ticketInfo: initialTicketInfo, balance,
 
   const canAfford = currentBalance >= lottery.ticket_price
   const hasTickets = ticketInfo && ticketInfo.ticket_count > 0
+  const totalCount = ticketInfo?.total_tickets ?? lottery.total_tickets
 
   return (
     <div
@@ -124,7 +125,7 @@ export function LotteryBanner({ lottery, ticketInfo: initialTicketInfo, balance,
         <div className="flex items-center gap-3">
           <span className="text-2xl">🎰</span>
           <div>
-            <h2 className="text-white font-bold text-base">Розыгрыш месяца</h2>
+            <h2 className="text-white font-bold text-base">eneca-game</h2>
             <DrawCountdown countdown={countdown} drawDate={drawDate} />
           </div>
         </div>
@@ -132,8 +133,7 @@ export function LotteryBanner({ lottery, ticketInfo: initialTicketInfo, balance,
           className="px-3 py-1.5 rounded-full text-xs font-semibold"
           style={{ background: 'rgba(255,255,255,0.15)', color: 'white' }}
         >
-          <Ticket size={12} className="inline mr-1 -translate-y-[0.5px]" />
-          {(ticketInfo?.total_tickets ?? lottery.total_tickets)} билетов
+          {totalCount} <Ticket size={12} className="inline ml-1 -translate-y-[0.5px]" />
         </div>
       </div>
 
@@ -180,10 +180,11 @@ export function LotteryBanner({ lottery, ticketInfo: initialTicketInfo, balance,
             {hasTickets && (
               <div className="flex gap-4 mb-1">
                 <div className="text-sm" style={{ color: 'var(--apex-text-secondary)' }}>
-                  Ваши билеты:{' '}
+                  Вы сыграете{' '}
                   <span className="font-semibold" style={{ color: 'var(--apex-primary)' }}>
                     {ticketInfo.ticket_count}
                   </span>
+                  {' '}{declineRaz(ticketInfo.ticket_count)}
                 </div>
                 <div className="text-sm" style={{ color: 'var(--apex-text-secondary)' }}>
                   Шанс:{' '}
@@ -203,22 +204,22 @@ export function LotteryBanner({ lottery, ticketInfo: initialTicketInfo, balance,
               style={{ background: canAfford ? 'var(--apex-primary)' : 'var(--apex-text-secondary)' }}
             >
               {isPending ? (
-                'Покупаем...'
+                'Входим...'
               ) : !canAfford ? (
                 <span className="inline-flex items-center gap-1">Ещё {lottery.ticket_price - currentBalance} <CoinIcon size={14} /></span>
               ) : (
                 <span className="flex items-center gap-2">
                   <Ticket size={16} />
-                  Купить билет
+                  {hasTickets ? 'Участвовать в игре' : 'Войти в игру'}
                   <CoinStatic amount={lottery.ticket_price} size="sm" />
                 </span>
               )}
             </button>
-            {hasTickets && (
-              <p className="text-center text-xs mt-2" style={{ color: 'var(--apex-text-secondary)' }}>
-                На покупку билетов нет лимита — больше билетов = больше шанс
-              </p>
-            )}
+            <p className="text-center text-xs mt-2" style={{ color: 'var(--apex-text-secondary)' }}>
+              {hasTickets
+                ? 'Чем больше у вас участий в игре — тем выше шанс!'
+                : 'Если войдёте в игру, увидите ваш шанс на выигрыш!'}
+            </p>
           </div>
         </div>
       </div>
@@ -236,7 +237,7 @@ interface CountdownState {
 }
 
 /**
- * Вычисляет дату розыгрыша: 1-е число следующего месяца в 12:00 Минск
+ * Вычисляет дату eneca-game: 1-е число следующего месяца в 12:00 Минск
  */
 function getDrawDate(lotteryMonth: string): Date {
   const month = new Date(lotteryMonth)
@@ -255,7 +256,7 @@ function DrawCountdown({ countdown, drawDate }: { countdown: CountdownState | nu
       <div className="flex items-center gap-1.5">
         <Clock size={12} className="text-orange-400" />
         <p className="text-orange-300 text-xs font-semibold tracking-wide font-mono">
-          До розыгрыша: {pad(countdown.hours)}:{pad(countdown.minutes)}:{pad(countdown.seconds)}
+          До eneca-game: {pad(countdown.hours)}:{pad(countdown.minutes)}:{pad(countdown.seconds)}
         </p>
       </div>
     )
@@ -271,7 +272,7 @@ function DrawCountdown({ countdown, drawDate }: { countdown: CountdownState | nu
 
   return (
     <p className="text-white/70 text-xs">
-      Розыгрыш: {formatted}
+      eneca-game: {formatted}
     </p>
   )
 }

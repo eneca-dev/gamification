@@ -87,7 +87,7 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
     setImageFile(null)
     setEditingLottery(lottery)
 
-    // Показываем предупреждение, если уже есть купленные билеты
+    // Показываем предупреждение, если уже есть игроки
     if (lottery.total_tickets > 0) {
       setShowEditWarning(true)
     }
@@ -119,7 +119,7 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
   function handleCreate() {
     setError(null)
     if (costBynNum <= 0) {
-      setError('Цена билета должна быть больше 0')
+      setError('Стоимость игры должна быть больше 0')
       return
     }
     const prev = lotteries
@@ -147,7 +147,7 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
       setForm({ name: '', description: '', cost_byn: '' })
       handleRemoveImage()
       setShowForm(false)
-      showNotif('Лотерея создана')
+      showNotif('eneca-game запущена')
     })
   }
 
@@ -155,7 +155,7 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
     if (!editingLottery) return
     setError(null)
     if (costBynNum <= 0) {
-      setError('Цена билета должна быть больше 0')
+      setError('Стоимость игры должна быть больше 0')
       return
     }
     const prev = lotteries
@@ -188,7 +188,7 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
         )
       )
       cancelEditing()
-      showNotif('Лотерея обновлена')
+      showNotif('eneca-game обновлена')
     })
   }
 
@@ -209,11 +209,11 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
         </div>
       )}
 
-      {/* Текущая лотерея */}
+      {/* Текущая eneca-game */}
       <section>
         <div className="flex items-center justify-between mb-4" data-onboarding="lottery-current-section">
           <h2 className="text-lg font-semibold" style={{ color: 'var(--apex-text-primary)' }}>
-            Текущая лотерея
+            Текущая eneca-game
           </h2>
           {!activeLottery && !showForm && (
             <button
@@ -222,7 +222,7 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
               style={{ background: 'var(--apex-primary)' }}
             >
               <Plus size={16} />
-              Создать лотерею
+              Запустить eneca-game
             </button>
           )}
         </div>
@@ -233,7 +233,7 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
             style={{ background: 'var(--surface-elevated)', border: '1px solid var(--apex-border)' }}
           >
             <h3 className="text-sm font-semibold" style={{ color: 'var(--apex-text-primary)' }}>
-              Новая лотерея на {formatLotteryMonth(new Date().toISOString())}
+              eneca-game на {formatLotteryMonth(new Date().toISOString())}
             </h3>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -257,7 +257,7 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
 
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: 'var(--apex-text-secondary)' }}>
-                  Цена билета (BYN)
+                  Стоимость игры (BYN)
                 </label>
                 <input
                   type="text"
@@ -416,11 +416,11 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard icon={<Ticket size={16} />} label="Билетов продано" value={activeLottery.total_tickets} />
-              <StatCard icon={<Users size={16} />} label="Участников" value={activeLottery.total_participants} />
+              <StatCard icon={<Ticket size={16} />} label="Сыграно раз" value={activeLottery.total_tickets} />
+              <StatCard icon={<Users size={16} />} label="Игроков" value={activeLottery.total_participants} />
               <StatCard
                 icon={<CoinIcon size={16} />}
-                label="Цена билета"
+                label="Стоимость игры"
                 value={activeLottery.ticket_price}
               />
               <StatCard
@@ -432,7 +432,7 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
           </div>
         )}
 
-        {/* Форма редактирования активной лотереи */}
+        {/* Форма редактирования */}
         {editingLottery && (
           <div
             className="rounded-xl p-5 space-y-4"
@@ -449,10 +449,10 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
               >
                 <AlertTriangle size={18} className="flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold mb-0.5">Лотерея уже идёт</p>
+                  <p className="font-semibold mb-0.5">Игра уже идёт</p>
                   <p className="text-xs" style={{ opacity: 0.85 }}>
-                    Продано {editingLottery.total_tickets} {editingLottery.total_tickets === 1 ? 'билет' : editingLottery.total_tickets < 5 ? 'билета' : 'билетов'} ({editingLottery.total_participants} {editingLottery.total_participants === 1 ? 'участник' : editingLottery.total_participants < 5 ? 'участника' : 'участников'}).
-                    Люди покупали билеты на другой приз — убедитесь, что изменение оправдано.
+                    Сыграли {editingLottery.total_tickets} раз ({editingLottery.total_participants} {editingLottery.total_participants === 1 ? 'игрок' : editingLottery.total_participants < 5 ? 'игрока' : 'игроков'}).
+                    Люди уже вошли в игру на другой приз — убедитесь, что изменение оправдано.
                   </p>
                 </div>
               </div>
@@ -479,7 +479,7 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
 
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: 'var(--apex-text-secondary)' }}>
-                  Цена билета (BYN)
+                  Стоимость игры (BYN)
                 </label>
                 <input
                   type="text"
@@ -598,7 +598,7 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
           >
             <div className="text-3xl mb-2">🎰</div>
             <p className="text-sm" style={{ color: 'var(--apex-text-secondary)' }}>
-              Нет активной лотереи. Создайте розыгрыш на текущий месяц.
+              Нет активной игры. Запустите eneca-game на текущий месяц.
             </p>
           </div>
         )}
@@ -608,7 +608,7 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
       {completedLotteries.length > 0 && (
         <section>
           <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--apex-text-primary)' }}>
-            История розыгрышей
+            История eneca-game
           </h2>
           <div className="space-y-3">
             {completedLotteries.map((lottery) => (
@@ -647,7 +647,7 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
                     {lottery.total_tickets}
                   </div>
                   <div className="text-xs" style={{ color: 'var(--apex-text-secondary)' }}>
-                    {lottery.total_participants} уч.
+                    {lottery.total_participants} игр.
                   </div>
                 </div>
               </div>

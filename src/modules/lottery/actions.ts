@@ -15,8 +15,8 @@ import type { LotteryDraw } from './types'
 import { getDrawCategoryId, getActiveLottery } from './queries'
 
 /**
- * Создание лотереи на текущий месяц.
- * Автоматически создаёт shop_product (билет) в категории "Розыгрыши".
+ * Создание eneca-game на текущий месяц.
+ * Автоматически создаёт shop_product в категории "eneca-game".
  */
 export async function createLottery(input: unknown): Promise<ActionResult<LotteryDraw>> {
   const isAdmin = await checkIsAdmin()
@@ -30,21 +30,21 @@ export async function createLottery(input: unknown): Promise<ActionResult<Lotter
     return { success: false, error: parsed.error.errors[0].message }
   }
 
-  // Проверяем что нет активной лотереи
+  // Проверяем что нет активной игры
   const active = await getActiveLottery()
   if (active) {
-    return { success: false, error: 'Уже есть активная лотерея. Дождитесь завершения текущей.' }
+    return { success: false, error: 'Уже есть активная игра. Дождитесь завершения текущей.' }
   }
 
   const categoryId = await getDrawCategoryId()
   if (!categoryId) {
-    return { success: false, error: 'Категория "Розыгрыши" не найдена. Создайте категорию со slug "draw".' }
+    return { success: false, error: 'Категория "eneca-game" не найдена. Создайте категорию со slug "draw".' }
   }
 
   const supabase = createSupabaseAdminClient()
   const { name, description, image_url, cost_byn } = parsed.data
 
-  // Конвертация BYN → кристаллы по текущему курсу. coefficient = 1 (для лотереи без наценки).
+  // Конвертация BYN → кристаллы по текущему курсу. coefficient = 1 (без наценки).
   const rate = await getCurrentRate()
   const ticketPriceCrystals = computePriceCrystals(cost_byn, 1, rate)
 
@@ -54,12 +54,12 @@ export async function createLottery(input: unknown): Promise<ActionResult<Lotter
     .toISOString()
     .split('T')[0]
 
-  // 1. Создаём товар-билет (цена в магазине считается из cost_byn × coefficient × rate)
+  // 1. Создаём товар (цена в магазине считается из cost_byn × coefficient × rate)
   const { data: product, error: productError } = await supabase
     .from('shop_products')
     .insert({
-      name: `Билет на розыгрыш: ${name}`,
-      description: description ?? `Лотерейный билет. Приз: ${name}`,
+      name: `eneca-game: ${name}`,
+      description: description ?? `eneca-game. Приз: ${name}`,
       cost_byn,
       coefficient: 1,
       category_id: categoryId,
@@ -73,10 +73,10 @@ export async function createLottery(input: unknown): Promise<ActionResult<Lotter
     .single()
 
   if (productError || !product) {
-    return { success: false, error: `Ошибка создания билета: ${productError?.message}` }
+    return { success: false, error: `Ошибка создания игры: ${productError?.message}` }
   }
 
-  // 2. Создаём лотерею (ticket_price — закэшированная цена в кристаллах на момент создания)
+  // 2. Создаём запись eneca-game (ticket_price — закэшированная цена в кристаллах на момент создания)
   const { data: lottery, error: lotteryError } = await supabase
     .from('lottery_draws')
     .insert({
@@ -97,9 +97,9 @@ export async function createLottery(input: unknown): Promise<ActionResult<Lotter
     await supabase.from('shop_products').delete().eq('id', product.id)
 
     if (lotteryError.message.includes('lottery_draws_month_key')) {
-      return { success: false, error: 'Лотерея на этот месяц уже существует' }
+      return { success: false, error: 'eneca-game на этот месяц уже существует' }
     }
-    return { success: false, error: `Ошибка создания лотереи: ${lotteryError.message}` }
+    return { success: false, error: `Ошибка создания игры: ${lotteryError.message}` }
   }
 
   revalidatePath('/admin/lottery')
@@ -109,8 +109,8 @@ export async function createLottery(input: unknown): Promise<ActionResult<Lotter
 }
 
 /**
- * Обновление приза активной лотереи.
- * Обновляет и lottery_draws, и связанный shop_product (билет).
+ * Обновление приза активной eneca-game.
+ * Обновляет и lottery_draws, и связанный shop_product.
  */
 export async function updateLottery(input: unknown): Promise<ActionResult<LotteryDraw>> {
   const isAdmin = await checkIsAdmin()
@@ -128,7 +128,7 @@ export async function updateLottery(input: unknown): Promise<ActionResult<Lotter
   const rate = await getCurrentRate()
   const ticketPriceCrystals = computePriceCrystals(cost_byn, 1, rate)
 
-  // Получаем текущую лотерею
+  // Получаем текущую запись
   const { data: current, error: fetchError } = await supabase
     .from('lottery_draws')
     .select('*')
@@ -136,10 +136,10 @@ export async function updateLottery(input: unknown): Promise<ActionResult<Lotter
     .single()
 
   if (fetchError || !current) {
-    return { success: false, error: 'Лотерея не найдена' }
+    return { success: false, error: 'eneca-game не найдена' }
   }
 
-  // Обновляем лотерею
+  // Обновляем запись
   const { data: lottery, error: lotteryError } = await supabase
     .from('lottery_draws')
     .update({
@@ -153,15 +153,15 @@ export async function updateLottery(input: unknown): Promise<ActionResult<Lotter
     .single()
 
   if (lotteryError || !lottery) {
-    return { success: false, error: `Ошибка обновления лотереи: ${lotteryError?.message}` }
+    return { success: false, error: `Ошибка обновления игры: ${lotteryError?.message}` }
   }
 
-  // Обновляем связанный товар-билет
+  // Обновляем связанный товар
   await supabase
     .from('shop_products')
     .update({
-      name: `Билет на розыгрыш: ${name}`,
-      description: description ?? `Лотерейный билет. Приз: ${name}`,
+      name: `eneca-game: ${name}`,
+      description: description ?? `eneca-game. Приз: ${name}`,
       cost_byn,
       coefficient: 1,
       image_url: image_url ?? null,
