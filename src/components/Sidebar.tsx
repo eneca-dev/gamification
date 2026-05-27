@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, ShoppingBag, Trophy, Users, Settings, LogOut, HelpCircle, Bot } from 'lucide-react'
+import { Home, ShoppingBag, Trophy, Users, Settings, LogOut, HelpCircle } from 'lucide-react'
 
 import { signOut } from '@/modules/auth/index.client'
 import type { AuthUser } from '@/modules/auth/index.client'
@@ -24,7 +24,6 @@ const navItems = [
 ]
 
 const bottomNavItems: { href: string; label: string; icon: typeof HelpCircle; adminOnly?: boolean }[] = [
-  { href: '/chat',        label: 'Ассистент',     icon: Bot },
   { href: '/help',        label: 'Справка',       icon: HelpCircle },
   { href: '/admin',       label: 'Админ-панель',  icon: Settings, adminOnly: true },
 ]

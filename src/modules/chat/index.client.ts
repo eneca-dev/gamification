@@ -1,3 +1,3 @@
-export { sendMessage } from './actions'
+export { sendMessage, getChatMessagesAction } from './actions'
 export type { ChatMessage } from './types'
-export { ChatWindow } from './components/ChatWindow'
+export { ChatWidget } from './components/ChatWidget'
