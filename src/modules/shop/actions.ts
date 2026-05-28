@@ -18,6 +18,7 @@ import {
   setCrystalRateSchema,
 } from './types'
 import type { PurchaseResult } from './types'
+import { balanceTag } from './queries'
 
 const productIdSchema = z.string().uuid()
 
@@ -63,6 +64,7 @@ export async function purchaseProduct(
     return { success: false, error: 'Ошибка при покупке' }
   }
 
+  revalidateTag(balanceTag(user.wsUserId), 'max')
   revalidatePath('/store')
   revalidatePath('/profile')
   return { success: true, data: data as PurchaseResult }

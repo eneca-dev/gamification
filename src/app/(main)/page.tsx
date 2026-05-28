@@ -30,7 +30,8 @@ import {
   buildCalendarDays,
 } from "@/modules/streak-panel";
 import { getActiveAlarms } from "@/modules/alarms";
-import { getMyGratitudesNew, getSenderQuota, getGratitudeRecipients, getUserBalance } from "@/modules/gratitudes";
+import { getMyGratitudesNew, getSenderQuota, getGratitudeRecipients } from "@/modules/gratitudes";
+import { getUserBalance } from "@/modules/shop";
 import { getUserOrders } from "@/modules/shop";
 import { getPendingResets } from "@/modules/streak-shield";
 import { getMasterPlannerPanel } from "@/modules/master-planner";
