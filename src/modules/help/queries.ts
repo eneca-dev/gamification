@@ -11,17 +11,19 @@ export async function getHelpVariables(): Promise<Record<string, string>> {
 export async function getHelpVariablesMeta(): Promise<HelpVariableMeta[]> {
   const supabase = await createSupabaseServerClient()
 
-  const [eventTypes, gratitudeSettings, shieldProducts] = await Promise.all([
+  const [eventTypes, gratitudeSettings, shieldProducts, crystalRate] = await Promise.all([
     supabase
       .from('gamification_event_types')
       .select('key, name, coins')
       .eq('is_active', true)
       .or('coins.neq.0,key.eq.red_day'),
     supabase.from('ach_gratitude_settings').select('category, threshold, bonus_coins'),
-    supabase.from('shop_products').select('effect, price, name').like('effect', 'streak_shield_%'),
+    supabase.from('shop_products').select('effect, cost_byn, coefficient, name').like('effect', 'streak_shield_%'),
+    supabase.rpc('current_crystal_rate'),
   ])
 
   const result: HelpVariableMeta[] = []
+  const rate = Number(crystalRate.data ?? 0)
 
   for (const row of eventTypes.data ?? []) {
     result.push({ key: row.key, name: row.name ?? row.key, value: String(Math.abs(row.coins)) })
@@ -34,8 +36,9 @@ export async function getHelpVariablesMeta(): Promise<HelpVariableMeta[]> {
   }
 
   for (const row of shieldProducts.data ?? []) {
-    if (row.effect === 'streak_shield_ws') result.push({ key: 'shield_price_ws', name: row.name ?? 'Цена щита WS', value: String(row.price) })
-    if (row.effect === 'streak_shield_revit') result.push({ key: 'shield_price_revit', name: row.name ?? 'Цена щита Revit', value: String(row.price) })
+    const price = String(Math.round(Number(row.cost_byn) * Number(row.coefficient) * rate))
+    if (row.effect === 'streak_shield_ws') result.push({ key: 'shield_price_ws', name: row.name ?? 'Цена щита WS', value: price })
+    if (row.effect === 'streak_shield_revit') result.push({ key: 'shield_price_revit', name: row.name ?? 'Цена щита Revit', value: price })
   }
 
   return result
@@ -44,13 +47,15 @@ export async function getHelpVariablesMeta(): Promise<HelpVariableMeta[]> {
 async function buildVariablesMap(): Promise<Record<string, string>> {
   const supabase = await createSupabaseServerClient()
 
-  const [eventTypes, gratitudeSettings, shieldProducts] = await Promise.all([
+  const [eventTypes, gratitudeSettings, shieldProducts, crystalRate] = await Promise.all([
     supabase.from('gamification_event_types').select('key, coins'),
     supabase.from('ach_gratitude_settings').select('category, threshold, bonus_coins'),
-    supabase.from('shop_products').select('effect, price').like('effect', 'streak_shield_%'),
+    supabase.from('shop_products').select('effect, cost_byn, coefficient').like('effect', 'streak_shield_%'),
+    supabase.rpc('current_crystal_rate'),
   ])
 
   const vars: Record<string, string> = {}
+  const rate = Number(crystalRate.data ?? 0)
 
   // gamification_event_types: {{green_day}} → "3"
   for (const row of eventTypes.data ?? []) {
@@ -64,10 +69,11 @@ async function buildVariablesMap(): Promise<Record<string, string>> {
     vars['gratitude_bonus'] = String(gratRows[0].bonus_coins)
   }
 
-  // shop_products (щиты): {{shield_price_ws}} → "500"
+  // shop_products (щиты): {{shield_price_ws}} → "500" (cost_byn × coefficient × курс кристалла)
   for (const row of shieldProducts.data ?? []) {
-    if (row.effect === 'streak_shield_ws') vars['shield_price_ws'] = String(row.price)
-    if (row.effect === 'streak_shield_revit') vars['shield_price_revit'] = String(row.price)
+    const price = String(Math.round(Number(row.cost_byn) * Number(row.coefficient) * rate))
+    if (row.effect === 'streak_shield_ws') vars['shield_price_ws'] = price
+    if (row.effect === 'streak_shield_revit') vars['shield_price_revit'] = price
   }
 
   return vars

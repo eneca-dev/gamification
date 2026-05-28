@@ -1,10 +1,12 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
-import { cached, CACHE_1H } from '@/lib/server-cache'
+import { cached, CACHE_1H, CACHE_5M } from '@/lib/server-cache'
 
 import { computePriceCrystals } from './types'
 import type { ShopCategory, ShopProductWithCategory, ShopOrderWithDetails } from './types'
 
-export async function getUserBalance(wsUserId: string): Promise<number> {
+export const balanceTag = (userId: string) => `balance:${userId}`
+
+async function _getUserBalance(wsUserId: string): Promise<number> {
   const supabase = createSupabaseAdminClient()
 
   const { data } = await supabase
@@ -15,6 +17,12 @@ export async function getUserBalance(wsUserId: string): Promise<number> {
 
   return data?.total_coins ?? 0
 }
+
+export const getUserBalance = (wsUserId: string) =>
+  cached(() => _getUserBalance(wsUserId), ['user-balance', wsUserId], {
+    tags: [balanceTag(wsUserId)],
+    revalidate: CACHE_5M,
+  })()
 
 async function _getCurrentRate(): Promise<number> {
   const supabase = createSupabaseAdminClient()

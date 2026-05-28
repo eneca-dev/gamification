@@ -1,6 +1,7 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
+import { balanceTag } from '@/modules/shop/queries'
 
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { getCurrentUser } from '@/modules/auth'
@@ -118,6 +119,7 @@ export async function buyStreakShield(
     ...(clearError ? { notes: 'pending_clear_failed' } : {}),
   })
 
+  revalidateTag(balanceTag(user.wsUserId), 'max')
   revalidatePath('/')
   revalidatePath('/store')
   return { success: true }

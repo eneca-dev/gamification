@@ -7,6 +7,7 @@ export {
   getUserOrders,
   getUserBalance,
   getCurrentRate,
+  balanceTag,
 } from './queries'
 export {
   purchaseProduct,

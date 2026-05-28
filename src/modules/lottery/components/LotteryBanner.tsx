@@ -2,10 +2,12 @@
 
 import { useState, useTransition, useEffect, useRef, useMemo } from 'react'
 import { Ticket, Clock } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { CoinStatic } from '@/components/CoinBalance'
 import { CoinIcon } from '@/components/CoinIcon'
 import { purchaseProduct } from '@/modules/shop/index.client'
+import { queryKeys } from '@/modules/cache/keys/query-keys'
 import { declineRaz } from '../utils'
 import type { LotteryWithStats, UserTicketInfo } from '../types'
 
@@ -20,6 +22,7 @@ interface LotteryBannerProps {
 }
 
 export function LotteryBanner({ lottery, ticketInfo: initialTicketInfo, balance, serverTime }: LotteryBannerProps) {
+  const queryClient = useQueryClient()
   const [ticketInfo, setTicketInfo] = useState(initialTicketInfo)
   const [currentBalance, setCurrentBalance] = useState(balance)
   const [isPending, startTransition] = useTransition()
@@ -102,6 +105,7 @@ export function LotteryBanner({ lottery, ticketInfo: initialTicketInfo, balance,
         setNotification({ type: 'error', message: result.error })
       } else {
         setNotification({ type: 'success', message: 'Вы в игре!' })
+        queryClient.invalidateQueries({ queryKey: queryKeys.balance.all })
       }
       setTimeout(() => setNotification(null), 3000)
     })
