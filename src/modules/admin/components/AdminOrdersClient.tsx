@@ -19,11 +19,11 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }>
 }
 
 const FILTER_TABS: { value: StatusFilter; label: string }[] = [
-  { value: 'all', label: 'Все' },
   { value: 'pending', label: 'Ожидают' },
   { value: 'processing', label: 'В работе' },
   { value: 'fulfilled', label: 'Выполнены' },
   { value: 'cancelled', label: 'Отменены' },
+  { value: 'all', label: 'Все' },
 ]
 
 const ALL_STATUSES = [
@@ -41,7 +41,8 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [notification, setNotification] = useState<string | null>(null)
-  const [filter, setFilter] = useState<StatusFilter>('all')
+  const [filter, setFilter] = useState<StatusFilter>('pending')
+  const [showVirtual, setShowVirtual] = useState(false)
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null)
 
   // Дропдаун статуса
@@ -53,14 +54,15 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [cancelNote, setCancelNote] = useState('')
 
-  const filtered = filter === 'all' ? orders : orders.filter((o) => o.status === filter)
+  const visibleOrders = showVirtual ? orders : orders.filter((o) => o.is_physical)
+  const filtered = filter === 'all' ? visibleOrders : visibleOrders.filter((o) => o.status === filter)
 
   const counts = {
-    all: orders.length,
-    pending: orders.filter((o) => o.status === 'pending').length,
-    processing: orders.filter((o) => o.status === 'processing').length,
-    fulfilled: orders.filter((o) => o.status === 'fulfilled').length,
-    cancelled: orders.filter((o) => o.status === 'cancelled').length,
+    all: visibleOrders.length,
+    pending: visibleOrders.filter((o) => o.status === 'pending').length,
+    processing: visibleOrders.filter((o) => o.status === 'processing').length,
+    fulfilled: visibleOrders.filter((o) => o.status === 'fulfilled').length,
+    cancelled: visibleOrders.filter((o) => o.status === 'cancelled').length,
   }
 
   function showNotification(msg: string) {
@@ -147,22 +149,44 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
         </div>
       )}
 
-      {/* Фильтры */}
-      <div className="flex gap-2 flex-wrap" data-onboarding="orders-filter-tabs">
-        {FILTER_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setFilter(tab.value)}
-            className="px-4 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"
-            style={{
-              background: filter === tab.value ? 'var(--apex-primary)' : 'var(--apex-surface)',
-              color: filter === tab.value ? 'white' : 'var(--apex-text-secondary)',
-              border: filter === tab.value ? 'none' : '1px solid var(--apex-border)',
-            }}
+      {/* Фильтры + тоггл виртуальных */}
+      <div className="flex items-center gap-2 flex-wrap justify-between">
+        <div className="flex gap-2 flex-wrap" data-onboarding="orders-filter-tabs">
+          {FILTER_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setFilter(tab.value)}
+              className="px-4 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"
+              style={{
+                background: filter === tab.value ? 'var(--apex-primary)' : 'var(--apex-surface)',
+                color: filter === tab.value ? 'white' : 'var(--apex-text-secondary)',
+                border: filter === tab.value ? 'none' : '1px solid var(--apex-border)',
+              }}
+            >
+              {tab.label} ({counts[tab.value]})
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => setShowVirtual((v) => !v)}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-semibold transition-all duration-200 flex-shrink-0"
+          style={{
+            background: showVirtual ? 'var(--apex-info-bg)' : 'var(--apex-surface)',
+            color: showVirtual ? 'var(--apex-info-text)' : 'var(--apex-text-secondary)',
+            border: '1px solid var(--apex-border)',
+          }}
+        >
+          <span
+            className="w-7 h-4 rounded-full relative transition-colors duration-200 flex-shrink-0"
+            style={{ background: showVirtual ? 'var(--apex-primary)' : 'var(--apex-border)' }}
           >
-            {tab.label} ({counts[tab.value]})
-          </button>
-        ))}
+            <span
+              className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all duration-200"
+              style={{ left: showVirtual ? '14px' : '2px' }}
+            />
+          </span>
+          Виртуальные
+        </button>
       </div>
 
       {/* Таблица */}
