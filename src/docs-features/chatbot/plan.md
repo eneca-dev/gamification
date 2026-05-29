@@ -227,12 +227,15 @@ Webhook срабатывает на каждый INSERT — агент сам п
 
 ## Фаза 6 — Деплой агента на VPS
 
-VPS: Python 3.10, pip3, **Docker** (уже используется для orchestrator). nginx и pm2 отсутствуют.
-Деплоим через Docker — это уже принятый подход на сервере.
+VPS уже использует Docker + `docker-compose.yml` для `gamification-sync`.
+`chat-agent` добавляется вторым сервисом в тот же `docker-compose.yml` — тогда один `docker compose up --build` поднимает оба контейнера, и существующий GitHub Actions деплоит оба автоматически.
 
-### Dockerfile
+### Шаг 1 — `chat_agent/Dockerfile`
+
+Создать файл `chat_agent/Dockerfile`:
+
 ```dockerfile
-FROM python:3.10-slim
+FROM python:3.11-slim
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -240,30 +243,46 @@ COPY . .
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
 ```
 
-### Запуск
+> Python 3.11: пакет `supabase>=2.30.0` требует 3.11+ для поддержки ключей формата `sb_secret_*`.
+
+### Шаг 2 — добавить сервис в `docker-compose.yml`
+
+```yaml
+services:
+  gamification-sync:
+    build: .
+    container_name: gamification-sync
+    restart: unless-stopped
+    ports:
+      - "3005:3000"
+    env_file:
+      - .env
+
+  chat-agent:
+    build: ./chat_agent
+    container_name: chat-agent
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+```
+
+Оба сервиса читают один `.env` в корне репозитория.
+
+### Шаг 3 — открыть порт 8001 на сервере
+
 ```bash
-docker build -t chat-agent .
-docker run -d \
-  --name chat-agent \
-  --restart unless-stopped \
-  -p 8001:8001 \
-  --env-file .env \
-  chat-agent
+ufw allow 8001
 ```
 
-### .env на сервере
-```
-SUPABASE_URL=...
-SUPABASE_SERVICE_KEY=...
-OPENAI_API_KEY=...
-WEBHOOK_SECRET=...
-```
+### Шаг 4 — обновить Supabase Webhook URL
 
-### Supabase Webhook URL
-`http://<vps-ip>:8001/process-message`
+После деплоя обновить URL вебхука (Фаза 5) с `http://localhost:8001` на `http://<vps-ip>:8001/process-message`.
 
-> Порт 8001 должен быть открыт в firewall сервера.
-> Для HTTPS позже можно добавить nginx (apt install) как reverse proxy.
+### Деплой
+
+GitHub Actions workflow уже есть (`deploy.yml`). После merge в `main` он выполнит `docker compose up -d --build --force-recreate` — оба контейнера пересоберутся и запустятся автоматически.
 
 ---
 
@@ -271,12 +290,11 @@ WEBHOOK_SECRET=...
 
 ```
 [x] 1.1–1.4   Миграции БД: pgvector, chat_messages, help_article_chunks, RPC
-[ ] 2         Chat UI: модуль, страница /chat, Server Action, Realtime
-[ ] 3         Скрипт векторизации: написать, запустить, проверить чанки в БД
-[ ] 4         Python агент: реализовать без RAG, проверить LLM-ответ
-[ ] 5         Database Webhook: настроить, проверить e2e (UI → агент → ответ в чате)
-[ ] 4+RAG     Добавить RAG в агент, проверить качество ответов
-[ ] 6         Деплой: после получения VPS-доступа
+[x] 2         Chat UI: модуль, страница /chat, Server Action, Realtime
+[x] 3         Скрипт векторизации: написать, запустить, проверить чанки в БД
+[x] 4         Python агент: FastAPI + RAG + история, проверен локально через Postman
+[x] 5         Database Webhook: настроить, проверить e2e (UI → агент → ответ в чате)
+[x] 6         Деплой: chat_agent/Dockerfile + сервис в docker-compose.yml + nginx proxy /process-message → 8001
 ```
 
 ---
