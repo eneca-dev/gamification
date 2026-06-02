@@ -34,6 +34,9 @@ export const dashboardTour: OnboardingTour = {
               <span>✓ Внесён дневной отчёт</span>
               <span>✓ % готовности обновлён на каждом 20%-чекпоинте бюджета (20/40/60/80/100/120/…)</span>
               <span>✓ Время в задачах со статусом «В работе»</span>
+              <span className="text-[10px]" style={{ color: 'var(--apex-warning-text)' }}>
+                ⚠️ Важно: после перевода задачи в статус «В работе» подождите 90 секунд перед следующей сменой статуса.
+              </span>
             </span>
           </span>
           <span style={{ color: 'var(--apex-danger)' }}>🔴 Красный день — нарушено любое условие</span>
