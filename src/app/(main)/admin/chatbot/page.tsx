@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Bot, FileText, Pencil, Eye, EyeOff, Layers, Plus } from 'lucide-react'
 
 import { getChatbotArticlesWithChunks } from '@/modules/help'
+import { ReembedButton } from '@/modules/help/components/ReembedButton'
 
 export default async function AdminChatbotPage() {
   const articles = await getChatbotArticlesWithChunks()
@@ -22,14 +23,17 @@ export default async function AdminChatbotPage() {
             {articles.length} {articles.length === 1 ? 'статья' : articles.length >= 2 && articles.length <= 4 ? 'статьи' : 'статей'} · {totalChunks} чанков
           </p>
         </div>
-        <Link
-          href="/admin/help/new/edit"
-          className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-semibold text-white transition-colors"
-          style={{ background: 'var(--apex-primary)' }}
-        >
-          <Plus size={15} />
-          Новая статья
-        </Link>
+        <div className="flex items-center gap-2">
+          <ReembedButton />
+          <Link
+            href="/admin/help/new/edit"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-semibold text-white transition-colors"
+            style={{ background: 'var(--apex-primary)' }}
+          >
+            <Plus size={15} />
+            Новая статья
+          </Link>
+        </div>
       </div>
 
       {articles.length === 0 && (
@@ -110,12 +114,20 @@ export default async function AdminChatbotPage() {
                       borderTop: i > 0 ? '1px solid var(--border)' : undefined,
                     }}
                   >
-                    <span
-                      className="inline-block text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full mr-2 align-middle"
-                      style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-primary)' }}
-                    >
-                      #{chunk.chunk_index + 1}
-                    </span>
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span
+                        className="inline-block text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
+                        style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-primary)' }}
+                      >
+                        #{chunk.chunk_index + 1}
+                      </span>
+                      <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
+                        {new Date(chunk.created_at).toLocaleString('ru-RU', {
+                          day: '2-digit', month: '2-digit', year: 'numeric',
+                          hour: '2-digit', minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
                     {chunk.content}
                   </div>
                 ))}

@@ -126,6 +126,25 @@ export async function deleteHelpArticle(slug: string) {
   return { success: true as const }
 }
 
+export async function getReembedStatus(): Promise<{
+  status: 'running' | 'done' | 'error' | null
+  error: string | null
+}> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { status: null, error: 'Нет доступа' }
+
+  const supabase = createSupabaseAdminClient()
+  const { data } = await supabase
+    .from('chatbot_reembed_log')
+    .select('status, error')
+    .order('started_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (!data) return { status: null, error: null }
+  return { status: data.status, error: data.error }
+}
+
 export async function triggerReembed() {
   const isAdmin = await checkIsAdmin()
   if (!isAdmin) return { success: false as const, error: 'Нет доступа' }
