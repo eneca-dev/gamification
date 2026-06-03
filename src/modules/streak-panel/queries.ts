@@ -22,6 +22,7 @@ export function buildCalendarDays(
   automationDates: Set<string>,
   holidays: Set<string>,
   workdays: Set<string>,
+  shieldDates?: Map<string, 'ws' | 'revit'>,
 ): CalendarDay[] {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -69,12 +70,15 @@ export function buildCalendarDays(
       uiStatus = 'no_data'
     }
 
+    const shieldSource = shieldDates?.get(dateStr)
     days.push({
       date: dateStr,
       status: uiStatus,
       automation: automationDates.has(dateStr) && uiStatus !== 'frozen',
       absenceType,
       redReasons,
+      shieldUsed: shieldSource !== undefined,
+      shieldSource,
     })
   }
 

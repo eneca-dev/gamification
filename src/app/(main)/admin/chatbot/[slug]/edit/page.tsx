@@ -1,0 +1,46 @@
+import { getAllHelpArticles, getHelpVariablesMeta } from '@/modules/help'
+import { HelpEditor } from '@/modules/help/components/HelpEditor'
+
+interface AdminChatbotEditPageProps {
+  params: Promise<{ slug: string }>
+}
+
+export default async function AdminChatbotEditPage({ params }: AdminChatbotEditPageProps) {
+  const { slug } = await params
+
+  const isNew = slug === 'new'
+
+  const [articles, variables] = await Promise.all([
+    isNew ? Promise.resolve([]) : getAllHelpArticles(),
+    getHelpVariablesMeta(),
+  ])
+
+  const article = isNew ? null : (articles.find((a) => a.slug === slug) ?? null)
+
+  if (!isNew && !article) {
+    return (
+      <div className="py-12 text-center">
+        <div className="text-3xl mb-3">🔍</div>
+        <div className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>
+          Статья не найдена
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <HelpEditor
+      article={article ? {
+        slug: article.slug,
+        title: article.title,
+        content: article.content,
+        folder: article.folder,
+        folder_label: article.folder_label,
+        is_published: article.is_published,
+      } : null}
+      isNew={isNew}
+      variables={variables}
+      defaultFolder="chatbot"
+    />
+  )
+}
