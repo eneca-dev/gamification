@@ -9,15 +9,27 @@ import type { ChatMessage } from '../types'
 import { ChatBubble } from './ChatBubble'
 import { ChatInput } from './ChatInput'
 
+const SUGGESTED_QUESTIONS = [
+  'Что такое красный и зелёный день?',
+  'За что можно получить кристаллы?',
+  'Что такое стрик и как его не потерять?',
+  'Как работает магазин?',
+]
+
 interface ChatWindowProps {
   initialMessages: ChatMessage[]
   userId: string
+  onHasMessages?: (has: boolean) => void
 }
 
-export function ChatWindow({ initialMessages, userId }: ChatWindowProps) {
+export function ChatWindow({ initialMessages, userId, onHasMessages }: ChatWindowProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [isWaiting, setIsWaiting] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    onHasMessages?.(messages.length > 0)
+  }, [messages.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'instant' })
@@ -112,6 +124,25 @@ export function ChatWindow({ initialMessages, userId }: ChatWindowProps) {
             <p className="text-[12px] text-center max-w-xs" style={{ color: 'var(--apex-text-muted)' }}>
               Отвечаю на вопросы о правилах: стрики, кристаллы, рейтинги, магазин и другое. Помню контекст последних 5 сообщений.
             </p>
+            <div className="flex flex-col gap-2 mt-2 w-full max-w-xs">
+              <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--apex-text-muted)' }}>
+                Попробуйте спросить
+              </p>
+              {SUGGESTED_QUESTIONS.map((q) => (
+                <button
+                  key={q}
+                  onClick={() => handleSend(q)}
+                  className="text-left text-[12px] px-3 py-2 rounded-xl transition-opacity cursor-pointer hover:opacity-75 active:opacity-60"
+                  style={{
+                    background: 'var(--apex-surface)',
+                    border: '1px solid var(--apex-border)',
+                    color: 'var(--apex-text)',
+                  }}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {messages.map((msg) => (
