@@ -34,11 +34,18 @@ export function ChatBubble({ message }: ChatBubbleProps) {
               ul: ({ children }) => <ul className="list-disc list-inside mb-2 last:mb-0 space-y-0.5">{children}</ul>,
               ol: ({ children }) => <ol className="list-decimal list-inside mb-2 last:mb-0 space-y-0.5">{children}</ol>,
               li: ({ children }) => <li>{children}</li>,
-              a: ({ href, children }) => (
-                <a href={href} className="underline underline-offset-2 hover:opacity-80" target="_blank" rel="noopener noreferrer">
-                  {children}
-                </a>
-              ),
+              a: ({ href, children }) => {
+                const isInternal = href?.startsWith('/')
+                return (
+                  <a
+                    href={href}
+                    className="underline underline-offset-2 hover:opacity-80"
+                    {...(!isInternal && { target: '_blank', rel: 'noopener noreferrer' })}
+                  >
+                    {children}
+                  </a>
+                )
+              },
             }}
           >
             {message.content}
