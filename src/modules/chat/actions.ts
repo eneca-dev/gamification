@@ -36,6 +36,17 @@ export async function sendMessage(
   return { success: true, data: null }
 }
 
+export async function clearMessages(): Promise<ActionResult<null>> {
+  const user = await getCurrentUser()
+  if (!user) return { success: false, error: 'Необходима авторизация' }
+
+  const supabase = createSupabaseAdminClient()
+  const { error } = await supabase.from('chat_messages').delete().eq('user_id', user.id)
+
+  if (error) return { success: false, error: 'Ошибка очистки чата' }
+  return { success: true, data: null }
+}
+
 export async function getChatMessagesAction(): Promise<ActionResult<ChatMessage[]>> {
   const user = await getCurrentUser()
   if (!user) return { success: false, error: 'Необходима авторизация' }

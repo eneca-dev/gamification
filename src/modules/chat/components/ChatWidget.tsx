@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Bot, X } from 'lucide-react'
+import { Bot, Trash2, X } from 'lucide-react'
 
-import { getChatMessagesAction } from '../actions'
+import { clearMessages, getChatMessagesAction } from '../actions'
 import type { ChatMessage } from '../types'
 import { ChatWindow } from './ChatWindow'
 
@@ -17,6 +17,11 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
   const [isPending, startTransition] = useTransition()
 
   if (!userId) return null
+
+  async function handleClear() {
+    setMessages([])
+    await clearMessages()
+  }
 
   function handleOpen() {
     setIsOpen(true)
@@ -80,6 +85,17 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
                   Вопросы о правилах геймификации
                 </p>
               </div>
+              {messages !== null && messages.length > 0 && (
+                <button
+                  onClick={handleClear}
+                  className="p-1.5 rounded-lg transition-colors hover:bg-black/5"
+                  style={{ color: 'var(--apex-text-muted)' }}
+                  aria-label="Очистить чат"
+                  title="Очистить чат"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
               <button
                 onClick={() => setIsOpen(false)}
                 className="p-1.5 rounded-lg transition-colors hover:bg-black/5"

@@ -68,7 +68,7 @@ export function ChatWindow({ initialMessages, userId }: ChatWindowProps) {
               Ассистент системы геймификации
             </p>
             <p className="text-[12px] text-center max-w-xs" style={{ color: 'var(--apex-text-muted)' }}>
-              Задайте вопрос о правилах и механике — как работают стрики, щиты, достижения и другое
+              Отвечаю на вопросы о правилах: стрики, кристаллы, рейтинги, магазин и другое. Помню контекст последних 5 сообщений.
             </p>
           </div>
         )}
