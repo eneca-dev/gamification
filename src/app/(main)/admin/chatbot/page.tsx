@@ -26,7 +26,7 @@ export default async function AdminChatbotPage() {
         <div className="flex items-center gap-2">
           <ReembedButton />
           <Link
-            href="/admin/help/new/edit"
+            href="/admin/chatbot/new/edit"
             className="flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-semibold text-white transition-colors"
             style={{ background: 'var(--apex-primary)' }}
           >
@@ -88,7 +88,7 @@ export default async function AdminChatbotPage() {
                   <EyeOff size={14} style={{ color: 'var(--text-muted)' }} />
                 )}
                 <Link
-                  href={`/admin/help/${article.slug}/edit`}
+                  href={`/admin/chatbot/${article.slug}/edit`}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors"
                   style={{
                     background: 'var(--surface)',

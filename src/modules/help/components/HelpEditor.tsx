@@ -21,10 +21,10 @@ interface HelpEditorProps {
     folder: string
     folder_label: string
     is_published: boolean
-    show_in_help: boolean
   } | null
   isNew: boolean
   variables: HelpVariableMeta[]
+  defaultFolder?: string
 }
 
 const KEY_PREFIX_TO_GROUP: Record<string, string> = {
@@ -65,7 +65,7 @@ interface VarMenuState {
 
 type ReembedStatus = 'idle' | 'pending' | 'done' | 'error'
 
-export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
+export function HelpEditor({ article, isNew, variables, defaultFolder }: HelpEditorProps) {
   const varGroups = groupVariables(variables)
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -81,10 +81,10 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
   const [slug, setSlug] = useState(article?.slug ?? '')
   const [title, setTitle] = useState(article?.title ?? '')
   const [content, setContent] = useState(article?.content ?? '')
-  const [folder, setFolder] = useState(article?.folder ?? 'general')
-  const [folderLabel, setFolderLabel] = useState(article?.folder_label ?? 'Общее')
+  const [folder, setFolder] = useState(article?.folder ?? defaultFolder ?? 'general')
+  const [folderLabel, setFolderLabel] = useState(article?.folder_label ?? (defaultFolder === 'chatbot' ? 'Чат-бот: определения' : 'Общее'))
   const [isPublished, setIsPublished] = useState(article?.is_published ?? true)
-  const [showInHelp, setShowInHelp] = useState(article?.show_in_help ?? true)
+  const backUrl = folder === 'chatbot' ? '/admin/chatbot' : '/admin/help'
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -124,6 +124,7 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
     { value: 'achievements', label: 'Достижения' },
     { value: 'store', label: 'Магазин' },
     { value: 'faq', label: 'Частые вопросы' },
+    // protected: не удалять — папка всегда должна существовать для базы знаний чат-бота
     { value: 'chatbot', label: 'Чат-бот: определения' },
   ]
 
@@ -131,7 +132,6 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
     setFolder(value)
     const found = FOLDERS.find((f) => f.value === value)
     if (found) setFolderLabel(found.label)
-    if (value === 'chatbot') setShowInHelp(false)
   }
 
   function handleContextMenu(e: React.MouseEvent<HTMLTextAreaElement>) {
@@ -167,7 +167,7 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
         folder,
         folder_label: folderLabel,
         is_published: isPublished,
-        show_in_help: showInHelp,
+        show_in_help: folder !== 'chatbot',
       }
       const result = isNew ? await createHelpArticle(input) : await updateHelpArticle(input)
 
@@ -175,7 +175,7 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
         setError(result.error)
       } else {
         setSuccess(true)
-        if (isNew) router.push('/admin/help')
+        if (isNew) router.push(backUrl)
         timeoutRef.current = setTimeout(() => setSuccess(false), 10000)
       }
     })
@@ -187,7 +187,7 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
       if (!result.success) {
         setError(result.error)
       } else {
-        router.push('/admin/help')
+        router.push(backUrl)
       }
     })
     setShowDeleteConfirm(false)
@@ -229,7 +229,7 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <Link
-          href="/admin/help"
+          href={backUrl}
           className="flex items-center gap-1.5 text-[13px] font-medium transition-colors hover:opacity-70"
           style={{ color: 'var(--text-secondary)' }}
         >
@@ -367,17 +367,6 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
             />
             <span className="text-[12px] font-medium" style={{ color: 'var(--text-secondary)' }}>
               Опубликована
-            </span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showInHelp}
-              onChange={(e) => setShowInHelp(e.target.checked)}
-              className="w-4 h-4 rounded"
-            />
-            <span className="text-[12px] font-medium" style={{ color: 'var(--text-secondary)' }}>
-              Показывать в справке
             </span>
           </label>
         </div>

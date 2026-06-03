@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Send } from 'lucide-react'
 
 interface ChatInputProps {
@@ -8,10 +8,27 @@ interface ChatInputProps {
   disabled?: boolean
 }
 
+const MAX_HEIGHT = 120
+
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [value, setValue] = useState('')
   const [isPending, setIsPending] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Фокус при открытии и после ответа ассистента
+  useEffect(() => {
+    if (!disabled) textareaRef.current?.focus()
+  }, [disabled])
+
+  // Авторазмер textarea
+  useLayoutEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.overflowY = 'hidden'
+    el.style.height = Math.min(el.scrollHeight, MAX_HEIGHT) + 'px'
+    if (el.scrollHeight > MAX_HEIGHT) el.style.overflowY = 'auto'
+  }, [value])
 
   async function handleSubmit() {
     const trimmed = value.trim()
@@ -23,7 +40,6 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
       await onSend(trimmed)
     } finally {
       setIsPending(false)
-      textareaRef.current?.focus()
     }
   }
 
@@ -49,8 +65,8 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
         placeholder="Задайте вопрос о системе геймификации..."
         rows={1}
         disabled={isDisabled}
-        className="flex-1 resize-none bg-transparent outline-none text-[14px] leading-relaxed placeholder:text-[var(--apex-text-muted)] text-[var(--apex-text)] max-h-32 overflow-y-auto disabled:opacity-50"
-        style={{ scrollbarWidth: 'none' }}
+        className="flex-1 resize-none bg-transparent outline-none text-[14px] leading-relaxed placeholder:text-[var(--apex-text-muted)] text-[var(--apex-text)] disabled:opacity-50"
+        style={{ scrollbarWidth: 'thin' }}
       />
       <button
         onClick={handleSubmit}

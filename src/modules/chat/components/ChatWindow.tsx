@@ -20,7 +20,7 @@ export function ChatWindow({ initialMessages, userId }: ChatWindowProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    bottomRef.current?.scrollIntoView({ behavior: 'instant' })
   }, [messages, isWaiting])
 
   useEffect(() => {
@@ -39,7 +39,9 @@ export function ChatWindow({ initialMessages, userId }: ChatWindowProps) {
           const msg = payload.new as ChatMessage
           setMessages((prev) => {
             if (prev.some((m) => m.id === msg.id)) return prev
-            return [...prev, msg]
+            // Убираем optimistic-заглушку при получении реального сообщения пользователя
+            const filtered = msg.role === 'user' ? prev.filter((m) => !m.id.startsWith('opt-')) : prev
+            return [...filtered, msg]
           })
           if (msg.role === 'assistant') setIsWaiting(false)
         }
@@ -52,15 +54,55 @@ export function ChatWindow({ initialMessages, userId }: ChatWindowProps) {
   }, [userId])
 
   async function handleSend(content: string) {
+    const optimistic: ChatMessage = {
+      id: `opt-${Date.now()}`,
+      user_id: userId,
+      role: 'user',
+      content,
+      created_at: new Date().toISOString(),
+    }
+    setMessages((prev) => [...prev, optimistic])
     setIsWaiting(true)
     const result = await sendMessage({ content })
-    if (!result.success) setIsWaiting(false)
+    if (!result.success) {
+      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id))
+      setIsWaiting(false)
+    }
+  }
+
+  function handleCopy(e: React.ClipboardEvent<HTMLDivElement>) {
+    const selection = window.getSelection()
+    if (!selection || selection.isCollapsed) return
+
+    const range = selection.getRangeAt(0)
+    const bubbles = e.currentTarget.querySelectorAll<HTMLElement>('[data-role]')
+    const lines: string[] = []
+
+    bubbles.forEach((el) => {
+      const elRange = document.createRange()
+      elRange.selectNodeContents(el)
+
+      const noOverlap =
+        range.compareBoundaryPoints(Range.END_TO_START, elRange) >= 0 ||
+        range.compareBoundaryPoints(Range.START_TO_END, elRange) <= 0
+
+      if (noOverlap) return
+
+      const role = el.dataset.role as string
+      const label = role === 'user' ? 'Пользователь написал' : 'Ассистент ответил'
+      lines.push(`${label}:\n${el.textContent?.trim() ?? ''}`)
+    })
+
+    if (lines.length === 0) return
+
+    e.preventDefault()
+    e.clipboardData.setData('text/plain', lines.join('\n\n'))
   }
 
   return (
     <div className="flex flex-col h-full">
       {/* Сообщения */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3" onCopy={handleCopy}>
         {messages.length === 0 && !isWaiting && (
           <div className="flex flex-col items-center justify-center h-full gap-3 py-16">
             <div className="text-4xl">🤖</div>

@@ -14,12 +14,14 @@ interface ChatWidgetProps {
 export function ChatWidget({ userId }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[] | null>(null)
+  const [clearKey, setClearKey] = useState(0)
   const [isPending, startTransition] = useTransition()
 
   if (!userId) return null
 
   async function handleClear() {
     setMessages([])
+    setClearKey((k) => k + 1)
     await clearMessages()
   }
 
@@ -119,7 +121,7 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
               </div>
             ) : (
               <div className="flex-1 min-h-0">
-                <ChatWindow initialMessages={messages} userId={userId} />
+                <ChatWindow key={clearKey} initialMessages={messages} userId={userId} />
               </div>
             )}
           </div>
