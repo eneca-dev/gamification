@@ -49,7 +49,7 @@ export const createLotterySchema = z.object({
   name: z.string().min(1, 'Название приза обязательно').max(200),
   description: z.string().max(1000).nullable().optional(),
   image_url: z.string().url().nullable().optional(),
-  cost_byn: z.number().positive('Цена билета должна быть больше 0'),
+  cost_byn: z.number().positive('Стоимость игры должна быть больше 0'),
 })
 
 export type CreateLotteryInput = z.infer<typeof createLotterySchema>
@@ -61,7 +61,7 @@ export const updateLotterySchema = z.object({
   name: z.string().min(1, 'Название приза обязательно').max(200),
   description: z.string().max(1000).nullable().optional(),
   image_url: z.string().url().nullable().optional(),
-  cost_byn: z.number().positive('Цена билета должна быть больше 0'),
+  cost_byn: z.number().positive('Стоимость игры должна быть больше 0'),
 })
 
 export type UpdateLotteryInput = z.infer<typeof updateLotterySchema>

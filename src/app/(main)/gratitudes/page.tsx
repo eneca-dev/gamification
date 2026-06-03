@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
 import { getCurrentUser } from '@/modules/auth/queries'
-import { getMyGratitudesNew, getSenderQuota, getGratitudeRecipients, getUserBalance } from '@/modules/gratitudes'
+import { getMyGratitudesNew, getSenderQuota, getGratitudeRecipients } from '@/modules/gratitudes'
+import { getUserBalance } from '@/modules/shop'
 import { GratitudeList } from '@/modules/gratitudes/components/GratitudeList'
 import { SendGratitudeButton } from '@/modules/gratitudes/components/SendGratitudeButton'
 

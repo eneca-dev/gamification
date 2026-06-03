@@ -48,7 +48,7 @@ certificates
 
 # mcp config
 .mcp.json
-.playwright-mcp/
+.playwright-mcp
 
-# graphify knowledge graph (generated, not committed)
+# graphify generated output
 /graphify-out/

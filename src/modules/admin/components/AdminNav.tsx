@@ -12,7 +12,7 @@ const navItems = [
   { href: '/admin/calendar', label: 'Календарь', icon: CalendarDays, exact: false },
   { href: '/admin/achievements', label: 'Достижения', icon: Trophy, exact: false },
   { href: '/admin/shields', label: 'Вторая жизнь', icon: Shield, exact: false },
-  { href: '/admin/lottery', label: 'Лотерея', icon: Ticket, exact: false },
+  { href: '/admin/lottery', label: 'eneca-game', icon: Ticket, exact: false },
   { href: '/admin/economy', label: 'Экономика', icon: Coins, exact: false },
   { href: '/admin/help', label: 'Справка', icon: FileText, exact: false },
   { href: '/admin/chatbot', label: 'Чат-бот', icon: Bot, exact: false },

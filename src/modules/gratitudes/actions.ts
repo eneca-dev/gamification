@@ -1,9 +1,10 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { getCurrentUser } from '@/modules/auth/queries'
+import { balanceTag } from '@/modules/shop/queries'
 
 import { sendGratitudeSchema } from './types'
 import type { SendGratitudeInput } from './types'
@@ -100,6 +101,9 @@ export async function sendGratitude(
     return { success: false, error: 'Не удалось отправить. Попробуйте ещё раз' }
   }
 
+  if (type === 'gift' && gift_source === 'balance') {
+    revalidateTag(balanceTag(senderId), 'max')
+  }
   revalidatePath('/')
   revalidatePath('/activity')
   revalidatePath('/gratitudes')

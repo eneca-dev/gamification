@@ -28,8 +28,8 @@ export default async function AchievementsPage() {
       )
     : 0
 
-  const teamName = progress?.team ?? null
-  const deptName = progress?.department ?? null
+  const deptName = progress?.department || null
+  const teamName = progress?.team || (deptName ? `Вне команд - ${deptName}` : 'Вне команд')
 
   return (
     <div className="space-y-6">

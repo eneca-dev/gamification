@@ -79,7 +79,7 @@ export function SpendingBreakdown({ channels, rate }: SpendingBreakdownProps) {
           rate={rate}
         />
         <ChannelCard
-          label="Лотерея"
+          label="eneca-game"
           channel={channels.lottery}
           unitLabel={participantPlural(channels.lottery.users)}
           icon={Ticket}

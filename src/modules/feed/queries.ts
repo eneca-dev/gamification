@@ -219,7 +219,7 @@ async function _getDepartmentFeedData(
   // Группировка сотрудников по команде
   const teamMembersMap = new Map<string, PersonFeedRow[]>()
   for (const user of userList) {
-    const teamName = user.team ?? 'Без команды'
+    const teamName = user.team || 'Вне команд'
     const fullName = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim()
     const uid = String(user.id)
     const userGrats = gratsByName.get(fullName) ?? []
