@@ -19,8 +19,10 @@
 ### WS стрик (VPS-скрипт compute-gamification)
 
 - Фаза 1: финализация неразрешённых pending (`pending_reset_date IS NOT NULL` → сброс)
-- Фаза 2: red день → `pending_reset_date = вчера`, `pending_reset_expires_at = now()+24h`. Стрик не трогается.
+- Фаза 2: red день → VPS читает `ws_user_streaks_effective` (view) для получения актуального `current_streak`, затем пишет его в `ws_user_streaks` как `pending_reset_date = вчера`, `pending_reset_expires_at = now()+24h`. Стрик заморожен по значению из view.
 - Green день → обычная логика + очистка pending
+
+**Важно:** при красном дне стрик берётся из VIEW (`ws_user_streaks_effective`), не из таблицы. Таблица хранит значение на момент последнего зелёного дня и не учитывает выходные, накопившиеся с тех пор. View добавляет +1 за каждый день без записи в `ws_daily_statuses`. Если брать значение из таблицы — стрик будет заморожен некорректно (меньше реального).
 
 ### Revit стрик (VPS-скрипт compute-revit-gamification)
 
@@ -34,15 +36,16 @@
 1. Проверить pending в streak-таблице
 2. Проверить grace period не истёк
 3. Найти товар по `effect` в `shop_products`
-4. Проверить квоту в `streak_shield_quota` (текущий месяц)
+4. Проверить квоту в `streak_shield_quota` (текущий месяц) — через admin client (обходит RLS)
 5. `purchase_product(p_free=isFree)` — атомарное списание 💎 или бесплатная транзакция
-6. Upsert `streak_shield_quota` (инкремент free_used или paid_used)
+6. Upsert `streak_shield_quota` (инкремент free_used или paid_used) — через admin client
 7. Очистить pending
 8. Записать лог в `streak_shield_log`
 
 ## Зависимости
 
-- `ws_user_streaks` — pending_reset_date, pending_reset_expires_at
+- `ws_user_streaks` — pending_reset_date, pending_reset_expires_at; при заморозке стрика пишется значение из view
+- `ws_user_streaks_effective` — view, читается VPS при red day для получения актуального current_streak перед заморозкой
 - `revit_user_streaks_effective` — view, читается для отображения замороженного `current_streak` во время грейса
 - `revit_user_streaks` — pending_reset_date, pending_reset_expires_at, pending_gap_days (legacy, не используется в новой модели)
 - `shop_products` — колонка `effect` ('streak_shield_ws', 'streak_shield_revit')
@@ -62,13 +65,14 @@
 
 ## Actions
 
-- `buyStreakShield(shieldType)` — покупка щита. Side effects: purchase_product, upsert streak_shield_quota, очистка pending, insert в streak_shield_log, revalidatePath
+- `buyStreakShield(shieldType)` — покупка щита. Side effects: purchase_product, upsert streak_shield_quota, очистка pending, insert в streak_shield_log, revalidatePath('/')
 
 ## Queries
 
-- `getPendingResets(userId)` — pending для WS и Revit с `freeUsesLeft` (для UI таймера)
-- `getShieldQuota(userId)` — квота текущего месяца для обоих типов (для карточки товара)
-- `getShieldLog()` — лог всех использований (для админки, limit 100)
+- `getPendingResets(userId)` — pending для WS и Revit с `freeUsesLeft` (для UI таймера). Использует admin client: RLS на `streak_shield_quota` работает через `my_ws_user_id()` (резолвит `ws_users.id` по email из JWT), что ломается при несовпадении auth email и ws_users email (admin с gmail, dev impersonation).
+- `getShieldQuota(userId)` — квота текущего месяца для обоих типов (для карточки товара). Та же причина — admin client.
+- `getShieldDatesInRange(userId, rangeStart, rangeEnd)` — даты использования щитов за период (для календаря).
+- `getShieldLog()` — лог всех использований (для админки, limit 100).
 
 ## Ограничения
 
@@ -78,3 +82,4 @@
 - Бесплатных жизней: 2 в месяц на каждый тип (ws и revit независимо)
 - Стоимость платной: рассчитывается динамически через `current_crystal_rate()`
 - Товары идентифицируются по `shop_products.effect`, не по ID
+- `streak_shield_quota` читается через admin client (service_role), не через user client — RLS политика `user_id = my_ws_user_id()` некорректно работает для пользователей с несовпадающим auth email

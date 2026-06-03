@@ -1,3 +1,5 @@
+import { cached, CACHE_1H } from '@/lib/server-cache'
+
 import { createSupabaseAdminClient } from '@/config/supabase'
 
 import type { GratitudeNew, SenderQuota, GratitudeRecipient } from './types'
@@ -90,9 +92,7 @@ export async function getSenderQuota(senderId: string): Promise<SenderQuota> {
 }
 
 // Список получателей для выбора (исключаем текущего пользователя)
-export async function getGratitudeRecipients(
-  excludeUserId: string
-): Promise<GratitudeRecipient[]> {
+async function _getGratitudeRecipients(excludeUserId: string): Promise<GratitudeRecipient[]> {
   const supabase = createSupabaseAdminClient()
 
   const { data, error } = await supabase
@@ -115,19 +115,9 @@ export async function getGratitudeRecipients(
   }))
 }
 
-// Баланс пользователя
-export async function getUserBalance(userId: string): Promise<number> {
-  const supabase = createSupabaseAdminClient()
+export const getGratitudeRecipients = (excludeUserId: string) =>
+  cached(() => _getGratitudeRecipients(excludeUserId), ['gratitude-recipients', excludeUserId], {
+    tags: ['ws-users'],
+    revalidate: CACHE_1H,
+  })()
 
-  const { data, error } = await supabase
-    .from('gamification_balances')
-    .select('total_coins')
-    .eq('user_id', userId)
-    .single()
-
-  if (error && error.code !== 'PGRST116') {
-    console.error('getUserBalance:', error.message)
-  }
-
-  return data?.total_coins ?? 0
-}

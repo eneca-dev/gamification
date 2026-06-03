@@ -34,6 +34,8 @@ export interface CalendarDay {
   automation: boolean
   absenceType?: string | null
   redReasons?: RedReason[] | null
+  shieldUsed?: boolean
+  shieldSource?: 'ws' | 'revit'
 }
 
 // Milestone стрика

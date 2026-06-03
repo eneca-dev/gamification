@@ -308,7 +308,7 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         accentColor="var(--orange-500)"
         currentUserRank={findRank(revitPanels)}
         tooltip="Топ формируется по максимальному количеству 💎 за использование Revit-плагинов за месяц. Сброс каждый месяц."
-        emptyRankLabel={<><span className="2xl:hidden">Нет 💎</span><span className="hidden 2xl:inline">Нет 💎 за Revit</span></>}
+        emptyRankLabel={<><span className="2xl:hidden">Нет 💎</span><span className="hidden 2xl:inline">💎 за Revit ≤ 0 </span></>}
         rankHref={`/transactions?source=revit&date_from=${dateFrom}&date_to=${dateTo}`}
       />
     </div>

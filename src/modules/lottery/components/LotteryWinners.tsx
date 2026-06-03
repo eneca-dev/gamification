@@ -1,4 +1,4 @@
-import { formatLotteryMonth } from '../utils'
+import { formatLotteryMonth, declineRaz } from '../utils'
 
 import type { LotteryWithStats } from '../types'
 
@@ -20,7 +20,7 @@ export function LotteryWinners({ lotteries }: LotteryWinnersProps) {
       >
         <span className="text-base">🏆</span>
         <h3 className="text-sm font-semibold" style={{ color: 'var(--apex-text-primary)' }}>
-          Победители розыгрышей
+          История eneca-game
         </h3>
       </div>
       <div style={{ background: 'var(--surface-elevated)' }}>
@@ -54,7 +54,7 @@ export function LotteryWinners({ lotteries }: LotteryWinnersProps) {
               )}
             </div>
             <div className="flex-shrink-0 text-xs" style={{ color: 'var(--apex-text-secondary)' }}>
-              {lottery.total_tickets} билетов
+              Сыграли {lottery.total_tickets} {declineRaz(lottery.total_tickets)}
             </div>
           </div>
         ))}
