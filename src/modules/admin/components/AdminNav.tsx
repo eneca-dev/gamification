@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Users, Package, ShoppingBag, Zap, CalendarDays, Trophy, Shield, Ticket, FileText, Coins, MessageCircle, Bot } from 'lucide-react'
+import { Users, Package, ShoppingBag, Zap, CalendarDays, Trophy, Shield, Ticket, FileText, Coins, MessageCircle, Calendar, Bot } from 'lucide-react'
 
 const navItems = [
   { href: '/admin/events', label: 'События', icon: Zap, exact: false },
@@ -17,6 +17,7 @@ const navItems = [
   { href: '/admin/help', label: 'Справка', icon: FileText, exact: false },
   { href: '/admin/chatbot', label: 'Чат-бот', icon: Bot, exact: false },
   { href: '/admin/feedback', label: 'Обратная связь', icon: MessageCircle, exact: false },
+  { href: '/admin/day-off', label: 'Выходные', icon: Calendar, exact: false },
 ]
 
 export function AdminNav() {
