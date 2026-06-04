@@ -39,6 +39,7 @@ const absenceLabels: Record<string, string> = {
   vacation:   "Отпуск",
   sick_leave: "Больничный",
   sick_day:   "SickDay",
+  day_off:    "Выходной",
 };
 
 interface MonthGrid {

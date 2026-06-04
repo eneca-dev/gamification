@@ -33,9 +33,12 @@
   --apex-warning-muted:    #FEF3C7;
   --apex-warning-text:     #D97706;
   --apex-warning-dark:     #92400E;
+  --apex-warning-border:   #FDE68A;
   --apex-warning-rgb:      217, 119, 6;
   --apex-error-bg:         #FEF2F2;
   --apex-error-text:       #DC2626;
+  --apex-danger-light:     #F87171;
+  --apex-overlay:          rgba(0,0,0,0.75);
 
   /* ── Tag palette ────────────────────────────────────────── */
   --tag-teal-bg:           #E6F4F1;
