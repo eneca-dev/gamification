@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from '@/config/supabase'
 
-import type { HelpArticle, HelpFolder, HelpVariableMeta } from './types'
+import type { HelpArticle, HelpChunk, HelpFolder, HelpVariableMeta, ReembedLog } from './types'
 
 // --- Шаблонные переменные {{key}} → значения из БД ---
 
@@ -57,12 +57,10 @@ async function buildVariablesMap(): Promise<Record<string, string>> {
   const vars: Record<string, string> = {}
   const rate = Number(crystalRate.data ?? 0)
 
-  // gamification_event_types: {{green_day}} → "3"
   for (const row of eventTypes.data ?? []) {
     vars[row.key] = String(Math.abs(row.coins))
   }
 
-  // ach_gratitude_settings: {{gratitude_threshold}} → "4", {{gratitude_bonus}} → "200"
   const gratRows = gratitudeSettings.data ?? []
   if (gratRows.length > 0) {
     vars['gratitude_threshold'] = String(gratRows[0].threshold)
@@ -96,10 +94,16 @@ function applyVariables(articles: HelpArticle[], vars: Record<string, string>): 
 
 // --- Запросы ---
 
+/** Статьи для пользовательской справки: опубликованные и show_in_help = true */
 export async function getHelpArticles(): Promise<HelpArticle[]> {
   const supabase = await createSupabaseServerClient()
   const [articlesResult, vars] = await Promise.all([
-    supabase.from('help_articles').select('*').eq('is_published', true).order('sort_order'),
+    supabase
+      .from('help_articles')
+      .select('*')
+      .eq('is_published', true)
+      .eq('show_in_help', true)
+      .order('sort_order'),
     buildVariablesMap(),
   ])
 
@@ -110,7 +114,12 @@ export async function getHelpArticles(): Promise<HelpArticle[]> {
 export async function getHelpArticle(slug: string): Promise<HelpArticle | null> {
   const supabase = await createSupabaseServerClient()
   const [articleResult, vars] = await Promise.all([
-    supabase.from('help_articles').select('*').eq('slug', slug).eq('is_published', true).single(),
+    supabase
+      .from('help_articles')
+      .select('*')
+      .eq('slug', slug)
+      .eq('is_published', true)
+      .single(),
     buildVariablesMap(),
   ])
 
@@ -147,4 +156,57 @@ export async function getAllHelpArticles(): Promise<HelpArticle[]> {
 
   if (error) throw error
   return data ?? []
+}
+
+/** Статьи чат-бота (show_in_help = false) с их чанками для страницы /admin/chatbot */
+export async function getChatbotArticlesWithChunks(): Promise<
+  Array<HelpArticle & { chunks: HelpChunk[] }>
+> {
+  const supabase = await createSupabaseServerClient()
+
+  const { data: articles, error: articlesError } = await supabase
+    .from('help_articles')
+    .select('*')
+    .eq('show_in_help', false)
+    .order('sort_order')
+
+  if (articlesError) throw articlesError
+
+  if (!articles || articles.length === 0) return []
+
+  const articleIds = articles.map((a) => a.id)
+
+  const { data: chunks, error: chunksError } = await supabase
+    .from('help_article_chunks')
+    .select('id, article_id, slug, chunk_index, content, created_at')
+    .in('article_id', articleIds)
+    .order('chunk_index')
+
+  if (chunksError) throw chunksError
+
+  const chunksByArticle = new Map<string, HelpChunk[]>()
+  for (const chunk of chunks ?? []) {
+    if (!chunksByArticle.has(chunk.article_id)) chunksByArticle.set(chunk.article_id, [])
+    chunksByArticle.get(chunk.article_id)!.push(chunk)
+  }
+
+  return articles.map((a) => ({ ...a, chunks: chunksByArticle.get(a.id) ?? [] }))
+}
+
+/** Последняя запись лога векторизации */
+export async function getLastReembedLog(): Promise<ReembedLog | null> {
+  const supabase = await createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('chatbot_reembed_log')
+    .select('*')
+    .order('started_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return null
+    throw error
+  }
+
+  return data
 }

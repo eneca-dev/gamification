@@ -4,7 +4,8 @@ import { FileText, Pencil, Plus, Eye, EyeOff } from 'lucide-react'
 import { getAllHelpArticles } from '@/modules/help'
 
 export default async function AdminHelpPage() {
-  const articles = await getAllHelpArticles()
+  const allArticles = await getAllHelpArticles()
+  const articles = allArticles.filter((a) => a.folder !== 'chatbot')
 
   // Группировка по папкам
   const folders = new Map<string, { label: string; articles: typeof articles }>()

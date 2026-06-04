@@ -14,6 +14,7 @@ interface UpdateArticleInput {
   folder: string
   folder_label: string
   is_published: boolean
+  show_in_help: boolean
 }
 
 export async function updateHelpArticle(input: UpdateArticleInput) {
@@ -30,6 +31,7 @@ export async function updateHelpArticle(input: UpdateArticleInput) {
       folder: input.folder,
       folder_label: input.folder_label,
       is_published: input.is_published,
+      show_in_help: input.show_in_help,
     })
     .eq('slug', input.slug)
     .select()
@@ -54,6 +56,7 @@ interface CreateArticleInput {
   folder: string
   folder_label: string
   is_published?: boolean
+  show_in_help?: boolean
 }
 
 export async function createHelpArticle(input: CreateArticleInput) {
@@ -66,7 +69,6 @@ export async function createHelpArticle(input: CreateArticleInput) {
 
   const supabase = createSupabaseAdminClient()
 
-  // Автоматический sort_order: максимальный в папке + 1
   const { data: maxRow } = await supabase
     .from('help_articles')
     .select('sort_order')
@@ -87,6 +89,7 @@ export async function createHelpArticle(input: CreateArticleInput) {
       folder_label: input.folder_label,
       sort_order: sortOrder,
       is_published: input.is_published ?? false,
+      show_in_help: input.show_in_help ?? true,
     })
 
   if (error) {
@@ -120,5 +123,47 @@ export async function deleteHelpArticle(slug: string) {
 
   revalidatePath('/help')
   revalidatePath('/admin/help')
+  return { success: true as const }
+}
+
+export async function getReembedStatus(): Promise<{
+  status: 'running' | 'done' | 'error' | null
+  error: string | null
+}> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { status: null, error: 'Нет доступа' }
+
+  const supabase = createSupabaseAdminClient()
+  const { data } = await supabase
+    .from('chatbot_reembed_log')
+    .select('status, error')
+    .order('started_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (!data) return { status: null, error: null }
+  return { status: data.status, error: data.error }
+}
+
+export async function triggerReembed() {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false as const, error: 'Нет доступа' }
+
+  const agentUrl = process.env.CHAT_AGENT_URL
+  const secret = process.env.CHAT_AGENT_SECRET
+
+  if (!agentUrl || !secret) {
+    return { success: false as const, error: 'CHAT_AGENT_URL или CHAT_AGENT_SECRET не настроены' }
+  }
+
+  const res = await fetch(`${agentUrl}/reembed`, {
+    method: 'POST',
+    headers: { 'x-secret-key': secret },
+  })
+
+  if (!res.ok && res.status !== 202) {
+    return { success: false as const, error: `Агент вернул ${res.status}` }
+  }
+
   return { success: true as const }
 }

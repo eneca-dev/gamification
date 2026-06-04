@@ -3,13 +3,13 @@
 import { useState, useTransition, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { Save, Eye, Pencil, Trash2, ArrowLeft } from 'lucide-react'
+import { Save, Eye, Pencil, Trash2, ArrowLeft, RefreshCw, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 
-import { updateHelpArticle, createHelpArticle, deleteHelpArticle } from '../actions'
+import { updateHelpArticle, createHelpArticle, deleteHelpArticle, triggerReembed } from '../actions'
 import { SelectionToolbar } from './SelectionToolbar'
 import type { HelpVariableMeta } from '../types'
 
@@ -24,9 +24,9 @@ interface HelpEditorProps {
   } | null
   isNew: boolean
   variables: HelpVariableMeta[]
+  defaultFolder?: string
 }
 
-// Группировка переменных по префиксу ключа — автоматически отражает новые ключи из БД
 const KEY_PREFIX_TO_GROUP: Record<string, string> = {
   green: 'Worksection',
   red: 'Worksection',
@@ -63,22 +63,28 @@ interface VarMenuState {
   y: number
 }
 
-export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
+type ReembedStatus = 'idle' | 'pending' | 'done' | 'error'
+
+export function HelpEditor({ article, isNew, variables, defaultFolder }: HelpEditorProps) {
   const varGroups = groupVariables(variables)
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [isReembedPending, startReembedTransition] = useTransition()
   const [showPreview, setShowPreview] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [varMenu, setVarMenu] = useState<VarMenuState | null>(null)
+  const [reembedStatus, setReembedStatus] = useState<ReembedStatus>('idle')
+  const [reembedError, setReembedError] = useState<string | null>(null)
 
   const [slug, setSlug] = useState(article?.slug ?? '')
   const [title, setTitle] = useState(article?.title ?? '')
   const [content, setContent] = useState(article?.content ?? '')
-  const [folder, setFolder] = useState(article?.folder ?? 'general')
-  const [folderLabel, setFolderLabel] = useState(article?.folder_label ?? 'Общее')
+  const [folder, setFolder] = useState(article?.folder ?? defaultFolder ?? 'general')
+  const [folderLabel, setFolderLabel] = useState(article?.folder_label ?? (defaultFolder === 'chatbot' ? 'Чат-бот: определения' : 'Общее'))
   const [isPublished, setIsPublished] = useState(article?.is_published ?? true)
+  const backUrl = folder === 'chatbot' ? '/admin/chatbot' : '/admin/help'
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -89,7 +95,6 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
     }
   }, [])
 
-  // закрытие меню по клику вне или по Escape
   useEffect(() => {
     if (!varMenu) return
 
@@ -119,6 +124,8 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
     { value: 'achievements', label: 'Достижения' },
     { value: 'store', label: 'Магазин' },
     { value: 'faq', label: 'Частые вопросы' },
+    // protected: не удалять — папка всегда должна существовать для базы знаний чат-бота
+    { value: 'chatbot', label: 'Чат-бот: определения' },
   ]
 
   function handleFolderChange(value: string) {
@@ -150,17 +157,26 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
   function handleSave() {
     setError(null)
     setSuccess(false)
+    setReembedStatus('idle')
 
     startTransition(async () => {
-      const input = { slug, title, content, folder, folder_label: folderLabel, is_published: isPublished }
+      const input = {
+        slug,
+        title,
+        content,
+        folder,
+        folder_label: folderLabel,
+        is_published: isPublished,
+        show_in_help: folder !== 'chatbot',
+      }
       const result = isNew ? await createHelpArticle(input) : await updateHelpArticle(input)
 
       if (!result.success) {
         setError(result.error)
       } else {
         setSuccess(true)
-        if (isNew) router.push('/admin/help')
-        timeoutRef.current = setTimeout(() => setSuccess(false), 3000)
+        if (isNew) router.push(backUrl)
+        timeoutRef.current = setTimeout(() => setSuccess(false), 10000)
       }
     })
   }
@@ -171,13 +187,27 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
       if (!result.success) {
         setError(result.error)
       } else {
-        router.push('/admin/help')
+        router.push(backUrl)
       }
     })
     setShowDeleteConfirm(false)
   }
 
-  // меню открывается влево от курсора если курсор в правой половине экрана
+  function handleReembed() {
+    setReembedStatus('pending')
+    setReembedError(null)
+
+    startReembedTransition(async () => {
+      const result = await triggerReembed()
+      if (!result.success) {
+        setReembedStatus('error')
+        setReembedError(result.error)
+      } else {
+        setReembedStatus('done')
+      }
+    })
+  }
+
   function getMenuStyle(x: number, y: number): React.CSSProperties {
     const menuW = 260
     const menuH = 480
@@ -199,7 +229,7 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <Link
-          href="/admin/help"
+          href={backUrl}
           className="flex items-center gap-1.5 text-[13px] font-medium transition-colors hover:opacity-70"
           style={{ color: 'var(--text-secondary)' }}
         >
@@ -238,15 +268,49 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
         </div>
       </div>
 
-      {/* Status messages */}
+      {/* Save error */}
       {error && (
         <div className="px-4 py-2 rounded-xl text-[13px] font-medium" style={{ background: 'var(--apex-danger)', color: 'white' }}>
           {error}
         </div>
       )}
+
+      {/* Save success + reembed banner */}
       {success && (
-        <div className="px-4 py-2 rounded-xl text-[13px] font-medium" style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-primary)' }}>
-          Сохранено
+        <div
+          className="flex items-center justify-between gap-4 px-4 py-3 rounded-xl"
+          style={{ background: 'var(--apex-success-bg)', border: '1px solid var(--apex-primary)' }}
+        >
+          <p className="text-[13px] font-medium" style={{ color: 'var(--apex-primary)' }}>
+            {reembedStatus === 'done'
+              ? 'Сохранено. Чанки обновлены — чат-бот получил изменения.'
+              : reembedStatus === 'error'
+              ? `Сохранено, но векторизация не запустилась: ${reembedError}`
+              : 'Сохранено. Обновите чанки, чтобы чат-бот узнал об изменениях.'}
+          </p>
+          {reembedStatus === 'idle' && (
+            <button
+              onClick={handleReembed}
+              disabled={isReembedPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold whitespace-nowrap transition-colors disabled:opacity-50"
+              style={{ background: 'var(--apex-primary)', color: 'white' }}
+            >
+              <RefreshCw size={13} />
+              Обновить чанки
+            </button>
+          )}
+          {reembedStatus === 'pending' && (
+            <div className="flex items-center gap-1.5 text-[12px] font-semibold whitespace-nowrap" style={{ color: 'var(--apex-primary)' }}>
+              <Loader2 size={13} className="animate-spin" />
+              Запускаем…
+            </div>
+          )}
+          {reembedStatus === 'done' && (
+            <CheckCircle size={18} style={{ color: 'var(--apex-primary)', flexShrink: 0 }} />
+          )}
+          {reembedStatus === 'error' && (
+            <AlertCircle size={18} style={{ color: 'var(--apex-danger)', flexShrink: 0 }} />
+          )}
         </div>
       )}
 
@@ -293,7 +357,7 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
             ))}
           </select>
         </div>
-        <div className="flex items-end pb-1">
+        <div className="flex items-end gap-5 pb-1">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -350,7 +414,6 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
         onChange={setContent}
       />
 
-      {/* Контекстное меню переменных — рендерится в document.body чтобы не зависеть от родительских transform */}
       {varMenu && createPortal(
         <div
           ref={menuRef}
@@ -406,7 +469,6 @@ export function HelpEditor({ article, isNew, variables }: HelpEditorProps) {
         document.body
       )}
 
-      {/* Модалка подтверждения удаления */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div

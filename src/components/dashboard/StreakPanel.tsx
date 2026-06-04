@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Trophy, CheckCircle2, Info } from "lucide-react";
+import { Trophy, CheckCircle2, Info, Shield } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { sourceColors } from "@/lib/data";
 import type { DailyTask } from "@/lib/data";
@@ -152,6 +152,11 @@ function getDayTooltip(day: CalendarDay): string | undefined {
 
   if (day.automation && day.status !== "frozen") {
     text += " · Автоматизация ★";
+  }
+
+  if (day.shieldUsed) {
+    const sourceName = day.shieldSource === "revit" ? "Revit" : "Worksection";
+    text += `\nИспользована вторая жизнь ${sourceName}`;
   }
 
   return text;
@@ -636,6 +641,36 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
                           const isFuture = day.status === "future";
                           const isNoData = day.status === "no_data";
                           const showStar = day.automation && day.status !== "frozen";
+                          const showShield = day.shieldUsed === true;
+
+                          if (isOut) {
+                            return <div key={day.date} style={{ width: CELL, height: CELL, flexShrink: 0 }} />;
+                          }
+
+                          if (showShield && !isFuture) {
+                            const fillColor = isNoData ? "#C5CCCC" : (statusColors[day.status] as string);
+                            return (
+                              <svg
+                                key={day.date}
+                                width={CELL}
+                                height={CELL}
+                                viewBox="0 0 18 18"
+                                style={{ flexShrink: 0 }}
+                              >
+                                <title>{getDayTooltip(day)}</title>
+                                <path
+                                  d="M 1 1 L 17 1 L 17 10 Q 17 16 9 18 Q 1 16 1 10 Z"
+                                  fill={fillColor}
+                                  fillOpacity={isNoData ? 0.5 : 1}
+                                  stroke={isToday ? "var(--apex-primary)" : "none"}
+                                  strokeWidth={isToday ? 1.5 : 0}
+                                />
+                                {showStar && (
+                                  <text x="9" y="12" textAnchor="middle" fontSize="10" fill="white" fontWeight="bold" opacity="0.9">★</text>
+                                )}
+                              </svg>
+                            );
+                          }
 
                           return (
                             <div
@@ -645,8 +680,8 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
                                 width: CELL,
                                 height: CELL,
                                 flexShrink: 0,
-                                background: isFuture || isOut ? "transparent" : statusColors[day.status],
-                                opacity: isOut ? 0 : isNoData ? 0.5 : 1,
+                                background: isFuture ? "transparent" : statusColors[day.status],
+                                opacity: isNoData ? 0.5 : 1,
                                 border: isToday
                                   ? "2px solid var(--apex-primary)"
                                   : isFuture
@@ -714,6 +749,15 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
                 <span style={{ color: "white", fontSize: 7, lineHeight: 1, fontWeight: "bold" }}>★</span>
               </div>
               <span className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>Автоматизация</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div
+                className="w-2.5 h-2.5 rounded-xs flex items-center justify-center"
+                style={{ background: "var(--apex-danger)" }}
+              >
+                <Shield size={7} style={{ color: "white" }} fill="white" strokeWidth={1} />
+              </div>
+              <span className="text-[10px]" style={{ color: "var(--apex-text-muted)" }}>Вторая жизнь</span>
             </div>
           </div>
 

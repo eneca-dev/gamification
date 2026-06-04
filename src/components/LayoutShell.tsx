@@ -6,6 +6,7 @@ import { Menu } from 'lucide-react'
 
 import { Sidebar } from '@/components/Sidebar'
 import { FeedbackButton } from '@/modules/feedback/components/FeedbackButton'
+import { ChatWidget } from '@/modules/chat/components/ChatWidget'
 import type { AuthUser } from '@/modules/auth/index.client'
 
 interface LayoutShellProps {
@@ -63,6 +64,7 @@ export function LayoutShell({ user, balance, showDevSwitcher, children }: Layout
         </main>
       </div>
 
+      <ChatWidget userId={user?.id ?? null} />
       <FeedbackButton />
     </div>
   )
