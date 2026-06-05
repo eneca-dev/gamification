@@ -1,7 +1,13 @@
+import { redirect } from 'next/navigation'
+
+import { checkIsAdmin } from '@/modules/admin'
 import { getFeedbackList } from '@/modules/feedback'
 import { FeedbackTable } from '@/modules/feedback/components/FeedbackTable'
 
 export default async function AdminFeedbackPage() {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) redirect('/')
+
   const items = await getFeedbackList()
 
   return (

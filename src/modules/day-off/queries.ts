@@ -49,6 +49,26 @@ export async function getAllDayOffRequestsAdmin(): Promise<DayOffRequestAdmin[]>
   return (data ?? []) as DayOffRequestAdmin[]
 }
 
+export async function getUserAbsenceDates(
+  wsUserId: string
+): Promise<{ absence_date: string; absence_type: string }[]> {
+  const supabase = createSupabaseAdminClient()
+  const today = new Date().toISOString().split('T')[0]
+
+  const { data, error } = await supabase
+    .from('ws_user_absences')
+    .select('absence_date, absence_type')
+    .eq('user_id', wsUserId)
+    .neq('absence_type', 'day_off')
+    .gte('absence_date', today)
+
+  if (error) {
+    console.error('getUserAbsenceDates:', error.message)
+    return []
+  }
+  return (data ?? []) as { absence_date: string; absence_type: string }[]
+}
+
 export async function getScreenshotSignedUrl(path: string): Promise<string | null> {
   const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase

@@ -6,7 +6,7 @@ import { submitDayOffRequest, uploadDayOffScreenshot } from '@/modules/day-off/i
 import { DatePicker } from '@/components/DatePicker'
 
 interface DayOffFormProps {
-  bookedDates: string[]
+  bookedDates: Record<string, string>
   onSubmitSuccess?: (id: string, requestedDate: string, note: string | null) => void
 }
 

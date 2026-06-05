@@ -1,10 +1,15 @@
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Bot, FileText, Pencil, Eye, EyeOff, Layers, Plus } from 'lucide-react'
 
+import { checkIsAdmin } from '@/modules/admin'
 import { getChatbotArticlesWithChunks } from '@/modules/help'
 import { ReembedButton } from '@/modules/help/components/ReembedButton'
 
 export default async function AdminChatbotPage() {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) redirect('/')
+
   const articles = await getChatbotArticlesWithChunks()
 
   const totalChunks = articles.reduce((sum, a) => sum + a.chunks.length, 0)

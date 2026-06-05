@@ -1,3 +1,6 @@
+import { redirect } from 'next/navigation'
+
+import { checkIsAdmin } from '@/modules/admin'
 import { getAllHelpArticles, getHelpVariablesMeta } from '@/modules/help'
 import { HelpEditor } from '@/modules/help/components/HelpEditor'
 
@@ -6,6 +9,9 @@ interface AdminHelpEditPageProps {
 }
 
 export default async function AdminHelpEditPage({ params }: AdminHelpEditPageProps) {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) redirect('/')
+
   const { slug } = await params
 
   const isNew = slug === 'new'

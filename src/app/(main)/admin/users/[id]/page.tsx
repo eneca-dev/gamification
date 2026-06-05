@@ -1,8 +1,8 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
-import { getUserDetail } from '@/modules/admin'
+import { checkIsAdmin, getUserDetail } from '@/modules/admin'
 import { getShieldDatesInRange } from '@/modules/streak-shield'
 import { RoleProvider, RoleBadge, RoleSwitch } from '@/modules/admin/components/RoleToggle'
 import { BetaProvider, BetaSwitch } from '@/modules/admin/components/BetaToggle'
@@ -27,6 +27,9 @@ interface UserDetailPageProps {
 }
 
 export default async function UserDetailPage({ params }: UserDetailPageProps) {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) redirect('/')
+
   const { id } = await params
   const detail = await getUserDetail(id)
 

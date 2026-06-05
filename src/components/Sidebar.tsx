@@ -24,7 +24,7 @@ const navItems = [
 ]
 
 const bottomNavItems: { href: string; label: string; icon: typeof HelpCircle; adminOnly?: boolean }[] = [
-  { href: '/day-off',     label: 'Взять выходной', icon: Calendar },
+  { href: '/day-off',     label: 'Запросить выходной', icon: Calendar },
   { href: '/help',        label: 'Справка',       icon: HelpCircle },
   { href: '/admin',       label: 'Админ-панель',  icon: Settings, adminOnly: true },
 ]

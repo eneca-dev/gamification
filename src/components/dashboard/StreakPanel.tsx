@@ -29,7 +29,7 @@ const statusLabels: Record<CalendarDayStatus, string> = {
   green:   "Зелёный",
   red:     "Красный",
   gray:    "Выходной",
-  frozen:  "Отпуск",
+  frozen:  "Отпуск / Выходной",
   future:  "Ещё не наступил",
   out:     "",
   no_data: "Нет данных",
@@ -718,7 +718,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
 
           {/* Legend */}
           <div className="flex items-center gap-3 mt-3 mb-4 flex-wrap">
-            {(["green", "red", "frozen", "gray"] as CalendarDayStatus[]).map((s) => (
+            {(["green", "red", "frozen"] as CalendarDayStatus[]).map((s) => (
               <div key={s} className="flex items-center gap-1">
                 <div
                   className="w-2.5 h-2.5 rounded-xs"

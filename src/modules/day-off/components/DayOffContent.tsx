@@ -10,7 +10,7 @@ import type { DayOffRequest } from '../types'
 
 interface DayOffContentProps {
   initialRequests: DayOffRequest[]
-  bookedDates: string[]
+  bookedDates: Record<string, string>
 }
 
 export function DayOffContent({ initialRequests, bookedDates }: DayOffContentProps) {
