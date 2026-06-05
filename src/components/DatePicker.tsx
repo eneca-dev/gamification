@@ -7,7 +7,7 @@ interface DatePickerProps {
   value: string              // YYYY-MM-DD или ''
   onChange: (date: string) => void
   minDate?: string           // YYYY-MM-DD — даты раньше недоступны
-  disabledDates?: string[]   // YYYY-MM-DD — уже занятые даты
+  disabledDates?: Record<string, string>  // YYYY-MM-DD → подпись тултипа
   placeholder?: string
 }
 
@@ -40,10 +40,10 @@ const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
 // ── Компонент ─────────────────────────────────────────────────────────────────
 
-export function DatePicker({ value, onChange, minDate, disabledDates = [], placeholder = 'Выберите дату' }: DatePickerProps) {
+export function DatePicker({ value, onChange, minDate, disabledDates = {}, placeholder = 'Выберите дату' }: DatePickerProps) {
   const selected = parseDate(value)
   const minD = parseDate(minDate ?? '')
-  const disabledSet = new Set(disabledDates)
+  const disabledMap = new Map(Object.entries(disabledDates))
 
   const [open, setOpen] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -82,7 +82,7 @@ export function DatePicker({ value, onChange, minDate, disabledDates = [], place
 
   function handleDay(d: Date) {
     if (minD && d < minD) return
-    if (disabledSet.has(toISO(d))) return
+    if (disabledMap.has(toISO(d))) return
     onChange(toISO(d))
     setOpen(false)
   }
@@ -179,7 +179,8 @@ export function DatePicker({ value, onChange, minDate, disabledDates = [], place
               const isSelected = selected && sameDay(d, selected)
               const isToday = sameDay(d, today)
               const isPast = !!(minD && d < minD)
-              const isBooked = disabledSet.has(iso)
+              const bookedLabel = disabledMap.get(iso)
+              const isBooked = bookedLabel !== undefined
               const isDisabled = isPast || isBooked
 
               let bg = 'transparent'
@@ -204,17 +205,25 @@ export function DatePicker({ value, onChange, minDate, disabledDates = [], place
               }
 
               return (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => handleDay(d)}
-                  disabled={isDisabled}
-                  title={isBooked ? 'Выходной уже запрошен на эту дату' : undefined}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-medium transition-all ${extraClass}`}
-                  style={{ background: bg, color, border: `1px solid ${borderColor}` }}
-                >
-                  {d.getDate()}
-                </button>
+                <div key={i} className="relative group flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() => handleDay(d)}
+                    disabled={isDisabled}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-medium transition-all ${extraClass}`}
+                    style={{ background: bg, color, border: `1px solid ${borderColor}` }}
+                  >
+                    {d.getDate()}
+                  </button>
+                  {isBooked && bookedLabel && (
+                    <div
+                      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 rounded-lg text-[10px] font-medium whitespace-nowrap pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ background: 'var(--apex-surface)', color: 'var(--apex-text)', border: '1px solid var(--apex-border)', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                    >
+                      {bookedLabel}
+                    </div>
+                  )}
+                </div>
               )
             })}
           </div>

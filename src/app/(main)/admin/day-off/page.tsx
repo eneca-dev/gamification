@@ -1,8 +1,14 @@
+import { redirect } from 'next/navigation'
+
+import { checkIsAdmin } from '@/modules/admin'
 import { getAllDayOffRequestsAdmin, getScreenshotSignedUrl } from '@/modules/day-off'
 import type { DayOffRequestAdmin } from '@/modules/day-off'
 import { AdminDayOffList } from '@/modules/day-off/components/AdminDayOffList'
 
 export default async function AdminDayOffPage() {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) redirect('/')
+
   const requests = await getAllDayOffRequestsAdmin()
 
   // Signed URLs генерируем только для активных (pending) заявок —

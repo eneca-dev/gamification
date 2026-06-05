@@ -18,6 +18,16 @@ export async function submitDayOffRequest(
 
   const supabase = createSupabaseAdminClient()
 
+  const { data: conflict } = await supabase
+    .from('ws_user_absences')
+    .select('absence_type')
+    .eq('user_id', user.wsUserId)
+    .eq('absence_date', parsed.data.requested_date)
+    .neq('absence_type', 'day_off')
+    .maybeSingle()
+
+  if (conflict) return { success: false, error: 'На этот день уже есть отпуск или больничный' }
+
   // user_name и status проставляются триггером trg_day_off_requests_before_insert
   const { data, error } = await supabase
     .from('day_off_requests')

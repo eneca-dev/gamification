@@ -1,3 +1,6 @@
+import { redirect } from 'next/navigation'
+
+import { checkIsAdmin } from '@/modules/admin'
 import { getShieldLog } from '@/modules/streak-shield'
 import { Shield } from 'lucide-react'
 
@@ -7,6 +10,9 @@ const typeLabels: Record<string, string> = {
 }
 
 export default async function AdminShieldsPage() {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) redirect('/')
+
   const log = await getShieldLog()
 
   return (
