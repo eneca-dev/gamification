@@ -16,8 +16,12 @@ export async function checkChatAvailability(): Promise<boolean> {
   const agentUrl = process.env.CHAT_AGENT_URL
   if (!agentUrl) return false
   try {
-    await fetch(agentUrl, { signal: AbortSignal.timeout(3000) })
-    return true
+    const res = await fetch(`${agentUrl}/process-message`, {
+      method: 'POST',
+      signal: AbortSignal.timeout(3000),
+    })
+    // 405 = endpoint существует, но не принимает POST без тела — сервис живой
+    return res.status !== 502 && res.status !== 503 && res.status !== 504
   } catch {
     return false
   }
