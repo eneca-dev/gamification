@@ -240,12 +240,19 @@ async function _getDepartmentFeedData(
   }
 
   // Сборка строк команд
+  const awardCountByUser = new Map<string, number>()
+  const awardCountByTeam = new Map<string, number>()
+  for (const a of awards) {
+    if (a.entity_type === 'user') awardCountByUser.set(a.entity_id, (awardCountByUser.get(a.entity_id) ?? 0) + 1)
+    else if (a.entity_type === 'team') awardCountByTeam.set(a.entity_id, (awardCountByTeam.get(a.entity_id) ?? 0) + 1)
+  }
+
   const teamRows: TeamFeedRow[] = []
   for (const [teamName, members] of teamMembersMap) {
     const sorted = members.sort((a, b) => (b.revitCoins + b.wsCoins) - (a.revitCoins + a.wsCoins))
     const memberIdSet = new Set(sorted.map((m) => m.userId))
-    const teamUserEarned = awards.filter((a) => a.entity_type === 'user' && memberIdSet.has(a.entity_id)).length
-    const teamTeamEarned = awards.filter((a) => a.entity_type === 'team' && a.entity_id === teamName).length
+    const teamUserEarned = [...memberIdSet].reduce((s, uid) => s + (awardCountByUser.get(uid) ?? 0), 0)
+    const teamTeamEarned = awardCountByTeam.get(teamName) ?? 0
     teamRows.push({
       team: teamName,
       revitCoins: sorted.reduce((s, m) => s + m.revitCoins, 0),

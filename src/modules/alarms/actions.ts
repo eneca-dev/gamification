@@ -2,7 +2,7 @@
 
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { getCurrentUser } from '@/modules/auth/queries'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 export async function resolveAlarm(alarmId: number): Promise<{ success: true } | { success: false; error: string }> {
   const user = await getCurrentUser()
@@ -21,7 +21,8 @@ export async function resolveAlarm(alarmId: number): Promise<{ success: true } |
 
   if (error) return { success: false, error: error.message }
 
-  revalidatePath('/')
+  revalidateTag(`alarms:${wsUserId}`, 'max')
+  revalidatePath('/alarms')
   return { success: true }
 }
 
@@ -42,6 +43,7 @@ export async function unresolveAlarm(alarmId: number): Promise<{ success: true }
 
   if (error) return { success: false, error: error.message }
 
-  revalidatePath('/')
+  revalidateTag(`alarms:${wsUserId}`, 'max')
+  revalidatePath('/alarms')
   return { success: true }
 }
