@@ -21,7 +21,7 @@ export async function resolveAlarm(alarmId: number): Promise<{ success: true } |
 
   if (error) return { success: false, error: error.message }
 
-  revalidateTag(`alarms:${wsUserId}`)
+  revalidateTag(`alarms:${wsUserId}`, 'max')
   revalidatePath('/alarms')
   return { success: true }
 }
@@ -43,7 +43,7 @@ export async function unresolveAlarm(alarmId: number): Promise<{ success: true }
 
   if (error) return { success: false, error: error.message }
 
-  revalidateTag(`alarms:${wsUserId}`)
+  revalidateTag(`alarms:${wsUserId}`, 'max')
   revalidatePath('/alarms')
   return { success: true }
 }
