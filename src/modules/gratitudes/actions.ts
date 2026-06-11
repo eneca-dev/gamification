@@ -104,7 +104,6 @@ export async function sendGratitude(
   if (type === 'gift' && gift_source === 'balance') {
     revalidateTag(balanceTag(senderId), 'max')
   }
-  revalidatePath('/')
   revalidatePath('/activity')
   revalidatePath('/gratitudes')
   return { success: true }
