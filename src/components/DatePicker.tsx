@@ -4,10 +4,15 @@ import { useState, useEffect, useRef } from 'react'
 import { Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface DatePickerProps {
-  value: string              // YYYY-MM-DD или ''
-  onChange: (date: string) => void
-  minDate?: string           // YYYY-MM-DD — даты раньше недоступны
-  disabledDates?: Record<string, string>  // YYYY-MM-DD → подпись тултипа
+  // Single mode
+  value?: string
+  onChange?: (date: string) => void
+  // Multi mode — передать values чтобы включить режим мультивыбора
+  values?: string[]
+  onChangeMulti?: (dates: string[]) => void
+  // Общие
+  minDate?: string
+  disabledDates?: Record<string, string>
   placeholder?: string
 }
 
@@ -36,18 +41,45 @@ function formatFull(d: Date): string {
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+function formatShort(d: Date): string {
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+}
+
+function pluralDates(n: number): string {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod100 >= 11 && mod100 <= 14) return `${n} дат`
+  if (mod10 === 1) return `${n} дата`
+  if (mod10 >= 2 && mod10 <= 4) return `${n} даты`
+  return `${n} дат`
+}
+
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
 // ── Компонент ─────────────────────────────────────────────────────────────────
 
-export function DatePicker({ value, onChange, minDate, disabledDates = {}, placeholder = 'Выберите дату' }: DatePickerProps) {
-  const selected = parseDate(value)
+export function DatePicker({
+  value = '',
+  onChange,
+  values,
+  onChangeMulti,
+  minDate,
+  disabledDates = {},
+  placeholder = 'Выберите дату',
+}: DatePickerProps) {
+  const isMulti = values !== undefined
+  const selected = isMulti ? null : parseDate(value)
+  const selectedSet = isMulti ? new Set(values) : null
   const minD = parseDate(minDate ?? '')
   const disabledMap = new Map(Object.entries(disabledDates))
 
   const [open, setOpen] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(() => {
-    const d = selected ?? new Date()
+    if (isMulti && values?.length) {
+      const d = parseDate(values[0])
+      if (d) return new Date(d.getFullYear(), d.getMonth(), 1)
+    }
+    const d = (isMulti ? null : parseDate(value)) ?? new Date()
     return new Date(d.getFullYear(), d.getMonth(), 1)
   })
   const ref = useRef<HTMLDivElement>(null)
@@ -61,9 +93,9 @@ export function DatePicker({ value, onChange, minDate, disabledDates = {}, place
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  // Синхронизируем месяц при внешнем изменении value
+  // Синхронизируем месяц при внешнем изменении value (только single mode)
   useEffect(() => {
-    if (selected) setCurrentMonth(new Date(selected.getFullYear(), selected.getMonth(), 1))
+    if (!isMulti && selected) setCurrentMonth(new Date(selected.getFullYear(), selected.getMonth(), 1))
   }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const today = new Date()
@@ -82,43 +114,90 @@ export function DatePicker({ value, onChange, minDate, disabledDates = {}, place
 
   function handleDay(d: Date) {
     if (minD && d < minD) return
-    if (disabledMap.has(toISO(d))) return
-    onChange(toISO(d))
-    setOpen(false)
+    const iso = toISO(d)
+    if (disabledMap.has(iso)) return
+
+    if (isMulti) {
+      const next = new Set(values)
+      if (next.has(iso)) next.delete(iso)
+      else next.add(iso)
+      onChangeMulti?.(Array.from(next).sort())
+      // Попап остаётся открытым для выбора следующей даты
+    } else {
+      onChange?.(iso)
+      setOpen(false)
+    }
   }
 
   function handleClear(e: React.MouseEvent) {
     e.stopPropagation()
-    onChange('')
+    if (isMulti) onChangeMulti?.([])
+    else onChange?.('')
+  }
+
+  const hasSelection = isMulti ? (values?.length ?? 0) > 0 : !!selected
+
+  // Текст триггера в multi-режиме
+  function multiTriggerLabel(): string | null {
+    if (!values?.length) return null
+    if (values.length <= 2) {
+      return values
+        .map(v => { const d = parseDate(v); return d ? formatShort(d) : '' })
+        .filter(Boolean)
+        .join(', ')
+    }
+    return pluralDates(values.length)
   }
 
   return (
     <div className="relative w-full" ref={ref}>
-      {/* Триггер — выглядит как input */}
+      {/* Триггер */}
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center gap-2 text-[13px] transition-colors text-left"
         style={{
-          background: 'var(--apex-bg)',
-          border: `1px solid ${open ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
+          background: (isMulti && hasSelection) ? 'var(--apex-success-bg)' : 'var(--apex-bg)',
+          border: `1px solid ${
+            (isMulti && hasSelection)
+              ? 'rgba(var(--apex-primary-rgb), 0.3)'
+              : open
+              ? 'var(--apex-primary)'
+              : 'var(--apex-border)'
+          }`,
           borderRadius: '10px',
           padding: '8px 12px',
-          color: selected ? 'var(--apex-text)' : 'var(--apex-text-muted)',
+          color: (isMulti && hasSelection)
+            ? 'var(--apex-primary)'
+            : (selected ? 'var(--apex-text)' : 'var(--apex-text-muted)'),
           outline: 'none',
         }}
       >
-        <Calendar size={14} style={{ color: 'var(--apex-text-muted)', flexShrink: 0 }} />
+        <Calendar
+          size={14}
+          style={{
+            color: (isMulti && hasSelection) ? 'var(--apex-primary)' : 'var(--apex-text-muted)',
+            flexShrink: 0,
+          }}
+        />
         <span className="flex-1">
-          {selected ? formatFull(selected) : placeholder}
+          {isMulti
+            ? (multiTriggerLabel() ?? placeholder)
+            : (selected ? formatFull(selected) : placeholder)
+          }
         </span>
-        {selected && (
+        {hasSelection && (
           <span
             onClick={handleClear}
             className="flex items-center justify-center w-4 h-4 rounded-full flex-shrink-0"
-            style={{ background: 'var(--apex-border)' }}
+            style={{
+              background: isMulti ? 'rgba(27,107,88,0.15)' : 'var(--apex-border)',
+            }}
           >
-            <X size={9} style={{ color: 'var(--apex-text-secondary)' }} />
+            <X
+              size={9}
+              style={{ color: isMulti ? 'var(--apex-primary)' : 'var(--apex-text-secondary)' }}
+            />
           </span>
         )}
       </button>
@@ -176,7 +255,9 @@ export function DatePicker({ value, onChange, minDate, disabledDates = {}, place
               if (!d) return <div key={i} className="w-8 h-8" />
 
               const iso = toISO(d)
-              const isSelected = selected && sameDay(d, selected)
+              const isSelected = isMulti
+                ? selectedSet!.has(iso)
+                : !!(selected && sameDay(d, selected))
               const isToday = sameDay(d, today)
               const isPast = !!(minD && d < minD)
               const bookedLabel = disabledMap.get(iso)
@@ -198,7 +279,7 @@ export function DatePicker({ value, onChange, minDate, disabledDates = {}, place
               } else if (isSelected) {
                 bg = 'var(--apex-primary)'
                 color = '#ffffff'
-                extraClass = ''
+                extraClass = 'cursor-pointer'
               } else if (isToday) {
                 borderColor = 'var(--apex-primary)'
                 color = 'var(--apex-primary)'
@@ -218,7 +299,12 @@ export function DatePicker({ value, onChange, minDate, disabledDates = {}, place
                   {isBooked && bookedLabel && (
                     <div
                       className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 rounded-lg text-[10px] font-medium whitespace-nowrap pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ background: 'var(--apex-surface)', color: 'var(--apex-text)', border: '1px solid var(--apex-border)', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                      style={{
+                        background: 'var(--apex-surface)',
+                        color: 'var(--apex-text)',
+                        border: '1px solid var(--apex-border)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                      }}
                     >
                       {bookedLabel}
                     </div>
@@ -227,6 +313,19 @@ export function DatePicker({ value, onChange, minDate, disabledDates = {}, place
               )
             })}
           </div>
+
+          {/* Подсказка в multi-режиме */}
+          {isMulti && (
+            <div
+              className="mt-2.5 pt-2 text-[10px] text-center"
+              style={{ color: 'var(--apex-text-muted)', borderTop: '1px solid var(--apex-border)' }}
+            >
+              {values?.length
+                ? `Выбрано: ${pluralDates(values.length)}`
+                : 'Нажмите на дату чтобы выбрать'
+              }
+            </div>
+          )}
         </div>
       )}
     </div>

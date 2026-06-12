@@ -2,17 +2,17 @@
 
 import { useState, useTransition, useRef } from 'react'
 import { Upload, X, Loader2 } from 'lucide-react'
-import { submitDayOffRequest, uploadDayOffScreenshot } from '@/modules/day-off/index.client'
+import { submitBatchDayOffRequests, uploadDayOffScreenshot } from '@/modules/day-off/index.client'
 import { DatePicker } from '@/components/DatePicker'
 
 interface DayOffFormProps {
   bookedDates: Record<string, string>
-  onSubmitSuccess?: (id: string, requestedDate: string, note: string | null) => void
+  onSubmitSuccess?: (ids: string[], requestedDates: string[], note: string | null) => void
 }
 
 export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
   const [isPending, startTransition] = useTransition()
-  const [date, setDate] = useState('')
+  const [dates, setDates] = useState<string[]>([])
   const [note, setNote] = useState('')
   const [screenshotPath, setScreenshotPath] = useState<string | null>(null)
   const [screenshotName, setScreenshotName] = useState<string | null>(null)
@@ -53,24 +53,24 @@ export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
     setError(null)
 
     startTransition(async () => {
-      const result = await submitDayOffRequest({
-        requested_date: date,
+      const result = await submitBatchDayOffRequests({
+        requested_dates: dates,
         note: note.trim() || undefined,
         screenshot_url: screenshotPath,
       })
       if (!result.success) { setError(result.error); return }
-      const submittedDate = date
+      const submittedDates = dates
       const submittedNote = note.trim() || null
-      setDate('')
+      setDates([])
       setNote('')
       setScreenshotPath(null)
       setScreenshotName(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
-      // Optimistic: сразу показываем заявку в списке, router.refresh() в родителе
-      onSubmitSuccess?.(result.id, submittedDate, submittedNote)
+      onSubmitSuccess?.(result.ids, submittedDates, submittedNote)
     })
   }
 
+  const isDisabled = isPending || dates.length === 0 || uploading || !screenshotPath
   const labelClass = 'block text-[12px] font-semibold mb-1.5'
   const inputStyle = {
     background: 'var(--apex-bg)',
@@ -98,11 +98,11 @@ export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
           Дата выходного
         </label>
         <DatePicker
-          value={date}
-          onChange={setDate}
+          values={dates}
+          onChangeMulti={setDates}
           minDate={minDateStr}
           disabledDates={bookedDates}
-          placeholder="Выберите дату"
+          placeholder="Выберите даты"
         />
       </div>
 
@@ -181,15 +181,12 @@ export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
 
       <button
         type="submit"
-        disabled={isPending || !date || uploading || !screenshotPath}
-
+        disabled={isDisabled}
         className="w-full py-2.5 rounded-xl text-[13px] font-bold transition-all"
         style={{
-          background: (isPending || !date || uploading || !screenshotPath)
-            ? 'var(--apex-disabled-bg)'
-            : 'var(--apex-primary)',
-          color: (isPending || !date || uploading || !screenshotPath) ? 'var(--apex-text-muted)' : 'white',
-          cursor: (isPending || !date || uploading || !screenshotPath) ? 'default' : 'pointer',
+          background: isDisabled ? 'var(--apex-disabled-bg)' : 'var(--apex-primary)',
+          color: isDisabled ? 'var(--apex-text-muted)' : 'white',
+          cursor: isDisabled ? 'default' : 'pointer',
         }}
       >
         {isPending ? 'Отправляем...' : 'Отправить заявку'}

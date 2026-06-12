@@ -19,21 +19,22 @@ export function DayOffContent({ initialRequests, bookedDates }: DayOffContentPro
 
   const hasActiveRequest = requests.some(r => r.status === 'pending')
 
-  function handleSubmitSuccess(id: string, requestedDate: string, note: string | null) {
-    const optimistic: DayOffRequest = {
+  function handleSubmitSuccess(ids: string[], requestedDates: string[], note: string | null) {
+    const now = new Date().toISOString()
+    const optimisticEntries: DayOffRequest[] = ids.map((id, i) => ({
       id,
       ws_user_id:       '',
       user_name:        '',
-      requested_date:   requestedDate,
+      requested_date:   requestedDates[i],
       note,
       screenshot_url:   null,
       status:           'pending',
       rejection_reason: null,
       reviewed_at:      null,
       resolved_at:      null,
-      created_at:       new Date().toISOString(),
-    }
-    setRequests(prev => [optimistic, ...prev])
+      created_at:       now,
+    }))
+    setRequests(prev => [...optimisticEntries, ...prev])
     router.refresh()
   }
 
