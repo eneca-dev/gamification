@@ -25,6 +25,8 @@ export const PLUGIN_INDICES = [
   'finishing-*', 'sharedcoordinates-*', 'eneca.sharedcoordinates-*',
   'profilay-*', 'lookuptables-*', 'viewcloner-*', 'lintelstransfer-*',
   'surfacegen-*', 'quickmount-*', 'schedulestable-*',
+  'settorevit-*', 'parkingslots-*', 'filterassistant-*',
+  'hvacautotag-*', 'evacuation-*', 'revitdataexporter-*',
 ].join(',');
 
 // Маппинг Properties.AppName → читаемое название (ключи — точные значения из ES)
@@ -51,4 +53,10 @@ export const PLUGIN_DISPLAY_NAMES: Record<string, string> = {
   SurfaceGen: 'Surface Gen',
   QuickMount: 'Quick Mount',
   SchedulesTable: 'Schedules Table',
+  SetToRevit: 'Set to Revit',
+  ParkingSlots: 'Parking Slots',
+  FilterAssistant: 'Filter Assistant',
+  HVACAutoTag: 'HVAC Auto Tag',
+  Evacuation: 'Evacuation',
+  RevitDataExporter: 'Revit Data Exporter',
 };
