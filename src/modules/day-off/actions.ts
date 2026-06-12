@@ -4,8 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { getCurrentUser } from '@/modules/auth/queries'
 import { checkIsAdmin } from '@/modules/admin/checkIsAdmin'
-import { submitDayOffSchema, rejectDayOffSchema } from './types'
-import type { SubmitDayOffInput, RejectDayOffInput } from './types'
+import { submitDayOffSchema, rejectDayOffSchema, submitBatchDayOffSchema } from './types'
+import type { SubmitDayOffInput, RejectDayOffInput, SubmitBatchDayOffInput } from './types'
 
 export async function submitDayOffRequest(
   input: SubmitDayOffInput
@@ -44,6 +44,54 @@ export async function submitDayOffRequest(
 
   revalidatePath('/day-off')
   return { success: true, id: data.id }
+}
+
+export async function submitBatchDayOffRequests(
+  input: SubmitBatchDayOffInput
+): Promise<{ success: true; ids: string[] } | { success: false; error: string }> {
+  const user = await getCurrentUser()
+  if (!user?.wsUserId) return { success: false, error: 'Необходима авторизация' }
+
+  const parsed = submitBatchDayOffSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message }
+
+  const now = new Date()
+  for (const date of parsed.data.requested_dates) {
+    if (new Date(date) <= now) {
+      return { success: false, error: `Дата ${date} должна быть в будущем` }
+    }
+  }
+
+  const supabase = createSupabaseAdminClient()
+  const wsUserId = user.wsUserId
+
+  const { data: conflicts } = await supabase
+    .from('ws_user_absences')
+    .select('absence_date')
+    .eq('user_id', wsUserId)
+    .in('absence_date', parsed.data.requested_dates)
+    .neq('absence_type', 'day_off')
+
+  if (conflicts?.length) {
+    return { success: false, error: `На ${conflicts[0].absence_date} уже есть отпуск или больничный` }
+  }
+
+  const rows = parsed.data.requested_dates.map(date => ({
+    ws_user_id:     wsUserId,
+    requested_date: date,
+    note:           parsed.data.note ?? null,
+    screenshot_url: parsed.data.screenshot_url,
+  }))
+
+  const { data, error } = await supabase
+    .from('day_off_requests')
+    .insert(rows)
+    .select('id')
+
+  if (error) return { success: false, error: 'Не удалось создать заявки' }
+
+  revalidatePath('/day-off')
+  return { success: true, ids: data.map(r => r.id) }
 }
 
 export async function uploadDayOffScreenshot(

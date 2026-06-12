@@ -47,3 +47,18 @@ export const rejectDayOffSchema = z.object({
 })
 
 export type RejectDayOffInput = z.infer<typeof rejectDayOffSchema>
+
+const dateStringSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Некорректный формат даты')
+
+export const submitBatchDayOffSchema = z.object({
+  requested_dates: z
+    .array(dateStringSchema)
+    .min(1, 'Выберите хотя бы одну дату')
+    .max(31, 'Не более 31 даты за один раз'),
+  note: z.string().max(500).optional(),
+  screenshot_url: z.string().min(1, 'Скриншот обязателен'),
+})
+
+export type SubmitBatchDayOffInput = z.infer<typeof submitBatchDayOffSchema>
