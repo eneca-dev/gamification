@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, ShoppingBag, Trophy, Users, Settings, LogOut, HelpCircle, Calendar } from 'lucide-react'
@@ -9,11 +10,14 @@ import type { AuthUser } from '@/modules/auth/index.client'
 import { DevUserSwitcher } from '@/modules/dev-tools/components/DevUserSwitcher'
 import { CoinBalanceLive } from '@/components/CoinBalance'
 
+const LS_KEY = 'day_off_last_seen_at'
+
 interface SidebarProps {
   user: AuthUser | null
   balance: number
   showDevSwitcher?: boolean
   isMobileOpen?: boolean
+  dayOffResolved?: string[]
 }
 
 const navItems = [
@@ -44,8 +48,31 @@ function getInitials(fullName: string, email?: string): string {
   return '?'
 }
 
-export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false }: SidebarProps) {
+export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, dayOffResolved = [] }: SidebarProps) {
   const pathname = usePathname()
+  const [dayOffBadge, setDayOffBadge] = useState(0)
+
+  useEffect(() => {
+    const raw = localStorage.getItem(LS_KEY)
+    const lastSeen = raw ? new Date(raw) : null
+
+    if (!lastSeen) {
+      // Первый запуск — считаем всё просмотренным
+      localStorage.setItem(LS_KEY, new Date().toISOString())
+      setDayOffBadge(0)
+      return
+    }
+
+    const unseen = dayOffResolved.filter((ts) => new Date(ts) > lastSeen).length
+    setDayOffBadge(unseen)
+  }, [dayOffResolved])
+
+  useEffect(() => {
+    if (pathname.startsWith('/day-off')) {
+      localStorage.setItem(LS_KEY, new Date().toISOString())
+      setDayOffBadge(0)
+    }
+  }, [pathname])
 
   return (
     <aside
@@ -107,6 +134,7 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false }
                 ? pathname.startsWith('/help')
                 : pathname.startsWith(item.href)
               const Icon = item.icon
+              const showBadge = item.href === '/day-off' && dayOffBadge > 0
               return (
                 <Link
                   key={item.href}
@@ -120,7 +148,15 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false }
                   }}
                 >
                   <Icon size={16} />
-                  {item.label}
+                  <span className="flex-1">{item.label}</span>
+                  {showBadge && (
+                    <span
+                      className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-bold text-white"
+                      style={{ background: 'var(--apex-primary)' }}
+                    >
+                      {dayOffBadge > 9 ? '9+' : dayOffBadge}
+                    </span>
+                  )}
                 </Link>
               )
             })}

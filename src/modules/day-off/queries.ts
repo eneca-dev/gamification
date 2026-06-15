@@ -69,6 +69,21 @@ export async function getUserAbsenceDates(
   return (data ?? []) as { absence_date: string; absence_type: string }[]
 }
 
+export async function getUserDayOffResolvedTimestamps(wsUserId: string): Promise<string[]> {
+  const supabase = createSupabaseAdminClient()
+  const { data, error } = await supabase
+    .from('day_off_requests')
+    .select('resolved_at')
+    .eq('ws_user_id', wsUserId)
+    .not('resolved_at', 'is', null)
+
+  if (error) {
+    console.error('getUserDayOffResolvedTimestamps:', error.message)
+    return []
+  }
+  return (data ?? []).map((r) => r.resolved_at as string)
+}
+
 export async function getScreenshotSignedUrl(path: string): Promise<string | null> {
   const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase

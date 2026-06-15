@@ -47,7 +47,7 @@ export function DayOffInstructions() {
             </p>
             <p className="text-[12px]" style={{ color: 'var(--apex-text-secondary)' }}>
               Прикрепите скриншот переписки с руководителем, где он подтверждает выходной.
-              На скриншоте должны быть видны: дата запроса выходного, явное согласие от руководителя, имя и фамилия руководителя.
+              На скриншоте должны быть видны: <strong>запрашиваемые даты, явное согласие от руководителя, имя и фамилия руководителя</strong>.
             </p>
             <ExampleImageButton />
           </div>
@@ -61,7 +61,7 @@ export function DayOffInstructions() {
         <AlertTriangle size={15} className="flex-shrink-0 mt-0.5" style={{ color: 'var(--apex-warning-text)' }} />
         <p className="text-[12px] leading-relaxed" style={{ color: 'var(--apex-warning-dark)' }}>
           Эта заявка относится <strong>исключительно к системе геймификации</strong> и не является
-          официальным документом. Официальное оформление выходного — через HR по стандартным каналам.
+          официальным документом. Официальное оформление выходного — через HR по стандартному процессу.
         </p>
       </div>
     </div>

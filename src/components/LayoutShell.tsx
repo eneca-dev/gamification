@@ -13,10 +13,11 @@ interface LayoutShellProps {
   user: AuthUser | null
   balance: number
   showDevSwitcher: boolean
+  dayOffResolved: string[]
   children: React.ReactNode
 }
 
-export function LayoutShell({ user, balance, showDevSwitcher, children }: LayoutShellProps) {
+export function LayoutShell({ user, balance, showDevSwitcher, dayOffResolved, children }: LayoutShellProps) {
   const [isSidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
 
@@ -38,6 +39,7 @@ export function LayoutShell({ user, balance, showDevSwitcher, children }: Layout
         balance={balance}
         showDevSwitcher={showDevSwitcher}
         isMobileOpen={isSidebarOpen}
+        dayOffResolved={dayOffResolved}
       />
 
       <div className="flex-1 min-w-0 ml-0 md:ml-[260px]">

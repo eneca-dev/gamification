@@ -17,6 +17,7 @@ export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
   const [screenshotPath, setScreenshotPath] = useState<string | null>(null)
   const [screenshotName, setScreenshotName] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -24,9 +25,7 @@ export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
   minDate.setDate(minDate.getDate() + 1)
   const minDateStr = minDate.toISOString().split('T')[0]
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+  async function uploadFile(file: File) {
     setError(null)
     setUploading(true)
     try {
@@ -39,6 +38,22 @@ export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
     } finally {
       setUploading(false)
     }
+  }
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    await uploadFile(file)
+  }
+
+  async function handlePaste(e: React.ClipboardEvent) {
+    if (screenshotPath) return
+    const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'))
+    if (!item) return
+    const file = item.getAsFile()
+    if (!file) return
+    const named = new File([file], `screenshot_${Date.now()}.png`, { type: file.type })
+    await uploadFile(named)
   }
 
   function handleRemoveFile() {
@@ -86,6 +101,7 @@ export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
+      onPaste={handlePaste}
       className="rounded-2xl p-5 space-y-4"
       style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
     >
@@ -148,18 +164,26 @@ export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
             type="button"
             disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault()
+              setIsDragging(false)
+              const file = e.dataTransfer.files?.[0]
+              if (file) uploadFile(file)
+            }}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-medium transition-colors"
             style={{
-              background: 'var(--apex-bg)',
-              border: '2px dashed var(--apex-border)',
-              color: uploading ? 'var(--apex-text-muted)' : 'var(--apex-text-secondary)',
+              background: isDragging ? 'var(--apex-primary-bg)' : 'var(--apex-bg)',
+              border: `2px dashed ${isDragging ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
+              color: uploading ? 'var(--apex-text-muted)' : isDragging ? 'var(--apex-primary)' : 'var(--apex-text-secondary)',
               cursor: uploading ? 'default' : 'pointer',
             }}
           >
             {uploading ? (
               <><Loader2 size={15} className="animate-spin" /> Загружается...</>
             ) : (
-              <><Upload size={15} /> Выбрать файл (JPG, PNG, до 5 МБ)</>
+              <><Upload size={15} /> Выбрать файл, перетащить или Ctrl+V</>
             )}
           </button>
         )}
