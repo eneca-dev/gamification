@@ -2,6 +2,7 @@ import { BetaAccessDenied } from '@/components/BetaAccessDenied'
 import { LayoutShell } from '@/components/LayoutShell'
 import { getCurrentUser } from '@/modules/auth'
 import { getUserBalance } from '@/modules/shop'
+import { getUserDayOffResolvedTimestamps } from '@/modules/day-off'
 import { OnboardingProvider } from '@/modules/onboarding/index.client'
 
 const DEV_TOOLS_ENABLED =
@@ -21,9 +22,10 @@ export default async function MainLayout({
   }
 
   const balance = user?.wsUserId ? await getUserBalance(user.wsUserId) : 0
+  const dayOffResolved = user?.wsUserId ? await getUserDayOffResolvedTimestamps(user.wsUserId) : []
 
   const layout = (
-    <LayoutShell user={user} balance={balance} showDevSwitcher={DEV_TOOLS_ENABLED}>
+    <LayoutShell user={user} balance={balance} showDevSwitcher={DEV_TOOLS_ENABLED} dayOffResolved={dayOffResolved}>
       {children}
     </LayoutShell>
   )
