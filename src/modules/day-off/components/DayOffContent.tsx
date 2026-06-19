@@ -6,7 +6,7 @@ import { DayOffInstructions } from './DayOffInstructions'
 import { DayOffForm } from './DayOffForm'
 import { DayOffRequestList } from './DayOffRequestList'
 import { DayOffStatusPoller } from './DayOffStatusPoller'
-import type { DayOffRequest } from '../types'
+import type { DayOffRequest, DayOffRequestType } from '../types'
 
 interface DayOffContentProps {
   initialRequests: DayOffRequest[]
@@ -16,16 +16,18 @@ interface DayOffContentProps {
 export function DayOffContent({ initialRequests, bookedDates }: DayOffContentProps) {
   const router = useRouter()
   const [requests, setRequests] = useState<DayOffRequest[]>(initialRequests)
+  const [requestType, setRequestType] = useState<DayOffRequestType>('day_off')
 
   const hasActiveRequest = requests.some(r => r.status === 'pending')
 
-  function handleSubmitSuccess(ids: string[], requestedDates: string[], note: string | null) {
+  function handleSubmitSuccess(ids: string[], requestedDates: string[], note: string | null, type: DayOffRequestType) {
     const now = new Date().toISOString()
     const optimisticEntries: DayOffRequest[] = ids.map((id, i) => ({
       id,
       ws_user_id:       '',
       user_name:        '',
       requested_date:   requestedDates[i],
+      request_type:     type,
       note,
       screenshot_url:   null,
       status:           'pending',
@@ -40,10 +42,12 @@ export function DayOffContent({ initialRequests, bookedDates }: DayOffContentPro
 
   return (
     <>
-      <div className="animate-fade-in-up stagger-1 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <DayOffInstructions />
+      <div className="animate-fade-in-up stagger-1 grid grid-cols-1 lg:grid-cols-2 gap-4 relative z-10">
+        <DayOffInstructions requestType={requestType} />
         <DayOffForm
           bookedDates={bookedDates}
+          requestType={requestType}
+          onRequestTypeChange={setRequestType}
           onSubmitSuccess={handleSubmitSuccess}
         />
       </div>

@@ -4,13 +4,16 @@ import { useState, useTransition, useRef } from 'react'
 import { Upload, X, Loader2 } from 'lucide-react'
 import { submitBatchDayOffRequests, uploadDayOffScreenshot } from '@/modules/day-off/index.client'
 import { DatePicker } from '@/components/DatePicker'
+import type { DayOffRequestType } from '../types'
 
 interface DayOffFormProps {
   bookedDates: Record<string, string>
-  onSubmitSuccess?: (ids: string[], requestedDates: string[], note: string | null) => void
+  requestType: DayOffRequestType
+  onRequestTypeChange: (type: DayOffRequestType) => void
+  onSubmitSuccess?: (ids: string[], requestedDates: string[], note: string | null, requestType: DayOffRequestType) => void
 }
 
-export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
+export function DayOffForm({ bookedDates, requestType, onRequestTypeChange, onSubmitSuccess }: DayOffFormProps) {
   const [isPending, startTransition] = useTransition()
   const [dates, setDates] = useState<string[]>([])
   const [note, setNote] = useState('')
@@ -24,6 +27,16 @@ export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
   const minDate = new Date()
   minDate.setDate(minDate.getDate() + 1)
   const minDateStr = minDate.toISOString().split('T')[0]
+
+  const isBusinessTrip = requestType === 'business_trip'
+
+  function handleTypeChange(type: DayOffRequestType) {
+    onRequestTypeChange(type)
+    setScreenshotPath(null)
+    setScreenshotName(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    setError(null)
+  }
 
   async function uploadFile(file: File) {
     setError(null)
@@ -47,7 +60,7 @@ export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
   }
 
   async function handlePaste(e: React.ClipboardEvent) {
-    if (screenshotPath) return
+    if (screenshotPath || isBusinessTrip) return
     const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'))
     if (!item) return
     const file = item.getAsFile()
@@ -64,14 +77,15 @@ export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!screenshotPath) { setError('Прикрепите скриншот согласования'); return }
+    if (!isBusinessTrip && !screenshotPath) { setError('Прикрепите скриншот согласования'); return }
     setError(null)
 
     startTransition(async () => {
       const result = await submitBatchDayOffRequests({
         requested_dates: dates,
-        note: note.trim() || undefined,
-        screenshot_url: screenshotPath,
+        request_type:    requestType,
+        note:            note.trim() || undefined,
+        screenshot_url:  screenshotPath,
       })
       if (!result.success) { setError(result.error); return }
       const submittedDates = dates
@@ -81,11 +95,11 @@ export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
       setScreenshotPath(null)
       setScreenshotName(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
-      onSubmitSuccess?.(result.ids, submittedDates, submittedNote)
+      onSubmitSuccess?.(result.ids, submittedDates, submittedNote, requestType)
     })
   }
 
-  const isDisabled = isPending || dates.length === 0 || uploading || !screenshotPath
+  const isDisabled = isPending || dates.length === 0 || uploading || (!isBusinessTrip && !screenshotPath)
   const labelClass = 'block text-[12px] font-semibold mb-1.5'
   const inputStyle = {
     background: 'var(--apex-bg)',
@@ -109,9 +123,31 @@ export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
         Новая заявка
       </h3>
 
+      {/* Переключатель типа */}
+      <div
+        className="flex rounded-xl p-1 gap-1"
+        style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
+      >
+        {(['day_off', 'business_trip'] as DayOffRequestType[]).map((type) => (
+          <button
+            key={type}
+            type="button"
+            onClick={() => handleTypeChange(type)}
+            className="flex-1 py-1.5 rounded-lg text-[12px] font-semibold transition-all"
+            style={{
+              background: requestType === type ? 'var(--apex-surface)' : 'transparent',
+              color: requestType === type ? 'var(--apex-text)' : 'var(--apex-text-muted)',
+              boxShadow: requestType === type ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+            }}
+          >
+            {type === 'day_off' ? 'Соцотпуск' : 'Командировка'}
+          </button>
+        ))}
+      </div>
+
       <div>
         <label className={labelClass} style={{ color: 'var(--apex-text-secondary)' }}>
-          Дата выходного
+          {isBusinessTrip ? 'Дата командировки' : 'Дата выходного'}
         </label>
         <DatePicker
           values={dates}
@@ -136,66 +172,68 @@ export function DayOffForm({ bookedDates, onSubmitSuccess }: DayOffFormProps) {
         />
       </div>
 
-      <div>
-        <label className={labelClass} style={{ color: 'var(--apex-text-secondary)' }}>
-          Скриншот согласования с руководителем
-          <span className="ml-1" style={{ color: 'var(--apex-danger)' }}>*</span>
-        </label>
+      {!isBusinessTrip && (
+        <div>
+          <label className={labelClass} style={{ color: 'var(--apex-text-secondary)' }}>
+            Скриншот согласования с руководителем
+            <span className="ml-1" style={{ color: 'var(--apex-danger)' }}>*</span>
+          </label>
 
-        {screenshotPath ? (
-          <div
-            className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl"
-            style={{ background: 'var(--apex-success-bg)', border: '1px solid var(--apex-border)' }}
-          >
-            <span className="text-[12px] font-medium truncate" style={{ color: 'var(--apex-primary)' }}>
-              {screenshotName}
-            </span>
+          {screenshotPath ? (
+            <div
+              className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl"
+              style={{ background: 'var(--apex-success-bg)', border: '1px solid var(--apex-border)' }}
+            >
+              <span className="text-[12px] font-medium truncate" style={{ color: 'var(--apex-primary)' }}>
+                {screenshotName}
+              </span>
+              <button
+                type="button"
+                onClick={handleRemoveFile}
+                className="flex-shrink-0 p-1 rounded-full hover:bg-black/5"
+                style={{ color: 'var(--apex-text-muted)' }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
             <button
               type="button"
-              onClick={handleRemoveFile}
-              className="flex-shrink-0 p-1 rounded-full hover:bg-black/5"
-              style={{ color: 'var(--apex-text-muted)' }}
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault()
+                setIsDragging(false)
+                const file = e.dataTransfer.files?.[0]
+                if (file) uploadFile(file)
+              }}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-medium transition-colors"
+              style={{
+                background: isDragging ? 'var(--apex-primary-bg)' : 'var(--apex-bg)',
+                border: `2px dashed ${isDragging ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
+                color: uploading ? 'var(--apex-text-muted)' : isDragging ? 'var(--apex-primary)' : 'var(--apex-text-secondary)',
+                cursor: uploading ? 'default' : 'pointer',
+              }}
             >
-              <X size={14} />
+              {uploading ? (
+                <><Loader2 size={15} className="animate-spin" /> Загружается...</>
+              ) : (
+                <><Upload size={15} /> Выбрать файл, перетащить или Ctrl+V</>
+              )}
             </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            disabled={uploading}
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault()
-              setIsDragging(false)
-              const file = e.dataTransfer.files?.[0]
-              if (file) uploadFile(file)
-            }}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-medium transition-colors"
-            style={{
-              background: isDragging ? 'var(--apex-primary-bg)' : 'var(--apex-bg)',
-              border: `2px dashed ${isDragging ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
-              color: uploading ? 'var(--apex-text-muted)' : isDragging ? 'var(--apex-primary)' : 'var(--apex-text-secondary)',
-              cursor: uploading ? 'default' : 'pointer',
-            }}
-          >
-            {uploading ? (
-              <><Loader2 size={15} className="animate-spin" /> Загружается...</>
-            ) : (
-              <><Upload size={15} /> Выбрать файл, перетащить или Ctrl+V</>
-            )}
-          </button>
-        )}
+          )}
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif,image/heic"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-      </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/heic"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </div>
+      )}
 
       {error && (
         <p className="text-[12px] font-medium" style={{ color: 'var(--apex-danger)' }}>

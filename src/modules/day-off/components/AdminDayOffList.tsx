@@ -6,6 +6,7 @@ import { approveDayOffRequest, rejectDayOffRequest } from '@/modules/day-off/ind
 import { DayOffStatusBadge } from './DayOffStatusBadge'
 import { ImageLightbox } from '@/components/ImageLightbox'
 import { formatDate } from '@/modules/day-off/utils'
+import { REQUEST_TYPE_LABELS } from '@/modules/day-off/index.client'
 import type { DayOffRequestAdmin } from '@/modules/day-off/index.client'
 
 interface AdminDayOffListProps {
@@ -32,6 +33,7 @@ function RequestRow({
   const [optimisticRejectionReason, setOptimisticRejectionReason] = useState(req.rejection_reason)
 
   const isActive = optimisticStatus === 'pending'
+  const isBusinessTrip = req.request_type === 'business_trip'
 
   function handleApprove() {
     setError(null)
@@ -81,6 +83,12 @@ function RequestRow({
               </span>
               <span className="text-[12px]" style={{ color: 'var(--apex-text-secondary)' }}>
                 {formatDate(req.requested_date)}
+              </span>
+              <span
+                className="px-1.5 py-0.5 rounded-md text-[11px] font-medium"
+                style={{ background: 'var(--apex-bg)', color: 'var(--apex-text-muted)', border: '1px solid var(--apex-border)' }}
+              >
+                {REQUEST_TYPE_LABELS[req.request_type]}
               </span>
               {req.note && (
                 <span className="text-[12px]" style={{ color: 'var(--apex-text-muted)' }}>
@@ -169,7 +177,7 @@ function RequestRow({
         {/* Статус + скрин */}
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
           <DayOffStatusBadge status={optimisticStatus} />
-          {screenshotUrl && (
+          {!isBusinessTrip && screenshotUrl && (
             <button
               type="button"
               onClick={() => onViewScreenshot(screenshotUrl)}

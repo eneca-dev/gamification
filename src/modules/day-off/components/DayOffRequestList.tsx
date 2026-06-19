@@ -1,6 +1,7 @@
 import { CalendarDays } from 'lucide-react'
 import { DayOffStatusBadge } from './DayOffStatusBadge'
 import { formatDate } from '../utils'
+import { REQUEST_TYPE_LABELS } from '../types'
 import type { DayOffRequest } from '../types'
 
 interface DayOffRequestListProps {
@@ -36,10 +37,16 @@ export function DayOffRequestList({ requests }: DayOffRequestListProps) {
           >
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <CalendarDays size={14} style={{ color: 'var(--apex-text-muted)' }} />
                   <span className="text-[14px] font-semibold" style={{ color: 'var(--apex-text)' }}>
                     {formatDate(req.requested_date)}
+                  </span>
+                  <span
+                    className="px-1.5 py-0.5 rounded-md text-[11px] font-medium"
+                    style={{ background: 'var(--apex-bg)', color: 'var(--apex-text-muted)', border: '1px solid var(--apex-border)' }}
+                  >
+                    {REQUEST_TYPE_LABELS[req.request_type]}
                   </span>
                 </div>
                 {req.note && (

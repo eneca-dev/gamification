@@ -16,6 +16,10 @@ export async function submitDayOffRequest(
   const parsed = submitDayOffSchema.safeParse(input)
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message }
 
+  if (parsed.data.request_type === 'day_off' && !parsed.data.screenshot_url) {
+    return { success: false, error: 'Скриншот обязателен' }
+  }
+
   const supabase = createSupabaseAdminClient()
 
   const { data: conflict } = await supabase
@@ -34,8 +38,9 @@ export async function submitDayOffRequest(
     .insert({
       ws_user_id:     user.wsUserId,
       requested_date: parsed.data.requested_date,
+      request_type:   parsed.data.request_type,
       note:           parsed.data.note ?? null,
-      screenshot_url: parsed.data.screenshot_url,
+      screenshot_url: parsed.data.screenshot_url ?? null,
     })
     .select('id')
     .single()
@@ -54,6 +59,10 @@ export async function submitBatchDayOffRequests(
 
   const parsed = submitBatchDayOffSchema.safeParse(input)
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message }
+
+  if (parsed.data.request_type === 'day_off' && !parsed.data.screenshot_url) {
+    return { success: false, error: 'Скриншот обязателен' }
+  }
 
   const now = new Date()
   for (const date of parsed.data.requested_dates) {
@@ -79,8 +88,9 @@ export async function submitBatchDayOffRequests(
   const rows = parsed.data.requested_dates.map(date => ({
     ws_user_id:     wsUserId,
     requested_date: date,
+    request_type:   parsed.data.request_type,
     note:           parsed.data.note ?? null,
-    screenshot_url: parsed.data.screenshot_url,
+    screenshot_url: parsed.data.screenshot_url ?? null,
   }))
 
   const { data, error } = await supabase
@@ -203,4 +213,3 @@ export async function rejectDayOffRequest(
   revalidatePath('/day-off')
   return { success: true }
 }
-

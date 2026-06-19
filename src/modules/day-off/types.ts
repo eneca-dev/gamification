@@ -10,11 +10,20 @@ export const STATUS_LABELS: Record<DayOffStatus, string> = {
   rejected: 'Отклонено',
 }
 
+export const DAY_OFF_REQUEST_TYPES = ['day_off', 'business_trip'] as const
+export type DayOffRequestType = typeof DAY_OFF_REQUEST_TYPES[number]
+
+export const REQUEST_TYPE_LABELS: Record<DayOffRequestType, string> = {
+  day_off:       'Соцотпуск',
+  business_trip: 'Командировка',
+}
+
 export interface DayOffRequest {
   id: string
   ws_user_id: string
   user_name: string
   requested_date: string
+  request_type: DayOffRequestType
   note: string | null
   screenshot_url: string | null
   status: DayOffStatus
@@ -35,8 +44,9 @@ export const submitDayOffSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Некорректный формат даты')
     .refine((d) => new Date(d) > new Date(), 'Дата должна быть в будущем'),
+  request_type: z.enum(DAY_OFF_REQUEST_TYPES).default('day_off'),
   note: z.string().max(500).optional(),
-  screenshot_url: z.string().min(1, 'Скриншот обязателен'),
+  screenshot_url: z.string().nullable().optional(),
 })
 
 export type SubmitDayOffInput = z.infer<typeof submitDayOffSchema>
@@ -57,8 +67,9 @@ export const submitBatchDayOffSchema = z.object({
     .array(dateStringSchema)
     .min(1, 'Выберите хотя бы одну дату')
     .max(31, 'Не более 31 даты за один раз'),
+  request_type: z.enum(DAY_OFF_REQUEST_TYPES).default('day_off'),
   note: z.string().max(500).optional(),
-  screenshot_url: z.string().min(1, 'Скриншот обязателен'),
+  screenshot_url: z.string().nullable().optional(),
 })
 
 export type SubmitBatchDayOffInput = z.infer<typeof submitBatchDayOffSchema>
