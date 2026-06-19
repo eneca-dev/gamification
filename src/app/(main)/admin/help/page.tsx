@@ -1,9 +1,14 @@
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { FileText, Pencil, Plus, Eye, EyeOff } from 'lucide-react'
 
+import { checkIsAdmin } from '@/modules/admin'
 import { getAllHelpArticles } from '@/modules/help'
 
 export default async function AdminHelpPage() {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) redirect('/')
+
   const allArticles = await getAllHelpArticles()
   const articles = allArticles.filter((a) => a.folder !== 'chatbot')
 

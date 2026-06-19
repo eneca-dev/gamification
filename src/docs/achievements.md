@@ -194,9 +194,9 @@
 
 ### Личные топы
 
-| View | Функция | Источник монет |
-|---|---|---|
-| `view_top_pers_ws` | `getWsPersonalRanking(limit)` | `source = 'ws'`, текущий месяц |
+| View                  | Функция                          | Источник монет                    |
+| --------------------- | -------------------------------- | --------------------------------- |
+| `view_top_pers_ws`    | `getWsPersonalRanking(limit)`    | `source = 'ws'`, текущий месяц    |
 | `view_top_pers_revit` | `getRevitPersonalRanking(limit)` | `source = 'revit'`, текущий месяц |
 
 Оба view фильтруют `total_coins > 0` — пользователи с нулевым или отрицательным итогом за месяц в топе не отображаются. На UI в таком случае показывается бейдж **"💎 за WS ≤ 0"** (не "Нет 💎") — чтобы явно указать, что монеты начислялись, но штрафы перекрыли начисления.
@@ -205,11 +205,11 @@ WS-итог за месяц может быть отрицательным: `wro
 
 ### Командные и отдельские топы
 
-| View | Функция | Формула score |
-|---|---|---|
-| `view_top_team_ws` | `getWsTeamRanking` | `SUM(ws_coins) / total_employees` |
-| `view_top_dept_ws` | `getWsDepartmentRanking` | `SUM(ws_coins) / total_employees` |
-| `view_top_team_revit` | `getRevitTeamRanking` | `total_coins × (users_earning / total_employees)` |
+| View                  | Функция                     | Формула score                                     |
+| --------------------- | --------------------------- | ------------------------------------------------- |
+| `view_top_team_ws`    | `getWsTeamRanking`          | `SUM(ws_coins) / total_employees`                 |
+| `view_top_dept_ws`    | `getWsDepartmentRanking`    | `SUM(ws_coins) / total_employees`                 |
+| `view_top_team_revit` | `getRevitTeamRanking`       | `total_coins × (users_earning / total_employees)` |
 | `view_top_dept_revit` | `getRevitDepartmentRanking` | `total_coins × (users_earning / total_employees)` |
 
 Команды `Вне команд*` и `Декретный` исключены из командных топов.

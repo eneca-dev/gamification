@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Итоги пилотирования — Eneca Game</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3352;
+      --accent: #f59e0b;
+      --accent2: #6366f1;
+      --accent3: #10b981;
+      --text: #e2e8f0;
+      --muted: #7c8ab0;
+      --danger: #ef4444;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative; overflow: hidden; text-align: center;
+      padding: 80px 24px 72px;
+      background: radial-gradient(ellipse 120% 60% at 50% -10%, #1e1a4033, transparent 70%),
+                  radial-gradient(ellipse 80% 40% at 80% 120%, #f59e0b1a, transparent 60%);
+    }
+    .hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 39px, var(--border) 39px, var(--border) 40px),
+                  repeating-linear-gradient(90deg, transparent, transparent 39px, var(--border) 39px, var(--border) 40px);
+      opacity: 0.06;
+    }
+    .badge {
+      display: inline-block; background: #f59e0b22; border: 1px solid #f59e0b55;
+      color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; padding: 6px 16px; border-radius: 999px; margin-bottom: 28px;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; line-height: 1.1;
+      letter-spacing: -0.5px; margin-bottom: 20px;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero p { font-size: 1.05rem; color: var(--muted); max-width: 520px; margin: 0 auto 36px; }
+    .hero-meta {
+      display: inline-flex; gap: 24px; flex-wrap: wrap; justify-content: center;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 28px; font-size: 0.88rem; color: var(--muted);
+    }
+    .hero-meta span strong { color: var(--text); }
+
+    /* ── Layout ── */
+    .container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+    section { padding: 72px 0; }
+    section + section { border-top: 1px solid var(--border); }
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 2.5px;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
+    }
+    .section-title { font-size: clamp(1.5rem, 3vw, 2.1rem); font-weight: 700; margin-bottom: 8px; }
+    .section-sub { color: var(--muted); font-size: 0.92rem; margin-bottom: 48px; max-width: 560px; }
+
+    /* ── Ready status ── */
+    .ready-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;
+    }
+    .ready-item {
+      display: flex; align-items: flex-start; gap: 14px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 18px 20px;
+    }
+    .ready-item.done { border-color: #10b98130; }
+    .ready-check {
+      width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; font-weight: 700; margin-top: 1px;
+    }
+    .done .ready-check { background: #10b98120; color: var(--accent3); }
+    .ready-item h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 3px; }
+    .ready-item p { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── KPI metrics ── */
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;
+    }
+    .kpi-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 24px 22px; position: relative; overflow: hidden;
+    }
+    .kpi-card::after {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--accent);
+    }
+    .kpi-card.green::after { background: var(--accent3); }
+    .kpi-card.purple::after { background: var(--accent2); }
+    .kpi-icon { font-size: 1.6rem; margin-bottom: 12px; }
+    .kpi-card h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 6px; }
+    .kpi-card p { font-size: 0.8rem; color: var(--muted); line-height: 1.55; }
+    .kpi-tag {
+      display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 2px 10px;
+      border-radius: 999px; background: #f59e0b18; color: var(--accent);
+      border: 1px solid #f59e0b30; margin-top: 10px;
+    }
+    .kpi-tag.green { background: #10b98118; color: var(--accent3); border-color: #10b98130; }
+    .kpi-tag.purple { background: #6366f118; color: var(--accent2); border-color: #6366f130; }
+
+    /* ── Big numbers ── */
+    .numbers-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
+    }
+    .num-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 32px 24px; text-align: center; position: relative; overflow: hidden;
+    }
+    .num-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--accent);
+    }
+    .num-card.green::before { background: var(--accent3); }
+    .num-card.purple::before { background: var(--accent2); }
+    .num-card.blue::before { background: #3b82f6; }
+    .num-val {
+      font-size: 2.8rem; font-weight: 800; line-height: 1;
+      color: var(--accent); margin-bottom: 8px;
+    }
+    .num-card.green .num-val { color: var(--accent3); }
+    .num-card.purple .num-val { color: var(--accent2); }
+    .num-card.blue .num-val { color: #60a5fa; }
+    .num-label { font-size: 0.85rem; color: var(--muted); font-weight: 500; line-height: 1.4; }
+
+    /* ── Bugs ── */
+    .bugs-list { display: flex; flex-direction: column; gap: 12px; }
+    .bug-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px 24px;
+      display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center;
+    }
+    .bug-num {
+      font-size: 0.72rem; font-weight: 700; color: var(--muted);
+      padding: 3px 10px; background: var(--surface2); border-radius: 6px; white-space: nowrap;
+    }
+    .bug-card h4 { font-size: 0.88rem; font-weight: 700; margin-bottom: 3px; }
+    .bug-card p { font-size: 0.8rem; color: var(--muted); }
+    .bug-fix {
+      font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 999px;
+      background: #10b98118; color: var(--accent3); border: 1px solid #10b98130; white-space: nowrap;
+    }
+
+    /* ── Reviews ── */
+    .reviews-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;
+    }
+    .review-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 24px 26px; display: flex; flex-direction: column; gap: 16px;
+    }
+    .review-text { font-size: 0.9rem; line-height: 1.65; color: var(--text); flex: 1; }
+    .review-text::before { content: '«'; color: var(--accent); font-size: 1.2rem; }
+    .review-text::after { content: '»'; color: var(--accent); font-size: 1.2rem; }
+    .review-author { display: flex; align-items: center; gap: 12px; }
+    .review-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, #f59e0b44, #6366f144);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 700; color: var(--accent); flex-shrink: 0;
+    }
+    .review-name { font-size: 0.82rem; font-weight: 700; }
+    .review-role { font-size: 0.75rem; color: var(--muted); }
+    .reviews-placeholder {
+      border: 2px dashed var(--border); border-radius: 14px;
+      padding: 56px 24px; text-align: center;
+    }
+    .reviews-placeholder p { color: var(--muted); font-size: 0.9rem; }
+    .reviews-placeholder strong { color: var(--accent); }
+
+    /* ── Conclusions ── */
+    .conclusions-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;
+    }
+    .conclusion-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 26px;
+    }
+    .conclusion-card .icon { font-size: 1.8rem; margin-bottom: 14px; }
+    .conclusion-card h4 { font-size: 0.92rem; font-weight: 700; margin-bottom: 8px; }
+    .conclusion-card p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+
+    /* ── Daily scripts banner ── */
+    .auto-banner {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden; margin-bottom: 48px;
+    }
+    .auto-banner-head {
+      background: linear-gradient(90deg, #f59e0b18, #6366f118);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 28px; display: flex; align-items: center; gap: 14px;
+    }
+    .auto-banner-icon {
+      width: 42px; height: 42px; border-radius: 10px;
+      background: #f59e0b22; border: 1px solid #f59e0b44;
+      display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;
+    }
+    .auto-banner-head strong { font-size: 0.95rem; display: block; margin-bottom: 2px; }
+    .auto-banner-head span { font-size: 0.82rem; color: var(--muted); }
+    .auto-banner-body {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+    .auto-item {
+      padding: 20px 24px; border-right: 1px solid var(--border);
+    }
+    .auto-item:last-child { border-right: none; }
+    .auto-item .icon { font-size: 1.3rem; margin-bottom: 8px; }
+    .auto-item h5 { font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; }
+    .auto-item p { font-size: 0.76rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border); padding: 28px 24px;
+      text-align: center; color: var(--muted); font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">Eneca Game · Итоги пилота</div>
+  <h1>Система геймификации —<br><span>пилот завершён</span></h1>
+  <p>Четыре месяца разработки и тестирования с реальными сотрудниками. Рассказываем, что получилось.</p>
+  <div class="hero-meta">
+    <span><strong>Март — Июнь 2026</strong> &nbsp;·&nbsp; период пилота</span>
+    <span>Готова к полному запуску</span>
+  </div>
+</div>
+
+
+<!-- SLIDE 1: ЧТО ГОТОВО -->
+<section>
+  <div class="container">
+    <div class="section-label">Слайд 1 — Статус системы</div>
+    <div class="section-title">Что готово на сегодня</div>
+    <div class="section-sub">Все основные функции реализованы и проверены в работе с реальными пользователями</div>
+
+    <div class="ready-grid">
+
+      <div class="ready-item done">
+        <div class="ready-check">✓</div>
+        <div>
+          <h4>Авторизация и профили</h4>
+          <p>Вход через корпоративный аккаунт, профиль с балансом и историей</p>
+        </div>
+      </div>
+
+      <div class="ready-item done">
+        <div class="ready-check">✓</div>
+        <div>
+          <h4>Начисление и списание алмазов</h4>
+          <p>Автоматически каждую ночь по данным из Worksection и Revit</p>
+        </div>
+      </div>
+
+      <div class="ready-item done">
+        <div class="ready-check">✓</div>
+        <div>
+          <h4>Серии активности</h4>
+          <p>Визуальный календарь, учёт выходных и больничных, щиты защиты</p>
+        </div>
+      </div>
+
+      <div class="ready-item done">
+        <div class="ready-check">✓</div>
+        <div>
+          <h4>Достижения и соревнования</h4>
+          <p>Индивидуальные достижения, ежемесячные конкурсы отделов и команд</p>
+        </div>
+      </div>
+
+      <div class="ready-item done">
+        <div class="ready-check">✓</div>
+        <div>
+          <h4>Магазин и лотерея</h4>
+          <p>Товары и привилегии за алмазы, еженедельная лотерея с призом</p>
+        </div>
+      </div>
+
+      <div class="ready-item done">
+        <div class="ready-check">✓</div>
+        <div>
+          <h4>Благодарности</h4>
+          <p>Перевод алмазов коллегам с комментарием, опционально — анонимно</p>
+        </div>
+      </div>
+
+      <div class="ready-item done">
+        <div class="ready-check">✓</div>
+        <div>
+          <h4>Лента активности</h4>
+          <p>События отдела, команды и всей компании в реальном времени</p>
+        </div>
+      </div>
+
+      <div class="ready-item done">
+        <div class="ready-check">✓</div>
+        <div>
+          <h4>AI-ассистент</h4>
+          <p>Отвечает на вопросы о правилах в свободной форме, 24/7</p>
+        </div>
+      </div>
+
+      <div class="ready-item done">
+        <div class="ready-check">✓</div>
+        <div>
+          <h4>Справка и обучение</h4>
+          <p>База знаний с интерактивным знакомством на каждой странице</p>
+        </div>
+      </div>
+
+      <div class="ready-item done">
+        <div class="ready-check">✓</div>
+        <div>
+          <h4>Геймификационный выходной</h4>
+          <p>Заявка со скриншотом согласования — серия активности не сгорает</p>
+        </div>
+      </div>
+
+      <div class="ready-item done">
+        <div class="ready-check">✓</div>
+        <div>
+          <h4>Мастер планирования</h4>
+          <p>Задачи из Worksection по бюджету и срокам прямо в системе</p>
+        </div>
+      </div>
+
+      <div class="ready-item done">
+        <div class="ready-check">✓</div>
+        <div>
+          <h4>Панель администратора</h4>
+          <p>Управление пользователями, товарами, балансами, статьями справки</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- SLIDE 2: ПО КАКИМ ПОКАЗАТЕЛЯМ НАЧИСЛЯЕМ -->
+<section>
+  <div class="container">
+    <div class="section-label">Слайд 2 — Механика начисления</div>
+    <div class="section-title">По каким показателям начисляем алмазы</div>
+    <div class="section-sub">Система автоматически считывает данные из рабочих инструментов каждую ночь — вручную ничего вводить не нужно</div>
+
+    <!-- автоматические скрипты -->
+    <div class="auto-banner">
+      <div class="auto-banner-head">
+        <div class="auto-banner-icon">⚙️</div>
+        <div>
+          <strong>Автоматический расчёт раз в сутки</strong>
+          <span>Скрипты запускаются каждую ночь и обрабатывают данные всех сотрудников без участия администратора</span>
+        </div>
+      </div>
+      <div class="auto-banner-body">
+        <div class="auto-item">
+          <div class="icon">📥</div>
+          <h5>Считываем данные</h5>
+          <p>Из Worksection и Revit за прошедший день</p>
+        </div>
+        <div class="auto-item">
+          <div class="icon">📐</div>
+          <h5>Применяем правила</h5>
+          <p>Сравниваем с условиями начисления по каждому показателю</p>
+        </div>
+        <div class="auto-item">
+          <div class="icon">💎</div>
+          <h5>Начисляем или нет</h5>
+          <p>По действующему курсу, без дубликатов</p>
+        </div>
+        <div class="auto-item">
+          <div class="icon">📝</div>
+          <h5>Сохраняем историю</h5>
+          <p>Каждый сотрудник видит, за что именно получил алмазы</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+
+      <div class="kpi-card">
+        <div class="kpi-icon">📋</div>
+        <h4>Дисциплина в Worksection</h4>
+        <p>Задачи закрыты вовремя, не висят просроченными, статусы обновлены. День без красных задач — день с начислением.</p>
+        <span class="kpi-tag">Worksection</span>
+      </div>
+
+      <div class="kpi-card green">
+        <div class="kpi-icon">⚡</div>
+        <h4>Использование Revit-плагинов</h4>
+        <p>Факт запуска корпоративных плагинов в течение дня. Чем активнее инструменты — тем выше начисление.</p>
+        <span class="kpi-tag green">Revit</span>
+      </div>
+
+      <div class="kpi-card purple">
+        <div class="kpi-icon">🤝</div>
+        <h4>Благодарности коллегам</h4>
+        <p>Полученные и отправленные благодарности учитываются в достижениях и влияют на рейтинг в соревнованиях.</p>
+        <span class="kpi-tag purple">Социальность</span>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon">🔥</div>
+        <h4>Непрерывность активности</h4>
+        <p>Длина серии активных дней без пропусков. Чем длиннее серия — тем выше ценность щита защиты.</p>
+        <span class="kpi-tag">Дисциплина</span>
+      </div>
+
+      <div class="kpi-card green">
+        <div class="kpi-icon">🏆</div>
+        <h4>Позиция в соревнованиях</h4>
+        <p>Ежемесячный рейтинг среди отделов и команд по совокупным показателям. Победители получают бонус автоматически.</p>
+        <span class="kpi-tag green">Рейтинг</span>
+      </div>
+
+      <div class="kpi-card purple">
+        <div class="kpi-icon">📅</div>
+        <h4>Бюджет и сроки задач</h4>
+        <p>Задачи, закрытые в рамках бюджета и до дедлайна, дополнительно фиксируются в мастере планирования.</p>
+        <span class="kpi-tag purple">Планирование</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- SLIDE 3: ИТОГИ ПИЛОТА — ЦИФРЫ -->
+<section>
+  <div class="container">
+    <div class="section-label">Слайд 3 — Итоги пилота</div>
+    <div class="section-title">Пилот в цифрах</div>
+    <div class="section-sub">Результаты первого цикла тестирования с реальными сотрудниками</div>
+
+    <div class="numbers-grid">
+      <div class="num-card">
+        <div class="num-val">—</div>
+        <div class="num-label">сотрудников участвовало в пилоте</div>
+      </div>
+      <div class="num-card green">
+        <div class="num-val">—</div>
+        <div class="num-label">алмазов начислено за период пилота</div>
+      </div>
+      <div class="num-card purple">
+        <div class="num-val">—</div>
+        <div class="num-label">курс: 1 алмаз = <br>___ руб.</div>
+      </div>
+      <div class="num-card blue">
+        <div class="num-val">—</div>
+        <div class="num-label">недель длился пилот</div>
+      </div>
+      <div class="num-card">
+        <div class="num-val">6</div>
+        <div class="num-label">типов ошибок найдено и исправлено в ходе тестирования</div>
+      </div>
+      <div class="num-card green">
+        <div class="num-val">0</div>
+        <div class="num-label">серьёзных сбоев за всё время работы</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- SLIDE 4: БАГИ -->
+<section>
+  <div class="container">
+    <div class="section-label">Слайд 4 — Качество</div>
+    <div class="section-title">Что нашли и исправили</div>
+    <div class="section-sub">Пилот помог выявить и устранить проблемы до массового запуска</div>
+
+    <div class="bugs-list">
+
+      <div class="bug-card">
+        <div class="bug-num">№ 1</div>
+        <div>
+          <h4>Баланс уходил в минус при быстрых повторных покупках</h4>
+          <p>Несколько нажатий подряд на кнопку в магазине могли обнулить баланс ниже нуля. Добавлена защита на сервере.</p>
+        </div>
+        <div class="bug-fix">✓ Исправлено</div>
+      </div>
+
+      <div class="bug-card">
+        <div class="bug-num">№ 2</div>
+        <div>
+          <h4>Серия не замораживалась при оформлении больничного задним числом</h4>
+          <p>Ручное добавление больничного за прошедшую дату не пересчитывало серию корректно. Логика исправлена.</p>
+        </div>
+        <div class="bug-fix">✓ Исправлено</div>
+      </div>
+
+      <div class="bug-card">
+        <div class="bug-num">№ 3</div>
+        <div>
+          <h4>Баланс не обновлялся сразу после отправки благодарности</h4>
+          <p>Отправленные алмазы списывались, но баланс показывал старое значение до перезагрузки страницы. Исправлено.</p>
+        </div>
+        <div class="bug-fix">✓ Исправлено</div>
+      </div>
+
+      <div class="bug-card">
+        <div class="bug-num">№ 4</div>
+        <div>
+          <h4>Достижение засчитывалось на день раньше из-за разницы в часовых поясах</h4>
+          <p>Сервер работал по UTC — в конце месяца это сдвигало дату засчитанного достижения. Переведено на минское время.</p>
+        </div>
+        <div class="bug-fix">✓ Исправлено</div>
+      </div>
+
+      <div class="bug-card">
+        <div class="bug-num">№ 5</div>
+        <div>
+          <h4>В ленте отдела отрицательные значения показывались без знака</h4>
+          <p>Минус не отображался — сотрудники видели положительные числа там, где должно быть списание. Исправлено отображение.</p>
+        </div>
+        <div class="bug-fix">✓ Исправлено</div>
+      </div>
+
+      <div class="bug-card">
+        <div class="bug-num">№ 6</div>
+        <div>
+          <h4>Можно было подать заявку на выходной с уже прошедшей датой</h4>
+          <p>Добавлена проверка: при подаче заявки доступны только будущие рабочие дни.</p>
+        </div>
+        <div class="bug-fix">✓ Исправлено</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- SLIDE 5: ОТЗЫВЫ -->
+<section>
+  <div class="container">
+    <div class="section-label">Слайд 5 — Обратная связь</div>
+    <div class="section-title">Что говорят участники пилота</div>
+    <div class="section-sub">Отзывы сотрудников, которые тестировали систему</div>
+
+    <div class="reviews-placeholder">
+      <p style="font-size:2.2rem;margin-bottom:16px">💬</p>
+      <p><strong>Отзывы будут добавлены.</strong><br>
+      Раздел подготовлен — вставьте цитаты участников пилота.</p>
+    </div>
+
+    <!-- Пример карточки отзыва — раскомментируйте и заполните:
+    <div class="reviews-grid">
+      <div class="review-card">
+        <div class="review-text"> Текст отзыва здесь </div>
+        <div class="review-author">
+          <div class="review-avatar">АБ</div>
+          <div>
+            <div class="review-name">Имя Фамилия</div>
+            <div class="review-role">Должность, отдел</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    -->
+  </div>
+</section>
+
+
+<!-- SLIDE 6: ВЫВОДЫ -->
+<section>
+  <div class="container">
+    <div class="section-label">Слайд 6 — Выводы</div>
+    <div class="section-title">Что дальше</div>
+    <div class="section-sub">Итоги пилота подтвердили: система работает и готова к полноценному запуску</div>
+
+    <div class="conclusions-grid">
+
+      <div class="conclusion-card">
+        <div class="icon">✅</div>
+        <h4>Система работает стабильно</h4>
+        <p>За всё время пилота не было ни одного серьёзного сбоя. Ежедневные расчёты выполнялись без ошибок.</p>
+      </div>
+
+      <div class="conclusion-card">
+        <div class="icon">🔍</div>
+        <h4>Пилот выявил и закрыл все критичные проблемы</h4>
+        <p>6 типов ошибок найдены и исправлены до массового запуска. Новых критичных проблем не выявлено.</p>
+      </div>
+
+      <div class="conclusion-card">
+        <div class="icon">📈</div>
+        <h4>Механики работают как задумано</h4>
+        <p>Начисления, серии, достижения, магазин — всё ведёт себя предсказуемо и понятно для пользователей.</p>
+      </div>
+
+      <div class="conclusion-card">
+        <div class="icon">🚀</div>
+        <h4>Готово к масштабированию</h4>
+        <p>Архитектура позволяет подключить любое количество сотрудников без переработки системы.</p>
+      </div>
+
+      <div class="conclusion-card">
+        <div class="icon">🤝</div>
+        <h4>Пользователи приняли систему</h4>
+        <p>Участники пилота освоили систему самостоятельно благодаря встроенному обучению и AI-ассистенту.</p>
+      </div>
+
+      <div class="conclusion-card">
+        <div class="icon">📅</div>
+        <h4>Следующий шаг — полный запуск</h4>
+        <p>Открыть доступ для всех сотрудников, финализировать курс алмаза и запустить первые ежемесячные конкурсы.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <p>Eneca Game · Итоги пилота · Июнь 2026 · eneca-dev</p>
+  </div>
+</footer>
+
+</body>
+</html>

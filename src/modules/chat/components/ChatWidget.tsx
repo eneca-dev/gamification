@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Bot, Trash2, X } from 'lucide-react'
 
-import { clearMessages, getChatMessagesAction } from '../actions'
+import { checkChatAvailability, clearMessages, getChatMessagesAction } from '../actions'
 import type { ChatMessage } from '../types'
 import { ChatWindow } from './ChatWindow'
 
@@ -14,6 +14,7 @@ interface ChatWidgetProps {
 export function ChatWidget({ userId }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[] | null>(null)
+  const [isAvailable, setIsAvailable] = useState<boolean | null>(null)
   const [clearKey, setClearKey] = useState(0)
   const [hasMessages, setHasMessages] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -30,7 +31,11 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
     setIsOpen(true)
     if (messages === null) {
       startTransition(async () => {
-        const result = await getChatMessagesAction()
+        const [available, result] = await Promise.all([
+          checkChatAvailability(),
+          getChatMessagesAction(),
+        ])
+        setIsAvailable(available)
         setMessages(result.success ? result.data : [])
       })
     }
@@ -128,6 +133,16 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
                 borderTopColor: 'var(--apex-primary)',
               }}
             />
+          </div>
+        ) : isAvailable === false ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+            <div className="text-4xl">🛠️</div>
+            <p className="text-[14px] font-semibold" style={{ color: 'var(--apex-text)' }}>
+              Ассистент на техническом перерыве
+            </p>
+            <p className="text-[13px]" style={{ color: 'var(--apex-text-muted)' }}>
+              Сервис временно недоступен. Скоро вернёмся — попробуйте позже.
+            </p>
           </div>
         ) : (
           <div className="flex-1 min-h-0">

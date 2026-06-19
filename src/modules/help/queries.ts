@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from '@/config/supabase'
+import { createSupabaseAdminClient, createSupabaseServerClient } from '@/config/supabase'
 
 import type { HelpArticle, HelpChunk, HelpFolder, HelpVariableMeta, ReembedLog } from './types'
 
@@ -148,7 +148,7 @@ export async function getHelpFolders(): Promise<HelpFolder[]> {
 
 /** Все статьи для админки (включая неопубликованные) — без подстановки переменных */
 export async function getAllHelpArticles(): Promise<HelpArticle[]> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase
     .from('help_articles')
     .select('*')
@@ -162,7 +162,7 @@ export async function getAllHelpArticles(): Promise<HelpArticle[]> {
 export async function getChatbotArticlesWithChunks(): Promise<
   Array<HelpArticle & { chunks: HelpChunk[] }>
 > {
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseAdminClient()
 
   const { data: articles, error: articlesError } = await supabase
     .from('help_articles')

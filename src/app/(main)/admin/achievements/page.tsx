@@ -6,12 +6,17 @@ import {
   getWsDepartmentRanking,
   getWsTeamRanking,
 } from '@/modules/achievements'
-import { getUsersLight } from '@/modules/admin'
+import { redirect } from 'next/navigation'
+
+import { checkIsAdmin, getUsersLight } from '@/modules/admin'
 import { AchievementProgressAdmin } from '@/modules/admin/components/AchievementProgressAdmin'
 import { ContestStandingsAdmin } from '@/modules/admin/components/ContestStandingsAdmin'
 import { getContestWinners } from '@/modules/contests'
 
 export default async function AdminAchievementsPage() {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) redirect('/')
+
   const [
     rankingProgress, gratitudeProgress, users,
     revitDeptStandings, revitTeamStandings, wsDeptStandings, wsTeamStandings,

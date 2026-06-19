@@ -9,6 +9,9 @@ import type { ChatMessage } from '../types'
 import { ChatBubble } from './ChatBubble'
 import { ChatInput } from './ChatInput'
 
+const ERROR_MESSAGE_TEXT = 'Кажется, что-то сломалось. Попробуйте написать чуть позже 🤖'
+const REALTIME_TIMEOUT_MS = 12_000
+
 const SUGGESTED_QUESTIONS = [
   'Что такое красный и зелёный день?',
   'За что можно получить кристаллы?',
@@ -26,6 +29,21 @@ export function ChatWindow({ initialMessages, userId, onHasMessages }: ChatWindo
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [isWaiting, setIsWaiting] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const waitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function addErrorMessage() {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `err-${Date.now()}`,
+        user_id: userId,
+        role: 'assistant' as const,
+        content: ERROR_MESSAGE_TEXT,
+        created_at: new Date().toISOString(),
+      },
+    ])
+    setIsWaiting(false)
+  }
 
   useEffect(() => {
     onHasMessages?.(messages.length > 0)
@@ -55,7 +73,10 @@ export function ChatWindow({ initialMessages, userId, onHasMessages }: ChatWindo
             const filtered = msg.role === 'user' ? prev.filter((m) => !m.id.startsWith('opt-')) : prev
             return [...filtered, msg]
           })
-          if (msg.role === 'assistant') setIsWaiting(false)
+          if (msg.role === 'assistant') {
+            if (waitTimeoutRef.current) clearTimeout(waitTimeoutRef.current)
+            setIsWaiting(false)
+          }
         }
       )
       .subscribe()
@@ -75,11 +96,16 @@ export function ChatWindow({ initialMessages, userId, onHasMessages }: ChatWindo
     }
     setMessages((prev) => [...prev, optimistic])
     setIsWaiting(true)
+
     const result = await sendMessage({ content })
+
     if (!result.success) {
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id))
-      setIsWaiting(false)
+      addErrorMessage()
+      return
     }
+
+    waitTimeoutRef.current = setTimeout(addErrorMessage, REALTIME_TIMEOUT_MS)
   }
 
   function handleCopy(e: React.ClipboardEvent<HTMLDivElement>) {
