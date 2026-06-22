@@ -5,7 +5,7 @@ import type {
   RankingSettingRow, GratitudeSettingRow,
   CalendarHolidayRow, CalendarWorkdayRow,
   EconomyFilters, EconomyOverview, TopSource, TopLevel, TopRow, CategoryRow,
-  EconomyPeriodPreset, DepartmentGroupRow, LowBalanceUser,
+  EconomyPeriodPreset, DepartmentGroupRow, LowBalanceUser, CrystalRateRow,
 } from './types'
 
 // gamification_balances — связь 1:1, но Supabase может вернуть объект или массив
@@ -330,6 +330,28 @@ export async function getUsersSortedByBalance(filters: EconomyFilters): Promise<
     group_type: null as 'designer' | 'non_designer' | null,
   }))
   // RPC уже возвращает отсортированных по net_coins ASC
+}
+
+export async function getCrystalRateHistory(): Promise<CrystalRateRow[]> {
+  const supabase = createSupabaseAdminClient()
+
+  const { data, error } = await supabase
+    .from('crystal_rates')
+    .select('id, rate, created_at, ws_users(first_name, last_name)')
+    .order('created_at', { ascending: false })
+
+  if (error) throw new Error(error.message)
+
+  return (data ?? []).map((row) => {
+    const user = Array.isArray(row.ws_users) ? row.ws_users[0] : row.ws_users
+    const name = user ? `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() : null
+    return {
+      id: row.id,
+      rate: Number(row.rate),
+      created_at: row.created_at,
+      set_by: name || null,
+    }
+  })
 }
 
 // YYYY-MM-DD → ISO начало дня (UTC). Возвращает null для невалидной даты

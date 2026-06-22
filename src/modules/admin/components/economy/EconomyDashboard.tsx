@@ -1,5 +1,6 @@
 import type {
   CategoryRow,
+  CrystalRateRow,
   DepartmentGroupRow,
   DesignerFilter,
   EconomyOverview,
@@ -10,6 +11,7 @@ import type {
 } from '@/modules/admin'
 
 import { CategoryBreakdownChart } from './CategoryBreakdownChart'
+import { CrystalRateHistory } from './CrystalRateHistory'
 import { DepartmentGroupsManager } from './DepartmentGroupsManager'
 import { EconomyFilters } from './EconomyFilters'
 import { KpiSummary } from './KpiSummary'
@@ -41,6 +43,7 @@ interface EconomyDashboardProps {
   poolSize: number
   allDepartments: string[]
   deptGroups: DepartmentGroupRow[]
+  crystalRates: CrystalRateRow[]
 }
 
 export function EconomyDashboard({
@@ -60,6 +63,7 @@ export function EconomyDashboard({
   poolSize,
   allDepartments,
   deptGroups,
+  crystalRates,
 }: EconomyDashboardProps) {
   return (
     <div className="space-y-6">
@@ -71,6 +75,8 @@ export function EconomyDashboard({
         topLevel={topLevel}
         capGratitudeAch={capGratitudeAch}
       />
+
+      <CrystalRateHistory rates={crystalRates} />
 
       <KpiSummary overview={overview} rate={rate} />
 
