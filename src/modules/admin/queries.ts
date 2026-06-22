@@ -307,34 +307,29 @@ export async function getGratitudeAchievementExcess(filters: EconomyFilters): Pr
   return result
 }
 
-export async function getUsersSortedByBalance(betaOnly: boolean): Promise<LowBalanceUser[]> {
+export async function getUsersSortedByBalance(filters: EconomyFilters): Promise<LowBalanceUser[]> {
   const supabase = createSupabaseAdminClient()
 
-  let query = supabase
-    .from('ws_users')
-    .select('id, first_name, last_name, email, department, team, is_beta_tester, gamification_balances(total_coins)')
-    .eq('is_active', true)
-    .not('team', 'eq', 'Декретный')
+  const { data, error } = await supabase.rpc('get_user_period_balance', {
+    p_from: filters.from,
+    p_to: filters.to,
+    p_beta_only: filters.betaOnly,
+  })
 
-  if (betaOnly) query = query.eq('is_beta_tester', true)
-
-  const { data, error } = await query
   if (error) throw new Error(error.message)
 
-  const users = (data ?? []).map((row) => ({
-    id: row.id,
+  return (data ?? []).map((row) => ({
+    id: row.user_id,
     first_name: row.first_name,
     last_name: row.last_name,
     email: row.email,
     department: row.department as string | null,
     team: row.team as string | null,
     is_beta_tester: row.is_beta_tester,
-    total_coins: extractCoins(row.gamification_balances),
+    total_coins: row.net_coins,
     group_type: null as 'designer' | 'non_designer' | null,
   }))
-
-  users.sort((a, b) => a.total_coins - b.total_coins)
-  return users
+  // RPC уже возвращает отсортированных по net_coins ASC
 }
 
 // YYYY-MM-DD → ISO начало дня (UTC). Возвращает null для невалидной даты
