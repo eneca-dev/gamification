@@ -331,9 +331,9 @@ export async function getUsersSortedByBalance(filters: EconomyFilters): Promise<
 
   return (data as RpcRow[] ?? []).map((row) => ({
     id: row.user_id,
-    first_name: row.first_name,
-    last_name: row.last_name,
-    email: row.email,
+    first_name: row.first_name ?? '',
+    last_name: row.last_name ?? '',
+    email: row.email ?? '',
     department: row.department,
     team: row.team,
     is_beta_tester: row.is_beta_tester,
