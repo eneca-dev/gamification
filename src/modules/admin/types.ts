@@ -253,6 +253,13 @@ export interface EconomyFilters {
   betaOnly: boolean
 }
 
+export interface CrystalRateRow {
+  id: number
+  rate: number
+  created_at: string
+  set_by: string | null
+}
+
 export interface EconomyChannel {
   coins: number
   users: number

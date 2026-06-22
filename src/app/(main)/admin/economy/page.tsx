@@ -10,10 +10,11 @@ import {
   getDepartmentGroups,
   getAllDepartments,
   getGratitudeAchievementExcess,
+  getCrystalRateHistory,
 } from '@/modules/admin'
 import { EconomyDashboard } from '@/modules/admin/components/economy/EconomyDashboard'
 import { getCurrentRate } from '@/modules/shop'
-import type { EconomyPeriodPreset, TopLevel, DesignerFilter, TopRow, LowBalanceUser } from '@/modules/admin'
+import type { EconomyPeriodPreset, TopLevel, DesignerFilter, TopRow, LowBalanceUser, CrystalRateRow } from '@/modules/admin'
 
 // Вычитает излишек из топа «Заработавшие» с учётом уровня группировки.
 function applyExcessToEarnedTop(
@@ -106,6 +107,7 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
     deptGroups,
     allDepartments,
     gratitudeExcess,
+    crystalRates,
   ] = await Promise.all([
     getEconomyOverview(filters),
     getEconomyCategoryBreakdown(filters),
@@ -120,6 +122,7 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
     getDepartmentGroups(),
     getAllDepartments(),
     getGratitudeAchievementExcess(filters),
+    getCrystalRateHistory(),
   ])
 
   const excessByUser = capGratitudeAch ? gratitudeExcess : {}
@@ -182,6 +185,7 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
       poolSize={pool.length}
       allDepartments={allDepartments}
       deptGroups={deptGroups}
+      crystalRates={crystalRates}
     />
   )
 }

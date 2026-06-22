@@ -3,6 +3,7 @@ export {
   getCalendarHolidays, getCalendarWorkdays, getUsersLight,
   getEconomyOverview, getEconomyTop, getEconomyCategoryBreakdown, resolveEconomyPeriod,
   getDepartmentGroups, getAllDepartments, getUsersSortedByBalance, getGratitudeAchievementExcess,
+  getCrystalRateHistory,
 } from './queries'
 export {
   updateEventType, updateRankingSetting, updateGratitudeSetting,
@@ -21,7 +22,7 @@ export type {
   ProductFormData,
   EconomyPeriodPreset, EconomyFilters, EconomyOverview, EconomyChannel, EconomyChannels,
   TopSource, TopLevel, TopRow, CategoryProduct, CategoryRow,
-  DesignerFilter, DepartmentGroupRow, LowBalanceUser,
+  DesignerFilter, DepartmentGroupRow, LowBalanceUser, CrystalRateRow,
 } from './types'
 export {
   updateEventTypeSchema, updateRankingSettingSchema, updateGratitudeSettingSchema,
