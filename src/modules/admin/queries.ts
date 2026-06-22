@@ -318,13 +318,24 @@ export async function getUsersSortedByBalance(filters: EconomyFilters): Promise<
 
   if (error) throw new Error(error.message)
 
-  return (data ?? []).map((row) => ({
+  type RpcRow = {
+    user_id: string
+    first_name: string | null
+    last_name: string | null
+    email: string | null
+    department: string | null
+    team: string | null
+    is_beta_tester: boolean
+    net_coins: number
+  }
+
+  return (data as RpcRow[] ?? []).map((row) => ({
     id: row.user_id,
     first_name: row.first_name,
     last_name: row.last_name,
     email: row.email,
-    department: row.department as string | null,
-    team: row.team as string | null,
+    department: row.department,
+    team: row.team,
     is_beta_tester: row.is_beta_tester,
     total_coins: row.net_coins,
     group_type: null as 'designer' | 'non_designer' | null,
