@@ -118,7 +118,7 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
     getEconomyTop(filters, 'paid_gratitude', topLevel),
     getEconomyTop(filters, 'revoked', topLevel),
     getCurrentRate(),
-    getUsersSortedByBalance(filters),
+    getUsersSortedByBalance({ from: null, to: null, betaOnly }),
     getDepartmentGroups(),
     getAllDepartments(),
     getGratitudeAchievementExcess(filters),
