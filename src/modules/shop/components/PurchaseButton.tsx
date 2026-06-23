@@ -13,6 +13,7 @@ interface PurchaseButtonProps {
   shieldNoPending?: boolean
   isFree?: boolean
   freeLeft?: number | null
+  comingSoon?: boolean
 }
 
 export function PurchaseButton({
@@ -26,12 +27,14 @@ export function PurchaseButton({
   shieldNoPending = false,
   isFree = false,
   freeLeft = null,
+  comingSoon = false,
 }: PurchaseButtonProps) {
-  const disabled = !canAfford || outOfStock || isPurchasing || shieldNoPending
-  const showDeficit = !canAfford && !outOfStock && !shieldNoPending && !isPurchasing
+  const disabled = !canAfford || outOfStock || isPurchasing || shieldNoPending || comingSoon
+  const showDeficit = !canAfford && !outOfStock && !shieldNoPending && !comingSoon && !isPurchasing
 
   function getLabel() {
     if (isPurchasing) return 'Покупаем...'
+    if (comingSoon) return 'Скоро в продаже'
     if (outOfStock) return 'Нет в наличии'
     if (shieldNoPending) return 'Нет угрозы стрику'
     if (isFree) return 'Спасти бесплатно'

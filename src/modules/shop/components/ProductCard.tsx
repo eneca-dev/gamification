@@ -18,7 +18,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, balance, index, onPurchase, isPurchasing, categoryDescription, pendingResets = [], shieldQuota = null }: ProductCardProps) {
-  const outOfStock = product.category.is_countable && product.stock !== null && product.stock === 0
+  const outOfStock = !product.is_coming_soon && product.category.is_countable && product.stock !== null && product.stock === 0
 
   // Для щитов: кнопка активна только при наличии соответствующего pending
   const shieldEffect = product.effect
@@ -72,6 +72,14 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
         ) : (
           <span className="text-5xl">{product.emoji || <span style={{ color: '#ccc' }}>?</span>}</span>
         )}
+        {product.is_coming_soon && (
+          <span
+            className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
+            style={{ background: 'var(--apex-warning-text)', color: 'white' }}
+          >
+            Скоро в продаже
+          </span>
+        )}
         {outOfStock && (
           <span
             className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
@@ -80,7 +88,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
             Нет в наличии
           </span>
         )}
-        {product.category.is_countable && product.stock !== null && product.stock > 0 && product.stock <= 5 && (
+        {!product.is_coming_soon && product.category.is_countable && product.stock !== null && product.stock > 0 && product.stock <= 5 && (
           <span
             className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
             style={{ background: 'var(--apex-warning-text)', color: 'white' }}
@@ -140,6 +148,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
           shieldNoPending={isShield && !hasActivePending}
           isFree={isFreeShield}
           freeLeft={freeLeft}
+          comingSoon={product.is_coming_soon}
         />
         </div>
       </div>

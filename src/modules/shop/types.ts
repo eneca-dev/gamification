@@ -51,6 +51,7 @@ export interface ShopProduct {
   emoji: string | null
   effect: string | null
   is_active: boolean
+  is_coming_soon: boolean
   stock: number | null
   sort_order: number
   created_by: string | null
@@ -78,6 +79,7 @@ export const createProductSchema = z.object({
 export const updateProductSchema = createProductSchema.partial().extend({
   id: z.string().uuid(),
   is_active: z.boolean().optional(),
+  is_coming_soon: z.boolean().optional(),
 })
 
 export type CreateProductInput = z.infer<typeof createProductSchema>

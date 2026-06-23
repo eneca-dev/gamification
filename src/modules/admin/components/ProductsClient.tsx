@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Check, X, HelpCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Check, X, HelpCircle, List, LayoutGrid } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
 import {
@@ -47,6 +47,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   const [isCreatingProduct, setIsCreatingProduct] = useState(false)
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null)
   const [expandedDescriptionId, setExpandedDescriptionId] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'list' | 'cards'>('list')
 
   // Inline-редактирование товаров
   const [inlineEdit, setInlineEdit] = useState<{
@@ -217,6 +218,39 @@ export function ProductsClient({ products: initialProducts, categories: initialC
     })
   }
 
+  type ProductStatus = 'active' | 'coming_soon' | 'inactive'
+
+  function setProductStatus(product: ShopProductWithCategory, newStatus: ProductStatus) {
+    if (newStatus === 'active' && product.category?.is_countable && (product.stock ?? 0) === 0) {
+      setError('Нельзя активировать товар с нулевым остатком. Сначала укажите количество.')
+      return
+    }
+
+    const fields =
+      newStatus === 'active'
+        ? { is_active: true, is_coming_soon: false }
+        : newStatus === 'coming_soon'
+        ? { is_active: false, is_coming_soon: true }
+        : { is_active: false, is_coming_soon: false }
+
+    const prev = products
+    setProducts((items) => items.map((p) => (p.id === product.id ? { ...p, ...fields } : p)))
+
+    startProductTransition(async () => {
+      const result = await updateProduct({ id: product.id, ...fields })
+      if (!result.success) {
+        setProducts(prev)
+        setError(result.error)
+      }
+    })
+  }
+
+  function getProductStatus(product: ShopProductWithCategory): ProductStatus {
+    if (product.is_active) return 'active'
+    if (product.is_coming_soon) return 'coming_soon'
+    return 'inactive'
+  }
+
   function handleDeleteProduct(id: string) {
     const prev = products
     setProducts((items) => items.filter((p) => p.id !== id))
@@ -366,6 +400,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             ...payload,
             price: computedPrice,
             is_active: !forceInactive,
+            is_coming_soon: false,
             created_by: null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -730,6 +765,32 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             />
           </div>
           <div className="flex items-center gap-3">
+            {/* Переключатель вида */}
+            <div
+              className="flex items-center rounded-lg overflow-hidden"
+              style={{ border: '1px solid var(--apex-border)' }}
+            >
+              <button
+                onClick={() => setViewMode('list')}
+                className="w-8 h-8 flex items-center justify-center transition-colors"
+                style={{
+                  background: viewMode === 'list' ? 'var(--apex-primary)' : 'transparent',
+                  color: viewMode === 'list' ? 'white' : 'var(--apex-text-muted)',
+                }}
+              >
+                <List size={14} />
+              </button>
+              <button
+                onClick={() => setViewMode('cards')}
+                className="w-8 h-8 flex items-center justify-center transition-colors"
+                style={{
+                  background: viewMode === 'cards' ? 'var(--apex-primary)' : 'transparent',
+                  color: viewMode === 'cards' ? 'white' : 'var(--apex-text-muted)',
+                }}
+              >
+                <LayoutGrid size={14} />
+              </button>
+            </div>
             {/* Поиск */}
             <div className="relative">
               <Search
@@ -761,8 +822,114 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           </div>
         </div>
 
+        {/* Вид: карточки */}
+        {viewMode === 'cards' && (
+          <div>
+            {filteredProducts.length === 0 ? (
+              <p className="text-center py-12 text-[13px] font-medium" style={{ color: 'var(--apex-text-muted)' }}>
+                {searchQuery.trim() ? 'Ничего не найдено' : 'Нет товаров'}
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-5">
+                {filteredProducts.map((product) => {
+                  const isConfirmingDelete = deletingProductId === product.id
+                  return (
+                    <div
+                      key={product.id}
+                      className="rounded-xl overflow-hidden flex flex-col"
+                      style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
+                    >
+                      {/* Картинка / эмодзи */}
+                      <div
+                        className="h-28 flex items-center justify-center relative overflow-hidden"
+                        style={{ background: product.image_url ? 'transparent' : 'var(--apex-emoji-bg)' }}
+                      >
+                        {product.image_url ? (
+                          <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
+                        ) : (
+                          <span className="text-4xl">{product.emoji || <span style={{ color: '#ccc' }}>?</span>}</span>
+                        )}
+                      </div>
+                      {/* Контент */}
+                      <div className="p-3 flex flex-col flex-1 gap-2">
+                        <div>
+                          <span
+                            className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                            style={{ background: 'var(--apex-tag-teal-bg)', color: 'var(--apex-tag-teal-text)' }}
+                          >
+                            {product.category?.name ?? '—'}
+                          </span>
+                        </div>
+                        <p className="text-[12px] font-semibold leading-snug" style={{ color: 'var(--apex-text)' }}>
+                          {product.name}
+                        </p>
+                        <CoinStatic
+                          amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
+                          size="sm"
+                        />
+                        <div className="mt-auto pt-1">
+                          <ProductStatusDropdown
+                            status={getProductStatus(product)}
+                            onChange={(s) => setProductStatus(product, s)}
+                            disabled={isProductPending || !product.category?.is_active}
+                          />
+                        </div>
+                        {/* Действия */}
+                        <div className="flex items-center gap-1">
+                          {isConfirmingDelete ? (
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] font-medium mr-1" style={{ color: 'var(--apex-danger)' }}>
+                                Удалить?
+                              </span>
+                              <button
+                                onClick={() => handleDeleteProduct(product.id)}
+                                className="w-6 h-6 rounded-full flex items-center justify-center"
+                                style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
+                              >
+                                <Check size={12} />
+                              </button>
+                              <button
+                                onClick={() => setDeletingProductId(null)}
+                                className="w-6 h-6 rounded-full flex items-center justify-center"
+                                style={{ color: 'var(--apex-text-muted)' }}
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => setEditingProduct(product)}
+                                className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                                style={{ color: 'var(--apex-text-muted)' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--apex-primary)'; e.currentTarget.style.background = 'var(--apex-success-bg)' }}
+                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--apex-text-muted)'; e.currentTarget.style.background = 'transparent' }}
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              <button
+                                onClick={() => setDeletingProductId(product.id)}
+                                className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                                style={{ color: 'var(--apex-text-muted)' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--apex-danger)'; e.currentTarget.style.background = 'var(--apex-error-bg)' }}
+                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--apex-text-muted)'; e.currentTarget.style.background = 'transparent' }}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Таблица товаров */}
-        <div className="overflow-x-auto">
+        {viewMode === 'list' && <div className="overflow-x-auto">
         <table className="w-full min-w-[700px]" style={{ tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: '60px' }} />
@@ -946,21 +1113,19 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                     <td className="px-5 py-2.5">
                       {(() => {
                         const isOutOfStock = !!product.category?.is_countable && (product.stock ?? 0) === 0
-                        const lockedByStock = isOutOfStock && !product.is_active
                         return (
                           <div className="flex items-center gap-2">
-                            <ToggleSwitch
-                              checked={product.is_active}
-                              onChange={() => toggleProductActive(product)}
-                              disabled={isProductPending || !product.category?.is_active || lockedByStock}
-                              label={product.is_active ? 'Активен' : 'Неактивен'}
+                            <ProductStatusDropdown
+                              status={getProductStatus(product)}
+                              onChange={(s) => setProductStatus(product, s)}
+                              disabled={isProductPending || !product.category?.is_active}
                             />
                             {!product.category?.is_active && (
                               <span className="text-[10px] font-medium leading-tight px-1.5 py-0.5 rounded" style={{ background: 'var(--apex-warning-bg)', color: 'var(--apex-warning-text)' }}>
                                 Категория<br />неактивна
                               </span>
                             )}
-                            {product.category?.is_active && lockedByStock && (
+                            {product.category?.is_active && isOutOfStock && !product.is_coming_soon && !product.is_active && (
                               <span
                                 className="text-[10px] font-medium leading-tight px-1.5 py-0.5 rounded whitespace-nowrap"
                                 style={{ background: 'var(--apex-warning-bg)', color: 'var(--apex-warning-text)' }}
@@ -1036,7 +1201,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             )}
           </tbody>
         </table>
-        </div>
+        </div>}
 
         <div className="px-5 py-3 text-[12px] font-medium" style={{ color: 'var(--apex-text-muted)' }}>
           {filteredProducts.length} из {products.length} товаров
@@ -1295,6 +1460,103 @@ function CatInlineEdit({
       >
         <X size={12} />
       </button>
+    </div>
+  )
+}
+
+type ProductStatus = 'active' | 'coming_soon' | 'inactive'
+
+const PRODUCT_STATUS_OPTIONS: { value: ProductStatus; label: string; bg: string; text: string }[] = [
+  { value: 'active', label: 'Активен', bg: 'var(--apex-success-bg)', text: 'var(--apex-success-text)' },
+  { value: 'coming_soon', label: 'Скоро', bg: 'var(--apex-warning-bg)', text: 'var(--apex-warning-text)' },
+  { value: 'inactive', label: 'Неактивен', bg: 'var(--apex-bg)', text: 'var(--apex-text-muted)' },
+]
+
+function ProductStatusDropdown({
+  status,
+  onChange,
+  disabled,
+}: {
+  status: ProductStatus
+  onChange: (s: ProductStatus) => void
+  disabled: boolean
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const current = PRODUCT_STATUS_OPTIONS.find((o) => o.value === status)!
+
+  useEffect(() => {
+    if (!isOpen) return
+    function handleClick(e: MouseEvent) {
+      if (
+        btnRef.current && !btnRef.current.contains(e.target as Node) &&
+        menuRef.current && !menuRef.current.contains(e.target as Node)
+      ) setIsOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [isOpen])
+
+  useEffect(() => {
+    if (isOpen && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      setPos({ top: rect.bottom + 6, left: rect.left })
+    }
+  }, [isOpen])
+
+  return (
+    <div className="inline-block">
+      <button
+        ref={btnRef}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md transition-opacity"
+        style={{
+          background: current.bg,
+          color: current.text,
+          cursor: disabled ? 'default' : 'pointer',
+          opacity: disabled ? 0.5 : 1,
+        }}
+      >
+        {current.label}
+        {!disabled && <ChevronDown size={11} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />}
+      </button>
+
+      {isOpen && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[100] min-w-[140px] rounded-xl py-1.5 shadow-lg animate-scale-in"
+          style={{
+            top: pos.top,
+            left: pos.left,
+            background: 'var(--apex-surface)',
+            border: '1px solid var(--apex-border)',
+          }}
+        >
+          {PRODUCT_STATUS_OPTIONS.map((o) => {
+            const isCurrent = o.value === status
+            return (
+              <button
+                key={o.value}
+                onClick={() => { onChange(o.value); setIsOpen(false) }}
+                className="w-full text-left px-4 py-2 text-[12px] font-medium transition-colors flex items-center gap-2.5"
+                style={{
+                  color: isCurrent ? o.text : 'var(--apex-text)',
+                  background: isCurrent ? o.bg : 'transparent',
+                  cursor: isCurrent ? 'default' : 'pointer',
+                }}
+                onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.background = 'var(--apex-bg)' }}
+                onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.background = 'transparent' }}
+              >
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: o.text }} />
+                {o.label}
+              </button>
+            )
+          })}
+        </div>,
+        document.body,
+      )}
     </div>
   )
 }
