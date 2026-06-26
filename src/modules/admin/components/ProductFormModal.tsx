@@ -44,7 +44,18 @@ export function ProductFormModal({ product, categories, rate, onSave, onClose, i
     function handleEsc(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
     }
+    function handlePaste(e: ClipboardEvent) {
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (file) { processFile(file); break }
+        }
+      }
+    }
     document.addEventListener('keydown', handleEsc)
+    document.addEventListener('paste', handlePaste)
 
     // Блокируем скролл body при открытии модалки
     const prevOverflow = document.body.style.overflow
@@ -52,6 +63,7 @@ export function ProductFormModal({ product, categories, rate, onSave, onClose, i
 
     return () => {
       document.removeEventListener('keydown', handleEsc)
+      document.removeEventListener('paste', handlePaste)
       document.body.style.overflow = prevOverflow
     }
   }, [onClose])
@@ -298,7 +310,7 @@ export function ProductFormModal({ product, categories, rate, onSave, onClose, i
               >
                 <Upload size={20} style={{ color: isDragging ? 'var(--apex-primary)' : 'var(--apex-text-muted)' }} />
                 <span className="text-[13px] font-medium">
-                  {isDragging ? 'Отпустите файл' : imagePreview ? 'Заменить изображение' : 'Перетащите или нажмите'}
+                  {isDragging ? 'Отпустите файл' : imagePreview ? 'Заменить изображение' : 'Перетащите, нажмите или Ctrl+V'}
                 </span>
                 <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
                   JPEG, PNG или WebP, до 2 МБ

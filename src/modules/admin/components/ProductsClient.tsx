@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef, useEffect } from 'react'
+import { useState, useTransition, useRef, useEffect, useMemo, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Check, X, HelpCircle, List, LayoutGrid } from 'lucide-react'
 
@@ -28,6 +28,143 @@ interface ProductsClientProps {
 
 type InlineProductField = 'category_id' | 'cost_byn' | 'coefficient' | 'stock'
 
+type ProductStatus = 'active' | 'coming_soon' | 'inactive'
+
+type NumericOp = '>=' | '<=' | '!=' | '>' | '<' | '='
+
+interface NumericFilter {
+  op: NumericOp
+  value: number
+}
+
+interface ParsedAdminFilter {
+  status?: ('active' | 'inactive' | 'coming_soon')[]
+  categories?: string[]
+  coefficient?: NumericFilter
+  price?: NumericFilter
+  costByn?: NumericFilter
+  stock?: NumericFilter
+  hasImage?: boolean
+  hasEmoji?: boolean
+}
+
+interface FilterToken { key: string; value: string; raw: string; negated: boolean; start: number }
+
+type FilterFieldKey = 'status' | 'categories' | 'coefficient' | 'price' | 'costByn' | 'stock' | 'hasImage'
+
+interface FieldDef {
+  displayKey: string
+  label: string
+  fieldKey: FilterFieldKey
+  color: string       // фон бейджа в дропдауне
+  textColor: string   // текст бейджа в дропдауне
+  overlayKeyColor: string  // цвет ключа "статус:" в оверлее инпута
+  isNumeric?: boolean
+  multiple?: boolean
+  values: Array<{ label: string; insert: string }>
+}
+
+const FILTER_KEY_MAP: Record<string, FilterFieldKey> = {
+  статус: 'status', status: 'status',
+  категория: 'categories', кат: 'categories', category: 'categories',
+  коэф: 'coefficient', коэффициент: 'coefficient', coefficient: 'coefficient',
+  цена: 'price', price: 'price',
+  byn: 'costByn', себестоимость: 'costByn',
+  остаток: 'stock', stock: 'stock', сток: 'stock',
+  картинка: 'hasImage', фото: 'hasImage', изображение: 'hasImage',
+}
+
+// Global regex — reset lastIndex before each use!
+const FILTER_TOKEN_RE = /(-?)([^\s:]+):(?:"([^"]*)"|(\S+))/g
+
+function parseFilterTokens(input: string): FilterToken[] {
+  const tokens: FilterToken[] = []
+  FILTER_TOKEN_RE.lastIndex = 0
+  let m: RegExpExecArray | null
+  while ((m = FILTER_TOKEN_RE.exec(input)) !== null) {
+    if (tokens.length >= 20) break
+    const key = m[2].toLowerCase()
+    if (!FILTER_KEY_MAP[key]) continue
+    tokens.push({ key, value: (m[3] ?? m[4] ?? '').toLowerCase(), raw: m[0], negated: m[1] === '-', start: m.index })
+  }
+  return tokens
+}
+
+function getProductStatus(product: ShopProductWithCategory): ProductStatus {
+  if (product.is_active) return 'active'
+  if (product.is_coming_soon) return 'coming_soon'
+  return 'inactive'
+}
+
+function compareNum(a: number, op: NumericOp, b: number): boolean {
+  if (op === '>=') return a >= b
+  if (op === '<=') return a <= b
+  if (op === '!=') return a !== b
+  if (op === '>') return a > b
+  if (op === '<') return a < b
+  return a === b
+}
+
+function buildAdminFilter(tokens: FilterToken[]): ParsedAdminFilter {
+  const result: ParsedAdminFilter = {}
+  const statusMap: Record<string, 'active' | 'inactive' | 'coming_soon'> = {
+    активен: 'active', активный: 'active', active: 'active',
+    неактивен: 'inactive', неактивный: 'inactive', inactive: 'inactive',
+    скоро: 'coming_soon', coming_soon: 'coming_soon',
+  }
+
+  for (const t of tokens) {
+    const field = FILTER_KEY_MAP[t.key]
+    if (!field) continue
+
+    if (field === 'status') {
+      const s = statusMap[t.value]
+      if (s) result.status = [...(result.status ?? []), s]
+    } else if (field === 'categories') {
+      result.categories = [...(result.categories ?? []), t.value]
+    } else if (field === 'hasImage') {
+      if (t.value === 'эмодзи') {
+        result.hasImage = false
+        result.hasEmoji = true
+      } else {
+        const isTrue = ['есть', 'да', 'true', 'yes'].includes(t.value)
+        const isFalse = ['нет', 'нету', 'no', 'false'].includes(t.value)
+        if (isTrue) result.hasImage = !t.negated
+        else if (isFalse) result.hasImage = t.negated
+      }
+    } else {
+      const nm = t.value.match(/^(>=|<=|!=|>|<|=)\s*(\d+(?:[.,]\d+)?)/)
+      if (nm) {
+        result[field as 'coefficient' | 'price' | 'costByn' | 'stock'] = {
+          op: nm[1] as NumericOp,
+          value: parseFloat(nm[2].replace(',', '.')),
+        }
+      }
+    }
+  }
+
+  return result
+}
+
+function applyParsedFilter(
+  p: ShopProductWithCategory,
+  filter: ParsedAdminFilter,
+  effectiveRate: number
+): boolean {
+  if (filter.status?.length && !filter.status.includes(getProductStatus(p))) return false
+  if (filter.categories?.length) {
+    const catName = (p.category?.name ?? '').toLowerCase()
+    if (!filter.categories.some(c => catName.includes(c))) return false
+  }
+  if (filter.coefficient && !compareNum(p.coefficient, filter.coefficient.op, filter.coefficient.value)) return false
+  if (filter.price && !compareNum(computePriceCrystals(p.cost_byn, p.coefficient, effectiveRate), filter.price.op, filter.price.value)) return false
+  if (filter.costByn && !compareNum(p.cost_byn, filter.costByn.op, filter.costByn.value)) return false
+  if (filter.stock && !compareNum(p.stock ?? 0, filter.stock.op, filter.stock.value)) return false
+  if (filter.hasImage !== undefined && !!p.image_url !== filter.hasImage) return false
+  if (filter.hasEmoji !== undefined && !!p.emoji !== filter.hasEmoji) return false
+  return true
+}
+
 export function ProductsClient({ products: initialProducts, categories: initialCategories, currentRate }: ProductsClientProps) {
   const [products, setProducts] = useState(initialProducts)
   const [categories, setCategories] = useState(initialCategories)
@@ -48,6 +185,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null)
   const [expandedDescriptionId, setExpandedDescriptionId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('list')
+  const [filterQuery, setFilterQuery] = useState('')
 
   // Inline-редактирование товаров
   const [inlineEdit, setInlineEdit] = useState<{
@@ -64,6 +202,9 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   const [editCatField, setEditCatField] = useState<'name' | 'slug' | 'description' | 'is_physical' | null>(null)
   const [editCatValue, setEditCatValue] = useState('')
 
+  const filterTokens = useMemo(() => parseFilterTokens(filterQuery), [filterQuery])
+  const parsedFilter = useMemo(() => buildAdminFilter(filterTokens), [filterTokens])
+
   const filteredProducts = products
     .filter((p) => categoryFilter === 'all' || p.category?.slug === categoryFilter)
     .filter((p) => {
@@ -75,6 +216,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         (p.category?.name.toLowerCase().includes(q) ?? false)
       )
     })
+    .filter((p) => applyParsedFilter(p, parsedFilter, effectiveRate))
 
   function showNotification(msg: string) {
     setNotification(msg)
@@ -218,8 +360,6 @@ export function ProductsClient({ products: initialProducts, categories: initialC
     })
   }
 
-  type ProductStatus = 'active' | 'coming_soon' | 'inactive'
-
   function setProductStatus(product: ShopProductWithCategory, newStatus: ProductStatus) {
     if (newStatus === 'active' && product.category?.is_countable && (product.stock ?? 0) === 0) {
       setError('Нельзя активировать товар с нулевым остатком. Сначала укажите количество.')
@@ -243,12 +383,6 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         setError(result.error)
       }
     })
-  }
-
-  function getProductStatus(product: ShopProductWithCategory): ProductStatus {
-    if (product.is_active) return 'active'
-    if (product.is_coming_soon) return 'coming_soon'
-    return 'inactive'
   }
 
   function handleDeleteProduct(id: string) {
@@ -822,6 +956,11 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           </div>
         </div>
 
+        {/* Строка фильтра */}
+        <div className="px-5 py-2.5" style={{ borderBottom: '1px solid var(--apex-border)' }}>
+          <FilterInput value={filterQuery} onChange={setFilterQuery} categories={categories} />
+        </div>
+
         {/* Вид: карточки */}
         {viewMode === 'cards' && (
           <div>
@@ -833,91 +972,132 @@ export function ProductsClient({ products: initialProducts, categories: initialC
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-5">
                 {filteredProducts.map((product) => {
                   const isConfirmingDelete = deletingProductId === product.id
+                  const isDescExpanded = expandedDescriptionId === product.id
+                  const outOfStock = !product.is_coming_soon && product.category?.is_countable && product.stock !== null && product.stock === 0
+                  const lowStock = !product.is_coming_soon && product.category?.is_countable && product.stock !== null && product.stock > 0 && product.stock <= 5
                   return (
                     <div
                       key={product.id}
-                      className="rounded-xl overflow-hidden flex flex-col"
-                      style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
+                      className="rounded-2xl overflow-hidden card-hover flex flex-col"
+                      style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
                     >
-                      {/* Картинка / эмодзи */}
+                      {/* Зона картинки / эмодзи */}
                       <div
-                        className="h-28 flex items-center justify-center relative overflow-hidden"
+                        className="h-36 flex items-center justify-center relative overflow-hidden"
                         style={{ background: product.image_url ? 'transparent' : 'var(--apex-emoji-bg)' }}
                       >
                         {product.image_url ? (
                           <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
                         ) : (
-                          <span className="text-4xl">{product.emoji || <span style={{ color: '#ccc' }}>?</span>}</span>
+                          <span className="text-5xl">{product.emoji || <span style={{ color: '#ccc' }}>?</span>}</span>
+                        )}
+                        {product.is_coming_soon && (
+                          <span
+                            className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
+                            style={{ background: 'var(--apex-warning-text)', color: 'white' }}
+                          >
+                            Скоро в продаже
+                          </span>
+                        )}
+                        {outOfStock && (
+                          <span
+                            className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
+                            style={{ background: 'var(--apex-danger)', color: 'white' }}
+                          >
+                            Нет в наличии
+                          </span>
+                        )}
+                        {lowStock && (
+                          <span
+                            className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
+                            style={{ background: 'var(--apex-warning-text)', color: 'white' }}
+                          >
+                            Осталось: {product.stock}
+                          </span>
                         )}
                       </div>
-                      {/* Контент */}
-                      <div className="p-3 flex flex-col flex-1 gap-2">
-                        <div>
-                          <span
-                            className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
-                            style={{ background: 'var(--apex-tag-teal-bg)', color: 'var(--apex-tag-teal-text)' }}
-                          >
+                      {/* Детали товара */}
+                      <div className="p-4 flex flex-col flex-1" style={{ background: 'var(--surface-elevated)' }}>
+                        <div className="mb-1">
+                          <span className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>
                             {product.category?.name ?? '—'}
                           </span>
                         </div>
-                        <p className="text-[12px] font-semibold leading-snug" style={{ color: 'var(--apex-text)' }}>
+                        <h3 className="text-[13px] font-bold leading-snug" style={{ color: 'var(--text-primary)' }}>
                           {product.name}
-                        </p>
-                        <CoinStatic
-                          amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
-                          size="sm"
-                        />
-                        <div className="mt-auto pt-1">
-                          <ProductStatusDropdown
-                            status={getProductStatus(product)}
-                            onChange={(s) => setProductStatus(product, s)}
-                            disabled={isProductPending || !product.category?.is_active}
+                        </h3>
+                        {product.description ? (
+                          <p
+                            onClick={() => setExpandedDescriptionId(isDescExpanded ? null : product.id)}
+                            className="text-[11px] mt-0.5 mb-2 overflow-hidden cursor-pointer"
+                            style={{
+                              color: 'var(--text-muted)',
+                              display: '-webkit-box',
+                              WebkitBoxOrient: 'vertical',
+                              WebkitLineClamp: isDescExpanded ? 'unset' : 2,
+                            }}
+                          >
+                            {product.description}
+                          </p>
+                        ) : (
+                          <div className="mb-3" />
+                        )}
+                        <div className="mt-auto pt-2 flex flex-col gap-2">
+                          <CoinStatic
+                            amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
+                            size="sm"
                           />
-                        </div>
-                        {/* Действия */}
-                        <div className="flex items-center gap-1">
-                          {isConfirmingDelete ? (
-                            <div className="flex items-center gap-1">
-                              <span className="text-[10px] font-medium mr-1" style={{ color: 'var(--apex-danger)' }}>
-                                Удалить?
-                              </span>
-                              <button
-                                onClick={() => handleDeleteProduct(product.id)}
-                                className="w-6 h-6 rounded-full flex items-center justify-center"
-                                style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
-                              >
-                                <Check size={12} />
-                              </button>
-                              <button
-                                onClick={() => setDeletingProductId(null)}
-                                className="w-6 h-6 rounded-full flex items-center justify-center"
-                                style={{ color: 'var(--apex-text-muted)' }}
-                              >
-                                <X size={12} />
-                              </button>
+                          <div className="flex items-center gap-1">
+                            <div className="flex-1 min-w-0">
+                              <ProductStatusDropdown
+                                status={getProductStatus(product)}
+                                onChange={(s) => setProductStatus(product, s)}
+                                disabled={isProductPending || !product.category?.is_active}
+                              />
                             </div>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => setEditingProduct(product)}
-                                className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
-                                style={{ color: 'var(--apex-text-muted)' }}
-                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--apex-primary)'; e.currentTarget.style.background = 'var(--apex-success-bg)' }}
-                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--apex-text-muted)'; e.currentTarget.style.background = 'transparent' }}
-                              >
-                                <Pencil size={13} />
-                              </button>
-                              <button
-                                onClick={() => setDeletingProductId(product.id)}
-                                className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
-                                style={{ color: 'var(--apex-text-muted)' }}
-                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--apex-danger)'; e.currentTarget.style.background = 'var(--apex-error-bg)' }}
-                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--apex-text-muted)'; e.currentTarget.style.background = 'transparent' }}
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </>
-                          )}
+                            {isConfirmingDelete ? (
+                              <>
+                                <span className="text-[10px] font-medium" style={{ color: 'var(--apex-danger)' }}>
+                                  Удалить?
+                                </span>
+                                <button
+                                  onClick={() => handleDeleteProduct(product.id)}
+                                  className="w-6 h-6 rounded-full flex items-center justify-center"
+                                  style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
+                                >
+                                  <Check size={12} />
+                                </button>
+                                <button
+                                  onClick={() => setDeletingProductId(null)}
+                                  className="w-6 h-6 rounded-full flex items-center justify-center"
+                                  style={{ color: 'var(--apex-text-muted)' }}
+                                >
+                                  <X size={12} />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => setEditingProduct(product)}
+                                  className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                                  style={{ color: 'var(--apex-text-muted)' }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--apex-primary)'; e.currentTarget.style.background = 'var(--apex-success-bg)' }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--apex-text-muted)'; e.currentTarget.style.background = 'transparent' }}
+                                >
+                                  <Pencil size={13} />
+                                </button>
+                                <button
+                                  onClick={() => setDeletingProductId(product.id)}
+                                  className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                                  style={{ color: 'var(--apex-text-muted)' }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--apex-danger)'; e.currentTarget.style.background = 'var(--apex-error-bg)' }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--apex-text-muted)'; e.currentTarget.style.background = 'transparent' }}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1023,7 +1203,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                         <InlineEditableCell onClick={() => startInlineEdit(product.id, 'category_id', product.category_id)}>
                           <span
                             className="text-[11px] font-bold px-2 py-0.5 rounded-md"
-                            style={{ background: 'var(--apex-tag-teal-bg)', color: 'var(--apex-tag-teal-text)' }}
+                            style={{ background: 'var(--tag-teal-bg)', color: 'var(--tag-teal-text)' }}
                           >
                             {product.category?.name ?? '—'}
                           </span>
@@ -1464,13 +1644,655 @@ function CatInlineEdit({
   )
 }
 
-type ProductStatus = 'active' | 'coming_soon' | 'inactive'
-
 const PRODUCT_STATUS_OPTIONS: { value: ProductStatus; label: string; bg: string; text: string }[] = [
   { value: 'active', label: 'Активен', bg: 'var(--apex-success-bg)', text: 'var(--apex-success-text)' },
   { value: 'coming_soon', label: 'Скоро', bg: 'var(--apex-warning-bg)', text: 'var(--apex-warning-text)' },
   { value: 'inactive', label: 'Неактивен', bg: 'var(--apex-bg)', text: 'var(--apex-text-muted)' },
 ]
+
+const NUMERIC_OPS: { op: string; label: string; hint: string }[] = [
+  { op: '=',  label: '=',  hint: 'равно' },
+  { op: '!=', label: '≠',  hint: 'не равно' },
+  { op: '>',  label: '>',  hint: 'больше' },
+  { op: '>=', label: '≥',  hint: 'не меньше' },
+  { op: '<',  label: '<',  hint: 'меньше' },
+  { op: '<=', label: '≤',  hint: 'не больше' },
+]
+
+// Longest ops first to avoid partial match ('>=', '<=' before '>', '<')
+const NUMERIC_OPS_SORTED_DESC = ['>=', '<=', '!=', '>', '<', '=']
+
+function parseOpFromPartial(partial: string): { op: string; numStr: string } | null {
+  for (const op of NUMERIC_OPS_SORTED_DESC) {
+    if (partial.startsWith(op)) return { op, numStr: partial.slice(op.length) }
+  }
+  return null
+}
+
+function FilterInput({ value, onChange, categories }: { value: string; onChange: (v: string) => void; categories: { name: string; is_active: boolean }[] }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+  const isFocusedRef = useRef(false)
+  // Protects cursorPos from being overwritten by onSelect before RAF sets DOM cursor
+  const pendingCursorRef = useRef<number | null>(null)
+  // Порядок навигации стрелками (в 2-колоночном режиме — сначала левая, потом правая)
+  const navOrderRef = useRef<number[]>([])
+
+  const [localValue, setLocalValue] = useState(value)
+  const [cursorPos, setCursorPos] = useState(0)
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [highlightIdx, setHighlightIdx] = useState(0)
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 })
+
+  // Sync from parent when changed externally (skip while focused to avoid debounce loop)
+  useEffect(() => {
+    if (!isFocusedRef.current && value !== localValue) setLocalValue(value)
+  }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounced parent update — 200ms
+  useEffect(() => {
+    const t = setTimeout(() => onChangeRef.current(localValue), 200)
+    return () => clearTimeout(t)
+  }, [localValue])
+
+  const fieldDefs = useMemo<FieldDef[]>(() => [
+    {
+      displayKey: 'статус', label: 'Статус', fieldKey: 'status',
+      color: 'var(--tag-green-bg)', textColor: 'var(--tag-green-text)', overlayKeyColor: 'var(--tag-green-text)',
+      values: [
+        { label: 'Активен', insert: 'активный' },
+        { label: 'Неактивен', insert: 'неактивный' },
+        { label: 'Скоро в продаже', insert: 'скоро' },
+      ],
+    },
+    {
+      displayKey: 'категория', label: 'Категория', fieldKey: 'categories',
+      color: 'var(--tag-teal-bg)', textColor: 'var(--tag-teal-text)', overlayKeyColor: 'var(--tag-teal-text)',
+      multiple: true,
+      values: categories.filter(c => c.is_active).map(c => {
+        const v = c.name.toLowerCase()
+        return { label: c.name, insert: v.includes(' ') ? `"${v}"` : v }
+      }),
+    },
+    {
+      displayKey: 'коэф', label: 'Коэффициент', fieldKey: 'coefficient',
+      color: 'var(--tag-orange-bg)', textColor: 'var(--tag-orange-text)', overlayKeyColor: 'var(--tag-orange-text)',
+      isNumeric: true,
+      values: [
+        { label: '1', insert: '1' },
+        { label: '1.5', insert: '1.5' },
+        { label: '2', insert: '2' },
+        { label: '3', insert: '3' },
+      ],
+    },
+    {
+      displayKey: 'цена', label: 'Цена (кристаллы)', fieldKey: 'price',
+      color: 'var(--tag-yellow-bg)', textColor: 'var(--tag-yellow-text)', overlayKeyColor: 'var(--tag-yellow-text)',
+      isNumeric: true,
+      values: [
+        { label: '50', insert: '50' },
+        { label: '100', insert: '100' },
+        { label: '500', insert: '500' },
+        { label: '1000', insert: '1000' },
+      ],
+    },
+    {
+      displayKey: 'byn', label: 'Себестоимость BYN', fieldKey: 'costByn',
+      color: 'var(--tag-blue-bg)', textColor: 'var(--tag-blue-text)', overlayKeyColor: 'var(--tag-blue-text)',
+      isNumeric: true,
+      values: [
+        { label: '10', insert: '10' },
+        { label: '25', insert: '25' },
+        { label: '50', insert: '50' },
+        { label: '100', insert: '100' },
+      ],
+    },
+    {
+      displayKey: 'остаток', label: 'Остаток', fieldKey: 'stock',
+      color: 'var(--tag-red-bg)', textColor: 'var(--tag-red-text)', overlayKeyColor: 'var(--tag-red-text)',
+      isNumeric: true,
+      values: [
+        { label: '0', insert: '0' },
+        { label: '5', insert: '5' },
+        { label: '10', insert: '10' },
+      ],
+    },
+    {
+      displayKey: 'картинка', label: 'Картинка', fieldKey: 'hasImage',
+      color: 'var(--tag-purple-bg)', textColor: 'var(--tag-purple-text)', overlayKeyColor: 'var(--tag-purple-text)',
+      values: [
+        { label: 'Есть', insert: 'есть' },
+        { label: 'Нет', insert: 'нет' },
+        { label: 'Эмодзи', insert: 'эмодзи' },
+      ],
+    },
+  ], [categories])
+
+  type InputContext =
+    | { type: 'key'; partial: string; negated: boolean; tokenStart: number }
+    | { type: 'value'; fieldKey: string; partial: string; tokenStart: number; keyEnd: number }
+    | { type: 'empty' }
+
+  const context = useMemo((): InputContext => {
+    const before = localValue.slice(0, cursorPos)
+
+    // Value context: cursor is after "key:" or "-key:"
+    const valueMatch = before.match(/(-?)([^\s:]+):(\S*)$/)
+    if (valueMatch) {
+      const key = valueMatch[2].toLowerCase()
+      if (FILTER_KEY_MAP[key]) {
+        return {
+          type: 'value',
+          fieldKey: key,
+          partial: valueMatch[3].toLowerCase(),
+          tokenStart: before.length - valueMatch[0].length,
+          keyEnd: before.length - valueMatch[3].length,
+        }
+      }
+    }
+
+    // Key context: cursor is typing a word without colon
+    const keyMatch = before.match(/(-?)(\S+)$/)
+    if (keyMatch && !keyMatch[0].includes(':')) {
+      return {
+        type: 'key',
+        partial: keyMatch[2].toLowerCase(),
+        negated: keyMatch[1] === '-',
+        tokenStart: before.length - keyMatch[0].length,
+      }
+    }
+
+    return { type: 'empty' }
+  }, [localValue, cursorPos])
+
+  type Suggestion =
+    | { type: 'key'; field: FieldDef }
+    | { type: 'operator'; op: string; label: string; hint: string; field: FieldDef }
+    | { type: 'value'; option: { label: string; insert: string }; field: FieldDef }
+
+  const suggestions = useMemo((): Suggestion[] => {
+    if (context.type === 'key' || context.type === 'empty') {
+      const partial = context.type === 'key' ? context.partial : ''
+      return fieldDefs
+        .filter(f => !partial || f.displayKey.startsWith(partial) || f.label.toLowerCase().includes(partial))
+        .slice(0, 8)
+        .map(f => ({ type: 'key' as const, field: f }))
+    }
+
+    if (context.type === 'value') {
+      const field = fieldDefs.find(f => f.fieldKey === FILTER_KEY_MAP[context.fieldKey])
+      if (!field) return []
+
+      if (field.isNumeric) {
+        const opParsed = parseOpFromPartial(context.partial)
+        if (!opParsed) {
+          // Шаг 1 для числовых: выбор оператора
+          return NUMERIC_OPS.map(({ op, label, hint }) => ({
+            type: 'operator' as const, op, label, hint, field,
+          }))
+        }
+        // Шаг 2: числовые значения для выбранного оператора
+        const numStr = opParsed.numStr
+        return field.values
+          .filter(v => !numStr || v.insert.startsWith(numStr))
+          .map(v => ({
+            type: 'value' as const,
+            option: { label: v.label, insert: opParsed.op + v.insert },
+            field,
+          }))
+      }
+
+      const partial = context.partial
+      return field.values
+        .filter(v => !partial || v.label.toLowerCase().includes(partial) || v.insert.startsWith(partial))
+        .slice(0, 8)
+        .map(v => ({ type: 'value' as const, option: v, field }))
+    }
+
+    return []
+  }, [context, fieldDefs])
+
+  useEffect(() => { setHighlightIdx(0) }, [suggestions.length, context.type])
+
+  const activeFieldDef = context.type === 'value'
+    ? fieldDefs.find(f => f.fieldKey === FILTER_KEY_MAP[context.fieldKey])
+    : null
+
+  // Оператор, выбранный на шаге 1 числового поля (null если не в числовой value-фазе)
+  const currentNumericOp = context.type === 'value' && activeFieldDef?.isNumeric
+    ? (parseOpFromPartial(context.partial)?.op ?? null)
+    : null
+
+  function applySuggestion(s: Suggestion) {
+    if (s.type === 'key') {
+      const negated = context.type === 'key' && context.negated
+      const keyText = `${negated ? '-' : ''}${s.field.displayKey}:`
+      const start = context.type !== 'empty' ? context.tokenStart : cursorPos
+      const before = localValue.slice(0, start)
+      const after = localValue.slice(cursorPos)
+      const newVal = before + keyText + after
+      const newCursor = before.length + keyText.length
+      pendingCursorRef.current = newCursor
+      setLocalValue(newVal)
+      setCursorPos(newCursor)
+      setShowDropdown(true)
+      requestAnimationFrame(() => {
+        pendingCursorRef.current = null
+        if (inputRef.current) {
+          inputRef.current.focus()
+          inputRef.current.setSelectionRange(newCursor, newCursor)
+        }
+      })
+    } else if (s.type === 'operator') {
+      if (context.type !== 'value') return
+      const before = localValue.slice(0, context.keyEnd)
+      const after = localValue.slice(cursorPos).trimStart()
+      const newVal = before + s.op + after
+      const newCursor = before.length + s.op.length
+      pendingCursorRef.current = newCursor
+      setLocalValue(newVal)
+      setCursorPos(newCursor)
+      setShowDropdown(true)
+      requestAnimationFrame(() => {
+        pendingCursorRef.current = null
+        if (inputRef.current) {
+          inputRef.current.focus()
+          inputRef.current.setSelectionRange(newCursor, newCursor)
+        }
+      })
+    } else {
+      if (context.type !== 'value') return
+      const insertText = s.option.insert
+      const before = localValue.slice(0, context.keyEnd)
+      const after = localValue.slice(cursorPos).trimStart()
+      const newVal = before + insertText + ' ' + after
+      const newCursor = before.length + insertText.length + 1
+      pendingCursorRef.current = newCursor
+      setLocalValue(newVal)
+      setCursorPos(newCursor)
+      setShowDropdown(false)
+      requestAnimationFrame(() => {
+        pendingCursorRef.current = null
+        if (inputRef.current) {
+          inputRef.current.focus()
+          inputRef.current.setSelectionRange(newCursor, newCursor)
+        }
+      })
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!showDropdown || suggestions.length === 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setShowDropdown(true) }
+      return
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      const order = navOrderRef.current
+      const pos = order.indexOf(highlightIdx)
+      setHighlightIdx(order[(pos + 1) % order.length])
+    }
+    else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      const order = navOrderRef.current
+      const pos = order.indexOf(highlightIdx)
+      setHighlightIdx(order[(pos - 1 + order.length) % order.length])
+    }
+    else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); if (suggestions[highlightIdx]) applySuggestion(suggestions[highlightIdx]) }
+    else if (e.key === 'Escape') {
+      e.preventDefault()
+      if (context.type === 'value') {
+        if (currentNumericOp) {
+          // Числовое поле, оператор выбран — назад к выбору оператора
+          const newVal = localValue.slice(0, context.keyEnd) + localValue.slice(cursorPos).trimStart()
+          const newCursor = context.keyEnd
+          setLocalValue(newVal)
+          setCursorPos(newCursor)
+          setShowDropdown(true)
+          requestAnimationFrame(() => {
+            if (inputRef.current) {
+              inputRef.current.focus()
+              inputRef.current.setSelectionRange(newCursor, newCursor)
+            }
+          })
+        } else {
+          // Назад к выбору ключа — убираем весь токен
+          const newVal = localValue.slice(0, context.tokenStart) + localValue.slice(cursorPos).trimStart()
+          const newCursor = context.tokenStart
+          setLocalValue(newVal)
+          setCursorPos(newCursor)
+          setShowDropdown(true)
+          requestAnimationFrame(() => {
+            if (inputRef.current) {
+              inputRef.current.focus()
+              inputRef.current.setSelectionRange(newCursor, newCursor)
+            }
+          })
+        }
+      } else {
+        setShowDropdown(false)
+      }
+    }
+  }
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const updateDropdownPos = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
+      setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+    }
+  }
+
+  useEffect(() => {
+    if (!showDropdown) return
+    updateDropdownPos()
+    window.addEventListener('scroll', updateDropdownPos, true)
+    window.addEventListener('resize', updateDropdownPos)
+    return () => {
+      window.removeEventListener('scroll', updateDropdownPos, true)
+      window.removeEventListener('resize', updateDropdownPos)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showDropdown, suggestions.length])
+
+  // Token highlighting overlay
+  const tokens = useMemo(() => parseFilterTokens(localValue), [localValue])
+
+  const highlightContent = useMemo((): ReactNode[] | null => {
+    if (!localValue || tokens.length === 0) return null
+    const parts: ReactNode[] = []
+    let lastIdx = 0
+
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i]
+      if (token.start > lastIdx) {
+        parts.push(
+          <span key={`gap-${i}`} style={{ color: 'var(--apex-text)' }}>
+            {localValue.slice(lastIdx, token.start)}
+          </span>
+        )
+      }
+      const field = fieldDefs.find(f => f.fieldKey === FILTER_KEY_MAP[token.key])
+      const colonIdx = token.raw.indexOf(':')
+      const rawKey = token.raw.slice(0, colonIdx + 1)
+      const rawVal = token.raw.slice(colonIdx + 1)
+      const keyColor = token.negated ? 'var(--apex-danger)' : (field?.overlayKeyColor ?? 'var(--apex-primary)')
+      const valColor = token.negated ? 'var(--apex-danger)' : 'var(--apex-text-muted)'
+
+      parts.push(
+        <span key={`tok-${i}`}>
+          <span style={{
+            color: token.negated ? 'var(--apex-danger)' : (field?.textColor ?? 'white'),
+            background: token.negated ? 'var(--apex-error-bg)' : (field?.color ?? 'var(--apex-primary)'),
+            borderRadius: '3px',
+          }}>{rawKey}</span>
+          <span style={{ color: valColor }}>{rawVal}</span>
+        </span>
+      )
+      lastIdx = token.start + token.raw.length
+    }
+
+    if (lastIdx < localValue.length) {
+      parts.push(<span key="tail" style={{ color: 'var(--apex-text)' }}>{localValue.slice(lastIdx)}</span>)
+    }
+    return parts
+  }, [localValue, tokens, fieldDefs])
+
+  const tokenCount = tokens.length
+  const hasDropdown = showDropdown && suggestions.length > 0
+
+  // Если под дропдауном мало места — показываем в 2 столбца
+  const useTwoCols = (() => {
+    if (!hasDropdown || suggestions.length < 4) return false
+    const ROW_H = 32
+    const headerH = context.type === 'value' ? 44 : 28
+    const hintH = context.type === 'value' && activeFieldDef?.isNumeric ? 36 : 0
+    const oneColH = headerH + suggestions.length * ROW_H + hintH
+    const available = typeof window !== 'undefined' ? window.innerHeight - dropdownPos.top - 8 : 9999
+    return oneColH > available
+  })()
+
+  // Порядок навигации: в 2-колонках — сначала вся левая колонка, потом правая
+  navOrderRef.current = (() => {
+    const N = suggestions.length
+    if (!useTwoCols) return Array.from({ length: N }, (_, i) => i)
+    const rowCount = Math.ceil(N / 2)
+    const order: number[] = []
+    for (let col = 0; col < 2; col++) {
+      for (let row = 0; row < rowCount; row++) {
+        const idx = row * 2 + col
+        if (idx < N) order.push(idx)
+      }
+    }
+    return order
+  })()
+
+  return (
+    <div ref={containerRef} className="relative">
+      {/* Input wrapper */}
+      <div
+        className="flex items-center rounded-lg"
+        style={{
+          background: 'var(--apex-bg)',
+          border: hasDropdown || localValue ? '1px solid var(--apex-primary)' : '1px solid var(--apex-border)',
+          transition: 'border-color 0.15s',
+        }}
+      >
+        <Search size={14} className="ml-2.5 shrink-0" style={{ color: 'var(--apex-text-muted)' }} />
+
+        {/* Highlight overlay + real input */}
+        <div className="relative flex-1 min-w-0 overflow-hidden">
+          {/* Colored token spans — sits behind the cursor */}
+          {highlightContent && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 flex items-center pl-2 pr-2 text-[12px] whitespace-pre"
+            >
+              {highlightContent}
+            </div>
+          )}
+
+          {/* Real input — text transparent when overlay is active so cursor shows through */}
+          <input
+            ref={inputRef}
+            type="text"
+            value={localValue}
+            onChange={(e) => {
+              setLocalValue(e.target.value)
+              setCursorPos(e.target.selectionStart ?? e.target.value.length)
+              setShowDropdown(true)
+              setHighlightIdx(0)
+            }}
+            onSelect={() => {
+              // Skip if applySuggestion RAF hasn't fired yet — it will set the correct position
+              if (pendingCursorRef.current !== null) return
+              if (inputRef.current) setCursorPos(inputRef.current.selectionStart ?? localValue.length)
+            }}
+            onFocus={() => { isFocusedRef.current = true; setShowDropdown(true) }}
+            onBlur={() => { isFocusedRef.current = false; setTimeout(() => setShowDropdown(false), 150) }}
+            onKeyDown={handleKeyDown}
+            placeholder="статус:активный  коэф:>= 1.5  категория:еда  картинка:нет"
+            spellCheck={false}
+            autoComplete="off"
+            className="relative w-full bg-transparent pl-2 pr-2 py-1.5 text-[12px] outline-none placeholder:opacity-40"
+            style={{
+              color: highlightContent ? 'transparent' : 'var(--apex-text)',
+              caretColor: 'var(--apex-text)',
+            }}
+          />
+        </div>
+
+        {/* Token counter + clear */}
+        {tokenCount > 0 && (
+          <div className="flex items-center gap-1 pr-2 shrink-0">
+            <span className="text-[11px] tabular-nums" style={{ color: 'var(--apex-text-muted)' }}>{tokenCount}</span>
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                setLocalValue('')
+                onChangeRef.current('')
+                setCursorPos(0)
+                setShowDropdown(true)
+                inputRef.current?.focus()
+              }}
+              style={{ color: 'var(--apex-text-muted)' }}
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Dropdown — через портал, чтобы выходить за рамки overflow:hidden контейнера */}
+      {hasDropdown && createPortal(
+        <div
+          className="fixed z-[200] rounded-xl overflow-hidden"
+          style={{
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
+            minWidth: '220px',
+            maxWidth: '480px',
+            background: 'var(--apex-surface)',
+            border: '1px solid var(--apex-border)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
+          }}
+        >
+          {/* Value phase header with back button */}
+          {context.type === 'value' && activeFieldDef && (
+            <div className="flex items-center gap-2 px-3 py-2" style={{ borderBottom: '1px solid var(--apex-border)' }}>
+              <button
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  if (context.type !== 'value') return
+                  if (currentNumericOp) {
+                    // Числовое поле с оператором — назад к операторам
+                    const newVal = localValue.slice(0, context.keyEnd) + localValue.slice(cursorPos).trimStart()
+                    const newCursor = context.keyEnd
+                    setLocalValue(newVal); setCursorPos(newCursor); setShowDropdown(true)
+                    requestAnimationFrame(() => { if (inputRef.current) { inputRef.current.focus(); inputRef.current.setSelectionRange(newCursor, newCursor) } })
+                  } else {
+                    // Назад к ключам
+                    const newVal = localValue.slice(0, context.tokenStart) + localValue.slice(cursorPos).trimStart()
+                    const newCursor = context.tokenStart
+                    setLocalValue(newVal); setCursorPos(newCursor); setShowDropdown(true)
+                    requestAnimationFrame(() => { if (inputRef.current) { inputRef.current.focus(); inputRef.current.setSelectionRange(newCursor, newCursor) } })
+                  }
+                }}
+                className="w-5 h-5 flex items-center justify-center rounded"
+                style={{ color: 'var(--apex-text-muted)' }}
+              >
+                <ChevronRight size={12} className="rotate-180" />
+              </button>
+              <span
+                className="text-[11px] font-semibold px-2 py-0.5 rounded-md"
+                style={{ background: activeFieldDef.color, color: activeFieldDef.textColor }}
+              >
+                {activeFieldDef.label}
+              </span>
+              {currentNumericOp ? (
+                <>
+                  <span
+                    className="text-[12px] font-bold font-mono px-1.5 py-0.5 rounded"
+                    style={{ background: activeFieldDef.color, color: activeFieldDef.textColor }}
+                  >
+                    {currentNumericOp}
+                  </span>
+                  <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>— введите или выберите число</span>
+                </>
+              ) : activeFieldDef.isNumeric ? (
+                <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>— выберите оператор</span>
+              ) : (
+                <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>— выберите значение</span>
+              )}
+            </div>
+          )}
+
+          {/* Suggestions list */}
+          <div className="py-1">
+            {context.type !== 'value' && (
+              <p className="text-[10px] font-semibold uppercase tracking-wide px-3 pt-2 pb-1" style={{ color: 'var(--apex-text-muted)' }}>
+                Фильтр по
+              </p>
+            )}
+            <div className={useTwoCols ? 'grid grid-cols-2' : undefined}>
+              {suggestions.map((s, i) => {
+                const isHighlighted = highlightIdx === i
+                if (s.type === 'key') {
+                  return (
+                    <button
+                      key={s.field.displayKey}
+                      onMouseDown={(e) => { e.preventDefault(); applySuggestion(s) }}
+                      onMouseEnter={() => setHighlightIdx(i)}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-left"
+                      style={{ background: isHighlighted ? 'var(--apex-bg)' : 'transparent' }}
+                    >
+                      <span
+                        className="px-1.5 py-0.5 rounded text-[11px] font-semibold shrink-0 font-mono"
+                        style={{ background: s.field.color, color: s.field.textColor }}
+                      >
+                        {s.field.displayKey}:
+                      </span>
+                      <span className="text-[12px] truncate" style={{ color: 'var(--apex-text)' }}>
+                        {s.field.label}
+                      </span>
+                    </button>
+                  )
+                } else if (s.type === 'operator') {
+                  return (
+                    <button
+                      key={s.op}
+                      onMouseDown={(e) => { e.preventDefault(); applySuggestion(s) }}
+                      onMouseEnter={() => setHighlightIdx(i)}
+                      className="w-full flex items-center gap-3 px-3 py-1.5 text-left"
+                      style={{ background: isHighlighted ? 'var(--apex-bg)' : 'transparent' }}
+                    >
+                      <span
+                        className="text-[13px] font-bold font-mono w-6 text-center shrink-0"
+                        style={{ color: isHighlighted ? s.field.overlayKeyColor : 'var(--apex-text)' }}
+                      >
+                        {s.label}
+                      </span>
+                      <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>{s.hint}</span>
+                    </button>
+                  )
+                } else {
+                  return (
+                    <button
+                      key={s.option.insert}
+                      onMouseDown={(e) => { e.preventDefault(); applySuggestion(s) }}
+                      onMouseEnter={() => setHighlightIdx(i)}
+                      className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left"
+                      style={{
+                        background: isHighlighted ? s.field.color : 'transparent',
+                        color: isHighlighted ? s.field.textColor : 'var(--apex-text)',
+                      }}
+                    >
+                      <span className="text-[12px] font-medium truncate">{s.option.label}</span>
+                    </button>
+                  )
+                }
+              })}
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </div>
+  )
+}
 
 function ProductStatusDropdown({
   status,
