@@ -1206,7 +1206,17 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                   className="text-left text-[12px] font-semibold px-5 py-2.5"
                   style={{ color: 'var(--apex-text-secondary)' }}
                 >
-                  {h}
+                  {h === 'Скидка юзера / Наценка' ? (
+                    <span className="group relative inline-flex items-center gap-0.5">
+                      {h}
+                      <HelpCircle size={12} className="cursor-help shrink-0" />
+                      <span className="pointer-events-none absolute left-0 top-full z-50 mt-1 hidden w-60 flex-col gap-1.5 rounded-lg border px-3 py-2.5 text-[11px] font-normal shadow-lg group-hover:flex"
+                        style={{ background: 'var(--apex-surface)', borderColor: 'var(--apex-border)', color: 'var(--apex-text-primary)' }}>
+                        <span><b>Скидка юзера</b> — какую скидку увидит пользователь при покупке товара</span>
+                        <span><b>Наценка</b> — на сколько % мы подняли цену товара</span>
+                      </span>
+                    </span>
+                  ) : h}
                 </th>
               ))}
             </tr>
@@ -1332,7 +1342,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                     </td>
 
                     {/* Скидка — inline editable (двойной ввод) */}
-                    <td className="px-5 py-2.5">
+                    <td className="px-5 py-2.5 relative">
                       {isInlineEditing && inlineEdit.field === 'discount_percent' ? (
                         <InlineDualDiscountInput
                           markup={inlineEdit.value}
@@ -1679,7 +1689,7 @@ function InlineDualDiscountInput({
 
   return (
     <div
-      className="relative z-20 flex flex-col gap-1 rounded-lg px-2 py-1.5"
+      className="absolute z-30 top-1/2 -translate-y-1/2 left-0 flex flex-col gap-1 rounded-lg px-2 py-1.5 min-w-max"
       onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) onCancel() }}
       style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-focus)', boxShadow: '0 4px 12px rgba(0,0,0,0.12)' }}
     >

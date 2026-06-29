@@ -272,17 +272,6 @@ export function ProductFormModal({ product, categories, rate, onSave, onClose, i
             </Field>
           </div>
 
-          {/* Превью цены для пользователя */}
-          <div
-            className="rounded-lg px-3 py-2 flex items-center justify-between"
-            style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
-          >
-            <span className="text-[12px]" style={{ color: 'var(--apex-text-secondary)' }}>
-              Цена для пользователя при курсе {rate}
-            </span>
-            <CoinStatic amount={priceCrystals} size="sm" />
-          </div>
-
           {/* Наценка и скидка для покупателя */}
           <div className="grid grid-cols-2 gap-4 items-start">
             <Field label="Наценка % (от реальной цены)">
@@ -335,26 +324,32 @@ export function ProductFormModal({ product, categories, rate, onSave, onClose, i
             </Field>
           </div>
 
-          {/* Превью зачёркнутой цены */}
-          {priceWithoutDiscountCrystals !== null ? (
-            <div
-              className="rounded-lg px-3 py-2 flex items-center justify-between"
-              style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
-            >
-              <p className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
-                Зачёркнутая цена
-              </p>
-              <div className="flex items-center gap-2">
-                <CoinStatic amount={priceWithoutDiscountCrystals} size="sm" />
-                <span
-                  className="text-[11px] font-bold px-1.5 py-0.5 rounded"
-                  style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
-                >
-                  −{displayDiscount}%
-                </span>
-              </div>
+          {/* Превью цены для пользователя */}
+          <div
+            className="rounded-lg px-3 py-2 flex items-center justify-between"
+            style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
+          >
+            <span className="text-[12px]" style={{ color: 'var(--apex-text-secondary)' }}>
+              Цена для пользователя при курсе {rate}
+            </span>
+            <div className="flex items-center gap-2">
+              {priceWithoutDiscountCrystals !== null && (
+                <>
+                  <span className="relative opacity-50">
+                    <CoinStatic amount={priceWithoutDiscountCrystals} size="sm" />
+                    <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2" style={{ background: 'var(--apex-text-secondary)' }} />
+                  </span>
+                  <span
+                    className="text-[11px] font-bold px-1.5 py-0.5 rounded"
+                    style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
+                  >
+                    −{displayDiscount}%
+                  </span>
+                </>
+              )}
+              <CoinStatic amount={priceCrystals} size="sm" />
             </div>
-          ) : null}
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             {/* Эмодзи */}
