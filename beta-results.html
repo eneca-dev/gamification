@@ -149,6 +149,28 @@
     }
 
     /* ── Reviews ── */
+    .reviews-summary {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;
+      margin-bottom: 36px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 24px 28px;
+    }
+    .reviews-summary-item { display: flex; flex-direction: column; gap: 4px; }
+    .reviews-summary-item .rs-val {
+      font-size: 1.7rem; font-weight: 800; color: var(--accent); line-height: 1;
+    }
+    .reviews-summary-item .rs-val.green { color: var(--accent3); }
+    .reviews-summary-item .rs-val.purple { color: var(--accent2); }
+    .reviews-summary-item .rs-label { font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
+    .reviews-summary-divider {
+      width: 1px; background: var(--border); align-self: stretch;
+    }
+    .reviews-summary-note {
+      grid-column: 1 / -1; padding-top: 16px; border-top: 1px solid var(--border);
+      font-size: 0.82rem; color: var(--muted); line-height: 1.6;
+    }
+    .reviews-summary-note strong { color: var(--text); }
+
     .reviews-grid {
       display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;
     }
@@ -156,6 +178,7 @@
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 14px; padding: 24px 26px; display: flex; flex-direction: column; gap: 16px;
     }
+    .review-card.featured { border-color: #f59e0b30; }
     .review-text { font-size: 0.9rem; line-height: 1.65; color: var(--text); flex: 1; }
     .review-text::before { content: '«'; color: var(--accent); font-size: 1.2rem; }
     .review-text::after { content: '»'; color: var(--accent); font-size: 1.2rem; }
@@ -169,6 +192,23 @@
     }
     .review-name { font-size: 0.82rem; font-weight: 700; }
     .review-role { font-size: 0.75rem; color: var(--muted); }
+
+    .reviews-more-wrap { margin-top: 20px; }
+    .reviews-more-btn {
+      display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 13px 24px; cursor: pointer;
+      font-size: 0.85rem; font-weight: 600; color: var(--muted);
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .reviews-more-btn:hover { border-color: var(--accent); color: var(--text); }
+    .reviews-more-btn .btn-arrow { transition: transform 0.25s; display: inline-block; }
+    .reviews-more-btn.open .btn-arrow { transform: rotate(180deg); }
+    .reviews-extra {
+      display: none; margin-top: 16px;
+    }
+    .reviews-extra.open { display: grid; }
+
     .reviews-placeholder {
       border: 2px dashed var(--border); border-radius: 14px;
       padding: 56px 24px; text-align: center;
@@ -229,9 +269,9 @@
 <div class="hero">
   <div class="badge">Eneca Game · Итоги пилота</div>
   <h1>Система геймификации —<br><span>пилот завершён</span></h1>
-  <p>Четыре месяца разработки и тестирования с реальными сотрудниками. Рассказываем, что получилось.</p>
+  <p>Два месяца пилота с реальными сотрудниками. Рассказываем, что получилось.</p>
   <div class="hero-meta">
-    <span><strong>Март — Июнь 2026</strong> &nbsp;·&nbsp; период пилота</span>
+    <span><strong>Апрель — Июнь 2026</strong> &nbsp;·&nbsp; период пилота</span>
     <span>Готова к полному запуску</span>
   </div>
 </div>
@@ -257,7 +297,7 @@
       <div class="ready-item done">
         <div class="ready-check">✓</div>
         <div>
-          <h4>Начисление и списание алмазов</h4>
+          <h4>Начисление и списание кристаллов</h4>
           <p>Автоматически каждую ночь по данным из Worksection и Revit</p>
         </div>
       </div>
@@ -282,7 +322,7 @@
         <div class="ready-check">✓</div>
         <div>
           <h4>Магазин и лотерея</h4>
-          <p>Товары и привилегии за алмазы, еженедельная лотерея с призом</p>
+          <p>Товары и привилегии за кристаллы, еженедельная лотерея с призом</p>
         </div>
       </div>
 
@@ -290,7 +330,7 @@
         <div class="ready-check">✓</div>
         <div>
           <h4>Благодарности</h4>
-          <p>Перевод алмазов коллегам с комментарием, опционально — анонимно</p>
+          <p>Перевод кристаллов коллегам с комментарием</p>
         </div>
       </div>
 
@@ -322,7 +362,7 @@
         <div class="ready-check">✓</div>
         <div>
           <h4>Геймификационный выходной</h4>
-          <p>Заявка со скриншотом согласования — серия активности не сгорает</p>
+          <p>Заявка на день за свой счет со скриншотом согласования — серия активности не сгорает</p>
         </div>
       </div>
 
@@ -330,7 +370,7 @@
         <div class="ready-check">✓</div>
         <div>
           <h4>Мастер планирования</h4>
-          <p>Задачи из Worksection по бюджету и срокам прямо в системе</p>
+          <p>Серия задач с соблюдением бюджетов</p>
         </div>
       </div>
 
@@ -351,7 +391,7 @@
 <section>
   <div class="container">
     <div class="section-label">Слайд 2 — Механика начисления</div>
-    <div class="section-title">По каким показателям начисляем алмазы</div>
+    <div class="section-title">По каким показателям начисляем кристаллы</div>
     <div class="section-sub">Система автоматически считывает данные из рабочих инструментов каждую ночь — вручную ничего вводить не нужно</div>
 
     <!-- автоматические скрипты -->
@@ -382,7 +422,7 @@
         <div class="auto-item">
           <div class="icon">📝</div>
           <h5>Сохраняем историю</h5>
-          <p>Каждый сотрудник видит, за что именно получил алмазы</p>
+          <p>Каждый сотрудник видит, за что именно получил кристаллы</p>
         </div>
       </div>
     </div>
@@ -392,42 +432,36 @@
       <div class="kpi-card">
         <div class="kpi-icon">📋</div>
         <h4>Дисциплина в Worksection</h4>
-        <p>Задачи закрыты вовремя, не висят просроченными, статусы обновлены. День без красных задач — день с начислением.</p>
         <span class="kpi-tag">Worksection</span>
       </div>
 
       <div class="kpi-card green">
         <div class="kpi-icon">⚡</div>
         <h4>Использование Revit-плагинов</h4>
-        <p>Факт запуска корпоративных плагинов в течение дня. Чем активнее инструменты — тем выше начисление.</p>
         <span class="kpi-tag green">Revit</span>
       </div>
 
       <div class="kpi-card purple">
         <div class="kpi-icon">🤝</div>
         <h4>Благодарности коллегам</h4>
-        <p>Полученные и отправленные благодарности учитываются в достижениях и влияют на рейтинг в соревнованиях.</p>
         <span class="kpi-tag purple">Социальность</span>
       </div>
 
       <div class="kpi-card">
         <div class="kpi-icon">🔥</div>
         <h4>Непрерывность активности</h4>
-        <p>Длина серии активных дней без пропусков. Чем длиннее серия — тем выше ценность щита защиты.</p>
         <span class="kpi-tag">Дисциплина</span>
       </div>
 
       <div class="kpi-card green">
         <div class="kpi-icon">🏆</div>
         <h4>Позиция в соревнованиях</h4>
-        <p>Ежемесячный рейтинг среди отделов и команд по совокупным показателям. Победители получают бонус автоматически.</p>
         <span class="kpi-tag green">Рейтинг</span>
       </div>
 
       <div class="kpi-card purple">
         <div class="kpi-icon">📅</div>
         <h4>Бюджет и сроки задач</h4>
-        <p>Задачи, закрытые в рамках бюджета и до дедлайна, дополнительно фиксируются в мастере планирования.</p>
         <span class="kpi-tag purple">Планирование</span>
       </div>
 
@@ -445,26 +479,30 @@
 
     <div class="numbers-grid">
       <div class="num-card">
-        <div class="num-val">—</div>
+        <div class="num-val">14</div>
         <div class="num-label">сотрудников участвовало в пилоте</div>
       </div>
       <div class="num-card green">
-        <div class="num-val">—</div>
-        <div class="num-label">алмазов начислено за период пилота</div>
+        <div class="num-val">17 774</div>
+        <div class="num-label">кристаллов заработано за последний месяц</div>
       </div>
       <div class="num-card purple">
-        <div class="num-val">—</div>
-        <div class="num-label">курс: 1 алмаз = <br>___ руб.</div>
+        <div class="num-val">45</div>
+        <div class="num-label">кристаллов = 1 BYN (курс пилота)</div>
       </div>
       <div class="num-card blue">
-        <div class="num-val">—</div>
+        <div class="num-val">8</div>
         <div class="num-label">недель длился пилот</div>
       </div>
       <div class="num-card">
-        <div class="num-val">6</div>
-        <div class="num-label">типов ошибок найдено и исправлено в ходе тестирования</div>
+        <div class="num-val">49</div>
+        <div class="num-label">багов найдено и исправлено в ходе тестирования</div>
       </div>
       <div class="num-card green">
+        <div class="num-val">44</div>
+        <div class="num-label">новых функций и улучшений реализовано за пилот</div>
+      </div>
+      <div class="num-card">
         <div class="num-val">0</div>
         <div class="num-label">серьёзных сбоев за всё время работы</div>
       </div>
@@ -491,26 +529,18 @@
         <div class="bug-fix">✓ Исправлено</div>
       </div>
 
+
       <div class="bug-card">
         <div class="bug-num">№ 2</div>
         <div>
-          <h4>Серия не замораживалась при оформлении больничного задним числом</h4>
-          <p>Ручное добавление больничного за прошедшую дату не пересчитывало серию корректно. Логика исправлена.</p>
+          <h4>Баланс не обновлялся сразу после отправки благодарности</h4>
+          <p>Отправленные кристаллы списывались, но баланс показывал старое значение до перезагрузки страницы. Исправлено.</p>
         </div>
         <div class="bug-fix">✓ Исправлено</div>
       </div>
 
       <div class="bug-card">
         <div class="bug-num">№ 3</div>
-        <div>
-          <h4>Баланс не обновлялся сразу после отправки благодарности</h4>
-          <p>Отправленные алмазы списывались, но баланс показывал старое значение до перезагрузки страницы. Исправлено.</p>
-        </div>
-        <div class="bug-fix">✓ Исправлено</div>
-      </div>
-
-      <div class="bug-card">
-        <div class="bug-num">№ 4</div>
         <div>
           <h4>Достижение засчитывалось на день раньше из-за разницы в часовых поясах</h4>
           <p>Сервер работал по UTC — в конце месяца это сдвигало дату засчитанного достижения. Переведено на минское время.</p>
@@ -519,7 +549,7 @@
       </div>
 
       <div class="bug-card">
-        <div class="bug-num">№ 5</div>
+        <div class="bug-num">№ 4</div>
         <div>
           <h4>В ленте отдела отрицательные значения показывались без знака</h4>
           <p>Минус не отображался — сотрудники видели положительные числа там, где должно быть списание. Исправлено отображение.</p>
@@ -528,10 +558,19 @@
       </div>
 
       <div class="bug-card">
-        <div class="bug-num">№ 6</div>
+        <div class="bug-num">№ 5</div>
         <div>
           <h4>Можно было подать заявку на выходной с уже прошедшей датой</h4>
           <p>Добавлена проверка: при подаче заявки доступны только будущие рабочие дни.</p>
+        </div>
+        <div class="bug-fix">✓ Исправлено</div>
+      </div>
+
+      <div class="bug-card">
+        <div class="bug-num">…</div>
+        <div>
+          <h4>И многое другое</h4>
+          <p>Всего за время пилота выявлено и устранено более 45 проблем — от визуальных до логических.</p>
         </div>
         <div class="bug-fix">✓ Исправлено</div>
       </div>
@@ -546,30 +585,154 @@
   <div class="container">
     <div class="section-label">Слайд 5 — Обратная связь</div>
     <div class="section-title">Что говорят участники пилота</div>
-    <div class="section-sub">Отзывы сотрудников, которые тестировали систему</div>
+    <div class="section-sub">9 сотрудников прошли полный цикл тестирования и поделились впечатлениями</div>
 
-    <div class="reviews-placeholder">
-      <p style="font-size:2.2rem;margin-bottom:16px">💬</p>
-      <p><strong>Отзывы будут добавлены.</strong><br>
-      Раздел подготовлен — вставьте цитаты участников пилота.</p>
+    <!-- Саммари -->
+    <div class="reviews-summary">
+      <div class="reviews-summary-item">
+        <span class="rs-val green">9/9</span>
+        <span class="rs-label">участников рекомендуют запустить платформу</span>
+      </div>
+      <div class="reviews-summary-item">
+        <span class="rs-val">Интерфейс</span>
+        <span class="rs-label">отмечают как понятный и визуально приятный</span>
+      </div>
+      <div class="reviews-summary-item">
+        <span class="rs-val purple">Мотивация</span>
+        <span class="rs-label">платформа создаёт привычку вести Worksection</span>
+      </div>
+      <div class="reviews-summary-note">
+        <strong>Ключевые пожелания:</strong> расширить ассортимент магазина перед запуском, добавить учёт командировок и дней за свой счёт, обеспечить оперативную поддержку в первые месяцы.
+      </div>
     </div>
 
-    <!-- Пример карточки отзыва — раскомментируйте и заполните:
+    <!-- 2 featured отзыва -->
     <div class="reviews-grid">
-      <div class="review-card">
-        <div class="review-text"> Текст отзыва здесь </div>
+
+      <div class="review-card featured">
+        <div class="review-text">Платформа работает корректно, багов последнее время не наблюдала. На мой взгляд платформа эффективна с точки зрения вырабатывания привычки ежедневно вести Worksection — во всяком случае, меня мотивирует.</div>
         <div class="review-author">
-          <div class="review-avatar">АБ</div>
+          <div class="review-avatar">АУ</div>
           <div>
-            <div class="review-name">Имя Фамилия</div>
-            <div class="review-role">Должность, отдел</div>
+            <div class="review-name">Алина Урицкая</div>
+            <div class="review-role">Участник пилота</div>
           </div>
         </div>
       </div>
+
+      <div class="review-card featured">
+        <div class="review-text">Идея и исполнение мне понравились. Определённо платформа создаёт и поддерживает соревновательный дух. В целом, большое спасибо за интересный продукт. Думаю, что к внедрению он готов.</div>
+        <div class="review-author">
+          <div class="review-avatar">ТС</div>
+          <div>
+            <div class="review-name">Татьяна Семененко</div>
+            <div class="review-role">Участник пилота</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="review-card featured">
+        <div class="review-text">Пора уже запускать. Коллеги спрашивают, когда уже можно пощупать. Интерфейс не сложный и визуально приятный. Магазин к релизу я бы расширил для первого впечатления — чтобы был эффект «вау».</div>
+        <div class="review-author">
+          <div class="review-avatar">АП</div>
+          <div>
+            <div class="review-name">Артем Пуссель</div>
+            <div class="review-role">Участник пилота</div>
+          </div>
+        </div>
+      </div>
+
     </div>
-    -->
+
+    <!-- Кнопка и остальные отзывы -->
+    <div class="reviews-more-wrap">
+      <button class="reviews-more-btn" onclick="toggleReviews(this)">
+        Ещё 6 отзывов <span class="btn-arrow">▾</span>
+      </button>
+      <div class="reviews-extra reviews-grid">
+
+        <div class="review-card">
+          <div class="review-text">В целом думаю готова, но нужна корректировка призов. Есть вопросы по ведению Worksection кадровыми специалистами — всё должно отмечаться: соцотпуск, sick day, командировки, отпуска.</div>
+          <div class="review-author">
+            <div class="review-avatar">ЗИ</div>
+            <div>
+              <div class="review-name">Зинаида Исакова</div>
+              <div class="review-role">Участник пилота</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="review-card">
+          <div class="review-text">С большего — рабочая платформа. По поводу эффективности — считаю, что это дополнительный стимул вовлечённости сотрудников, особенно новичков: сделал необходимый минимум правильно — получил бонус!</div>
+          <div class="review-author">
+            <div class="review-avatar">АП</div>
+            <div>
+              <div class="review-name">Алексей Пайташ</div>
+              <div class="review-role">Участник пилота</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="review-card">
+          <div class="review-text">Баги и недочёты, что были замечены и описаны, — устранены. Платформа эффективна. Совет: периодически наполнять магазин чем-то интересным и разыгрывать призы среди топ-сотрудников — это тоже мотивация.</div>
+          <div class="review-author">
+            <div class="review-avatar">АЗ</div>
+            <div>
+              <div class="review-name">Андрей Зверок</div>
+              <div class="review-role">Участник пилота</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="review-card">
+          <div class="review-text">Платформа готова к запуску, лучше поэтапному. Нужны контакты реального человека, к кому можно обратиться по проблемам начисления баллов. Также важно прояснить учёт командировок и дней отсутствия.</div>
+          <div class="review-author">
+            <div class="review-avatar">ЯС</div>
+            <div>
+              <div class="review-name">Ярослав Сергушов</div>
+              <div class="review-role">Участник пилота</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="review-card">
+          <div class="review-text">Мне кажется, что нужно доработать момент с отрицательным балансом.</div>
+          <div class="review-author">
+            <div class="review-avatar">ВН</div>
+            <div>
+              <div class="review-name">Владимир Николюк</div>
+              <div class="review-role">Участник пилота</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="review-card">
+          <div class="review-text">Платформа в целом работает стабильно. Думаю, она будет эффективна — и эффективность во многом будет зависеть от ассортимента магазина. В любом случае, надо запускать!</div>
+          <div class="review-author">
+            <div class="review-avatar">ЕЕ</div>
+            <div>
+              <div class="review-name">Евгений Емельянов</div>
+              <div class="review-role">Участник пилота</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 </section>
+
+<script>
+  function toggleReviews(btn) {
+    const extra = btn.nextElementSibling;
+    const isOpen = extra.classList.toggle('open');
+    btn.classList.toggle('open', isOpen);
+    btn.innerHTML = isOpen
+      ? 'Скрыть <span class="btn-arrow" style="transform:rotate(180deg);display:inline-block">▾</span>'
+      : 'Ещё 7 отзывов <span class="btn-arrow">▾</span>';
+  }
+</script>
 
 
 <!-- SLIDE 6: ВЫВОДЫ -->
@@ -584,13 +747,13 @@
       <div class="conclusion-card">
         <div class="icon">✅</div>
         <h4>Система работает стабильно</h4>
-        <p>За всё время пилота не было ни одного серьёзного сбоя. Ежедневные расчёты выполнялись без ошибок.</p>
+        <p>За всё время пилота не было ни одного серьёзного сбоя.</p>
       </div>
 
       <div class="conclusion-card">
         <div class="icon">🔍</div>
-        <h4>Пилот выявил и закрыл все критичные проблемы</h4>
-        <p>6 типов ошибок найдены и исправлены до массового запуска. Новых критичных проблем не выявлено.</p>
+        <h4>Пилот выявил и закрыл многие критичные проблемы</h4>
+        <p>49 багов найдены и исправлены до массового запуска.</p>
       </div>
 
       <div class="conclusion-card">
@@ -602,7 +765,7 @@
       <div class="conclusion-card">
         <div class="icon">🚀</div>
         <h4>Готово к масштабированию</h4>
-        <p>Архитектура позволяет подключить любое количество сотрудников без переработки системы.</p>
+        <p>Архитектура позволяет подключить всех сотрудников без переработки системы.</p>
       </div>
 
       <div class="conclusion-card">
@@ -614,7 +777,7 @@
       <div class="conclusion-card">
         <div class="icon">📅</div>
         <h4>Следующий шаг — полный запуск</h4>
-        <p>Открыть доступ для всех сотрудников, финализировать курс алмаза и запустить первые ежемесячные конкурсы.</p>
+        <p>Открыть доступ для всех сотрудников.</p>
       </div>
 
     </div>
