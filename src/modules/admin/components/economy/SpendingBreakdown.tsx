@@ -1,4 +1,4 @@
-import { ShoppingBag, Ticket, Shield, Heart, Sparkles } from 'lucide-react'
+import { ShoppingBag, /*[LOTTERY HIDDEN] Ticket,*/ Shield, Heart, Sparkles } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
 import { coinsToByn, formatByn } from '@/modules/shop'
@@ -78,6 +78,7 @@ export function SpendingBreakdown({ channels, rate }: SpendingBreakdownProps) {
           icon={ShoppingBag}
           rate={rate}
         />
+        {/* [LOTTERY HIDDEN]
         <ChannelCard
           label="eneca-game"
           channel={channels.lottery}
@@ -85,6 +86,7 @@ export function SpendingBreakdown({ channels, rate }: SpendingBreakdownProps) {
           icon={Ticket}
           rate={rate}
         />
+        */}
         <ChannelCard
           label="Вторая жизнь"
           channel={channels.second_life}

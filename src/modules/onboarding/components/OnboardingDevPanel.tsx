@@ -25,7 +25,7 @@ const TOUR_PAGES = [
   { slug: 'admin-events', label: 'События (адм)' },
   { slug: 'admin-calendar', label: 'Календарь (адм)' },
   { slug: 'admin-achievements', label: 'Достижения (адм)' },
-  { slug: 'admin-lottery', label: 'Лотерея (адм)' },
+  // [LOTTERY HIDDEN] { slug: 'admin-lottery', label: 'Лотерея (адм)' },
   { slug: 'admin-help', label: 'Справка (адм)' },
 ]
 
@@ -41,7 +41,7 @@ const PATH_TO_SLUG: Record<string, string> = {
   '/admin/events': 'admin-events',
   '/admin/calendar': 'admin-calendar',
   '/admin/achievements': 'admin-achievements',
-  '/admin/lottery': 'admin-lottery',
+  // [LOTTERY HIDDEN] '/admin/lottery': 'admin-lottery',
   '/admin/help': 'admin-help',
   '/help': 'help',
   '/master-planner': 'master-planner',

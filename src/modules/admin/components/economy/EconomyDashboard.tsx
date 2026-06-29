@@ -110,7 +110,7 @@ export function EconomyDashboard({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <TopList title="Заработавшие" items={tops.earned} iconName="award" rate={rate} />
           <TopList title="Тратящие в магазине" items={tops.shop} iconName="shoppingBag" secondaryLabel="покупок" rate={rate} />
-          <TopList title="Игроки eneca-game" items={tops.lottery} iconName="ticket" secondaryLabel="входов" rate={rate} />
+          {/* [LOTTERY HIDDEN] <TopList title="Игроки eneca-game" items={tops.lottery} iconName="ticket" secondaryLabel="входов" rate={rate} /> */}
           <TopList title="Покупатели второй жизни" items={tops.second_life} iconName="shield" secondaryLabel="покупок" rate={rate} />
           <TopList title="Отправители платных благодарностей" items={tops.paid_gratitude} iconName="heart" secondaryLabel="отправок" rate={rate} />
           <TopList title="Получившие отзывы" items={tops.revoked} iconName="alertTriangle" rate={rate} />

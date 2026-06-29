@@ -19,19 +19,19 @@ export const storeTour: OnboardingTour = {
         'Цена указана в 💎. Если баланса хватает — нажмите «Получить». Если нет — кнопка покажет, сколько ещё нужно накопить. Товары с пометкой «Осталось: N» скоро закончатся!',
       placement: 'right',
     },
-    {
-      id: 'store-lottery',
-      target: 'lottery-banner',
-      title: 'eneca-game',
-      description:
-        'Каждый месяц — eneca-game! Войдите в игру за 💎 — цена указана на баннере. Чем больше раз войдёте — тем выше шанс. Игра проходит 1 числа каждого месяца в 12:00. Ваш шанс рассчитывается автоматически.',
-      placement: 'bottom',
-      // Переключаем фильтр категорий на «eneca-game», чтобы LotteryBanner отрендерился
-      onBeforeShow: () => {
-        document
-          .querySelector<HTMLButtonElement>('[data-onboarding-category="draw"]')
-          ?.click()
-      },
-    },
+    // [LOTTERY HIDDEN]
+    // {
+    //   id: 'store-lottery',
+    //   target: 'lottery-banner',
+    //   title: 'eneca-game',
+    //   description:
+    //     'Каждый месяц — eneca-game! Войдите в игру за 💎 — цена указана на баннере. Чем больше раз войдёте — тем выше шанс. Игра проходит 1 числа каждого месяца в 12:00. Ваш шанс рассчитывается автоматически.',
+    //   placement: 'bottom',
+    //   onBeforeShow: () => {
+    //     document
+    //       .querySelector<HTMLButtonElement>('[data-onboarding-category="draw"]')
+    //       ?.click()
+    //   },
+    // },
   ],
 }
