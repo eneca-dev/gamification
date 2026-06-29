@@ -14,7 +14,7 @@ import {
   deleteProductImage,
   computePriceCrystals,
   computePriceWithoutDiscount,
-  computeDisplayDiscount,
+
 } from '@/modules/shop/index.client'
 
 import { CrystalRatePanel } from './CrystalRatePanel'
@@ -453,9 +453,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
   function startInlineEdit(productId: string, field: InlineProductField, currentValue: string) {
     if (field === 'discount_percent') {
-      const markupNum = parseInt(currentValue, 10)
-      const userDiscount = !isNaN(markupNum) && markupNum > 0 ? String(computeDisplayDiscount(markupNum)) : ''
-      setInlineEdit({ productId, field, value: currentValue, value2: userDiscount })
+      setInlineEdit({ productId, field, value: currentValue })
     } else {
       setInlineEdit({ productId, field, value: currentValue })
     }
@@ -505,8 +503,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         updatePayload = { discount_percent: null }
       } else {
         const num = parseInt(value, 10)
-        if (isNaN(num) || num < 1 || num > 500) {
-          setError('Наценка должна быть от 1 до 500')
+        if (isNaN(num) || num < 1 || num > 99) {
+          setError('Скидка должна быть от 1 до 99%')
           return
         }
         updatePayload = { discount_percent: num }
@@ -1125,7 +1123,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                                   className="text-[10px] font-bold px-1.5 py-0.5 rounded"
                                   style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
                                 >
-                                  −{computeDisplayDiscount(product.discount_percent)}%
+                                  −{product.discount_percent}%
                                 </span>
                               </div>
                               <div className="flex items-center gap-2">
@@ -1137,9 +1135,6 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                                     )}
                                     size="sm"
                                   />
-                                </span>
-                                <span className="text-[10px]" style={{ color: 'var(--apex-text-muted)' }}>
-                                  наценка +{product.discount_percent}%
                                 </span>
                               </div>
                             </div>
@@ -1227,23 +1222,13 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           </colgroup>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--apex-border)' }}>
-              {['', 'Название', 'Категория', 'BYN', 'Коэф.', 'Цена', 'Скидка юзера / Наценка', 'Остаток', 'Комм.', 'Статус'].map((h, i) => (
+              {['', 'Название', 'Категория', 'BYN', 'Коэф.', 'Цена', 'Скидка', 'Остаток', 'Комм.', 'Статус'].map((h, i) => (
                 <th
                   key={i}
                   className="text-left text-[12px] font-semibold px-5 py-2.5"
                   style={{ color: 'var(--apex-text-secondary)' }}
                 >
-                  {h === 'Скидка юзера / Наценка' ? (
-                    <span className="group relative inline-flex items-center gap-0.5">
-                      {h}
-                      <HelpCircle size={12} className="cursor-help shrink-0" />
-                      <span className="pointer-events-none absolute left-0 top-full z-50 mt-1 hidden w-60 flex-col gap-1.5 rounded-lg border px-3 py-2.5 text-[11px] font-normal shadow-lg group-hover:flex"
-                        style={{ background: 'var(--apex-surface)', borderColor: 'var(--apex-border)', color: 'var(--apex-text-primary)' }}>
-                        <span><b>Скидка юзера</b> — какую скидку увидит пользователь при покупке товара</span>
-                        <span><b>Наценка</b> — на сколько % мы подняли цену товара</span>
-                      </span>
-                    </span>
-                  ) : h}
+                  {h}
                 </th>
               ))}
             </tr>
@@ -1378,11 +1363,10 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                     {/* Скидка — inline editable (двойной ввод) */}
                     <td className="px-5 py-2.5 relative">
                       {isInlineEditing && inlineEdit.field === 'discount_percent' ? (
-                        <InlineDualDiscountInput
-                          markup={inlineEdit.value}
-                          userDiscount={inlineEdit.value2 ?? ''}
+                        <InlineDiscountInput
+                          userDiscount={inlineEdit.value}
                           priceCrystals={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
-                          onChange={(markup: string, userDiscount: string) => setInlineEdit({ ...inlineEdit, value: markup, value2: userDiscount })}
+                          onChange={(v: string) => setInlineEdit({ ...inlineEdit, value: v })}
                           onSave={saveInlineEdit}
                           onCancel={cancelInlineEdit}
                         />
@@ -1394,7 +1378,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                                 className="text-[11px] font-bold px-1.5 py-0.5 rounded"
                                 style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
                               >
-                                −{computeDisplayDiscount(product.discount_percent)}%
+                                −{product.discount_percent}%
                               </span>
                               <span className="line-through text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
                                 {computePriceWithoutDiscount(
@@ -1403,9 +1387,6 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                                 ).toLocaleString('ru-RU')}
                               </span>
                             </div>
-                            <span className="text-[10px]" style={{ color: 'var(--apex-text-muted)' }}>
-                              наценка +{product.discount_percent}%
-                            </span>
                           </div>
                         </InlineEditableCell>
                       ) : (
@@ -1708,36 +1689,22 @@ function InlineNumberInput({
   )
 }
 
-function InlineDualDiscountInput({
-  markup,
+function InlineDiscountInput({
   userDiscount,
   priceCrystals,
   onChange,
   onSave,
   onCancel,
 }: {
-  markup: string
   userDiscount: string
   priceCrystals: number
-  onChange: (markup: string, userDiscount: string) => void
+  onChange: (v: string) => void
   onSave: () => void
   onCancel: () => void
 }) {
-  function handleMarkupChange(val: string) {
-    const n = parseInt(val, 10)
-    const ud = !isNaN(n) && n > 0 ? String(Math.round(n / (100 + n) * 100)) : ''
-    onChange(val, ud)
-  }
-
-  function handleUserDiscountChange(val: string) {
-    const n = parseInt(val, 10)
-    const m = !isNaN(n) && n > 0 && n < 100 ? String(Math.round(n / (100 - n) * 100)) : ''
-    onChange(m, val)
-  }
-
-  const markupNum = parseInt(markup, 10)
-  const strikePrice = !isNaN(markupNum) && markupNum > 0 && priceCrystals > 0
-    ? computePriceWithoutDiscount(priceCrystals, markupNum)
+  const discountNum = parseInt(userDiscount, 10)
+  const strikePrice = !isNaN(discountNum) && discountNum > 0 && discountNum < 100 && priceCrystals > 0
+    ? computePriceWithoutDiscount(priceCrystals, discountNum)
     : null
 
   return (
@@ -1746,27 +1713,22 @@ function InlineDualDiscountInput({
       onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) onCancel() }}
       style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-focus)', boxShadow: '0 4px 12px rgba(0,0,0,0.12)' }}
     >
-      {[
-        { label: 'Наценка', value: markup, onChange: handleMarkupChange, min: 1, max: 500, autoFocus: true },
-        { label: 'Скидка юзера', value: userDiscount, onChange: handleUserDiscountChange, min: 1, max: 99, autoFocus: false },
-      ].map(({ label, value, onChange: onCh, min, max, autoFocus }) => (
-        <div key={label} className="flex items-center gap-1">
-          <span className="text-[10px] w-[58px] shrink-0" style={{ color: 'var(--apex-text-muted)' }}>{label}</span>
-          <input
-            type="number"
-            value={value}
-            onChange={(e) => onCh(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') onSave(); if (e.key === 'Escape') onCancel() }}
-            className="w-12 px-1 py-0.5 rounded text-[12px] outline-none"
-            style={{ background: 'var(--apex-bg)', color: 'var(--apex-text)', border: '1px solid var(--apex-border)' }}
-            min={min}
-            max={max}
-            placeholder="—"
-            autoFocus={autoFocus}
-          />
-          <span className="text-[10px]" style={{ color: 'var(--apex-text-muted)' }}>%</span>
-        </div>
-      ))}
+      <div className="flex items-center gap-1">
+        <span className="text-[10px] w-[42px] shrink-0" style={{ color: 'var(--apex-text-muted)' }}>Скидка</span>
+        <input
+          type="number"
+          value={userDiscount}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') onSave(); if (e.key === 'Escape') onCancel() }}
+          className="w-12 px-1 py-0.5 rounded text-[12px] outline-none"
+          style={{ background: 'var(--apex-bg)', color: 'var(--apex-text)', border: '1px solid var(--apex-border)' }}
+          min={1}
+          max={99}
+          placeholder="—"
+          autoFocus
+        />
+        <span className="text-[10px]" style={{ color: 'var(--apex-text-muted)' }}>%</span>
+      </div>
       <div className="mt-0.5 pt-1" style={{ borderTop: '1px solid var(--apex-border)' }}>
         <span className="text-[10px]" style={{ color: 'var(--apex-text-muted)' }}>Юзер увидит: </span>
         {strikePrice !== null ? (
