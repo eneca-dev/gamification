@@ -9,11 +9,11 @@ import { purchaseProduct } from '../actions'
 import { queryKeys } from '@/modules/cache/keys/query-keys'
 import { buyStreakShield } from '@/modules/streak-shield/index.client'
 import { ProductCard } from './ProductCard'
-import { LotteryBanner } from '@/modules/lottery/components/LotteryBanner'
-import { LotteryWinners } from '@/modules/lottery/components/LotteryWinners'
+// [LOTTERY HIDDEN] import { LotteryBanner } from '@/modules/lottery/components/LotteryBanner'
+// [LOTTERY HIDDEN] import { LotteryWinners } from '@/modules/lottery/components/LotteryWinners'
 import type { ShopProductWithCategory, ShopCategory } from '../types'
 import type { PendingReset, ShieldQuota } from '@/modules/streak-shield/index.client'
-import type { LotteryWithStats, UserTicketInfo } from '@/modules/lottery/index.client'
+// [LOTTERY HIDDEN] import type { LotteryWithStats, UserTicketInfo } from '@/modules/lottery/index.client'
 
 interface StoreClientProps {
   products: ShopProductWithCategory[]
@@ -21,10 +21,10 @@ interface StoreClientProps {
   balance: number
   pendingResets: PendingReset[]
   shieldQuota?: ShieldQuota | null
-  activeLottery?: LotteryWithStats | null
-  ticketInfo?: UserTicketInfo | null
-  lotteryHistory?: LotteryWithStats[]
-  serverTime?: number
+  // [LOTTERY HIDDEN] activeLottery?: LotteryWithStats | null
+  // [LOTTERY HIDDEN] ticketInfo?: UserTicketInfo | null
+  // [LOTTERY HIDDEN] lotteryHistory?: LotteryWithStats[]
+  // [LOTTERY HIDDEN] serverTime?: number
 }
 
 export function StoreClient({
@@ -33,10 +33,10 @@ export function StoreClient({
   balance,
   pendingResets,
   shieldQuota = null,
-  activeLottery = null,
-  ticketInfo = null,
-  lotteryHistory = [],
-  serverTime = Date.now(),
+  // [LOTTERY HIDDEN] activeLottery = null,
+  // [LOTTERY HIDDEN] ticketInfo = null,
+  // [LOTTERY HIDDEN] lotteryHistory = [],
+  // [LOTTERY HIDDEN] serverTime = Date.now(),
 }: StoreClientProps) {
   const [activeFilter, setActiveFilter] = useState('all')
   const [purchasingId, setPurchasingId] = useState<string | null>(null)
@@ -199,37 +199,8 @@ export function StoreClient({
       )}
 
       {/* Контент категории */}
-      {activeFilter === 'draw' ? (
-        <div className="space-y-6 animate-fade-in-up stagger-3">
-          {/* Активная лотерея */}
-          {activeLottery && (
-            <LotteryBanner
-              lottery={activeLottery}
-              ticketInfo={ticketInfo}
-              balance={balance}
-              serverTime={serverTime}
-            />
-          )}
-
-          {!activeLottery && (
-            <div
-              className="text-center py-12 rounded-2xl"
-              style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
-            >
-              <div className="text-4xl mb-3">🎰</div>
-              <p className="text-[14px] font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                Сейчас нет активной eneca-game
-              </p>
-              <p className="text-[12px] mt-1" style={{ color: 'var(--text-secondary)' }}>
-                Следующая eneca-game будет объявлена в начале месяца
-              </p>
-            </div>
-          )}
-
-          {/* Победители */}
-          <LotteryWinners lotteries={lotteryHistory} />
-        </div>
-      ) : filtered.length > 0 ? (
+      {/* [LOTTERY HIDDEN] activeFilter === 'draw' branch (LotteryBanner, LotteryWinners) removed */}
+      {filtered.length > 0 ? (
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 animate-fade-in-up stagger-3">
           {filtered.map((product, i) => (
             <ProductCard

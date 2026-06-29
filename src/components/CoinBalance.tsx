@@ -6,6 +6,7 @@ import { CoinIcon } from '@/components/CoinIcon'
 interface CoinBalanceProps {
   amount: number;
   size?: "xs" | "sm" | "md" | "lg";
+  className?: string;
 }
 
 const sizeClasses = { xs: "text-[10px]", sm: "text-sm", md: "text-lg", lg: "text-3xl" };
@@ -25,11 +26,11 @@ export function CoinBalance({ amount, size = "md" }: CoinBalanceProps) {
   );
 }
 
-export function CoinStatic({ amount, size = "md" }: CoinBalanceProps) {
+export function CoinStatic({ amount, size = "md", className = "" }: CoinBalanceProps) {
   const formatted = (amount ?? 0).toLocaleString("ru-RU");
 
   return (
-    <span className={`inline-flex items-center gap-1.5 font-bold ${sizeClasses[size]}`}>
+    <span className={`inline-flex items-center gap-1.5 font-bold ${sizeClasses[size]} ${className}`}>
       <span style={{ color: "inherit" }}>{formatted}</span>
       <CoinIcon size={coinSizes[size]} className="flex-shrink-0" />
     </span>

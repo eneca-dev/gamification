@@ -21,7 +21,7 @@ import { adminOrdersTour } from '../tours/admin-orders'
 import { adminEventsTour } from '../tours/admin-events'
 import { adminCalendarTour } from '../tours/admin-calendar'
 import { adminAchievementsTour } from '../tours/admin-achievements'
-import { adminLotteryTour } from '../tours/admin-lottery'
+// [LOTTERY HIDDEN] import { adminLotteryTour } from '../tours/admin-lottery'
 import { adminHelpTour } from '../tours/admin-help'
 import { helpTour } from '../tours/help'
 import { masterPlannerTour } from '../tours/master-planner'
@@ -31,7 +31,7 @@ const TOURS: OnboardingTour[] = [
   dashboardTour, achievementsTour, storeTour,
   activityTour, activityDeptTour, activityTeamTour,
   adminTour, adminUsersTour, adminProductsTour, adminOrdersTour,
-  adminEventsTour, adminCalendarTour, adminAchievementsTour, adminLotteryTour,
+  adminEventsTour, adminCalendarTour, adminAchievementsTour, /*[LOTTERY HIDDEN] adminLotteryTour,*/
   adminHelpTour, helpTour, masterPlannerTour,
 ]
 
