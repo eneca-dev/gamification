@@ -1063,22 +1063,29 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                             Скоро в продаже
                           </span>
                         )}
-                        {outOfStock && (
+                        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                          {!product.is_coming_soon && product.category?.is_countable && product.stock != null && (
+                            <span
+                              className="text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-sm"
+                              style={
+                                outOfStock
+                                  ? { background: 'var(--apex-danger)', color: 'white' }
+                                  : lowStock
+                                  ? { background: 'var(--apex-warning-text)', color: 'white' }
+                                  : { background: 'var(--apex-success-text)', color: 'white' }
+                              }
+                            >
+                              {outOfStock ? 'Нет в наличии' : `${product.stock} шт`}
+                            </span>
+                          )}
                           <span
-                            className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
-                            style={{ background: 'var(--apex-danger)', color: 'white' }}
+                            className="text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-sm"
+                            style={{ background: 'var(--apex-info-bg)', color: 'var(--apex-info-text)' }}
+                            title="Коэффициент наценки"
                           >
-                            Нет в наличии
+                            ×{product.coefficient}
                           </span>
-                        )}
-                        {lowStock && (
-                          <span
-                            className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
-                            style={{ background: 'var(--apex-warning-text)', color: 'white' }}
-                          >
-                            Осталось: {product.stock}
-                          </span>
-                        )}
+                        </div>
                       </div>
                       {/* Детали товара */}
                       <div className="p-4 flex flex-col flex-1" style={{ background: 'var(--surface-elevated)' }}>
@@ -1087,13 +1094,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                             {product.category?.name ?? '—'}
                           </span>
                         </div>
-                        <h3 className="text-[13px] font-bold leading-snug flex items-center gap-1" style={{ color: 'var(--text-primary)' }}>
+                        <h3 className="text-[13px] font-bold leading-snug" style={{ color: 'var(--text-primary)' }}>
                           {product.name}
-                          {product.comment_required && (
-                            <span title="Требует комментарий при покупке" className="flex shrink-0">
-                              <MessageSquare size={11} style={{ color: 'var(--apex-primary)' }} />
-                            </span>
-                          )}
                         </h3>
                         {product.description ? (
                           <p
@@ -1112,37 +1114,77 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                           <div className="mb-3" />
                         )}
                         <div className="mt-auto pt-2 flex flex-col gap-2">
+                          {/* Себестоимость, коэффициент, тогл комментария */}
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md"
+                              style={{ background: 'var(--apex-bg)', color: 'var(--text-muted)' }}
+                              title="Себестоимость"
+                            >
+                              С/с
+                              <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{product.cost_byn}</span>
+                              BYN
+                            </span>
+                            <button
+                              onClick={() => toggleCommentRequired(product)}
+                              disabled={isProductPending}
+                              className="ml-auto w-6 h-6 rounded-full flex items-center justify-center transition-colors flex-shrink-0"
+                              title={product.comment_required ? 'Комментарий обязателен — нажмите, чтобы отключить' : 'Комментарий не требуется — нажмите, чтобы включить'}
+                              style={{
+                                background: product.comment_required ? 'var(--apex-success-bg)' : 'transparent',
+                                color: product.comment_required ? 'var(--apex-primary)' : 'var(--apex-text-muted)',
+                                border: `1px solid ${product.comment_required ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
+                                opacity: isProductPending ? 0.5 : 1,
+                                cursor: isProductPending ? 'default' : 'pointer',
+                              }}
+                            >
+                              <MessageSquare size={11} />
+                            </button>
+                          </div>
+                          {product.comment_required && (
+                            <div
+                              className="flex flex-col gap-0.5 rounded-md px-2 py-1.5"
+                              style={{ background: 'var(--apex-success-bg)', border: '1px solid var(--apex-primary)' }}
+                            >
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold" style={{ color: 'var(--apex-primary)' }}>
+                                <MessageSquare size={10} className="flex-shrink-0" />
+                                {product.comment_label || 'Комментарий к покупке'}
+                              </span>
+                              {product.comment_placeholder && (
+                                <span className="text-[10px] italic truncate" style={{ color: 'var(--text-muted)' }}>
+                                  {product.comment_placeholder}
+                                </span>
+                              )}
+                            </div>
+                          )}
                           {product.discount_percent != null ? (
-                            <div className="flex flex-col gap-0.5">
-                              <div className="flex items-center gap-2">
-                                <CoinStatic
-                                  amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
-                                  size="sm"
-                                />
-                                <span
-                                  className="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                                  style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
-                                >
-                                  −{product.discount_percent}%
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="line-through opacity-40">
-                                  <CoinStatic
-                                    amount={computePriceWithoutDiscount(
-                                      computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate),
-                                      product.discount_percent
-                                    )}
-                                    size="sm"
-                                  />
-                                </span>
-                              </div>
+                            <div className="flex items-center justify-end gap-2">
+                              <CoinStatic
+                                amount={computePriceWithoutDiscount(
+                                  computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate),
+                                  product.discount_percent
+                                )}
+                                size="sm"
+                                className="line-through opacity-40"
+                              />
+                              <span
+                                className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                                style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
+                              >
+                                −{product.discount_percent}%
+                              </span>
+                              <CoinStatic
+                                amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
+                                size="sm"
+                              />
                             </div>
                           ) : (
-                            <CoinStatic
-                              amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
-                              size="sm"
-                            />
+                            <div className="flex justify-end">
+                              <CoinStatic
+                                amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
+                                size="sm"
+                              />
+                            </div>
                           )}
                           <div className="flex items-center gap-1">
                             <div className="flex-1 min-w-0">
