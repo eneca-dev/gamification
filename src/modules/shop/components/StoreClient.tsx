@@ -141,7 +141,7 @@ export function StoreClient({
           style={{
             background: activeFilter === 'all' ? 'var(--apex-primary)' : 'var(--surface-elevated)',
             color: activeFilter === 'all' ? 'white' : 'var(--text-secondary)',
-            border: activeFilter === 'all' ? 'none' : '1px solid var(--border)',
+            border: activeFilter === 'all' ? '1px solid transparent' : '1px solid var(--border)',
           }}
         >
           Все
@@ -160,12 +160,12 @@ export function StoreClient({
                 paddingRight: '1rem',
                 background: 'var(--apex-warning-bg)',
                 color: 'var(--apex-warning-dark)',
-                border: isActive ? '1px solid var(--apex-gold)' : 'none',
+                border: isActive ? '1px solid var(--apex-gold)' : '1px solid transparent',
                 opacity: isActive ? 1 : 0.75,
               } : {
                 background: isActive ? 'var(--apex-primary)' : 'var(--surface-elevated)',
                 color: isActive ? 'white' : 'var(--text-secondary)',
-                border: isActive ? 'none' : '1px solid var(--border)',
+                border: isActive ? '1px solid transparent' : '1px solid var(--border)',
               }}
             >
               {isDraw && (
@@ -185,7 +185,7 @@ export function StoreClient({
       </div>
 
       {/* Описание категории */}
-      {activeFilter !== 'all' && activeCategory?.description ? (
+      {activeFilter !== 'all' && activeCategory?.description && (
         <div
           className="animate-fade-in-up rounded-xl px-4 py-3 text-[12px] font-medium"
           style={{
@@ -196,7 +196,7 @@ export function StoreClient({
         >
           {activeCategory.description}
         </div>
-      ) : null}
+      )}
 
       {/* Контент категории */}
       {activeFilter === 'draw' ? (

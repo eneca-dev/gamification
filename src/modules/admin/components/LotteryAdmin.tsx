@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import { Plus, Pencil, Ticket, Users, Upload, X, AlertTriangle } from 'lucide-react'
 
 import { CoinIcon } from '@/components/CoinIcon'
@@ -34,6 +34,22 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!showForm && !editingLottery) return
+    function handlePaste(e: ClipboardEvent) {
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (file) { processFile(file); break }
+        }
+      }
+    }
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [showForm, editingLottery])
 
   const activeLottery = lotteries.find((l) => l.status === 'active')
   const completedLotteries = lotteries.filter((l) => l.status === 'completed')
@@ -333,7 +349,7 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
                 >
                   <Upload size={20} style={{ color: 'var(--apex-text-secondary)' }} />
                   <p className="text-xs" style={{ color: 'var(--apex-text-secondary)' }}>
-                    Перетащите или нажмите для загрузки
+                    Перетащите, нажмите или Ctrl+V
                   </p>
                   <p className="text-xs" style={{ color: 'var(--apex-text-muted)' }}>
                     JPEG, PNG, WebP · до 2 МБ
@@ -555,7 +571,7 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
                 >
                   <Upload size={20} style={{ color: 'var(--apex-text-secondary)' }} />
                   <p className="text-xs" style={{ color: 'var(--apex-text-secondary)' }}>
-                    Перетащите или нажмите для загрузки
+                    Перетащите, нажмите или Ctrl+V
                   </p>
                   <p className="text-xs" style={{ color: 'var(--apex-text-muted)' }}>
                     JPEG, PNG, WebP · до 2 МБ

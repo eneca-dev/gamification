@@ -51,6 +51,8 @@ export interface ShopProduct {
   emoji: string | null
   effect: string | null
   is_active: boolean
+  is_coming_soon: boolean
+  discount_percent: number | null
   stock: number | null
   sort_order: number
   created_by: string | null
@@ -71,6 +73,7 @@ export const createProductSchema = z.object({
   image_url: z.string().url().nullable().optional(),
   emoji: z.string().max(10).nullable().optional(),
   effect: z.string().max(100).nullable().optional(),
+  discount_percent: z.number().int().min(1).max(500).nullable().optional(),
   stock: z.number().int().min(0).nullable().optional(),
   sort_order: z.number().int().min(0).default(0),
 })
@@ -78,6 +81,7 @@ export const createProductSchema = z.object({
 export const updateProductSchema = createProductSchema.partial().extend({
   id: z.string().uuid(),
   is_active: z.boolean().optional(),
+  is_coming_soon: z.boolean().optional(),
 })
 
 export type CreateProductInput = z.infer<typeof createProductSchema>
@@ -100,6 +104,16 @@ export type SetCrystalRateInput = z.infer<typeof setCrystalRateSchema>
 
 export function computePriceCrystals(costByn: number, coefficient: number, rate: number): number {
   return Math.round(costByn * coefficient * rate)
+}
+
+/** Зачёркнутая цена в кристаллах = реальная цена × (1 + наценка / 100). */
+export function computePriceWithoutDiscount(priceInCrystals: number, discountPercent: number): number {
+  return Math.round(priceInCrystals * (1 + discountPercent / 100))
+}
+
+/** Процент скидки для бейджа (от цены без скидки). Считается от discountPercent напрямую — без дрейфа от округления. */
+export function computeDisplayDiscount(discountPercent: number): number {
+  return Math.round((discountPercent / (100 + discountPercent)) * 100)
 }
 
 /** Конвертирует кристаллы → BYN по текущему курсу. Округление до копеек. */

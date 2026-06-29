@@ -84,16 +84,17 @@ idempotency_key: revit_green_{email}_{work_date}
 Считается на чтение через view `revit_user_streaks_effective` (миграция 040, зеркало WS). Walk идёт прямо по `elk_plugin_launches`, `ws_user_absences`, `calendar_holidays`, `calendar_workdays` от `streak_start_date` до `fn_minsk_today() - 1`. Дельты: green=+1, weekend/holiday=+1, absent=0, red=0.
 
 Snapshot и milestones обновляет VPS-скрипт `compute-revit-gamification`:
+
 - Phase 1 (всегда): финализация просроченных pending → событие `revit_streak_reset` (coins=0, ключ `revit_streak_reset_{user_id}_{pending_reset_date}`).
 - Phase 2 (только в рабочий день): green → читаем `current_streak` из view, выдаём milestones по пересечению порога. Red → ставим pending на 24h, если стрик > 0 и pending ещё не было.
 
 **Бонусы за milestones (idempotency keys на user_id):**
 
-| Условие пересечения        | event_type              | 💎   | idempotency_key                       |
-| -------------------------- | ----------------------- | ---- | ------------------------------------- |
-| `prev < 7 ∧ 7 ≤ next`      | `revit_streak_7_bonus`  | +25  | `revit_streak_7_{user_id}_{date}`     |
-| `prev < 30 ∧ 30 ≤ next`    | `revit_streak_30_bonus` | +100 | `revit_streak_30_{user_id}_{date}`    |
-| pending грейс истёк (24h)  | `revit_streak_reset`    | 0    | `revit_streak_reset_{user_id}_{date}` |
+| Условие пересечения       | event_type              | 💎   | idempotency_key                       |
+| ------------------------- | ----------------------- | ---- | ------------------------------------- |
+| `prev < 7 ∧ 7 ≤ next`     | `revit_streak_7_bonus`  | +25  | `revit_streak_7_{user_id}_{date}`     |
+| `prev < 30 ∧ 30 ≤ next`   | `revit_streak_30_bonus` | +100 | `revit_streak_30_{user_id}_{date}`    |
+| pending грейс истёк (24h) | `revit_streak_reset`    | 0    | `revit_streak_reset_{user_id}_{date}` |
 
 После 30 — `current_streak = 0`, `streak_start_date = NULL`, `completed_cycles += 1`.
 
@@ -157,6 +158,7 @@ View `view_daily_statuses` агрегирует эту логику.
 Источник истины для числа стрика — view `ws_user_streaks_effective` (read-time расчёт). Таблица `ws_user_streaks` хранит снапшот на момент vps-прогона: `streak_start_date`, `longest_streak`, `completed_cycles`, pending-поля и `current_streak` (используется vps для milestone-сравнения «было/стало»).
 
 **Модель дельт по дням (view):**
+
 - `ws_daily_statuses.status = 'green'` → `+1`
 - `ws_daily_statuses.status = 'absent'` (отпуск/больничный/sick_day) → `0` (заморозка)
 - нет записи в `ws_daily_statuses` (выходной/праздник) → `+1`
@@ -165,6 +167,7 @@ View `view_daily_statuses` агрегирует эту логику.
 Walk идёт от `streak_start_date` (или `pending_reset_date + 1`, если pending истёк, но vps ещё не финализировал) до `fn_minsk_today() - 1`. Во время активного грейса (`pending_reset_expires_at > now()`) view возвращает замороженное `current_streak` из таблицы — UI показывает прежнее значение.
 
 **VPS-обновление в `compute-gamification` (step 3):**
+
 - Phase 1 finalize: при истёкшем грейсе записывает `streak_start_date = pending_reset_date + 1` и обнуляет `current_streak` (раньше ставил `streak_start_date = null`).
 - Phase 2 green: читает актуальный `current_streak` из view, сохраняет как снапшот в таблицу.
 - Milestone-detection: пересечение порога `prev < T <= next` для T ∈ {7, 30, 90}.
@@ -341,30 +344,30 @@ idempotency_key: deadline_ok_l3_{ws_task_id}_{user_id}
 
 **С начислением/списанием 💎:**
 
-| event_type                   | 💎   | Источник | Механизм                              |
-| ---------------------------- | ---- | -------- | ------------------------------------- |
-| `master_planner`             | +450 | ws       | compute-gamification                  |
-| `master_planner_l2`          | +400 | ws       | compute-gamification                  |
-| `ws_streak_90`               | +300 | ws       | compute-gamification                  |
-| `budget_ok_l2`               | +200 | ws       | compute-gamification                  |
-| `team_contest_top1_bonus`    | +200 | contest  | PG-функция + pg_cron (1 число месяца) |
-| `revit_streak_30_bonus`      | +100 | revit    | PG-триггер                            |
-| `ws_streak_30`               | +100 | ws       | compute-gamification                  |
-| `budget_ok_l3`               | +50  | ws       | compute-gamification                  |
-| `revit_streak_7_bonus`       | +25  | revit    | PG-триггер                            |
-| `ws_streak_7`                | +25  | ws       | compute-gamification                  |
-| `gratitude_recipient_points` | +20  | gratitudes | PG-триггер                          |
-| `revit_using_plugins`        | +5   | revit    | PG-триггер                            |
-| `budget_ok_l3_lead_bonus`    | +5   | ws       | compute-gamification                  |
-| `green_day`                  | +3   | ws       | compute-gamification                  |
-| `deadline_ok_l3`             | +3   | ws       | compute-gamification                  |
-| `wrong_status_report`        | -3   | ws       | compute-gamification                  |
-| `deadline_revoked_l3`        | -3   | ws       | compute-gamification                  |
-| `budget_revoked_l3_lead`     | -5   | ws       | compute-gamification                  |
-| `budget_revoked_l3`          | -50  | ws       | compute-gamification                  |
-| `budget_revoked_l2`          | -200 | ws       | compute-gamification                  |
-| `master_planner_l2_revoked`  | -400 | ws       | compute-gamification                  |
-| `master_planner_revoked`     | -450 | ws       | compute-gamification                  |
+| event_type                   | 💎   | Источник   | Механизм                              |
+| ---------------------------- | ---- | ---------- | ------------------------------------- |
+| `master_planner`             | +450 | ws         | compute-gamification                  |
+| `master_planner_l2`          | +400 | ws         | compute-gamification                  |
+| `ws_streak_90`               | +300 | ws         | compute-gamification                  |
+| `budget_ok_l2`               | +200 | ws         | compute-gamification                  |
+| `team_contest_top1_bonus`    | +200 | contest    | PG-функция + pg_cron (1 число месяца) |
+| `revit_streak_30_bonus`      | +100 | revit      | PG-триггер                            |
+| `ws_streak_30`               | +100 | ws         | compute-gamification                  |
+| `budget_ok_l3`               | +50  | ws         | compute-gamification                  |
+| `revit_streak_7_bonus`       | +25  | revit      | PG-триггер                            |
+| `ws_streak_7`                | +25  | ws         | compute-gamification                  |
+| `gratitude_recipient_points` | +20  | gratitudes | PG-триггер                            |
+| `revit_using_plugins`        | +5   | revit      | PG-триггер                            |
+| `budget_ok_l3_lead_bonus`    | +5   | ws         | compute-gamification                  |
+| `green_day`                  | +3   | ws         | compute-gamification                  |
+| `deadline_ok_l3`             | +3   | ws         | compute-gamification                  |
+| `wrong_status_report`        | -3   | ws         | compute-gamification                  |
+| `deadline_revoked_l3`        | -3   | ws         | compute-gamification                  |
+| `budget_revoked_l3_lead`     | -5   | ws         | compute-gamification                  |
+| `budget_revoked_l3`          | -50  | ws         | compute-gamification                  |
+| `budget_revoked_l2`          | -200 | ws         | compute-gamification                  |
+| `master_planner_l2_revoked`  | -400 | ws         | compute-gamification                  |
+| `master_planner_revoked`     | -450 | ws         | compute-gamification                  |
 
 **Информационные (0 💎, фиксируют факт события):**
 
@@ -396,8 +399,8 @@ idempotency_key: deadline_ok_l3_{ws_task_id}_{user_id}
 
 **Благодарности (PG-триггеры):**
 
-| Событие                | Формат ключа                        |
-| ---------------------- | ----------------------------------- |
+| Событие                | Формат ключа                         |
+| ---------------------- | ------------------------------------ |
 | Благодарность получена | `gratitude_recipient_{gratitude_id}` |
 
 **WS — дневные статусы (compute-gamification):**

@@ -31,7 +31,7 @@
 
 - `OrderStatus` — `'pending' | 'processing' | 'fulfilled' | 'cancelled'`. Константа `ORDER_STATUSES` и Zod-схема `orderStatusSchema`
 - `ShopCategory` — категория: id, name, slug, description, is_physical, is_countable, is_active, sort_order
-- `ShopProduct` — товар: id, name, description, cost_byn, coefficient, price (вычислено), category_id, image_url, emoji, stock, is_active, sort_order, created_by, updated_at
+- `ShopProduct` — товар: id, name, description, cost_byn, coefficient, price (вычислено), category_id, image_url, emoji, effect, stock, discount_percent (integer | null), is_active, is_coming_soon, sort_order, created_by, updated_at
 - `ShopProductWithCategory` — товар + вложенная категория (name, slug, is_physical, is_countable, is_active)
 - `ShopOrderWithDetails` — заказ + название товара + emoji + image_url + coins_spent (через JOIN на transaction)
 - `PurchaseResult` — результат покупки из RPC: order_id, new_balance, coins_spent
@@ -47,7 +47,7 @@
 - `createCategory(input)` — создание категории. Только админ. Revalidate: `/admin/products`, `/store`
 - `updateCategory(input)` — обновление категории (name, slug, description, is_physical, is_countable, is_active). При `is_countable = false` сбрасывает `stock` в NULL у всех товаров категории. Только админ
 - `createProduct(input)` — создание товара (cost_byn, coefficient). Только админ. Записывает `created_by`
-- `updateProduct(input)` — обновление товара (включая cost_byn, coefficient, is_active). Только админ
+- `updateProduct(input)` — обновление товара (включая cost_byn, coefficient, discount_percent, is_active). `discount_percent: null` убирает скидку. Только админ. Revalidate: `shop-products`
 - `deleteProduct(productId)` — удаление товара. Проверяет наличие заказов — если есть, блокирует. Удаляет изображение из Storage. Только админ
 - `setCrystalRate({ rate })` — INSERT новой записи в `crystal_rates`, последняя становится актуальной. Только админ. `updateTag('crystal-rate')` + `updateTag('shop-products')` (цены товаров пересчитаются), revalidate: `/admin/products`, `/admin/economy`, `/store`
 - `uploadProductImage(formData)` — загрузка изображения в Storage bucket `product-images`. Валидация: JPEG/PNG/WebP, max 2 МБ. Path: `products/{timestamp}_{uuid}.{ext}`. Только админ
@@ -72,9 +72,13 @@
 
 - `CoinBalanceLive` (`src/components/CoinBalance.tsx`) — клиентский компонент баланса с polling. Принимает `initialAmount` (SSR-значение) — показывает его до первого ответа polling. Используется в Sidebar
 - `StoreClient` — клиентский контейнер: фильтрация по категориям, optimistic update баланса при покупке, toast-уведомления (3 сек). Grid: 2 колонки → 3 на lg → 4 на xl
-- `ProductCard` — карточка товара: image_url (object-contain) / emoji / placeholder (?), фон emoji — var(--apex-emoji-bg), разделитель между картинкой и футером, футер с var(--apex-bg). Бейдж «мало» при stock ≤ 5 (физические), бейдж «нет в наличии». Staggered-анимация по index. Описание: `line-clamp-2` по умолчанию; если текст реально обрезан (detect через ResizeObserver на scrollHeight/clientHeight) — клик по описанию раскрывает его полностью (toggle). Соседние карточки в строке растягиваются за счёт CSS Grid `align-items: stretch`
+- `ProductCard` — карточка товара: image_url (object-contain) / emoji / placeholder (?), фон emoji — var(--apex-emoji-bg). Бейджи на картинке (top-left): «Скоро в продаже», «Нет в наличии», «Осталось: N»; бейдж «−X%» (top-right, красный) при `discount_percent != null`. Над кнопкой покупки при скидке — блок с зачёркнутой ценой и «скидка −X%» на светло-красном фоне. Staggered-анимация по index. Описание: `line-clamp-2` по умолчанию; если текст реально обрезан (ResizeObserver на scrollHeight/clientHeight) — клик раскрывает полностью (toggle)
 - `PurchaseButton` — кнопка покупки: проверка баланса и stock, динамический текст (покупаем/нет в наличии/ещё N 💎/получить за N 💎)
 - `OrdersClient` — клиентский контейнер страницы «Мои заказы»: фильтрация по статусу, отображение image_url / emoji / placeholder, ссылка на магазин при пустом списке
+
+**Админ-компоненты** (в `src/modules/admin/`):
+- `ProductsClient` — инлайн-редактирование `discount_percent`: Enter = сохранить, Esc = отменить, пустое значение = `null` (убрать скидку). Фильтры: `скидка:есть` / `скидка:нет`
+- `ProductFormModal` — поле «Наценка %» с кнопкой очистки (×). Live-preview: зачёркнутая цена в кристаллах и процент скидки для покупателя
 
 ## Страницы
 
@@ -86,6 +90,8 @@
 ## Утилиты
 
 - `computePriceCrystals(costByn, coefficient, rate)` — `Math.round(costByn × coefficient × rate)`. Цена для пользователя — всегда целое число
+- `computePriceWithoutDiscount(priceInCrystals, discountPercent)` — `Math.round(priceInCrystals × (1 + discountPercent / 100))`. Зачёркнутая цена в кристаллах
+- `computeDisplayDiscount(discountPercent)` — `Math.round(discountPercent / (100 + discountPercent) × 100)`. Процент скидки для бейджа (без дрейфа от округления кристаллов)
 - `coinsToByn(coins, rate)` — `Math.round(coins / rate * 100) / 100`. Используется в дашборде экономики
 - `formatByn(amount)` — `"1 250,50 BYN"` (ru-BY locale, 2 знака после запятой)
 

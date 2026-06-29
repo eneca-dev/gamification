@@ -217,6 +217,7 @@ export interface ProductFormData {
   description: string | null
   cost_byn: number
   coefficient: number
+  discount_percent: number | null
   category_id: string
   image_url: string | null
   emoji: string | null

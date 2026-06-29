@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import { CoinIcon } from '@/components/CoinIcon'
 import { PurchaseButton } from './PurchaseButton'
+import { computeDisplayDiscount, computePriceWithoutDiscount } from '../types'
 import type { ShopProductWithCategory } from '../types'
 import type { PendingReset, ShieldQuota } from '@/modules/streak-shield/index.client'
 
@@ -18,7 +20,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, balance, index, onPurchase, isPurchasing, categoryDescription, pendingResets = [], shieldQuota = null }: ProductCardProps) {
-  const outOfStock = product.category.is_countable && product.stock !== null && product.stock === 0
+  const outOfStock = !product.is_coming_soon && product.category.is_countable && product.stock !== null && product.stock === 0
 
   // Для щитов: кнопка активна только при наличии соответствующего pending
   const shieldEffect = product.effect
@@ -72,6 +74,14 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
         ) : (
           <span className="text-5xl">{product.emoji || <span style={{ color: '#ccc' }}>?</span>}</span>
         )}
+        {product.is_coming_soon && (
+          <span
+            className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
+            style={{ background: 'var(--apex-warning-text)', color: 'white' }}
+          >
+            Скоро в продаже
+          </span>
+        )}
         {outOfStock && (
           <span
             className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
@@ -80,12 +90,20 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
             Нет в наличии
           </span>
         )}
-        {product.category.is_countable && product.stock !== null && product.stock > 0 && product.stock <= 5 && (
+        {!product.is_coming_soon && product.category.is_countable && product.stock !== null && product.stock > 0 && product.stock <= 5 && (
           <span
             className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
             style={{ background: 'var(--apex-warning-text)', color: 'white' }}
           >
             Осталось: {product.stock}
+          </span>
+        )}
+        {product.discount_percent !== null && (
+          <span
+            className="absolute top-3 right-3 text-[12px] font-black px-2.5 py-1 rounded-lg"
+            style={{ background: 'var(--apex-gold)', color: 'white' }}
+          >
+            −{computeDisplayDiscount(product.discount_percent)}%
           </span>
         )}
       </div>
@@ -129,6 +147,16 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
 
 
         <div className="mt-auto pt-2">
+        {product.discount_percent !== null && (
+          <div className="flex items-center justify-center gap-1 mb-1.5">
+            <span
+              className="text-[12px] line-through flex items-center gap-0.5"
+              style={{ color: 'var(--apex-text-muted)' }}
+            >
+              {computePriceWithoutDiscount(product.price, product.discount_percent).toLocaleString('ru-RU')}&nbsp;<CoinIcon size={10} />
+            </span>
+          </div>
+        )}
         <PurchaseButton
           productId={product.id}
           price={product.price}
@@ -140,6 +168,8 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
           shieldNoPending={isShield && !hasActivePending}
           isFree={isFreeShield}
           freeLeft={freeLeft}
+          comingSoon={product.is_coming_soon}
+          hasDiscount={product.discount_percent !== null}
         />
         </div>
       </div>

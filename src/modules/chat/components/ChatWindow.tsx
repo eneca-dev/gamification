@@ -10,7 +10,7 @@ import { ChatBubble } from './ChatBubble'
 import { ChatInput } from './ChatInput'
 
 const ERROR_MESSAGE_TEXT = 'Кажется, что-то сломалось. Попробуйте написать чуть позже 🤖'
-const REALTIME_TIMEOUT_MS = 12_000
+const REALTIME_TIMEOUT_MS = 30_000
 
 const SUGGESTED_QUESTIONS = [
   'Что такое красный и зелёный день?',
