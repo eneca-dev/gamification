@@ -13,6 +13,8 @@ import {
   deleteProduct,
   deleteProductImage,
   computePriceCrystals,
+  computePriceWithoutDiscount,
+  computeDisplayDiscount,
 } from '@/modules/shop/index.client'
 
 import { CrystalRatePanel } from './CrystalRatePanel'
@@ -26,7 +28,7 @@ interface ProductsClientProps {
   currentRate: number
 }
 
-type InlineProductField = 'category_id' | 'cost_byn' | 'coefficient' | 'stock'
+type InlineProductField = 'category_id' | 'cost_byn' | 'coefficient' | 'discount_percent' | 'stock'
 
 type ProductStatus = 'active' | 'coming_soon' | 'inactive'
 
@@ -47,11 +49,12 @@ interface ParsedAdminFilter {
   stockNull?: boolean
   hasImage?: boolean
   hasEmoji?: boolean
+  hasDiscount?: boolean
 }
 
 interface FilterToken { key: string; value: string; raw: string; negated: boolean; start: number }
 
-type FilterFieldKey = 'status' | 'categories' | 'coefficient' | 'price' | 'costByn' | 'stock' | 'hasImage'
+type FilterFieldKey = 'status' | 'categories' | 'coefficient' | 'price' | 'costByn' | 'stock' | 'hasImage' | 'hasDiscount'
 
 interface FieldDef {
   displayKey: string
@@ -73,6 +76,7 @@ const FILTER_KEY_MAP: Record<string, FilterFieldKey> = {
   byn: 'costByn', себестоимость: 'costByn',
   остаток: 'stock', stock: 'stock', сток: 'stock',
   картинка: 'hasImage', фото: 'hasImage', изображение: 'hasImage',
+  скидка: 'hasDiscount', discount: 'hasDiscount',
 }
 
 // Global regex — reset lastIndex before each use!
@@ -123,6 +127,11 @@ function buildAdminFilter(tokens: FilterToken[]): ParsedAdminFilter {
       if (s) result.status = [...(result.status ?? []), s]
     } else if (field === 'categories') {
       result.categories = [...(result.categories ?? []), t.value]
+    } else if (field === 'hasDiscount') {
+      const isTrue = ['есть', 'да', 'true', 'yes'].includes(t.value)
+      const isFalse = ['нет', 'нету', 'no', 'false'].includes(t.value)
+      if (isTrue) result.hasDiscount = !t.negated
+      else if (isFalse) result.hasDiscount = t.negated
     } else if (field === 'hasImage') {
       if (t.value === 'эмодзи') {
         result.hasImage = false
@@ -177,6 +186,8 @@ function applyParsedFilter(
   if (filter.stockNull === false && p.stock === null) return false
   if (filter.hasImage !== undefined && !!p.image_url !== filter.hasImage) return false
   if (filter.hasEmoji !== undefined && !!p.emoji !== filter.hasEmoji) return false
+  if (filter.hasDiscount === true && p.discount_percent == null) return false
+  if (filter.hasDiscount === false && p.discount_percent != null) return false
   return true
 }
 
@@ -207,6 +218,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
     productId: string
     field: InlineProductField
     value: string
+    value2?: string
   } | null>(null)
 
   // Категории — секция
@@ -419,7 +431,13 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   // --- Inline edit ---
 
   function startInlineEdit(productId: string, field: InlineProductField, currentValue: string) {
-    setInlineEdit({ productId, field, value: currentValue })
+    if (field === 'discount_percent') {
+      const markupNum = parseInt(currentValue, 10)
+      const userDiscount = !isNaN(markupNum) && markupNum > 0 ? String(computeDisplayDiscount(markupNum)) : ''
+      setInlineEdit({ productId, field, value: currentValue, value2: userDiscount })
+    } else {
+      setInlineEdit({ productId, field, value: currentValue })
+    }
   }
 
   function cancelInlineEdit() {
@@ -460,6 +478,17 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         if (num === 0) {
           updatePayload.is_active = false
         }
+      }
+    } else if (field === 'discount_percent') {
+      if (value === '') {
+        updatePayload = { discount_percent: null }
+      } else {
+        const num = parseInt(value, 10)
+        if (isNaN(num) || num < 1 || num > 500) {
+          setError('Наценка должна быть от 1 до 500')
+          return
+        }
+        updatePayload = { discount_percent: num }
       }
     } else if (field === 'category_id') {
       if (!value) {
@@ -555,6 +584,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             updated_at: new Date().toISOString(),
             category: categoryData,
             effect: null,
+            discount_percent: null,
           },
           ...list,
         ])
@@ -1058,10 +1088,41 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                           <div className="mb-3" />
                         )}
                         <div className="mt-auto pt-2 flex flex-col gap-2">
-                          <CoinStatic
-                            amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
-                            size="sm"
-                          />
+                          {product.discount_percent != null ? (
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-2">
+                                <CoinStatic
+                                  amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
+                                  size="sm"
+                                />
+                                <span
+                                  className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                                  style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
+                                >
+                                  −{computeDisplayDiscount(product.discount_percent)}%
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="line-through opacity-40">
+                                  <CoinStatic
+                                    amount={computePriceWithoutDiscount(
+                                      computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate),
+                                      product.discount_percent
+                                    )}
+                                    size="sm"
+                                  />
+                                </span>
+                                <span className="text-[10px]" style={{ color: 'var(--apex-text-muted)' }}>
+                                  наценка +{product.discount_percent}%
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <CoinStatic
+                              amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
+                              size="sm"
+                            />
+                          )}
                           <div className="flex items-center gap-1">
                             <div className="flex-1 min-w-0">
                               <ProductStatusDropdown
@@ -1129,17 +1190,17 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           <colgroup>
             <col style={{ width: '60px' }} />
             <col />
-            <col style={{ width: '160px' }} />
-            <col style={{ width: '100px' }} />
+            <col style={{ width: '130px' }} />
             <col style={{ width: '80px' }} />
-            <col style={{ width: '110px' }} />
+            <col style={{ width: '65px' }} />
             <col style={{ width: '100px' }} />
-            <col style={{ width: '180px' }} />
-            <col style={{ width: '120px' }} />
+            <col style={{ width: '130px' }} />
+            <col style={{ width: '75px' }} />
+            <col style={{ width: '220px' }} />
           </colgroup>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--apex-border)' }}>
-              {['', 'Название', 'Категория', 'BYN', 'Коэф.', 'Цена', 'Остаток', 'Статус', ''].map((h, i) => (
+              {['', 'Название', 'Категория', 'BYN', 'Коэф.', 'Цена', 'Скидка юзера / Наценка', 'Остаток', 'Статус'].map((h, i) => (
                 <th
                   key={i}
                   className="text-left text-[12px] font-semibold px-5 py-2.5"
@@ -1270,6 +1331,50 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                       />
                     </td>
 
+                    {/* Скидка — inline editable (двойной ввод) */}
+                    <td className="px-5 py-2.5">
+                      {isInlineEditing && inlineEdit.field === 'discount_percent' ? (
+                        <InlineDualDiscountInput
+                          markup={inlineEdit.value}
+                          userDiscount={inlineEdit.value2 ?? ''}
+                          priceCrystals={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
+                          onChange={(markup: string, userDiscount: string) => setInlineEdit({ ...inlineEdit, value: markup, value2: userDiscount })}
+                          onSave={saveInlineEdit}
+                          onCancel={cancelInlineEdit}
+                        />
+                      ) : product.discount_percent != null ? (
+                        <InlineEditableCell onClick={() => startInlineEdit(product.id, 'discount_percent', String(product.discount_percent))}>
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1">
+                              <span
+                                className="text-[11px] font-bold px-1.5 py-0.5 rounded"
+                                style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
+                              >
+                                −{computeDisplayDiscount(product.discount_percent)}%
+                              </span>
+                              <span className="line-through text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
+                                {computePriceWithoutDiscount(
+                                  computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate),
+                                  product.discount_percent
+                                ).toLocaleString('ru-RU')}
+                              </span>
+                            </div>
+                            <span className="text-[10px]" style={{ color: 'var(--apex-text-muted)' }}>
+                              наценка +{product.discount_percent}%
+                            </span>
+                          </div>
+                        </InlineEditableCell>
+                      ) : (
+                        <button
+                          onClick={() => startInlineEdit(product.id, 'discount_percent', '')}
+                          className="text-[12px] opacity-0 group-hover:opacity-60 transition-opacity"
+                          style={{ color: 'var(--apex-text-muted)' }}
+                        >
+                          +%
+                        </button>
+                      )}
+                    </td>
+
                     {/* Остаток — inline editable только для исчисляемых товаров */}
                     <td className="px-5 py-2.5">
                       {product.category?.is_countable ? (
@@ -1304,91 +1409,89 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                       )}
                     </td>
 
-                    {/* Статус */}
+                    {/* Статус + Действия */}
                     <td className="px-5 py-2.5">
                       {(() => {
                         const isOutOfStock = !!product.category?.is_countable && (product.stock ?? 0) === 0
                         return (
-                          <div className="flex items-center gap-2">
-                            <ProductStatusDropdown
-                              status={getProductStatus(product)}
-                              onChange={(s) => setProductStatus(product, s)}
-                              disabled={isProductPending || !product.category?.is_active}
-                            />
-                            {!product.category?.is_active && (
-                              <span className="text-[10px] font-medium leading-tight px-1.5 py-0.5 rounded" style={{ background: 'var(--apex-warning-bg)', color: 'var(--apex-warning-text)' }}>
-                                Категория<br />неактивна
-                              </span>
-                            )}
-                            {product.category?.is_active && isOutOfStock && !product.is_coming_soon && !product.is_active && (
-                              <span
-                                className="text-[10px] font-medium leading-tight px-1.5 py-0.5 rounded whitespace-nowrap"
-                                style={{ background: 'var(--apex-warning-bg)', color: 'var(--apex-warning-text)' }}
-                              >
-                                Нет в наличии<br />Измените количество
-                              </span>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <ProductStatusDropdown
+                                status={getProductStatus(product)}
+                                onChange={(s) => setProductStatus(product, s)}
+                                disabled={isProductPending || !product.category?.is_active}
+                              />
+                              {!product.category?.is_active && (
+                                <span className="text-[10px] font-medium leading-tight px-1.5 py-0.5 rounded" style={{ background: 'var(--apex-warning-bg)', color: 'var(--apex-warning-text)' }}>
+                                  Категория<br />неактивна
+                                </span>
+                              )}
+                              {product.category?.is_active && isOutOfStock && !product.is_coming_soon && !product.is_active && (
+                                <span
+                                  className="text-[10px] font-medium leading-tight px-1.5 py-0.5 rounded whitespace-nowrap"
+                                  style={{ background: 'var(--apex-warning-bg)', color: 'var(--apex-warning-text)' }}
+                                >
+                                  Нет в наличии<br />Измените количество
+                                </span>
+                              )}
+                            </div>
+                            {isConfirmingDelete ? (
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[11px] font-medium mr-1" style={{ color: 'var(--apex-danger)' }}>
+                                  Удалить?
+                                </span>
+                                <button
+                                  onClick={() => handleDeleteProduct(product.id)}
+                                  className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                                  style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
+                                >
+                                  <Check size={14} />
+                                </button>
+                                <button
+                                  onClick={() => setDeletingProductId(null)}
+                                  className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
+                                  style={{ color: 'var(--apex-text-muted)' }}
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                <button
+                                  onClick={() => setEditingProduct(product)}
+                                  className="w-8 h-8 rounded-full flex items-center justify-center"
+                                  style={{ color: 'var(--apex-text-muted)' }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.color = 'var(--apex-primary)'
+                                    e.currentTarget.style.background = 'var(--apex-success-bg)'
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.color = 'var(--apex-text-muted)'
+                                    e.currentTarget.style.background = 'transparent'
+                                  }}
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                                <button
+                                  onClick={() => setDeletingProductId(product.id)}
+                                  className="w-8 h-8 rounded-full flex items-center justify-center"
+                                  style={{ color: 'var(--apex-text-muted)' }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.color = 'var(--apex-danger)'
+                                    e.currentTarget.style.background = 'var(--apex-error-bg)'
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.color = 'var(--apex-text-muted)'
+                                    e.currentTarget.style.background = 'transparent'
+                                  }}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                             )}
                           </div>
                         )
                       })()}
-                    </td>
-
-                    {/* Действия */}
-                    <td className="px-5 py-2.5">
-                      {isConfirmingDelete ? (
-                        <div className="flex items-center gap-1">
-                          <span className="text-[11px] font-medium mr-1" style={{ color: 'var(--apex-danger)' }}>
-                            Удалить?
-                          </span>
-                          <button
-                            onClick={() => handleDeleteProduct(product.id)}
-                            className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
-                            style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
-                          >
-                            <Check size={14} />
-                          </button>
-                          <button
-                            onClick={() => setDeletingProductId(null)}
-                            className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
-                            style={{ color: 'var(--apex-text-muted)' }}
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => setEditingProduct(product)}
-                            className="w-8 h-8 rounded-full flex items-center justify-center"
-                            style={{ color: 'var(--apex-text-muted)' }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.color = 'var(--apex-primary)'
-                              e.currentTarget.style.background = 'var(--apex-success-bg)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.color = 'var(--apex-text-muted)'
-                              e.currentTarget.style.background = 'transparent'
-                            }}
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            onClick={() => setDeletingProductId(product.id)}
-                            className="w-8 h-8 rounded-full flex items-center justify-center"
-                            style={{ color: 'var(--apex-text-muted)' }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.color = 'var(--apex-danger)'
-                              e.currentTarget.style.background = 'var(--apex-error-bg)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.color = 'var(--apex-text-muted)'
-                              e.currentTarget.style.background = 'transparent'
-                            }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      )}
                     </td>
                   </tr>
                 )
@@ -1538,6 +1641,91 @@ function InlineNumberInput({
       >
         <X size={12} />
       </button>
+    </div>
+  )
+}
+
+function InlineDualDiscountInput({
+  markup,
+  userDiscount,
+  priceCrystals,
+  onChange,
+  onSave,
+  onCancel,
+}: {
+  markup: string
+  userDiscount: string
+  priceCrystals: number
+  onChange: (markup: string, userDiscount: string) => void
+  onSave: () => void
+  onCancel: () => void
+}) {
+  function handleMarkupChange(val: string) {
+    const n = parseInt(val, 10)
+    const ud = !isNaN(n) && n > 0 ? String(Math.round(n / (100 + n) * 100)) : ''
+    onChange(val, ud)
+  }
+
+  function handleUserDiscountChange(val: string) {
+    const n = parseInt(val, 10)
+    const m = !isNaN(n) && n > 0 && n < 100 ? String(Math.round(n / (100 - n) * 100)) : ''
+    onChange(m, val)
+  }
+
+  const markupNum = parseInt(markup, 10)
+  const strikePrice = !isNaN(markupNum) && markupNum > 0 && priceCrystals > 0
+    ? computePriceWithoutDiscount(priceCrystals, markupNum)
+    : null
+
+  return (
+    <div
+      className="relative z-20 flex flex-col gap-1 rounded-lg px-2 py-1.5"
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) onCancel() }}
+      style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-focus)', boxShadow: '0 4px 12px rgba(0,0,0,0.12)' }}
+    >
+      {[
+        { label: 'Наценка', value: markup, onChange: handleMarkupChange, min: 1, max: 500, autoFocus: true },
+        { label: 'Скидка юзера', value: userDiscount, onChange: handleUserDiscountChange, min: 1, max: 99, autoFocus: false },
+      ].map(({ label, value, onChange: onCh, min, max, autoFocus }) => (
+        <div key={label} className="flex items-center gap-1">
+          <span className="text-[10px] w-[58px] shrink-0" style={{ color: 'var(--apex-text-muted)' }}>{label}</span>
+          <input
+            type="number"
+            value={value}
+            onChange={(e) => onCh(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') onSave(); if (e.key === 'Escape') onCancel() }}
+            className="w-12 px-1 py-0.5 rounded text-[12px] outline-none"
+            style={{ background: 'var(--apex-bg)', color: 'var(--apex-text)', border: '1px solid var(--apex-border)' }}
+            min={min}
+            max={max}
+            placeholder="—"
+            autoFocus={autoFocus}
+          />
+          <span className="text-[10px]" style={{ color: 'var(--apex-text-muted)' }}>%</span>
+        </div>
+      ))}
+      <div className="mt-0.5 pt-1" style={{ borderTop: '1px solid var(--apex-border)' }}>
+        <span className="text-[10px]" style={{ color: 'var(--apex-text-muted)' }}>Юзер увидит: </span>
+        {strikePrice !== null ? (
+          <>
+            <span className="line-through text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
+              {strikePrice.toLocaleString('ru-RU')}
+            </span>
+            <span className="text-[10px]" style={{ color: 'var(--apex-text-muted)' }}> → </span>
+          </>
+        ) : null}
+        <span className="text-[11px] font-semibold" style={{ color: 'var(--apex-text)' }}>
+          {priceCrystals.toLocaleString('ru-RU')}
+        </span>
+      </div>
+      <div className="flex items-center justify-end gap-1 mt-0.5">
+        <button onClick={onSave} className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ color: 'var(--apex-success-text)' }}>
+          <Check size={12} />
+        </button>
+        <button onClick={onCancel} className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ color: 'var(--apex-text-muted)' }}>
+          <X size={12} />
+        </button>
+      </div>
     </div>
   )
 }
@@ -1784,6 +1972,14 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
         { label: 'Есть', insert: 'есть' },
         { label: 'Нет', insert: 'нет' },
         { label: 'Эмодзи', insert: 'эмодзи' },
+      ],
+    },
+    {
+      displayKey: 'скидка', label: 'Скидка', fieldKey: 'hasDiscount',
+      color: 'var(--tag-red-bg)', textColor: 'var(--tag-red-text)', overlayKeyColor: 'var(--tag-red-text)',
+      values: [
+        { label: 'Есть', insert: 'есть' },
+        { label: 'Нет', insert: 'нет' },
       ],
     },
   ], [categories])

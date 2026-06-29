@@ -11,7 +11,7 @@ export {
   deleteProductImage,
   setCrystalRate,
 } from './actions'
-export { computePriceCrystals, coinsToByn, formatByn } from './types'
+export { computePriceCrystals, computePriceWithoutDiscount, computeDisplayDiscount, coinsToByn, formatByn } from './types'
 export type {
   ShopCategory,
   ShopProduct,

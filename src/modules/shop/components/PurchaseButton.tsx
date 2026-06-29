@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 import { CoinIcon } from '@/components/CoinIcon'
 
 interface PurchaseButtonProps {
@@ -14,6 +16,7 @@ interface PurchaseButtonProps {
   isFree?: boolean
   freeLeft?: number | null
   comingSoon?: boolean
+  hasDiscount?: boolean
 }
 
 export function PurchaseButton({
@@ -28,7 +31,9 @@ export function PurchaseButton({
   isFree = false,
   freeLeft = null,
   comingSoon = false,
+  hasDiscount = false,
 }: PurchaseButtonProps) {
+  const [hovered, setHovered] = useState(false)
   const disabled = !canAfford || outOfStock || isPurchasing || shieldNoPending || comingSoon
   const showDeficit = !canAfford && !outOfStock && !shieldNoPending && !comingSoon && !isPurchasing
 
@@ -45,14 +50,22 @@ export function PurchaseButton({
     )
   }
 
+  function getBgColor() {
+    if (disabled) return 'var(--apex-disabled-bg)'
+    if (hasDiscount) return hovered ? 'var(--apex-gold-dark)' : 'var(--apex-gold)'
+    return hovered ? 'var(--apex-primary-hover)' : 'var(--apex-primary)'
+  }
+
   return (
     <div>
       <button
         className="w-full py-2.5 rounded-xl text-[12px] font-bold transition-all duration-200"
         disabled={disabled}
         onClick={() => onPurchase(productId, price)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         style={{
-          background: !disabled ? 'var(--apex-primary)' : 'var(--apex-disabled-bg)',
+          background: getBgColor(),
           color: !disabled ? 'white' : 'var(--text-muted)',
           border: !disabled ? 'none' : '1px solid var(--border)',
           cursor: !disabled ? 'pointer' : 'default',

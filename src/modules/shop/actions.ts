@@ -266,6 +266,7 @@ export async function updateProduct(
   if (error) return { success: false, error: error.message }
   if (!data || data.length === 0) return { success: false, error: 'Товар не найден' }
 
+  revalidateTag('shop-products', 'max')
   revalidatePath('/admin/products')
   revalidatePath('/store')
   return { success: true }
