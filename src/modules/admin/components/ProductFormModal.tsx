@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { X, Upload, Trash2, Loader2, ChevronDown, Check, MessageSquare } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
-import { computePriceCrystals, computePriceWithoutDiscount, computeDisplayDiscount } from '@/modules/shop/index.client'
+import { computePriceCrystals, computePriceWithoutDiscount } from '@/modules/shop/index.client'
 import type { ShopProductWithCategory, ShopCategory } from '@/modules/shop/index.client'
 
 import type { ProductFormData } from '../types'
@@ -30,9 +30,8 @@ export function ProductFormModal({ product, categories, rate, onSave, onClose, i
   const [categoryId, setCategoryId] = useState(defaultCategoryId)
   const [emoji, setEmoji] = useState(product?.emoji ?? '')
   const [stock, setStock] = useState<string>(product?.stock != null ? String(product.stock) : '')
-  const [discountPercent, setDiscountPercent] = useState<string>(product?.discount_percent != null ? String(product.discount_percent) : '')
   const [userDiscountPercent, setUserDiscountPercent] = useState<string>(
-    product?.discount_percent != null ? String(computeDisplayDiscount(product.discount_percent)) : ''
+    product?.discount_percent != null ? String(product.discount_percent) : ''
   )
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(product?.image_url ?? null)
@@ -115,37 +114,21 @@ export function ProductFormModal({ product, categories, rate, onSave, onClose, i
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  function handleMarkupChange(val: string) {
-    setDiscountPercent(val)
-    const n = parseInt(val, 10)
-    if (!isNaN(n) && n > 0) {
-      setUserDiscountPercent(String(Math.round(n / (100 + n) * 100)))
-    } else {
-      setUserDiscountPercent('')
-    }
-  }
-
   function handleUserDiscountChange(val: string) {
     setUserDiscountPercent(val)
-    const n = parseInt(val, 10)
-    if (!isNaN(n) && n > 0 && n < 100) {
-      setDiscountPercent(String(Math.round(n / (100 - n) * 100)))
-    } else {
-      setDiscountPercent('')
-    }
   }
 
   const costBynNum = parseFloat(costByn.replace(',', '.')) || 0
   const coefficientNum = parseFloat(coefficient.replace(',', '.')) || 0
-  const discountPercentNum = parseInt(discountPercent, 10)
+  const userDiscountPercentNum = parseInt(userDiscountPercent, 10)
   const priceCrystals = costBynNum > 0 && coefficientNum > 0
     ? computePriceCrystals(costBynNum, coefficientNum, rate)
     : 0
-  const priceWithoutDiscountCrystals = priceCrystals > 0 && discountPercent !== '' && !isNaN(discountPercentNum) && discountPercentNum > 0
-    ? computePriceWithoutDiscount(priceCrystals, discountPercentNum)
+  const priceWithoutDiscountCrystals = priceCrystals > 0 && userDiscountPercent !== '' && !isNaN(userDiscountPercentNum) && userDiscountPercentNum > 0
+    ? computePriceWithoutDiscount(priceCrystals, userDiscountPercentNum)
     : null
-  const displayDiscount = !isNaN(discountPercentNum) && discountPercentNum > 0
-    ? computeDisplayDiscount(discountPercentNum)
+  const displayDiscount = !isNaN(userDiscountPercentNum) && userDiscountPercentNum > 0
+    ? userDiscountPercentNum
     : null
 
   function validate(): boolean {
@@ -172,7 +155,7 @@ export function ProductFormModal({ product, categories, rate, onSave, onClose, i
       description: description.trim() || null,
       cost_byn: costBynNum,
       coefficient: coefficientNum,
-      discount_percent: discountPercent !== '' && !isNaN(discountPercentNum) && discountPercentNum > 0 ? discountPercentNum : null,
+      discount_percent: userDiscountPercent !== '' && !isNaN(userDiscountPercentNum) && userDiscountPercentNum > 0 ? userDiscountPercentNum : null,
       category_id: categoryId,
       image_url: removeImage ? null : (imagePreview && !imageFile ? product?.image_url ?? null : null),
       emoji: emoji.trim() || null,
@@ -278,57 +261,31 @@ export function ProductFormModal({ product, categories, rate, onSave, onClose, i
             </Field>
           </div>
 
-          {/* Наценка и скидка для покупателя */}
-          <div className="grid grid-cols-2 gap-4 items-start">
-            <Field label="Наценка % (от реальной цены)">
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={discountPercent}
-                  onChange={(e) => handleMarkupChange(e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg text-[13px] outline-none"
-                  style={inputStyle()}
-                  min={1}
-                  max={500}
-                  placeholder="Нет скидки"
-                />
-                {discountPercent !== '' && (
-                  <button
-                    type="button"
-                    onClick={() => { setDiscountPercent(''); setUserDiscountPercent('') }}
-                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                    style={{ color: 'var(--apex-text-muted)', background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
-            </Field>
-            <Field label="Скидка для юзера % (от зачёркнутой)">
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={userDiscountPercent}
-                  onChange={(e) => handleUserDiscountChange(e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg text-[13px] outline-none"
-                  style={inputStyle()}
-                  min={1}
-                  max={99}
-                  placeholder="Нет скидки"
-                />
-                {userDiscountPercent !== '' && (
-                  <button
-                    type="button"
-                    onClick={() => { setDiscountPercent(''); setUserDiscountPercent('') }}
-                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                    style={{ color: 'var(--apex-text-muted)', background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
-            </Field>
-          </div>
+          {/* Скидка для покупателя */}
+          <Field label="Скидка %">
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={userDiscountPercent}
+                onChange={(e) => handleUserDiscountChange(e.target.value)}
+                className="flex-1 px-3 py-2 rounded-lg text-[13px] outline-none"
+                style={inputStyle()}
+                min={1}
+                max={99}
+                placeholder="Нет скидки"
+              />
+              {userDiscountPercent !== '' && (
+                <button
+                  type="button"
+                  onClick={() => setUserDiscountPercent('')}
+                  className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                  style={{ color: 'var(--apex-text-muted)', background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </Field>
 
           {/* Превью цены для пользователя */}
           <div

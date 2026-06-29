@@ -76,7 +76,7 @@ export const createProductSchema = z.object({
   image_url: z.string().url().nullable().optional(),
   emoji: z.string().max(10).nullable().optional(),
   effect: z.string().max(100).nullable().optional(),
-  discount_percent: z.number().int().min(1).max(500).nullable().optional(),
+  discount_percent: z.number().int().min(1).max(99).nullable().optional(),
   stock: z.number().int().min(0).nullable().optional(),
   sort_order: z.number().int().min(0).default(0),
   comment_required: z.boolean().default(false),
@@ -112,14 +112,14 @@ export function computePriceCrystals(costByn: number, coefficient: number, rate:
   return Math.round(costByn * coefficient * rate)
 }
 
-/** Зачёркнутая цена в кристаллах = реальная цена × (1 + наценка / 100). */
+/** Зачёркнутая цена в кристаллах = реальная цена / (1 − скидка / 100). */
 export function computePriceWithoutDiscount(priceInCrystals: number, discountPercent: number): number {
-  return Math.round(priceInCrystals * (1 + discountPercent / 100))
+  return Math.round(priceInCrystals / (1 - discountPercent / 100))
 }
 
-/** Процент скидки для бейджа (от цены без скидки). Считается от discountPercent напрямую — без дрейфа от округления. */
+/** Процент скидки для бейджа. discount_percent хранит скидку юзера напрямую. */
 export function computeDisplayDiscount(discountPercent: number): number {
-  return Math.round((discountPercent / (100 + discountPercent)) * 100)
+  return discountPercent
 }
 
 /** Конвертирует кристаллы → BYN по текущему курсу. Округление до копеек. */
