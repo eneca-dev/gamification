@@ -44,6 +44,7 @@ interface ParsedAdminFilter {
   price?: NumericFilter
   costByn?: NumericFilter
   stock?: NumericFilter
+  stockNull?: boolean
   hasImage?: boolean
   hasEmoji?: boolean
 }
@@ -133,11 +134,23 @@ function buildAdminFilter(tokens: FilterToken[]): ParsedAdminFilter {
         else if (isFalse) result.hasImage = t.negated
       }
     } else {
-      const nm = t.value.match(/^(>=|<=|!=|>|<|=)\s*(\d+(?:[.,]\d+)?)/)
-      if (nm) {
-        result[field as 'coefficient' | 'price' | 'costByn' | 'stock'] = {
-          op: nm[1] as NumericOp,
-          value: parseFloat(nm[2].replace(',', '.')),
+      if (field === 'stock') {
+        const inf = t.value.match(/^(!=|=)бесконечность$/)
+        if (inf) {
+          result.stockNull = inf[1] === '='
+        } else {
+          const nm = t.value.match(/^(>=|<=|!=|>|<|=)\s*(\d+(?:[.,]\d+)?)/)
+          if (nm) {
+            result.stock = { op: nm[1] as NumericOp, value: parseFloat(nm[2].replace(',', '.')) }
+          }
+        }
+      } else {
+        const nm = t.value.match(/^(>=|<=|!=|>|<|=)\s*(\d+(?:[.,]\d+)?)/)
+        if (nm) {
+          result[field as 'coefficient' | 'price' | 'costByn'] = {
+            op: nm[1] as NumericOp,
+            value: parseFloat(nm[2].replace(',', '.')),
+          }
         }
       }
     }
@@ -160,6 +173,8 @@ function applyParsedFilter(
   if (filter.price && !compareNum(computePriceCrystals(p.cost_byn, p.coefficient, effectiveRate), filter.price.op, filter.price.value)) return false
   if (filter.costByn && !compareNum(p.cost_byn, filter.costByn.op, filter.costByn.value)) return false
   if (filter.stock && !compareNum(p.stock ?? 0, filter.stock.op, filter.stock.value)) return false
+  if (filter.stockNull === true && p.stock !== null) return false
+  if (filter.stockNull === false && p.stock === null) return false
   if (filter.hasImage !== undefined && !!p.image_url !== filter.hasImage) return false
   if (filter.hasEmoji !== undefined && !!p.emoji !== filter.hasEmoji) return false
   return true
@@ -1654,9 +1669,9 @@ const NUMERIC_OPS: { op: string; label: string; hint: string }[] = [
   { op: '=',  label: '=',  hint: 'равно' },
   { op: '!=', label: '≠',  hint: 'не равно' },
   { op: '>',  label: '>',  hint: 'больше' },
-  { op: '>=', label: '≥',  hint: 'не меньше' },
+  { op: '>=', label: '≥',  hint: 'больше или равно' },
   { op: '<',  label: '<',  hint: 'меньше' },
-  { op: '<=', label: '≤',  hint: 'не больше' },
+  { op: '<=', label: '≤',  hint: 'меньше или равно' },
 ]
 
 // Longest ops first to avoid partial match ('>=', '<=' before '>', '<')
@@ -1672,9 +1687,11 @@ function parseOpFromPartial(partial: string): { op: string; numStr: string } | n
 function FilterInput({ value, onChange, categories }: { value: string; onChange: (v: string) => void; categories: { name: string; is_active: boolean }[] }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
   const isFocusedRef = useRef(false)
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Protects cursorPos from being overwritten by onSelect before RAF sets DOM cursor
   const pendingCursorRef = useRef<number | null>(null)
   // Порядок навигации стрелками (в 2-колоночном режиме — сначала левая, потом правая)
@@ -1754,6 +1771,7 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
       color: 'var(--tag-red-bg)', textColor: 'var(--tag-red-text)', overlayKeyColor: 'var(--tag-red-text)',
       isNumeric: true,
       values: [
+        { label: '∞ Бесконечный', insert: 'бесконечность' },
         { label: '0', insert: '0' },
         { label: '5', insert: '5' },
         { label: '10', insert: '10' },
@@ -1833,15 +1851,23 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
             type: 'operator' as const, op, label, hint, field,
           }))
         }
-        // Шаг 2: числовые значения для выбранного оператора
+        // Шаг 2: числовые значения + текстовые спецзначения (напр. "бесконечность")
         const numStr = opParsed.numStr
-        return field.values
-          .filter(v => !numStr || v.insert.startsWith(numStr))
+        const numeric = field.values
+          .filter(v => /^\d/.test(v.insert) && (!numStr || v.insert.startsWith(numStr)))
           .map(v => ({
             type: 'value' as const,
             option: { label: v.label, insert: opParsed.op + v.insert },
             field,
           }))
+        const specials = numStr ? [] : field.values
+          .filter(v => /^[а-яёa-z]/i.test(v.insert))
+          .map(v => ({
+            type: 'value' as const,
+            option: { label: v.label, insert: opParsed.op + v.insert },
+            field,
+          }))
+        return [...numeric, ...specials]
       }
 
       const partial = context.partial
@@ -1912,7 +1938,7 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
       pendingCursorRef.current = newCursor
       setLocalValue(newVal)
       setCursorPos(newCursor)
-      setShowDropdown(false)
+      setShowDropdown(true)
       requestAnimationFrame(() => {
         pendingCursorRef.current = null
         if (inputRef.current) {
@@ -1979,6 +2005,10 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
 
   useEffect(() => {
     function handler(e: MouseEvent) {
+      const insideDropdown = e.composedPath().some(
+        el => el instanceof HTMLElement && el.dataset.filterDropdown !== undefined
+      )
+      if (insideDropdown) return
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setShowDropdown(false)
       }
@@ -2119,10 +2149,17 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
               if (pendingCursorRef.current !== null) return
               if (inputRef.current) setCursorPos(inputRef.current.selectionStart ?? localValue.length)
             }}
-            onFocus={() => { isFocusedRef.current = true; setShowDropdown(true) }}
-            onBlur={() => { isFocusedRef.current = false; setTimeout(() => setShowDropdown(false), 150) }}
+            onFocus={() => {
+              isFocusedRef.current = true
+              if (blurTimerRef.current !== null) { clearTimeout(blurTimerRef.current); blurTimerRef.current = null }
+              setShowDropdown(true)
+            }}
+            onBlur={() => {
+              isFocusedRef.current = false
+              blurTimerRef.current = setTimeout(() => { blurTimerRef.current = null; setShowDropdown(false) }, 150)
+            }}
             onKeyDown={handleKeyDown}
-            placeholder="статус:активный  коэф:>= 1.5  категория:еда  картинка:нет"
+            placeholder="статус:  категория:  коэф:  цена:"
             spellCheck={false}
             autoComplete="off"
             className="relative w-full bg-transparent pl-2 pr-2 py-1.5 text-[12px] outline-none placeholder:opacity-40"
@@ -2134,7 +2171,7 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
         </div>
 
         {/* Token counter + clear */}
-        {tokenCount > 0 && (
+        {localValue.length > 0 && (
           <div className="flex items-center gap-1 pr-2 shrink-0">
             <span className="text-[11px] tabular-nums" style={{ color: 'var(--apex-text-muted)' }}>{tokenCount}</span>
             <button
@@ -2158,6 +2195,8 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
       {/* Dropdown — через портал, чтобы выходить за рамки overflow:hidden контейнера */}
       {hasDropdown && createPortal(
         <div
+          ref={dropdownRef}
+          data-filter-dropdown=""
           className="fixed z-[200] rounded-xl overflow-hidden"
           style={{
             top: dropdownPos.top,
