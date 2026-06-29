@@ -50,7 +50,7 @@ export function StoreClient({
 
   const activeCategory = categories.find((c) => c.slug === activeFilter)
 
-  function handlePurchase(productId: string, _price: number) {
+  function handlePurchase(productId: string, _price: number, userComment?: string) {
     const product = products.find((p) => p.id === productId)
     const effect = product?.effect
 
@@ -77,7 +77,7 @@ export function StoreClient({
     setNotification(null)
 
     startTransition(async () => {
-      const result = await purchaseProduct(productId)
+      const result = await purchaseProduct({ product_id: productId, user_comment: userComment ?? null })
       setPurchasingId(null)
 
       if (!result.success) {

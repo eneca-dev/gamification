@@ -134,6 +134,18 @@ export function OrdersClient({ orders }: OrdersClientProps) {
                     </span>
                     <CoinStatic amount={order.coins_spent} size="sm" />
                   </div>
+                  {order.user_comment && (
+                    <p
+                      className="text-[12px] mt-1.5 px-2 py-1 rounded-lg"
+                      style={{
+                        color: 'var(--apex-text-secondary)',
+                        background: 'var(--apex-bg)',
+                        border: '1px solid var(--apex-border)',
+                      }}
+                    >
+                      {order.user_comment}
+                    </p>
+                  )}
                   {order.note && (
                     <p
                       className="text-[12px] mt-1 italic"

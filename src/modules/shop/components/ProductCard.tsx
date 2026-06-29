@@ -12,7 +12,7 @@ interface ProductCardProps {
   product: ShopProductWithCategory
   balance: number
   index: number
-  onPurchase: (productId: string, price: number) => void
+  onPurchase: (productId: string, price: number, userComment?: string) => void
   isPurchasing: boolean
   categoryDescription?: string | null
   pendingResets?: PendingReset[]
@@ -170,6 +170,9 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
           freeLeft={freeLeft}
           comingSoon={product.is_coming_soon}
           hasDiscount={product.discount_percent !== null}
+          commentRequired={product.comment_required}
+          commentLabel={product.comment_label}
+          commentPlaceholder={product.comment_placeholder}
         />
         </div>
       </div>

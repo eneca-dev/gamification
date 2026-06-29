@@ -186,6 +186,7 @@ export async function getUserOrders(wsUserId: string): Promise<ShopOrderWithDeta
       transaction_id: row.transaction_id,
       refund_transaction_id: row.refund_transaction_id,
       note: row.note,
+      user_comment: row.user_comment,
       created_at: row.created_at,
       product: {
         name: product?.name ?? 'Удалённый товар',
