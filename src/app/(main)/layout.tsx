@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers'
 import { BetaAccessDenied } from '@/components/BetaAccessDenied'
 import { LayoutShell } from '@/components/LayoutShell'
 import { getCurrentUser } from '@/modules/auth'
@@ -23,9 +24,10 @@ export default async function MainLayout({
 
   const balance = user?.wsUserId ? await getUserBalance(user.wsUserId) : 0
   const dayOffResolved = user?.wsUserId ? await getUserDayOffResolvedTimestamps(user.wsUserId) : []
+  const sidebarCollapsed = (await cookies()).get('sidebar_collapsed')?.value === 'true'
 
   const layout = (
-    <LayoutShell user={user} balance={balance} showDevSwitcher={DEV_TOOLS_ENABLED} dayOffResolved={dayOffResolved}>
+    <LayoutShell user={user} balance={balance} showDevSwitcher={DEV_TOOLS_ENABLED} dayOffResolved={dayOffResolved} sidebarCollapsed={sidebarCollapsed}>
       {children}
     </LayoutShell>
   )

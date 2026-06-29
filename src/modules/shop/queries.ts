@@ -93,7 +93,7 @@ async function _getProducts(categorySlug?: string): Promise<ShopProductWithCateg
       *,
       category:shop_categories!category_id ( name, slug, is_physical, is_countable, is_active )
     `)
-    .eq('is_active', true)
+    .or('is_active.eq.true,is_coming_soon.eq.true')
     .order('sort_order', { ascending: true })
 
   if (categorySlug) {
