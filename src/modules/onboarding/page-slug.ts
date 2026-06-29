@@ -13,7 +13,7 @@ export const PAGE_SLUG_MAP: Record<string, string> = {
   '/admin/events': 'admin-events',
   '/admin/calendar': 'admin-calendar',
   '/admin/achievements': 'admin-achievements',
-  '/admin/lottery': 'admin-lottery',
+  // [LOTTERY HIDDEN] '/admin/lottery': 'admin-lottery',
   '/admin/help': 'admin-help',
   '/help': 'help',
   '/master-planner': 'master-planner',
