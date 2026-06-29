@@ -6,12 +6,14 @@ export {
   updateCategory,
   createProduct,
   updateProduct,
+  updateProductsBulk,
+  deleteProductsBulk,
   deleteProduct,
   uploadProductImage,
   deleteProductImage,
   setCrystalRate,
 } from './actions'
-export { computePriceCrystals, computePriceWithoutDiscount, computeDisplayDiscount, coinsToByn, formatByn } from './types'
+export { computePriceCrystals, computePriceWithoutDiscount, computeDisplayDiscount, coinsToByn, formatByn, computeBulkPatch } from './types'
 export type {
   ShopCategory,
   ShopProduct,
@@ -23,6 +25,10 @@ export type {
   UpdateCategoryInput,
   CreateProductInput,
   UpdateProductInput,
+  BulkUpdateProductsInput,
+  BulkUpdateOp,
+  BulkUpdateResult,
+  BulkPatchProductInfo,
   PurchaseResult,
   CancelResult,
   CrystalRate,

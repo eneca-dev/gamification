@@ -93,6 +93,89 @@ export const updateProductSchema = createProductSchema.partial().extend({
 export type CreateProductInput = z.infer<typeof createProductSchema>
 export type UpdateProductInput = z.infer<typeof updateProductSchema>
 
+// --- Массовое редактирование товаров ---
+
+const bulkIdsSchema = z.array(z.string().uuid()).min(1, 'Не выбран ни один товар').max(500)
+const bulkNumericOp = z.enum(['add', 'subtract', 'set'])
+
+export const bulkUpdateProductsSchema = z.discriminatedUnion('field', [
+  z.object({ ids: bulkIdsSchema, field: z.literal('cost_byn'), op: bulkNumericOp, value: z.number() }),
+  z.object({ ids: bulkIdsSchema, field: z.literal('coefficient'), op: bulkNumericOp, value: z.number() }),
+  z.object({ ids: bulkIdsSchema, field: z.literal('stock'), op: bulkNumericOp, value: z.number() }),
+  z.object({ ids: bulkIdsSchema, field: z.literal('discount_percent'), op: z.enum(['add', 'subtract', 'set', 'clear']), value: z.number().optional() }),
+  z.object({ ids: bulkIdsSchema, field: z.literal('status'), value: z.enum(['active', 'inactive', 'coming_soon']) }),
+])
+
+export type BulkUpdateProductsInput = z.infer<typeof bulkUpdateProductsSchema>
+
+/** Поле + операция без ids — для применения к одному товару (UI optimistic + сервер).
+ *  Дистрибутивный Omit, чтобы сохранить варианты discriminated union (иначе остаётся только `field`). */
+export type BulkUpdateOp = BulkUpdateProductsInput extends infer T
+  ? T extends { ids: unknown }
+    ? Omit<T, 'ids'>
+    : never
+  : never
+
+export interface BulkUpdateResult {
+  updated: number
+  skipped: { id: string; reason: string }[]
+}
+
+/** Минимум данных товара, нужный для вычисления массового патча. */
+export interface BulkPatchProductInfo {
+  cost_byn: number
+  coefficient: number
+  discount_percent: number | null
+  stock: number | null
+  is_active: boolean
+  is_coming_soon: boolean
+  is_countable: boolean
+}
+
+export type BulkPatch = Record<string, number | boolean | null>
+export type BulkPatchResult = { ok: true; patch: BulkPatch } | { ok: false; reason: string }
+
+/**
+ * Вычисляет патч для одного товара по массовой операции и проверяет инварианты.
+ * Единый источник логики для сервера (updateProductsBulk) и клиента (optimistic update).
+ * Невалидный результат возвращается как { ok: false, reason } — товар пропускается.
+ */
+export function computeBulkPatch(p: BulkPatchProductInfo, op: BulkUpdateOp): BulkPatchResult {
+  if (op.field === 'status') {
+    if (op.value === 'active') {
+      if (p.is_countable && (p.stock ?? 0) === 0) return { ok: false, reason: 'нулевой остаток' }
+      return { ok: true, patch: { is_active: true, is_coming_soon: false } }
+    }
+    if (op.value === 'coming_soon') return { ok: true, patch: { is_active: false, is_coming_soon: true } }
+    return { ok: true, patch: { is_active: false, is_coming_soon: false } }
+  }
+
+  if (op.field === 'discount_percent') {
+    if (op.op === 'clear') return { ok: true, patch: { discount_percent: null } }
+    const base = p.discount_percent ?? 0
+    const v = op.value ?? 0
+    const next = Math.round(op.op === 'set' ? v : op.op === 'add' ? base + v : base - v)
+    if (next < 1 || next > 99) return { ok: false, reason: 'скидка вне диапазона 1–99%' }
+    return { ok: true, patch: { discount_percent: next } }
+  }
+
+  if (op.field === 'stock') {
+    if (!p.is_countable) return { ok: false, reason: 'категория без учёта остатков' }
+    const base = p.stock ?? 0
+    const next = Math.round(op.op === 'set' ? op.value : op.op === 'add' ? base + op.value : base - op.value)
+    if (next < 0) return { ok: false, reason: 'остаток < 0' }
+    // Инвариант: stock = 0 ⇒ товар неактивен
+    return { ok: true, patch: next === 0 ? { stock: 0, is_active: false } : { stock: next } }
+  }
+
+  // cost_byn | coefficient
+  const base = op.field === 'cost_byn' ? p.cost_byn : p.coefficient
+  const raw = op.op === 'set' ? op.value : op.op === 'add' ? base + op.value : base - op.value
+  const next = Math.round(raw * 100) / 100
+  if (next <= 0) return { ok: false, reason: op.field === 'cost_byn' ? 'себестоимость ≤ 0' : 'коэффициент ≤ 0' }
+  return { ok: true, patch: { [op.field]: next } }
+}
+
 // --- Курс кристаллов ---
 
 export interface CrystalRate {

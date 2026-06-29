@@ -10,17 +10,21 @@ import {
   updateCategory,
   createProduct,
   updateProduct,
+  updateProductsBulk,
+  deleteProductsBulk,
   deleteProduct,
   deleteProductImage,
   computePriceCrystals,
   computePriceWithoutDiscount,
+  computeBulkPatch,
 
 } from '@/modules/shop/index.client'
 
 import { CrystalRatePanel } from './CrystalRatePanel'
 import { ProductFormModal } from './ProductFormModal'
+import { BulkActionBar } from './BulkActionBar'
 import type { ProductFormData } from '../types'
-import type { ShopProductWithCategory, ShopCategory } from '@/modules/shop/index.client'
+import type { ShopProductWithCategory, ShopCategory, BulkUpdateOp } from '@/modules/shop/index.client'
 
 interface ProductsClientProps {
   products: ShopProductWithCategory[]
@@ -221,6 +225,9 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('list')
   const [filterQuery, setFilterQuery] = useState('')
 
+  // Мультиселект товаров — массовые операции
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
   // Inline-редактирование товаров
   const [inlineEdit, setInlineEdit] = useState<{
     productId: string
@@ -252,6 +259,104 @@ export function ProductsClient({ products: initialProducts, categories: initialC
       )
     })
     .filter((p) => applyParsedFilter(p, parsedFilter, effectiveRate))
+
+  const allFilteredSelected = filteredProducts.length > 0 && filteredProducts.every((p) => selectedIds.has(p.id))
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (allFilteredSelected) filteredProducts.forEach((p) => next.delete(p.id))
+      else filteredProducts.forEach((p) => next.add(p.id))
+      return next
+    })
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set())
+  }
+
+  function handleBulkDelete() {
+    const ids = Array.from(selectedIds)
+    if (ids.length === 0) return
+
+    const prev = products
+    // Optimistic — убираем выбранные; пропущенные (с заказами) вернём после ответа
+    setProducts((items) => items.filter((p) => !selectedIds.has(p.id)))
+
+    startProductTransition(async () => {
+      const result = await deleteProductsBulk(ids)
+      if (!result.success) {
+        setProducts(prev)
+        setError(result.error)
+        return
+      }
+      const { updated, skipped } = result.data
+      const skippedIds = new Set(skipped.map((s) => s.id))
+      // Оставляем невыбранные + пропущенные (с заказами)
+      setProducts(prev.filter((p) => !selectedIds.has(p.id) || skippedIds.has(p.id)))
+      setSelectedIds(new Set())
+      showNotification(
+        skipped.length > 0
+          ? `Удалено: ${updated}, пропущено: ${skipped.length} (есть заказы)`
+          : `Удалено: ${updated}`,
+      )
+    })
+  }
+
+  function handleBulkApply(op: BulkUpdateOp) {
+    const ids = Array.from(selectedIds)
+    if (ids.length === 0) return
+
+    const prev = products
+    // Optimistic — та же логика, что на сервере (computeBulkPatch); невалидные пропускаются
+    setProducts((items) =>
+      items.map((p) => {
+        if (!selectedIds.has(p.id)) return p
+        const result = computeBulkPatch(
+          {
+            cost_byn: p.cost_byn,
+            coefficient: p.coefficient,
+            discount_percent: p.discount_percent,
+            stock: p.stock,
+            is_active: p.is_active,
+            is_coming_soon: p.is_coming_soon,
+            is_countable: !!p.category?.is_countable,
+          },
+          op,
+        )
+        if (!result.ok) return p
+        const next = { ...p, ...result.patch }
+        if (op.field === 'cost_byn' || op.field === 'coefficient') {
+          next.price = computePriceCrystals(next.cost_byn, next.coefficient, effectiveRate)
+        }
+        return next
+      }),
+    )
+
+    startProductTransition(async () => {
+      const result = await updateProductsBulk({ ids, ...op })
+      if (!result.success) {
+        setProducts(prev)
+        setError(result.error)
+        return
+      }
+      const { updated, skipped } = result.data
+      showNotification(
+        skipped.length > 0
+          ? `Обновлено: ${updated}, пропущено: ${skipped.length}`
+          : `Обновлено: ${updated}`,
+      )
+    })
+  }
 
   function showNotification(msg: string) {
     setNotification(msg)
@@ -1025,6 +1130,17 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           <FilterInput value={filterQuery} onChange={setFilterQuery} categories={categories} />
         </div>
 
+        {/* Панель массовых операций */}
+        {selectedIds.size > 0 && (
+          <BulkActionBar
+            selectedCount={selectedIds.size}
+            isPending={isProductPending}
+            onApply={handleBulkApply}
+            onDelete={handleBulkDelete}
+            onClear={clearSelection}
+          />
+        )}
+
         {/* Вид: карточки */}
         {viewMode === 'cards' && (
           <div>
@@ -1042,14 +1158,20 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                   return (
                     <div
                       key={product.id}
-                      className="rounded-2xl overflow-hidden card-hover flex flex-col"
-                      style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
+                      className="relative rounded-2xl overflow-hidden card-hover flex flex-col"
+                      style={{
+                        background: 'var(--surface-elevated)',
+                        border: `1px solid ${selectedIds.has(product.id) ? 'var(--apex-primary)' : 'var(--border)'}`,
+                      }}
                     >
                       {/* Зона картинки / эмодзи */}
                       <div
                         className="h-36 flex items-center justify-center relative overflow-hidden"
                         style={{ background: product.image_url ? 'transparent' : 'var(--apex-emoji-bg)' }}
                       >
+                        <span className="absolute top-2 left-2 z-10 flex items-center justify-center w-6 h-6 rounded-md" style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}>
+                          <SelectCheckbox checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} />
+                        </span>
                         {product.image_url ? (
                           <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
                         ) : (
@@ -1251,6 +1373,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         {viewMode === 'list' && <div className="overflow-x-auto">
         <table className="w-full min-w-[700px]" style={{ tableLayout: 'fixed' }}>
           <colgroup>
+            <col style={{ width: '44px' }} />
             <col style={{ width: '60px' }} />
             <col />
             <col style={{ width: '130px' }} />
@@ -1264,6 +1387,13 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           </colgroup>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--apex-border)' }}>
+              <th className="px-5 py-2.5">
+                <SelectCheckbox
+                  checked={allFilteredSelected}
+                  onChange={toggleSelectAll}
+                  title="Выбрать все"
+                />
+              </th>
               {['', 'Название', 'Категория', 'BYN', 'Коэф.', 'Цена', 'Скидка', 'Остаток', 'Комм.', 'Статус'].map((h, i) => (
                 <th
                   key={i}
@@ -1278,7 +1408,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           <tbody>
             {filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center py-12">
+                <td colSpan={11} className="text-center py-12">
                   <p className="text-[13px] font-medium" style={{ color: 'var(--apex-text-muted)' }}>
                     {searchQuery.trim() ? 'Ничего не найдено' : 'Нет товаров'}
                   </p>
@@ -1290,7 +1420,11 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                 const isConfirmingDelete = deletingProductId === product.id
 
                 return (
-                  <tr key={product.id} className="group" style={{ borderBottom: '1px solid var(--apex-border)' }}>
+                  <tr key={product.id} className="group" style={{ borderBottom: '1px solid var(--apex-border)', background: selectedIds.has(product.id) ? 'var(--apex-success-bg)' : 'transparent' }}>
+                    {/* Чекбокс выбора */}
+                    <td className="px-5 py-2.5">
+                      <SelectCheckbox checked={selectedIds.has(product.id)} onChange={() => toggleSelect(product.id)} />
+                    </td>
                     {/* Изображение */}
                     <td className="px-5 py-2.5 w-12">
                       <div
@@ -1639,6 +1773,20 @@ function CatEditableCell({ onClick, children }: { onClick: () => void; children:
         <Pencil size={12} />
       </button>
     </div>
+  )
+}
+
+function SelectCheckbox({ checked, onChange, title }: { checked: boolean; onChange: () => void; title?: string }) {
+  return (
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      onClick={(e) => e.stopPropagation()}
+      title={title}
+      className="w-4 h-4 rounded cursor-pointer shrink-0 align-middle"
+      style={{ accentColor: 'var(--apex-primary)' }}
+    />
   )
 }
 

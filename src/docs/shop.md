@@ -49,7 +49,9 @@
 - `updateCategory(input)` — обновление категории (name, slug, description, is_physical, is_countable, is_active). При `is_countable = false` сбрасывает `stock` в NULL у всех товаров категории. Только админ
 - `createProduct(input)` — создание товара (cost_byn, coefficient). Только админ. Записывает `created_by`
 - `updateProduct(input)` — обновление товара (включая cost_byn, coefficient, discount_percent, is_active). `discount_percent: null` убирает скидку. Только админ. Revalidate: `shop-products`
+- `updateProductsBulk(input)` — массовое обновление выбранных товаров. Input (Zod discriminated union по `field`): `{ ids, field, op, value? }`. Числовые поля (`cost_byn`, `coefficient`, `stock`, `discount_percent`) — `op: add|subtract|set`; `discount_percent` дополнительно `op: clear` (→ null); `status` — `value: active|inactive|coming_soon` без op. Для каждого товара патч вычисляется через `computeBulkPatch`; невалидные (коэф/себестоимость ≤ 0, остаток < 0, скидка вне 1–99, активация при нулевом остатке, остаток у неисчисляемой категории) пропускаются. Возвращает `{ updated, skipped: [{ id, reason }] }`. Одинаковые патчи (set/status) — один UPDATE `.in('id', …)`; разные (add/subtract) — по одному. Только админ. Revalidate: `shop-products`, `/admin/products`, `/store`
 - `deleteProduct(productId)` — удаление товара. Проверяет наличие заказов — если есть, блокирует. Удаляет изображение из Storage. Только админ
+- `deleteProductsBulk(ids)` — массовое удаление. Товары с существующими заказами пропускаются (reason: «есть заказы»), у удалённых подчищаются изображения из Storage. Возвращает `{ updated, skipped: [{ id, reason }] }` (`updated` = число удалённых). Один `.delete().in('id', …)`. Только админ. Revalidate: `shop-products`, `/admin/products`, `/store`
 - `setCrystalRate({ rate })` — INSERT новой записи в `crystal_rates`, последняя становится актуальной. Только админ. `updateTag('crystal-rate')` + `updateTag('shop-products')` (цены товаров пересчитаются), revalidate: `/admin/products`, `/admin/economy`, `/store`
 - `uploadProductImage(formData)` — загрузка изображения в Storage bucket `product-images`. Валидация: JPEG/PNG/WebP, max 2 МБ. Path: `products/{timestamp}_{uuid}.{ext}`. Только админ
 - `deleteProductImage(imageUrl)` — удаление изображения из Storage по публичному URL. Только админ
@@ -78,7 +80,8 @@
 - `OrdersClient` — клиентский контейнер страницы «Мои заказы»: фильтрация по статусу, отображение image_url / emoji / placeholder, ссылка на магазин при пустом списке
 
 **Админ-компоненты** (в `src/modules/admin/`):
-- `ProductsClient` — инлайн-редактирование `discount_percent`: Enter = сохранить, Esc = отменить, пустое значение = `null` (убрать скидку). Фильтры: `скидка:есть` / `скидка:нет`
+- `ProductsClient` — инлайн-редактирование `discount_percent`: Enter = сохранить, Esc = отменить, пустое значение = `null` (убрать скидку). Фильтры: `скидка:есть` / `скидка:нет`. Мультиселект: чекбоксы в list и cards видах (+ «выбрать все» по отфильтрованным), панель `BulkActionBar` с операциями `+/−/выставить` для cost_byn/coefficient/discount_percent/stock и выставлением статуса; optimistic через `computeBulkPatch`, toast «Обновлено N, пропущено M»
+- `BulkActionBar` — панель массовых операций над выбранными товарами: селектор поля, переключатель операции (+/−/=), значение, для скидки кнопка «Убрать скидку», для статуса — три кнопки, кнопка «Удалить» с подтверждением. Вызывает `onApply(op)` / `onDelete()` без ids (ids подставляет родитель)
 - `ProductFormModal` — поле «Наценка %» с кнопкой очистки (×). Live-preview: зачёркнутая цена в кристаллах и процент скидки для покупателя. Блок «Требовать комментарий при покупке» — чекбокс + поля comment_label и comment_placeholder (отображаются только при включённом флаге)
 
 ## Страницы
@@ -95,6 +98,7 @@
 - `computeDisplayDiscount(discountPercent)` — `Math.round(discountPercent / (100 + discountPercent) × 100)`. Процент скидки для бейджа (без дрейфа от округления кристаллов)
 - `coinsToByn(coins, rate)` — `Math.round(coins / rate * 100) / 100`. Используется в дашборде экономики
 - `formatByn(amount)` — `"1 250,50 BYN"` (ru-BY locale, 2 знака после запятой)
+- `computeBulkPatch(productInfo, op)` — чистая функция: по `BulkPatchProductInfo` и операции возвращает `{ ok: true, patch }` либо `{ ok: false, reason }`. Единый источник логики массового обновления для сервера (`updateProductsBulk`) и клиента (optimistic update в `ProductsClient`), чтобы пропуск невалидных товаров совпадал. Инвариант `stock=0 ⇒ is_active=false` зашит здесь. `null`-скидка трактуется как 0 при add/subtract
 
 ## Ограничения
 

@@ -17,8 +17,10 @@ import {
   updateCategorySchema,
   setCrystalRateSchema,
   purchaseProductSchema,
+  bulkUpdateProductsSchema,
+  computeBulkPatch,
 } from './types'
-import type { PurchaseResult } from './types'
+import type { PurchaseResult, BulkUpdateResult, BulkPatch, BulkPatchProductInfo } from './types'
 import { balanceTag } from './queries'
 
 const productIdSchema = z.string().uuid()
@@ -273,6 +275,123 @@ export async function updateProduct(
   revalidatePath('/admin/products')
   revalidatePath('/store')
   return { success: true }
+}
+
+export async function updateProductsBulk(
+  input: unknown,
+): Promise<{ success: true; data: BulkUpdateResult } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const parsed = bulkUpdateProductsSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: 'Невалидные данные' }
+
+  const { ids, ...op } = parsed.data
+  const supabase = createSupabaseAdminClient()
+
+  const { data: rows, error: fetchError } = await supabase
+    .from('shop_products')
+    .select('id, cost_byn, coefficient, discount_percent, stock, is_active, is_coming_soon, category:shop_categories!category_id(is_countable)')
+    .in('id', ids)
+
+  if (fetchError) return { success: false, error: fetchError.message }
+  if (!rows || rows.length === 0) return { success: false, error: 'Товары не найдены' }
+
+  const skipped: BulkUpdateResult['skipped'] = []
+  const patches: { id: string; patch: BulkPatch }[] = []
+
+  for (const row of rows) {
+    const category = Array.isArray(row.category) ? row.category[0] : row.category
+    const info: BulkPatchProductInfo = {
+      cost_byn: Number(row.cost_byn),
+      coefficient: Number(row.coefficient),
+      discount_percent: row.discount_percent,
+      stock: row.stock,
+      is_active: row.is_active,
+      is_coming_soon: row.is_coming_soon,
+      is_countable: !!category?.is_countable,
+    }
+    const result = computeBulkPatch(info, op)
+    if (result.ok) patches.push({ id: row.id, patch: result.patch })
+    else skipped.push({ id: row.id, reason: result.reason })
+  }
+
+  if (patches.length === 0) return { success: true, data: { updated: 0, skipped } }
+
+  const updatedAt = new Date().toISOString()
+
+  // Одинаковые патчи (op=set / status) → один запрос; разные (add/subtract) → по одному
+  const firstPatch = JSON.stringify(patches[0].patch)
+  const allSame = patches.every((p) => JSON.stringify(p.patch) === firstPatch)
+
+  if (allSame) {
+    const { error } = await supabase
+      .from('shop_products')
+      .update({ ...patches[0].patch, updated_at: updatedAt })
+      .in('id', patches.map((p) => p.id))
+    if (error) return { success: false, error: error.message }
+  } else {
+    for (const { id, patch } of patches) {
+      const { error } = await supabase
+        .from('shop_products')
+        .update({ ...patch, updated_at: updatedAt })
+        .eq('id', id)
+      if (error) return { success: false, error: error.message }
+    }
+  }
+
+  revalidateTag('shop-products', 'max')
+  revalidatePath('/admin/products')
+  revalidatePath('/store')
+  return { success: true, data: { updated: patches.length, skipped } }
+}
+
+export async function deleteProductsBulk(
+  ids: unknown,
+): Promise<{ success: true; data: BulkUpdateResult } | { success: false; error: string }> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const parsed = z.array(z.string().uuid()).min(1).max(500).safeParse(ids)
+  if (!parsed.success) return { success: false, error: 'Невалидный список товаров' }
+
+  const supabase = createSupabaseAdminClient()
+
+  // Товары с существующими заказами удалять нельзя — пропускаем
+  const { data: orderRows } = await supabase
+    .from('shop_orders')
+    .select('product_id')
+    .in('product_id', parsed.data)
+
+  const withOrders = new Set((orderRows ?? []).map((o) => o.product_id))
+  const deletable = parsed.data.filter((id) => !withOrders.has(id))
+  const skipped = parsed.data
+    .filter((id) => withOrders.has(id))
+    .map((id) => ({ id, reason: 'есть заказы' }))
+
+  if (deletable.length === 0) return { success: true, data: { updated: 0, skipped } }
+
+  // Подчищаем изображения из Storage
+  const { data: products } = await supabase
+    .from('shop_products')
+    .select('image_url')
+    .in('id', deletable)
+
+  const paths = (products ?? [])
+    .map((p) => p.image_url?.split('/product-images/')[1])
+    .filter((path): path is string => !!path && path.startsWith('products/'))
+
+  if (paths.length > 0) {
+    await supabase.storage.from('product-images').remove(paths)
+  }
+
+  const { error } = await supabase.from('shop_products').delete().in('id', deletable)
+  if (error) return { success: false, error: error.message }
+
+  revalidateTag('shop-products', 'max')
+  revalidatePath('/admin/products')
+  revalidatePath('/store')
+  return { success: true, data: { updated: deletable.length, skipped } }
 }
 
 // --- Удаление товара (только админ) ---
