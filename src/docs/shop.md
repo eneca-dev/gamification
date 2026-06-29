@@ -6,7 +6,7 @@
 
 Сотрудники тратят 💎 на товары. Цена в кристаллах — производная от себестоимости в BYN, коэффициента наценки и текущего курса: `price_crystals = round(cost_byn × coefficient × current_crystal_rate())`. Курс хранится с историей в таблице `crystal_rates`, последняя запись = актуальный курс. Колонки `shop_products.price` нет — цена считается на лету в `purchase_product` и в `getProducts*`.
 
-Покупка — атомарная SQL-функция `purchase_product`: блокирует строку товара, читает `cost_byn` + `coefficient`, вычисляет `v_price` через `current_crystal_rate()`, проверяет баланс, списывает, создаёт event_log + транзакцию + заказ, обновляет stock. Нефизические товары (`is_physical = false`) — сразу `fulfilled`. Физические — `pending`, ждут обработки админом. Учёт остатков определяется флагом `is_countable` на категории: `is_countable = true` → `stock` обязателен и уменьшается при покупке; `is_countable = false` → `stock = NULL` (безлимит).
+Покупка — атомарная SQL-функция `purchase_product`: блокирует строку товара, читает `cost_byn` + `coefficient`, вычисляет `v_price` через `current_crystal_rate()`, проверяет баланс, списывает, создаёт event_log + транзакцию + заказ, обновляет stock. Нефизические товары (`is_physical = false`) — сразу `fulfilled`. Физические — `pending`, ждут обработки админом. Если товар имеет флаг `comment_required = true`, RPC требует непустой `p_user_comment` — иначе RAISE EXCEPTION `'comment_required'`. Комментарий сохраняется в `shop_orders.user_comment`. Учёт остатков определяется флагом `is_countable` на категории: `is_countable = true` → `stock` обязателен и уменьшается при покупке; `is_countable = false` → `stock = NULL` (безлимит).
 
 Отмена заказа — SQL-функция `cancel_order` (возврат 💎 по `coins` из исходной транзакции, запись refund-транзакции, возврат stock). Доступна только админам.
 
@@ -18,7 +18,7 @@
 
 ## Зависимости
 
-- Таблицы: `shop_categories`, `shop_products` (`cost_byn`, `coefficient`, без `price`), `shop_orders`, `crystal_rates`
+- Таблицы: `shop_categories`, `shop_products` (`cost_byn`, `coefficient`, `comment_required`, `comment_label`, `comment_placeholder`), `shop_orders` (`user_comment`), `crystal_rates`
 - Связь с: `gamification_event_logs`, `gamification_transactions` (`byn_amount`), `gamification_balances`, `ws_users`
 - Event types: `shop_purchase` (is_dynamic_coins), `shop_refund` (is_dynamic_coins)
 - SQL-функция: `current_crystal_rate()` — последний курс из `crystal_rates`
@@ -31,8 +31,9 @@
 
 - `OrderStatus` — `'pending' | 'processing' | 'fulfilled' | 'cancelled'`. Константа `ORDER_STATUSES` и Zod-схема `orderStatusSchema`
 - `ShopCategory` — категория: id, name, slug, description, is_physical, is_countable, is_active, sort_order
-- `ShopProduct` — товар: id, name, description, cost_byn, coefficient, price (вычислено), category_id, image_url, emoji, effect, stock, discount_percent (integer | null), is_active, is_coming_soon, sort_order, created_by, updated_at
+- `ShopProduct` — товар: id, name, description, cost_byn, coefficient, price (вычислено), category_id, image_url, emoji, effect, stock, discount_percent (integer | null), is_active, is_coming_soon, comment_required (boolean), comment_label (text | null), comment_placeholder (text | null), sort_order, created_by, updated_at
 - `ShopProductWithCategory` — товар + вложенная категория (name, slug, is_physical, is_countable, is_active)
+- `ShopOrder` — заказ: id, user_id, product_id, status, transaction_id, refund_transaction_id, note, user_comment (text | null), created_at
 - `ShopOrderWithDetails` — заказ + название товара + emoji + image_url + coins_spent (через JOIN на transaction)
 - `PurchaseResult` — результат покупки из RPC: order_id, new_balance, coins_spent
 - `CancelResult` — результат отмены из RPC: order_id, refunded_coins, new_balance
@@ -43,7 +44,7 @@
 ## Actions
 
 - `getBalanceAction()` — возвращает баланс текущего пользователя. Используется для polling на клиенте (CoinBalanceLive). Не требует параметров — берёт wsUserId из сессии
-- `purchaseProduct(productId)` — покупка, доступна всем. RPC `purchase_product`. Revalidate: `/store`, `/profile`
+- `purchaseProduct({ product_id, user_comment? })` — покупка, доступна всем. RPC `purchase_product`. Если товар требует комментарий и он пустой — RPC возвращает ошибку `'comment_required'`, Action возвращает `{ success: false, error: 'Необходимо указать комментарий' }`. Revalidate: `/store`, `/profile`
 - `createCategory(input)` — создание категории. Только админ. Revalidate: `/admin/products`, `/store`
 - `updateCategory(input)` — обновление категории (name, slug, description, is_physical, is_countable, is_active). При `is_countable = false` сбрасывает `stock` в NULL у всех товаров категории. Только админ
 - `createProduct(input)` — создание товара (cost_byn, coefficient). Только админ. Записывает `created_by`
@@ -73,12 +74,12 @@
 - `CoinBalanceLive` (`src/components/CoinBalance.tsx`) — клиентский компонент баланса с polling. Принимает `initialAmount` (SSR-значение) — показывает его до первого ответа polling. Используется в Sidebar
 - `StoreClient` — клиентский контейнер: фильтрация по категориям, optimistic update баланса при покупке, toast-уведомления (3 сек). Grid: 2 колонки → 3 на lg → 4 на xl
 - `ProductCard` — карточка товара: image_url (object-contain) / emoji / placeholder (?), фон emoji — var(--apex-emoji-bg). Бейджи на картинке (top-left): «Скоро в продаже», «Нет в наличии», «Осталось: N»; бейдж «−X%» (top-right, красный) при `discount_percent != null`. Над кнопкой покупки при скидке — блок с зачёркнутой ценой и «скидка −X%» на светло-красном фоне. Staggered-анимация по index. Описание: `line-clamp-2` по умолчанию; если текст реально обрезан (ResizeObserver на scrollHeight/clientHeight) — клик раскрывает полностью (toggle)
-- `PurchaseButton` — кнопка покупки: проверка баланса и stock, динамический текст (покупаем/нет в наличии/ещё N 💎/получить за N 💎)
+- `PurchaseButton` — кнопка покупки: проверка баланса и stock, динамический текст. Если `commentRequired=true` — при клике открывает inline-диалог с textarea; кнопка подтверждения заблокирована пока поле пустое (UX-блокировка). Комментарий передаётся в `onPurchase(productId, price, userComment)`
 - `OrdersClient` — клиентский контейнер страницы «Мои заказы»: фильтрация по статусу, отображение image_url / emoji / placeholder, ссылка на магазин при пустом списке
 
 **Админ-компоненты** (в `src/modules/admin/`):
 - `ProductsClient` — инлайн-редактирование `discount_percent`: Enter = сохранить, Esc = отменить, пустое значение = `null` (убрать скидку). Фильтры: `скидка:есть` / `скидка:нет`
-- `ProductFormModal` — поле «Наценка %» с кнопкой очистки (×). Live-preview: зачёркнутая цена в кристаллах и процент скидки для покупателя
+- `ProductFormModal` — поле «Наценка %» с кнопкой очистки (×). Live-preview: зачёркнутая цена в кристаллах и процент скидки для покупателя. Блок «Требовать комментарий при покупке» — чекбокс + поля comment_label и comment_placeholder (отображаются только при включённом флаге)
 
 ## Страницы
 

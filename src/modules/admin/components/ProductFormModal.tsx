@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Upload, Trash2, Loader2, ChevronDown, Check } from 'lucide-react'
+import { X, Upload, Trash2, Loader2, ChevronDown, Check, MessageSquare } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
 import { computePriceCrystals, computePriceWithoutDiscount, computeDisplayDiscount } from '@/modules/shop/index.client'
@@ -37,6 +37,9 @@ export function ProductFormModal({ product, categories, rate, onSave, onClose, i
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(product?.image_url ?? null)
   const [removeImage, setRemoveImage] = useState(false)
+  const [commentRequired, setCommentRequired] = useState(product?.comment_required ?? false)
+  const [commentLabel, setCommentLabel] = useState(product?.comment_label ?? '')
+  const [commentPlaceholder, setCommentPlaceholder] = useState(product?.comment_placeholder ?? '')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -175,6 +178,9 @@ export function ProductFormModal({ product, categories, rate, onSave, onClose, i
       emoji: emoji.trim() || null,
       stock: isCountable ? parseInt(stock, 10) : null,
       sort_order: product?.sort_order ?? 0,
+      comment_required: commentRequired,
+      comment_label: commentRequired && commentLabel.trim() ? commentLabel.trim() : null,
+      comment_placeholder: commentRequired && commentPlaceholder.trim() ? commentPlaceholder.trim() : null,
     }
 
     onSave(data, imageFile)
@@ -425,6 +431,67 @@ export function ProductFormModal({ product, categories, rate, onSave, onClose, i
               </div>
             </div>
           </Field>
+
+          {/* Комментарий при покупке */}
+          <div
+            className="rounded-xl p-3 space-y-3"
+            style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
+          >
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <div
+                className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-colors"
+                style={{
+                  background: commentRequired ? 'var(--apex-primary)' : 'transparent',
+                  border: `2px solid ${commentRequired ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
+                }}
+              >
+                {commentRequired && <Check size={10} color="white" strokeWidth={3} />}
+              </div>
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={commentRequired}
+                onChange={(e) => {
+                  setCommentRequired(e.target.checked)
+                  if (!e.target.checked) {
+                    setCommentLabel('')
+                    setCommentPlaceholder('')
+                  }
+                }}
+              />
+              <MessageSquare size={14} style={{ color: commentRequired ? 'var(--apex-primary)' : 'var(--apex-text-muted)' }} />
+              <span className="text-[13px] font-medium" style={{ color: 'var(--apex-text)' }}>
+                Требовать комментарий при покупке
+              </span>
+            </label>
+
+            {commentRequired && (
+              <div className="space-y-2 pt-1">
+                <Field label="Заголовок поля">
+                  <input
+                    type="text"
+                    value={commentLabel}
+                    onChange={(e) => setCommentLabel(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg text-[13px] outline-none"
+                    style={inputStyle()}
+                    placeholder="Укажите размер и название шаурмы"
+                    maxLength={200}
+                  />
+                </Field>
+                <Field label="Плейсхолдер">
+                  <input
+                    type="text"
+                    value={commentPlaceholder}
+                    onChange={(e) => setCommentPlaceholder(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg text-[13px] outline-none"
+                    style={inputStyle()}
+                    placeholder="Чикен терияки маленькая из Папа Донер"
+                    maxLength={300}
+                  />
+                </Field>
+              </div>
+            )}
+          </div>
 
           {/* Кнопки */}
           <div className="flex gap-3 pt-2">
