@@ -65,6 +65,7 @@ export interface AdminOrderRow {
   status: 'pending' | 'processing' | 'fulfilled' | 'cancelled'
   coins_spent: number
   note: string | null
+  user_comment: string | null
   status_changed_by: string | null
   status_changed_at: string | null
   created_at: string
@@ -223,6 +224,9 @@ export interface ProductFormData {
   emoji: string | null
   stock: number | null
   sort_order: number
+  comment_required: boolean
+  comment_label: string | null
+  comment_placeholder: string | null
 }
 
 // --- Economy Dashboard ---

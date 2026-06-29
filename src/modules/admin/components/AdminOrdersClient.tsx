@@ -258,9 +258,23 @@ export function AdminOrdersClient({ orders: initial }: AdminOrdersClientProps) {
                             <span style={{ color: '#ccc', fontSize: '12px' }}>?</span>
                           )}
                         </div>
-                        <span className="text-[13px] font-medium" style={{ color: 'var(--apex-text)' }}>
-                          {order.product_name}
-                        </span>
+                        <div className="min-w-0">
+                          <span className="text-[13px] font-medium" style={{ color: 'var(--apex-text)' }}>
+                            {order.product_name}
+                          </span>
+                          {order.user_comment && (
+                            <p
+                              className="text-[11px] mt-0.5 px-1.5 py-0.5 rounded-md"
+                              style={{
+                                color: 'var(--apex-text-secondary)',
+                                background: 'var(--apex-bg)',
+                                border: '1px solid var(--apex-border)',
+                              }}
+                            >
+                              {order.user_comment}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </td>
 

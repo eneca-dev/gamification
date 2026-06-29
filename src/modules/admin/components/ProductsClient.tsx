@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect, useMemo, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Check, X, HelpCircle, List, LayoutGrid } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Check, X, HelpCircle, List, LayoutGrid, MessageSquare } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
 import {
@@ -50,11 +50,12 @@ interface ParsedAdminFilter {
   hasImage?: boolean
   hasEmoji?: boolean
   hasDiscount?: boolean
+  commentRequired?: boolean
 }
 
 interface FilterToken { key: string; value: string; raw: string; negated: boolean; start: number }
 
-type FilterFieldKey = 'status' | 'categories' | 'coefficient' | 'price' | 'costByn' | 'stock' | 'hasImage' | 'hasDiscount'
+type FilterFieldKey = 'status' | 'categories' | 'coefficient' | 'price' | 'costByn' | 'stock' | 'hasImage' | 'hasDiscount' | 'commentRequired'
 
 interface FieldDef {
   displayKey: string
@@ -77,6 +78,7 @@ const FILTER_KEY_MAP: Record<string, FilterFieldKey> = {
   остаток: 'stock', stock: 'stock', сток: 'stock',
   картинка: 'hasImage', фото: 'hasImage', изображение: 'hasImage',
   скидка: 'hasDiscount', discount: 'hasDiscount',
+  комментарий: 'commentRequired', comment: 'commentRequired', комм: 'commentRequired',
 }
 
 // Global regex — reset lastIndex before each use!
@@ -132,6 +134,11 @@ function buildAdminFilter(tokens: FilterToken[]): ParsedAdminFilter {
       const isFalse = ['нет', 'нету', 'no', 'false'].includes(t.value)
       if (isTrue) result.hasDiscount = !t.negated
       else if (isFalse) result.hasDiscount = t.negated
+    } else if (field === 'commentRequired') {
+      const isTrue = ['есть', 'да', 'требуется', 'true', 'yes'].includes(t.value)
+      const isFalse = ['нет', 'нету', 'не требуется', 'no', 'false'].includes(t.value)
+      if (isTrue) result.commentRequired = !t.negated
+      else if (isFalse) result.commentRequired = t.negated
     } else if (field === 'hasImage') {
       if (t.value === 'эмодзи') {
         result.hasImage = false
@@ -188,6 +195,7 @@ function applyParsedFilter(
   if (filter.hasEmoji !== undefined && !!p.emoji !== filter.hasEmoji) return false
   if (filter.hasDiscount === true && p.discount_percent == null) return false
   if (filter.hasDiscount === false && p.discount_percent != null) return false
+  if (filter.commentRequired !== undefined && p.comment_required !== filter.commentRequired) return false
   return true
 }
 
@@ -380,6 +388,19 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
     startProductTransition(async () => {
       const result = await updateProduct({ id: product.id, is_active: next })
+      if (!result.success) {
+        setProducts(prev)
+        setError(result.error)
+      }
+    })
+  }
+
+  function toggleCommentRequired(product: ShopProductWithCategory) {
+    const next = !product.comment_required
+    const prev = products
+    setProducts((items) => items.map((p) => (p.id === product.id ? { ...p, comment_required: next } : p)))
+    startProductTransition(async () => {
+      const result = await updateProduct({ id: product.id, comment_required: next })
       if (!result.success) {
         setProducts(prev)
         setError(result.error)
@@ -1068,8 +1089,13 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                             {product.category?.name ?? '—'}
                           </span>
                         </div>
-                        <h3 className="text-[13px] font-bold leading-snug" style={{ color: 'var(--text-primary)' }}>
+                        <h3 className="text-[13px] font-bold leading-snug flex items-center gap-1" style={{ color: 'var(--text-primary)' }}>
                           {product.name}
+                          {product.comment_required && (
+                            <span title="Требует комментарий при покупке" className="flex shrink-0">
+                              <MessageSquare size={11} style={{ color: 'var(--apex-primary)' }} />
+                            </span>
+                          )}
                         </h3>
                         {product.description ? (
                           <p
@@ -1196,11 +1222,12 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             <col style={{ width: '100px' }} />
             <col style={{ width: '130px' }} />
             <col style={{ width: '75px' }} />
+            <col style={{ width: '60px' }} />
             <col style={{ width: '220px' }} />
           </colgroup>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--apex-border)' }}>
-              {['', 'Название', 'Категория', 'BYN', 'Коэф.', 'Цена', 'Скидка юзера / Наценка', 'Остаток', 'Статус'].map((h, i) => (
+              {['', 'Название', 'Категория', 'BYN', 'Коэф.', 'Цена', 'Скидка юзера / Наценка', 'Остаток', 'Комм.', 'Статус'].map((h, i) => (
                 <th
                   key={i}
                   className="text-left text-[12px] font-semibold px-5 py-2.5"
@@ -1258,9 +1285,16 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
                     {/* Название */}
                     <td className="px-5 py-2.5">
-                      <span className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>
-                        {product.name}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>
+                          {product.name}
+                        </span>
+                        {product.comment_required && (
+                          <span title="Требует комментарий при покупке" className="flex shrink-0">
+                            <MessageSquare size={12} style={{ color: 'var(--apex-primary)' }} />
+                          </span>
+                        )}
+                      </div>
                       {product.description && (
                         <p
                           className={`text-[11px] mt-0.5 max-w-[250px] cursor-pointer ${expandedDescriptionId === product.id ? 'whitespace-normal' : 'truncate'}`}
@@ -1417,6 +1451,25 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                           ∞
                         </span>
                       )}
+                    </td>
+
+                    {/* Комментарий при покупке — toggle */}
+                    <td className="px-5 py-2.5">
+                      <button
+                        onClick={() => toggleCommentRequired(product)}
+                        disabled={isProductPending}
+                        title={product.comment_required ? 'Требует комментарий — нажать, чтобы отключить' : 'Комментарий не требуется — нажать, чтобы включить'}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+                        style={{
+                          background: product.comment_required ? 'var(--apex-success-bg)' : 'transparent',
+                          border: `1px solid ${product.comment_required ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
+                          color: product.comment_required ? 'var(--apex-primary)' : 'var(--apex-text-muted)',
+                          cursor: isProductPending ? 'default' : 'pointer',
+                          opacity: isProductPending ? 0.5 : 1,
+                        }}
+                      >
+                        <MessageSquare size={13} />
+                      </button>
                     </td>
 
                     {/* Статус + Действия */}
@@ -1992,6 +2045,14 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
         { label: 'Нет', insert: 'нет' },
       ],
     },
+    {
+      displayKey: 'комментарий', label: 'Комментарий', fieldKey: 'commentRequired',
+      color: 'var(--apex-success-bg)', textColor: 'var(--apex-primary)', overlayKeyColor: 'var(--apex-primary)',
+      values: [
+        { label: 'Требуется', insert: 'требуется' },
+        { label: 'Не требуется', insert: 'нет' },
+      ],
+    },
   ], [categories])
 
   type InputContext =
@@ -2041,7 +2102,6 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
       const partial = context.type === 'key' ? context.partial : ''
       return fieldDefs
         .filter(f => !partial || f.displayKey.startsWith(partial) || f.label.toLowerCase().includes(partial))
-        .slice(0, 8)
         .map(f => ({ type: 'key' as const, field: f }))
     }
 
@@ -2365,7 +2425,7 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
               blurTimerRef.current = setTimeout(() => { blurTimerRef.current = null; setShowDropdown(false) }, 150)
             }}
             onKeyDown={handleKeyDown}
-            placeholder="статус:  категория:  коэф:  цена:"
+            placeholder="статус:  категория:  коэф:  цена:  комментарий:"
             spellCheck={false}
             autoComplete="off"
             className="relative w-full bg-transparent pl-2 pr-2 py-1.5 text-[12px] outline-none placeholder:opacity-40"

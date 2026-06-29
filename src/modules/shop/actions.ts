@@ -16,6 +16,7 @@ import {
   createCategorySchema,
   updateCategorySchema,
   setCrystalRateSchema,
+  purchaseProductSchema,
 } from './types'
 import type { PurchaseResult } from './types'
 import { balanceTag } from './queries'
@@ -41,10 +42,10 @@ export async function getBalanceAction(): Promise<ActionResult<number>> {
 // --- Покупка (доступна всем авторизованным) ---
 
 export async function purchaseProduct(
-  productId: unknown
+  input: unknown
 ): Promise<{ success: true; data: PurchaseResult } | { success: false; error: string }> {
-  const parsed = productIdSchema.safeParse(productId)
-  if (!parsed.success) return { success: false, error: 'Невалидный ID товара' }
+  const parsed = purchaseProductSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: 'Невалидный запрос' }
 
   const user = await getCurrentUser()
   if (!user?.wsUserId) return { success: false, error: 'Пользователь не найден в системе' }
@@ -52,12 +53,14 @@ export async function purchaseProduct(
   const supabase = createSupabaseAdminClient()
 
   const { data, error } = await supabase.rpc('purchase_product', {
-    p_product_id: parsed.data,
+    p_product_id: parsed.data.product_id,
     p_user_id: user.wsUserId,
+    p_user_comment: parsed.data.user_comment ?? null,
   })
 
   if (error) {
     const msg = error.message
+    if (msg.includes('comment_required')) return { success: false, error: 'Необходимо указать комментарий' }
     if (msg.includes('Недостаточно')) return { success: false, error: 'Недостаточно 💎' }
     if (msg.includes('Нет в наличии')) return { success: false, error: 'Нет в наличии' }
     if (msg.includes('недоступен')) return { success: false, error: 'Товар недоступен' }

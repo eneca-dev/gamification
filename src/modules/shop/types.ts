@@ -55,6 +55,9 @@ export interface ShopProduct {
   discount_percent: number | null
   stock: number | null
   sort_order: number
+  comment_required: boolean
+  comment_label: string | null
+  comment_placeholder: string | null
   created_by: string | null
   created_at: string
   updated_at: string
@@ -76,6 +79,9 @@ export const createProductSchema = z.object({
   discount_percent: z.number().int().min(1).max(500).nullable().optional(),
   stock: z.number().int().min(0).nullable().optional(),
   sort_order: z.number().int().min(0).default(0),
+  comment_required: z.boolean().default(false),
+  comment_label: z.string().max(200).nullable().optional(),
+  comment_placeholder: z.string().max(300).nullable().optional(),
 })
 
 export const updateProductSchema = createProductSchema.partial().extend({
@@ -139,8 +145,16 @@ export interface ShopOrder {
   transaction_id: string
   refund_transaction_id: string | null
   note: string | null
+  user_comment: string | null
   created_at: string
 }
+
+export const purchaseProductSchema = z.object({
+  product_id: z.string().uuid('Невалидный ID товара'),
+  user_comment: z.string().max(1000).nullable().optional(),
+})
+
+export type PurchaseProductInput = z.infer<typeof purchaseProductSchema>
 
 export interface ShopOrderWithDetails extends ShopOrder {
   product: Pick<ShopProduct, 'name' | 'emoji' | 'image_url'>

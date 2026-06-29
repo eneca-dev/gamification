@@ -162,6 +162,7 @@ export async function getOrders(): Promise<AdminOrderRow[]> {
       status: row.status,
       coins_spent: Math.abs(transaction?.coins ?? 0),
       note: row.note,
+      user_comment: row.user_comment,
       status_changed_by: row.status_changed_by,
       status_changed_at: row.status_changed_at,
       created_at: row.created_at,
