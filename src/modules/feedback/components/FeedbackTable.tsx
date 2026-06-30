@@ -179,7 +179,7 @@ export function FeedbackTable({ items: initialItems }: FeedbackTableProps) {
         />
       )}
 
-      <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}>
+      <div data-onboarding="admin-feedback-table" className="rounded-2xl overflow-hidden" style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}>
         {/* Toolbar */}
         {someSelected && (
           <div
@@ -209,6 +209,7 @@ export function FeedbackTable({ items: initialItems }: FeedbackTableProps) {
 
         {/* Header */}
         <div
+          data-onboarding="admin-feedback-header-row"
           className="grid gap-4 px-5 py-3 text-xs font-semibold"
           style={{
             gridTemplateColumns: '32px 100px 1fr 200px 140px 100px',
@@ -228,9 +229,10 @@ export function FeedbackTable({ items: initialItems }: FeedbackTableProps) {
         </div>
 
         {/* Rows */}
-        {items.map((item) => (
+        {items.map((item, rowIndex) => (
           <div
             key={item.id}
+            data-onboarding={rowIndex === 0 ? 'admin-feedback-row' : undefined}
             className="grid gap-4 items-start px-5 py-4"
             style={{
               gridTemplateColumns: '32px 100px 1fr 200px 140px 100px',

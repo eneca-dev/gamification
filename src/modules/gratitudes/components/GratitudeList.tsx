@@ -84,7 +84,7 @@ export function GratitudeList({ items, currentUserEmail }: GratitudeListProps) {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((item) => {
+          {filtered.map((item, index) => {
             const isReceived = item.recipient_email === currentUserEmail
             return (
               <div

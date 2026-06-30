@@ -56,6 +56,7 @@
 - Стилизация по типу аларма (alarm_type), не по severity: `label_change_soon` — бейдж L3 (teal), `team_label_change_soon` — бейдж L2 (orange) с именем исполнителя
 - Двухстрочная раскладка: первая строка — бейдж уровня + действие + имя + проценты бюджета/чекпоинта; вторая — название задачи WS + кнопка resolve/unresolve
 - На дашборде сворачивание при > 3 алармов
+- Виджет на дашборде продублирован под брейкпоинты (3xl / меньше), оба обёрнуты `data-onboarding="alarms-widget"` — шаг онбординга `dashboard-alarms` в туре дашборда
 - Resolved-алармы: серый фон, opacity 0.55, line-through на тексте, пиллы серые
 - Optimistic update при resolve/unresolve с per-item pending state
 - Страница `/alarms`: шапка с Bell + «Все напоминания за сегодня» + счётчик resolved/total, показывает только активные алармы (getActiveAlarms)

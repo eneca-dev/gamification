@@ -52,7 +52,7 @@ export function DayOffContent({ initialRequests, bookedDates }: DayOffContentPro
         />
       </div>
 
-      <div className="animate-fade-in-up stagger-2">
+      <div className="animate-fade-in-up stagger-2" data-onboarding="day-off-history">
         <DayOffRequestList requests={requests} />
       </div>
 

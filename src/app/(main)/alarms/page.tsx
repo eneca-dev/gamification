@@ -46,7 +46,7 @@ export default async function AlarmsPage() {
                 Все напоминания за сегодня
               </h1>
             </div>
-            <span className="text-[12px] font-semibold" style={{ color: "var(--apex-text-muted)" }}>
+            <span className="text-[12px] font-semibold" style={{ color: "var(--apex-text-muted)" }} data-onboarding="alarms-counter">
               {alarms.filter((a) => a.is_resolved).length}/{alarms.length}
             </span>
           </div>

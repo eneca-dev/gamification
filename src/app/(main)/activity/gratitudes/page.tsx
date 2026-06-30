@@ -10,9 +10,10 @@ export default async function AllGratitudesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="animate-fade-in-up">
+      <div className="animate-fade-in-up" data-onboarding="activity-gratitudes-header">
         <Link
           href="/activity"
+          data-onboarding="activity-gratitudes-back"
           className="inline-flex items-center gap-1.5 text-[13px] font-bold mb-3 transition-opacity hover:opacity-70"
           style={{ color: 'var(--text-muted)' }}
         >

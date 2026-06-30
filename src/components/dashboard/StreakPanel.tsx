@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { Trophy, CheckCircle2, Info, Shield } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
+import { PLUGIN_NAMES } from "@/config/plugins";
 import { sourceColors } from "@/lib/data";
 import type { DailyTask } from "@/lib/data";
 import type { CalendarDayStatus, CalendarDay, RedReason, StreakMilestone, StreakPanelData } from "@/modules/streak-panel";
@@ -441,13 +442,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
     "Бюджет задачи пересёк очередной 20%-чекпоинт (включая 120 / 140 / …), но % готовности не был изменён",
     "Время внесено в задачу со статусом отличным от «В работе» (План, Пауза, Готово и т.п.)",
   ];
-  const automationPlugins = [
-    "Auditor", "ClashesManager", "LinksManager", "ShareModel",
-    "SDT", "ParamOperator", "ApartmentLayouts", "FasciaCappings",
-    "SpacesManager", "ResaveModels", "AutoOpenings", "Finishing",
-    "SharedCoordinates", "ProfiLay", "LookupTables", "ViewCloner",
-    "LintelsTransfer", "SurfaceGen", "QuickMount", "SchedulesTable",
-  ];
+  const automationPlugins = PLUGIN_NAMES;
 
   const workingDays = calendarDays.filter((d) => d.status === "green" || d.status === "red");
   const greenPct = workingDays.length > 0

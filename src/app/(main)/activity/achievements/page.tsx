@@ -11,16 +11,17 @@ export default async function AllAchievementsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="animate-fade-in-up">
+      <div className="animate-fade-in-up" data-onboarding="activity-achievements-header">
         <Link
           href="/activity"
           className="inline-flex items-center gap-1.5 text-[13px] font-bold mb-3 transition-opacity hover:opacity-70"
           style={{ color: 'var(--text-muted)' }}
+          data-onboarding="activity-achievements-back"
         >
           <ArrowLeft size={14} />
           Лента компании
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" data-onboarding="activity-achievements-title">
           <Trophy size={20} style={{ color: 'var(--orange-500)' }} />
           <h1 className="text-2xl font-extrabold" style={{ color: 'var(--text-primary)' }}>
             Все достижения
@@ -31,7 +32,9 @@ export default async function AllAchievementsPage() {
         </p>
       </div>
 
-      <AwardsFilters awards={awards} />
+      <div data-onboarding="activity-achievements-feed">
+        <AwardsFilters awards={awards} />
+      </div>
     </div>
   )
 }

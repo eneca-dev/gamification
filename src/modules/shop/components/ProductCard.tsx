@@ -98,7 +98,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
             Осталось: {product.stock}
           </span>
         )}
-        {product.discount_percent !== null && (
+        {!product.is_coming_soon && product.discount_percent !== null && (
           <span
             className="absolute top-3 right-3 text-[12px] font-black px-2.5 py-1 rounded-lg"
             style={{ background: 'var(--apex-gold)', color: 'white' }}
@@ -147,7 +147,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
 
 
         <div className="mt-auto pt-2">
-        {product.discount_percent !== null && (
+        {!product.is_coming_soon && product.discount_percent !== null && (
           <div className="flex items-center justify-center gap-1 mb-1.5">
             <span
               className="text-[12px] line-through flex items-center gap-0.5"

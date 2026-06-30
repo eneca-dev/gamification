@@ -127,6 +127,7 @@ export function DayOffForm({ bookedDates, requestType, onRequestTypeChange, onSu
       <div
         className="flex rounded-xl p-1 gap-1"
         style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
+        data-onboarding="day-off-type-switch"
       >
         {(['day_off', 'business_trip'] as DayOffRequestType[]).map((type) => (
           <button
@@ -244,6 +245,7 @@ export function DayOffForm({ bookedDates, requestType, onRequestTypeChange, onSu
       <button
         type="submit"
         disabled={isDisabled}
+        data-onboarding="day-off-submit"
         className="w-full py-2.5 rounded-xl text-[13px] font-bold transition-all"
         style={{
           background: isDisabled ? 'var(--apex-disabled-bg)' : 'var(--apex-primary)',
