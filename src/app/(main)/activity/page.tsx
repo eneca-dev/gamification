@@ -236,6 +236,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
           </div>
           <Link
             href="/activity/achievements"
+            data-onboarding="activity-all-achievements-link"
             className="text-[12px] font-semibold transition-opacity hover:opacity-80"
             style={{ color: 'var(--apex-primary)' }}
           >
@@ -272,6 +273,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
           </div>
           <Link
             href="/activity/gratitudes"
+            data-onboarding="activity-all-gratitudes-link"
             className="text-[12px] font-semibold transition-opacity hover:opacity-80"
             style={{ color: 'var(--apex-primary)' }}
           >

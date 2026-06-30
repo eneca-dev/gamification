@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Play, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 import { TOURS, useOnboardingContext } from './OnboardingProvider'
 import { resetAllTours, resetTour } from '../storage'
-import { getPageSlugWithFallback } from '../page-slug'
+import { getPageSlugWithFallback, getPathForSlug } from '../page-slug'
 
 interface OnboardingDevPanelProps {
   userId: string
@@ -20,16 +20,9 @@ interface OnboardingDevPanelProps {
 const SLUG_LABELS: Record<string, string> = {
   dashboard: 'Главная',
   achievements: 'Достижения',
-  'achievements-all': 'Достижения (все)',
   store: 'Магазин',
   activity: 'Активность',
-  'activity-dept': 'Активность: отдел',
-  'activity-team': 'Активность: команда',
-  'activity-achievements': 'Активность: достижения',
-  'activity-gratitudes': 'Активность: благодарности',
-  gratitudes: 'Благодарности',
   transactions: 'Транзакции',
-  alarms: 'Напоминания',
   help: 'Помощь',
   admin: 'Админ',
   'admin-users': 'Пользователи (адм)',
@@ -39,6 +32,7 @@ const SLUG_LABELS: Record<string, string> = {
   'admin-calendar': 'Календарь (адм)',
   'admin-achievements': 'Достижения (адм)',
   'admin-help': 'Справка (адм)',
+  'admin-help-edit': 'Редактор справки (адм)',
   'admin-day-off': 'Отгулы (адм)',
   'admin-economy': 'Экономика (адм)',
   'admin-feedback': 'Обратная связь (адм)',
@@ -51,11 +45,29 @@ export function OnboardingDevPanel({ userId }: OnboardingDevPanelProps) {
   const [expandedSlug, setExpandedSlug] = useState<string | null>(null)
   const { startTour } = useOnboardingContext()
   const pathname = usePathname()
+  const router = useRouter()
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const currentSlug = getPageSlugWithFallback(pathname)
 
+  // Клик вне панели — закрыть меню выбора
+  useEffect(() => {
+    if (!open) return
+    function handleOutside(e: MouseEvent) {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [open])
+
   function handleStart(slug: string, stepIndex = 0) {
     resetTour(userId, slug)
+    // Не на нужной странице — сначала переходим на неё.
+    // Spotlight поллит target до 3с, поэтому тур стартует сразу.
+    if (slug !== currentSlug) {
+      const path = getPathForSlug(slug)
+      if (path) router.push(path)
+    }
     startTour(slug, stepIndex)
     setOpen(false)
   }
@@ -65,7 +77,7 @@ export function OnboardingDevPanel({ userId }: OnboardingDevPanelProps) {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col items-end gap-2">
+    <div ref={containerRef} className="fixed bottom-4 right-4 z-[9999] flex flex-col items-end gap-2">
       {open && (
         <div
           className="rounded-xl p-3 w-56 flex flex-col gap-1"
@@ -79,6 +91,7 @@ export function OnboardingDevPanel({ userId }: OnboardingDevPanelProps) {
             Туры онбординга
           </div>
 
+          <div className="flex flex-col gap-1 overflow-y-auto max-h-[60vh] -mx-1 px-1">
           {TOURS.map(({ pageSlug: slug, steps }) => {
             const label = SLUG_LABELS[slug] ?? slug
             const isExpanded = expandedSlug === slug
@@ -125,6 +138,7 @@ export function OnboardingDevPanel({ userId }: OnboardingDevPanelProps) {
               </div>
             )
           })}
+          </div>
 
           <div className="border-t mt-1 pt-2" style={{ borderColor: 'var(--apex-border)' }}>
             <button

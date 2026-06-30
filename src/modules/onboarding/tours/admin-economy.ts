@@ -16,7 +16,7 @@ export const adminEconomyTour: OnboardingTour = {
       target: 'admin-economy-filters',
       title: 'Фильтры и период',
       description:
-        'Выберите период (7 дней — всё время или произвольный диапазон). Тоггл «Только бета-тестеры» ограничивает выборку, а «Топы» переключают группировку: сотрудники, команды или отделы.',
+        'Выберите период (7 дней — всё время или произвольный диапазон). «Топы» переключают группировку: сотрудники, команды или отделы.',
       placement: 'bottom',
     },
     {
@@ -24,7 +24,7 @@ export const adminEconomyTour: OnboardingTour = {
       target: 'admin-economy-rate',
       title: 'Курс кристаллов',
       description:
-        'Текущий курс кристаллов 💎 к BYN и история его изменений. По нему пересчитываются все денежные суммы в сводке и каналах ниже.',
+        'Текущий курс кристаллов 💎 к BYN и история его изменений. По нему пересчитываются все денежные суммы в сводке и каналах ниже с учетом курса в разный период.',
       placement: 'bottom',
     },
     {
@@ -50,6 +50,23 @@ export const adminEconomyTour: OnboardingTour = {
       description:
         'Нижние 10% сотрудников по балансу кристаллов 💎. Фильтр делит выборку на проектировщиков и непроектировщиков. Ниже отдельным блоком — самые богатые (топ 10%).',
       placement: 'top',
+    },
+    {
+      id: 'admin-economy-dept-groups',
+      target: 'admin-economy-dept-groups',
+      title: 'Группировка отделов',
+      description:
+        'Распределите отделы между «Проектировщиками» и «Непроектировщиками» — перетащите карточку отдела или нажмите кнопку перемещения. Эта группировка управляет фильтром «проектировщики / непроектировщики» в блоках «Группа риска» и «Самые богатые».',
+      placement: 'top',
+      onBeforeShow: () => {
+        // Развернуть аккордеон группировки, если он свёрнут
+        const section = document.querySelector('[data-onboarding="admin-economy-dept-groups"]')
+        if (section && !section.querySelector('[data-onboarding-open]')) {
+          section
+            .querySelector<HTMLElement>('[data-onboarding-trigger="admin-economy-dept-groups-toggle"]')
+            ?.click()
+        }
+      },
     },
     {
       id: 'admin-economy-tops',

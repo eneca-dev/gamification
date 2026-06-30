@@ -12,8 +12,6 @@ import { dashboardTour } from '../tours/dashboard'
 import { achievementsTour } from '../tours/achievements'
 import { storeTour } from '../tours/store'
 import { activityTour } from '../tours/activity'
-import { activityDeptTour } from '../tours/activity-dept'
-import { activityTeamTour } from '../tours/activity-team'
 import { adminTour } from '../tours/admin'
 import { adminUsersTour } from '../tours/admin-users'
 import { adminProductsTour } from '../tours/admin-products'
@@ -23,29 +21,24 @@ import { adminCalendarTour } from '../tours/admin-calendar'
 import { adminAchievementsTour } from '../tours/admin-achievements'
 // [LOTTERY HIDDEN] import { adminLotteryTour } from '../tours/admin-lottery'
 import { adminHelpTour } from '../tours/admin-help'
+import { adminHelpEditTour } from '../tours/admin-help-edit'
 import { adminDayOffTour } from '../tours/admin-day-off'
 import { adminEconomyTour } from '../tours/admin-economy'
 import { adminFeedbackTour } from '../tours/admin-feedback'
 import { adminChatbotTour } from '../tours/admin-chatbot'
 import { adminShieldsTour } from '../tours/admin-shields'
 import { helpTour } from '../tours/help'
-import { achievementsAllTour } from '../tours/achievements-all'
-import { activityAchievementsTour } from '../tours/activity-achievements'
-import { activityGratitudesTour } from '../tours/activity-gratitudes'
-import { gratitudesTour } from '../tours/gratitudes'
 import { transactionsTour } from '../tours/transactions'
-import { alarmsTour } from '../tours/alarms'
 import type { OnboardingStep, OnboardingTour } from '../types'
 
 export const TOURS: OnboardingTour[] = [
-  dashboardTour, achievementsTour, achievementsAllTour,
+  dashboardTour, achievementsTour,
   storeTour,
-  activityTour, activityDeptTour, activityTeamTour,
-  activityAchievementsTour, activityGratitudesTour,
-  gratitudesTour, transactionsTour, alarmsTour,
+  activityTour,
+  transactionsTour,
   adminTour, adminUsersTour, adminProductsTour, adminOrdersTour,
   adminEventsTour, adminCalendarTour, adminAchievementsTour, /*[LOTTERY HIDDEN] adminLotteryTour,*/
-  adminHelpTour, adminDayOffTour, adminEconomyTour, adminFeedbackTour,
+  adminHelpTour, adminHelpEditTour, adminDayOffTour, adminEconomyTour, adminFeedbackTour,
   adminChatbotTour, adminShieldsTour,
   helpTour,
 ]

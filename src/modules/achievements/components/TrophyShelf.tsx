@@ -164,6 +164,7 @@ export function TrophyShelf({ awards }: TrophyShelfProps) {
           </div>
           <Link
             href="/achievements/all"
+            data-onboarding="achievements-all-link"
             className="text-[12px] font-semibold transition-opacity hover:opacity-80"
             style={{ color: 'var(--apex-primary)' }}
           >

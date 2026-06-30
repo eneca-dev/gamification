@@ -47,7 +47,7 @@ export function GratitudeList({ items, currentUserEmail }: GratitudeListProps) {
   return (
     <div>
       {/* Табы */}
-      <div className="flex gap-1 mb-5" data-onboarding="gratitudes-tabs">
+      <div className="flex gap-1 mb-5">
         {([
           ['all', `Все (${items.length})`],
           ['received', `Полученные (${receivedCount})`],
@@ -83,13 +83,12 @@ export function GratitudeList({ items, currentUserEmail }: GratitudeListProps) {
           </div>
         </div>
       ) : (
-        <div className="space-y-3" data-onboarding="gratitudes-list">
+        <div className="space-y-3">
           {filtered.map((item, index) => {
             const isReceived = item.recipient_email === currentUserEmail
             return (
               <div
                 key={item.id}
-                data-onboarding={index === 0 ? 'gratitudes-item' : undefined}
                 className="rounded-2xl p-4"
                 style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
               >

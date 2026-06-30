@@ -22,7 +22,7 @@ export function FeedTabSwitcher({ hasDepartment, hasTeam }: FeedTabSwitcherProps
   const current = (searchParams.get('feed') ?? 'company') as FeedTab
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="flex items-center gap-1.5 flex-wrap" data-onboarding="feed-tabs">
       {TABS.map(({ id, label, Icon }) => {
         const disabled = (id === 'dept' && !hasDepartment) || (id === 'team' && !hasTeam)
         const isActive = current === id

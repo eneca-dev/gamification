@@ -44,8 +44,9 @@ Sidebar рендерит кнопку «Запустить онбординг» 
 ## Page slug resolver
 
 `src/modules/onboarding/page-slug.ts` — единый источник правды для `PAGE_SLUG_MAP`:
-- `getPageSlug(pathname)` — точное совпадение, используется автозапуском
-- `getPageSlugWithFallback(pathname)` — точное + префиксное, используется Sidebar-кнопкой. Более длинные пути проверяются первыми (`/admin/users` раньше `/admin`)
+- `getPageSlug(pathname)` — точное совпадение + `PAGE_SLUG_PATTERNS` (regex для динамических маршрутов), используется автозапуском
+- `getPageSlugWithFallback(pathname)` — точное + паттерны + префиксное, используется Sidebar-кнопкой. Более длинные пути проверяются первыми (`/admin/users` раньше `/admin`)
+- `PAGE_SLUG_PATTERNS` — массив `{ pattern, slug }` для маршрутов без точного совпадения (например, `/admin/help/<slug>/edit` → `admin-help-edit`). Проверяется после точного совпадения и до префиксного
 
 ## Туры
 
@@ -53,29 +54,23 @@ Sidebar рендерит кнопку «Запустить онбординг» 
 
 ### Пользовательские
 - `dashboard` — 15 шагов (welcome, баланс, календарь, стрик, мастер планирования, напоминания — `alarms-widget`, благодарности, операции, лидерборд, контест, AI-ассистент — глобальная кнопка `chat-assistant`, обратная связь — глобальная кнопка `feedback-button`, запрос выходного — через `onBeforeShow` переходит на `/day-off`, подсвечивает `day-off-type-switch` + пункт сайдбара `sidebar-day-off` (`extraTargets`), справочник начислений — через `onBeforeShow` переходит на `/help/coins-reference` и подсвечивает `help-article`, финал). Отдельного тура `/day-off` нет — раздел объясняется здесь
-- `achievements` — 4 шага (grid, ranking block, gratitude block, trophy shelf)
-- `achievements-all` — 5 шагов (welcome, шапка, первый месяц, карточка достижения, строка дней/награды). Каталог сгруппирован по месяцам; element-шаги пропускаются при пустой истории
+- `achievements` — 5 шагов (grid, ranking block, gratitude block, trophy shelf, ссылка «Все достижения» — `achievements-all-link`). Отдельного тура для `/achievements/all` нет
 - `store` — 3 шага (каталог, карточка, кнопка «Мои заказы» — `store-my-orders`). Шаг лотереи закомментирован
-- `activity` — 1 шаг (лента)
-- `activity-dept` — тур ленты отдела (`/activity?feed=dept`, slug определяется по search-параметру)
-- `activity-team` — тур ленты команды (`/activity?feed=team`)
-- `activity-achievements` — 4 шага (welcome, заголовок, лента достижений, ссылка назад). Атрибуты на page-level, без правки общего `AwardsFilters`
-- `activity-gratitudes` — 6 шагов (welcome, шапка, фильтры, список, элемент, ссылка назад)
-- `gratitudes` — 5 шагов (welcome, отправка/квота, табы, список, элемент)
+- `activity` — 4 шага (welcome, вкладки компания/отдел/команда — `feed-tabs` в `FeedTabSwitcher`, ссылка «Все достижения» — `activity-all-achievements-link`, ссылка «Все благодарности» — `activity-all-gratitudes-link`). Отдельных туров для вкладок отдела/команды и страниц `/activity/achievements`, `/activity/gratitudes` нет
 - `transactions` — 5 шагов (welcome, итоговый баланс, фильтры, список, первая операция)
-- `alarms` — 5 шагов (welcome, шапка, список, элемент, ссылка назад). Алармы — просрочки из Worksection; element-шаги пропускаются при пустом списке
 - `help` — тур страницы справки
 
 ### Админ-панель
 - `admin` — 1 шаг (навигация по разделам)
 - `admin-users` — 2 шага (таблица сотрудников, управление правами)
-- `admin-products` — 2 шага (категории, inline-редактирование товаров)
+- `admin-products` — 4 шага (курс кристаллов — `admin-rate-current` + `admin-rate-new` (`extraTargets`), без блока статистики, категории — `onBeforeShow` разворачивает аккордеон через `[data-onboarding-trigger="admin-categories-toggle"]`, инлайн-фильтр — `admin-products-filter`, товары и inline-редактирование)
 - `admin-orders` — 1 шаг (статусы, отмена с возвратом)
 - `admin-events` — 2 шага (типы событий, пороги достижений)
 - `admin-calendar` — 1 шаг (клик-переключение дней)
 - `admin-achievements` — 1 шаг (мониторинг прогресса)
 - `admin-help` — 1 шаг (редактирование статей справки)
-- `admin-day-off` — 5 шагов (welcome, список заявок, заявка, approve/reject, скриншот). Шаги действий/скриншота пропускаются, если элемента нет на строке
+- `admin-help-edit` — 5 шагов (редактор статьи: формат Markdown + подсказка про ИИ, переменные, кнопка предпросмотра, флажок «Опубликована», модалка про «Обновить чанки» для чат-бота — кнопка появляется только после сохранения, поэтому шаг модальный `target=null`). Динамический маршрут `/admin/help/<slug>/edit` (и `/admin/help/new/edit`) — slug определяется через `PAGE_SLUG_PATTERNS` в `page-slug.ts`, а не точным совпадением. Программной навигации нет (нет канонического URL), запуск из dev-панели работает, когда уже открыт редактор
+- `admin-day-off` — 1 шаг (welcome: модерация заявок, авто-одобрение). Инструкция по проверке заявок вынесена на саму страницу (AdminDayOffInstructions)
 - `admin-economy` — 7 шагов (welcome, фильтр периода, курс кристалла, сводка KPI, расходы, группа риска, топы)
 - `admin-feedback` — 5 шагов (welcome, шапка, таблица, строка-шапка с выбором, строка)
 - `admin-chatbot` — 4 шага (welcome, реэмбеддинг, список статей, статья со статусом и счётчиком чанков)

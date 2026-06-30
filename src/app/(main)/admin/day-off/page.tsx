@@ -4,6 +4,7 @@ import { checkIsAdmin } from '@/modules/admin'
 import { getAllDayOffRequestsAdmin, getScreenshotSignedUrl } from '@/modules/day-off'
 import type { DayOffRequestAdmin } from '@/modules/day-off'
 import { AdminDayOffList } from '@/modules/day-off/components/AdminDayOffList'
+import { AdminDayOffInstructions } from '@/modules/day-off/components/AdminDayOffInstructions'
 
 export default async function AdminDayOffPage() {
   const isAdmin = await checkIsAdmin()
@@ -11,14 +12,12 @@ export default async function AdminDayOffPage() {
 
   const requests = await getAllDayOffRequestsAdmin()
 
-  // Signed URLs генерируем только для активных (pending) заявок —
-  // завершённые загружаются лениво при раскрытии раздела.
-  const activeWithScreenshot = requests.filter(
-    (r) => r.status === 'pending' && r.screenshot_url
-  )
+  // Signed URLs генерируем для всех заявок со скриншотом —
+  // и активных, и завершённых.
+  const withScreenshot = requests.filter((r) => r.screenshot_url)
 
   const urlEntries = await Promise.all(
-    activeWithScreenshot.map(async (r) => {
+    withScreenshot.map(async (r) => {
       const url = await getScreenshotSignedUrl(r.screenshot_url!)
       return [r.id, url] as [string, string | null]
     })
@@ -38,6 +37,7 @@ export default async function AdminDayOffPage() {
           Геймификационные выходные сотрудников
         </p>
       </div>
+      <AdminDayOffInstructions />
       <AdminDayOffList requests={requests} screenshotUrls={screenshotUrls} />
     </div>
   )

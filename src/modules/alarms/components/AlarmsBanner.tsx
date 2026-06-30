@@ -160,7 +160,7 @@ export function AlarmsBanner({ alarms: initialAlarms, showAll = false }: AlarmsB
         </>
       )}
 
-      <div className={`space-y-2 ${showAll ? '' : 'flex-1 flex flex-col mt-1'}`} data-onboarding="alarms-list">
+      <div className={`space-y-2 ${showAll ? '' : 'flex-1 flex flex-col mt-1'}`}>
       {visible.map((alarm, index) => {
         const isResolved = resolvedIds.has(alarm.id)
         const config = ALARM_TYPE_CONFIG[alarm.alarm_type] ?? DEFAULT_TYPE_CONFIG
@@ -172,7 +172,6 @@ export function AlarmsBanner({ alarms: initialAlarms, showAll = false }: AlarmsB
         return (
           <div
             key={alarm.id}
-            data-onboarding={index === 0 ? 'alarms-item' : undefined}
             className={`flex flex-col gap-1 px-2.5 rounded-lg transition-all duration-300 ${showAll ? 'py-1.5' : 'py-2.5'}`}
             style={{
               background: isResolved ? RESOLVED_STYLE.bg : config.rowBg,

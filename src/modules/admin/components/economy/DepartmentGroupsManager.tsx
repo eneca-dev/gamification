@@ -175,9 +175,10 @@ export function DepartmentGroupsManager({
   }
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-3" data-onboarding="admin-economy-dept-groups">
       <button
         onClick={() => setIsOpen((v) => !v)}
+        data-onboarding-trigger="admin-economy-dept-groups-toggle"
         className="flex items-center justify-between w-full text-left px-3 py-2.5 rounded-xl transition-colors"
         style={{ background: 'transparent' }}
         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--apex-surface)' }}
@@ -204,6 +205,7 @@ export function DepartmentGroupsManager({
 
       {isOpen && (
         <div
+          data-onboarding-open
           className={`rounded-2xl p-4 transition-opacity ${isPending ? 'opacity-80' : ''}`}
           style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
         >
