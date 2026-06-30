@@ -225,21 +225,23 @@ export function SendGratitudeModal({
                   />
                   {showDropdown && filteredRecipients.length > 0 && (
                     <div
-                      className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden max-h-48 overflow-y-auto"
+                      className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden"
                       style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', boxShadow: '0 8px 24px rgba(0,0,0,0.08)', zIndex: 60 }}
                     >
-                      {filteredRecipients.map((r) => (
-                        <button
-                          key={r.id}
-                          onClick={() => { setRecipientId(r.id); setSearchQuery(''); setShowDropdown(false) }}
-                          className="w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors hover:bg-[var(--surface)]"
-                        >
-                          <span className="text-[12px] font-semibold" style={{ color: 'var(--text-primary)' }}>{r.name}</span>
-                          {r.department && (
-                            <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>{r.department}</span>
-                          )}
-                        </button>
-                      ))}
+                      <div className="max-h-48 overflow-y-auto">
+                        {filteredRecipients.map((r) => (
+                          <button
+                            key={r.id}
+                            onClick={() => { setRecipientId(r.id); setSearchQuery(''); setShowDropdown(false) }}
+                            className="w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors hover:bg-[var(--surface)]"
+                          >
+                            <span className="text-[12px] font-semibold" style={{ color: 'var(--text-primary)' }}>{r.name}</span>
+                            {r.department && (
+                              <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>{r.department}</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -286,7 +288,7 @@ export function SendGratitudeModal({
               />
               <div className="flex items-center justify-between mt-0.5">
                 <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                  Win + . (Win + Ю) — смайлики
+                  Win + . (Win + Ю) или ⌃ ⌘ Space (Mac) — смайлики
                 </span>
                 <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                   {message.length}/500
@@ -361,7 +363,7 @@ export function SendGratitudeModal({
                   {isPending ? 'Отправляется...' : (
                     <>
                       <Send size={13} />
-                      <span className="inline-flex items-center gap-1">Отправить подарок за {coinsAmount} <CoinIcon size={12} /></span>
+                      <span className="inline-flex items-center gap-1">Отправить подарок в {coinsAmount} <CoinIcon size={12} /></span>
                     </>
                   )}
                 </button>

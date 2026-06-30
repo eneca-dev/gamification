@@ -12,8 +12,6 @@ import { dashboardTour } from '../tours/dashboard'
 import { achievementsTour } from '../tours/achievements'
 import { storeTour } from '../tours/store'
 import { activityTour } from '../tours/activity'
-import { activityDeptTour } from '../tours/activity-dept'
-import { activityTeamTour } from '../tours/activity-team'
 import { adminTour } from '../tours/admin'
 import { adminUsersTour } from '../tours/admin-users'
 import { adminProductsTour } from '../tours/admin-products'
@@ -23,20 +21,30 @@ import { adminCalendarTour } from '../tours/admin-calendar'
 import { adminAchievementsTour } from '../tours/admin-achievements'
 // [LOTTERY HIDDEN] import { adminLotteryTour } from '../tours/admin-lottery'
 import { adminHelpTour } from '../tours/admin-help'
+import { adminHelpEditTour } from '../tours/admin-help-edit'
+import { adminDayOffTour } from '../tours/admin-day-off'
+import { adminEconomyTour } from '../tours/admin-economy'
+import { adminFeedbackTour } from '../tours/admin-feedback'
+import { adminChatbotTour } from '../tours/admin-chatbot'
+import { adminShieldsTour } from '../tours/admin-shields'
 import { helpTour } from '../tours/help'
-import { masterPlannerTour } from '../tours/master-planner'
+import { transactionsTour } from '../tours/transactions'
 import type { OnboardingStep, OnboardingTour } from '../types'
 
-const TOURS: OnboardingTour[] = [
-  dashboardTour, achievementsTour, storeTour,
-  activityTour, activityDeptTour, activityTeamTour,
+export const TOURS: OnboardingTour[] = [
+  dashboardTour, achievementsTour,
+  storeTour,
+  activityTour,
+  transactionsTour,
   adminTour, adminUsersTour, adminProductsTour, adminOrdersTour,
   adminEventsTour, adminCalendarTour, adminAchievementsTour, /*[LOTTERY HIDDEN] adminLotteryTour,*/
-  adminHelpTour, helpTour, masterPlannerTour,
+  adminHelpTour, adminHelpEditTour, adminDayOffTour, adminEconomyTour, adminFeedbackTour,
+  adminChatbotTour, adminShieldsTour,
+  helpTour,
 ]
 
 interface OnboardingContextValue {
-  startTour: (pageSlug: string) => void
+  startTour: (pageSlug: string, startStepIndex?: number) => void
 }
 
 const OnboardingContext = createContext<OnboardingContextValue>({ startTour: () => {} })
@@ -137,8 +145,16 @@ export function OnboardingProvider({ userId, children }: OnboardingProviderProps
     } else if (param.startsWith('reset:')) {
       resetTour(userId, param.slice(6))
     } else if (param.startsWith('start:')) {
-      const tour = TOURS.find((t) => t.pageSlug === param.slice(6))
-      if (tour) { setActiveTour(tour); setCurrentStepIndex(0) }
+      // Формат: start:slug или start:slug:stepIndex (индекс с 0)
+      const [slug, stepStr] = param.slice(6).split(':')
+      const tour = TOURS.find((t) => t.pageSlug === slug)
+      if (tour) {
+        const index = stepStr
+          ? Math.min(Math.max(0, Number.parseInt(stepStr, 10) || 0), tour.steps.length - 1)
+          : 0
+        setActiveTour(tour)
+        setCurrentStepIndex(index)
+      }
     }
   }, [pathname, userId])
 
@@ -163,13 +179,14 @@ export function OnboardingProvider({ userId, children }: OnboardingProviderProps
     setCurrentStepIndex(0)
   }, [])
 
-  const startTour = useCallback((pageSlug: string) => {
+  const startTour = useCallback((pageSlug: string, startStepIndex = 0) => {
     const tour = TOURS.find((t) => t.pageSlug === pageSlug)
     if (!tour) return
+    const index = Math.min(Math.max(0, startStepIndex), tour.steps.length - 1)
     markTourSeen(userId, pageSlug)
     markTourSeenInDb(userId, pageSlug)
     setActiveTour(tour)
-    setCurrentStepIndex(0)
+    setCurrentStepIndex(index)
   }, [userId])
 
   const currentStep: OnboardingStep | null = activeTour?.steps[currentStepIndex] ?? null

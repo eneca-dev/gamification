@@ -249,6 +249,7 @@ export function HelpEditor({ article, isNew, variables, defaultFolder }: HelpEdi
             </button>
           )}
           <button
+            data-onboarding="admin-help-edit-preview"
             onClick={() => setShowPreview(!showPreview)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors"
             style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
@@ -358,7 +359,7 @@ export function HelpEditor({ article, isNew, variables, defaultFolder }: HelpEdi
           </select>
         </div>
         <div className="flex items-end gap-5 pb-1">
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label data-onboarding="admin-help-edit-published" className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={isPublished}
@@ -374,9 +375,9 @@ export function HelpEditor({ article, isNew, variables, defaultFolder }: HelpEdi
 
       {/* Подсказки */}
       <div className="space-y-1">
-        <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
+        <p data-onboarding="admin-help-edit-variables" className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
           В тексте можно использовать переменные — значения из базы данных, которые подставляются автоматически
-          (количество монет, пороги, цены). Чтобы вставить переменную, поставьте курсор в нужное место
+          (количество кристаллов, пороги, цены). Чтобы вставить переменную, поставьте курсор в нужное место
           и нажмите правую кнопку мыши в поле редактора.
         </p>
         <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
@@ -388,7 +389,7 @@ export function HelpEditor({ article, isNew, variables, defaultFolder }: HelpEdi
       </div>
 
       {/* Editor / Preview */}
-      <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+      <div data-onboarding="admin-help-edit-content" className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
         {showPreview ? (
           <div className="p-6 help-content" style={{ background: 'var(--surface-elevated)' }}>
             <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>

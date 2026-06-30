@@ -16,9 +16,10 @@ interface KpiCardProps {
   accent: string
   bg: string
   rate: number
+  hint?: string
 }
 
-function KpiCard({ label, value, icon: Icon, accent, bg, rate }: KpiCardProps) {
+function KpiCard({ label, value, icon: Icon, accent, bg, rate, hint }: KpiCardProps) {
   return (
     <div
       className="rounded-2xl p-5 flex flex-col gap-2"
@@ -44,6 +45,11 @@ function KpiCard({ label, value, icon: Icon, accent, bg, rate }: KpiCardProps) {
       <span style={{ color: 'var(--apex-text-muted)' }}>
         <CoinStatic amount={value} size="sm" />
       </span>
+      {hint && (
+        <span className="text-[11px] leading-tight" style={{ color: 'var(--apex-text-muted)' }}>
+          {hint}
+        </span>
+      )}
     </div>
   )
 }
@@ -55,7 +61,7 @@ export function KpiSummary({ overview, rate }: KpiSummaryProps) {
       : 0
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-3" data-onboarding="admin-economy-summary">
       <h2 className="text-[14px] font-bold" style={{ color: 'var(--apex-text)' }}>
         Сводка
       </h2>
@@ -76,6 +82,7 @@ export function KpiSummary({ overview, rate }: KpiSummaryProps) {
           accent="var(--apex-primary)"
           bg="var(--apex-success-bg)"
           rate={rate}
+          hint="С учётом отзывов"
         />
         <KpiCard
           label="Отозвано фактически"

@@ -82,6 +82,7 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
             </h1>
             <div className="flex items-center gap-3">
               <span
+                data-onboarding="transactions-total"
                 className="text-[12px] font-bold px-2 py-0.5 rounded-full"
                 style={{
                   background: totalSum >= 0 ? "var(--apex-success-bg)" : "var(--apex-error-bg)",

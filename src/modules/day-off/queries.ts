@@ -1,7 +1,7 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
 import type { DayOffRequest, DayOffRequestAdmin } from './types'
 
-const SAFE_COLUMNS = 'id, ws_user_id, user_name, requested_date, note, screenshot_url, status, rejection_reason, reviewed_at, resolved_at, created_at' as const
+const SAFE_COLUMNS = 'id, ws_user_id, user_name, requested_date, request_type, note, screenshot_url, status, rejection_reason, reviewed_at, resolved_at, created_at' as const
 const ADMIN_COLUMNS = `${SAFE_COLUMNS}, approved_by_name, rejected_by_name` as const
 
 export async function getUserDayOffRequests(wsUserId: string): Promise<DayOffRequest[]> {

@@ -164,6 +164,7 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, 
                   key={item.href}
                   href={item.href}
                   prefetch={true}
+                  data-onboarding={item.href === '/day-off' ? 'sidebar-day-off' : undefined}
                   title={collapsed ? item.label : undefined}
                   className={`flex items-center py-2.5 rounded-full text-[13px] font-semibold transition-colors duration-150
                     ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'}`}

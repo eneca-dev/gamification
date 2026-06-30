@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect, useMemo, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Check, X, HelpCircle, List, LayoutGrid, MessageSquare } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Check, X, HelpCircle, List, LayoutGrid, MessageSquare, Eye } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
 import {
@@ -17,15 +17,17 @@ import {
 
 } from '@/modules/shop/index.client'
 
-import { CrystalRatePanel } from './CrystalRatePanel'
+import { CrystalRateHistory } from './economy/CrystalRateHistory'
+import { CrystalRateStats } from './CrystalRateStats'
 import { ProductFormModal } from './ProductFormModal'
-import type { ProductFormData } from '../types'
+import type { ProductFormData, CrystalRateRow } from '../types'
 import type { ShopProductWithCategory, ShopCategory } from '@/modules/shop/index.client'
 
 interface ProductsClientProps {
   products: ShopProductWithCategory[]
   categories: ShopCategory[]
   currentRate: number
+  crystalRates: CrystalRateRow[]
 }
 
 type InlineProductField = 'category_id' | 'cost_byn' | 'coefficient' | 'discount_percent' | 'stock'
@@ -199,7 +201,7 @@ function applyParsedFilter(
   return true
 }
 
-export function ProductsClient({ products: initialProducts, categories: initialCategories, currentRate }: ProductsClientProps) {
+export function ProductsClient({ products: initialProducts, categories: initialCategories, currentRate, crystalRates }: ProductsClientProps) {
   const [products, setProducts] = useState(initialProducts)
   const [categories, setCategories] = useState(initialCategories)
   const [isCatPending, startCatTransition] = useTransition()
@@ -239,6 +241,40 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
   const filterTokens = useMemo(() => parseFilterTokens(filterQuery), [filterQuery])
   const parsedFilter = useMemo(() => buildAdminFilter(filterTokens), [filterTokens])
+
+  // Статистика товаров для блока курса (цены — по effectiveRate, реагируют на предпросмотр)
+  const productStats = useMemo(() => {
+    let active = 0
+    let comingSoon = 0
+    let inactive = 0
+    let withDiscount = 0
+    let outOfStock = 0
+    let priceSum = 0
+    let maxPrice = 0
+    for (const p of products) {
+      const status = getProductStatus(p)
+      if (status === 'active') active++
+      else if (status === 'coming_soon') comingSoon++
+      else inactive++
+      if (p.discount_percent != null) withDiscount++
+      if (p.category?.is_countable && (p.stock ?? 0) === 0) outOfStock++
+      const price = computePriceCrystals(p.cost_byn, p.coefficient, effectiveRate)
+      priceSum += price
+      if (price > maxPrice) maxPrice = price
+    }
+    const total = products.length
+    return {
+      total,
+      active,
+      comingSoon,
+      inactive,
+      withDiscount,
+      outOfStock,
+      categoriesTotal: categories.length,
+      avgPrice: total > 0 ? Math.round(priceSum / total) : 0,
+      maxPrice,
+    }
+  }, [products, categories, effectiveRate])
 
   const filteredProducts = products
     .filter((p) => categoryFilter === 'all' || p.category?.slug === categoryFilter)
@@ -639,6 +675,33 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
   return (
     <div className="space-y-5">
+      {/* Индикация предпросмотра нового курса — рамка по периметру экрана + баннер */}
+      {previewRate !== null && createPortal(
+        <div className="fixed inset-0 z-40 pointer-events-none">
+          <div
+            className="absolute inset-0"
+            style={{ border: '3px solid var(--apex-warning-text)', boxShadow: 'inset 0 0 0 1px var(--apex-warning-border)' }}
+          />
+          <div
+            className="pointer-events-auto absolute top-0 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-1.5 rounded-b-xl text-[12px] font-semibold shadow-md"
+            style={{ background: 'var(--apex-warning-text)', color: 'white' }}
+          >
+            <Eye size={13} />
+            Предпросмотр цен при новом курсе: {previewRate}
+            <button
+              type="button"
+              onClick={() => setPreviewRate(null)}
+              className="ml-1 rounded-full p-0.5 transition-colors hover:bg-white/20"
+              aria-label="Сбросить предпросмотр"
+              title="Сбросить предпросмотр"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        </div>,
+        document.body,
+      )}
+
       {/* Toast — через портал, чтобы обойти transform containing block */}
       {notification && createPortal(
         <div className="fixed top-6 right-6 z-50 animate-fade-in-up">
@@ -667,13 +730,18 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         </div>
       )}
 
-      {/* Курс кристаллов */}
-      <CrystalRatePanel
-        currentRate={currentRate}
-        previewRate={previewRate}
-        onPreviewRateChange={setPreviewRate}
-        onError={setError}
-        onApplied={(rate) => showNotification(`Курс изменён: 1 BYN = ${rate} кристаллов`)}
+      {/* Курс кристаллов: текущий курс + история, смена курса с предпросмотром и статистика */}
+      <CrystalRateHistory
+        rates={crystalRates}
+        editing={{
+          previewRate,
+          onPreviewRateChange: setPreviewRate,
+          onError: setError,
+          onApplied: (rate) => showNotification(`Курс изменён: 1 BYN = ${rate} кристаллов`),
+        }}
+        extra={
+          <CrystalRateStats ratedAt={crystalRates[0]?.created_at ?? null} stats={productStats} />
+        }
       />
 
       {/* === КАТЕГОРИИ === */}
@@ -684,6 +752,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
       >
         <div
           className="flex items-center justify-between px-5 py-3 cursor-pointer"
+          data-onboarding-trigger="admin-categories-toggle"
           onClick={() => setCategoriesExpanded(!categoriesExpanded)}
         >
           <div className="flex items-center gap-2">
@@ -1021,7 +1090,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         </div>
 
         {/* Строка фильтра */}
-        <div className="px-5 py-2.5" style={{ borderBottom: '1px solid var(--apex-border)' }}>
+        <div className="px-5 py-2.5" data-onboarding="admin-products-filter" style={{ borderBottom: '1px solid var(--apex-border)' }}>
           <FilterInput value={filterQuery} onChange={setFilterQuery} categories={categories} />
         </div>
 

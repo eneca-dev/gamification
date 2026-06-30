@@ -44,9 +44,13 @@ export function StoreClient({
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const queryClient = useQueryClient()
 
-  const filtered = activeFilter === 'all'
+  const filtered = (activeFilter === 'all'
     ? products
     : products.filter((p) => p.category.slug === activeFilter)
+  )
+    // Товары «Скоро в продаже» — в самый низ, остальной порядок сохраняем
+    .slice()
+    .sort((a, b) => Number(a.is_coming_soon) - Number(b.is_coming_soon))
 
   const activeCategory = categories.find((c) => c.slug === activeFilter)
 
@@ -117,11 +121,12 @@ export function StoreClient({
             Магазин
           </h1>
           <p className="text-sm font-medium mt-1" style={{ color: 'var(--text-secondary)' }}>
-            Обменивайте 💎 на реальные награды
+            Обменивайте 💎 на реальные товары
           </p>
         </div>
         <Link
           href="/store/orders"
+          data-onboarding="store-my-orders"
           className="px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200"
           style={{
             background: 'var(--surface-elevated)',

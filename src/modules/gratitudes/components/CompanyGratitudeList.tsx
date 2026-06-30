@@ -63,7 +63,7 @@ export function CompanyGratitudeList({
   return (
     <div>
       {showFilters && (
-        <div className="flex flex-wrap items-center gap-1.5 mb-4">
+        <div className="flex flex-wrap items-center gap-1.5 mb-4" data-onboarding="activity-gratitudes-filters">
           {/* Фильтры категорий */}
           {[
             { slug: 'all', label: 'Все' },
@@ -122,10 +122,11 @@ export function CompanyGratitudeList({
         </div>
       ) : (
         <div>
-          <div className="md:columns-2 gap-3 space-y-3 [column-fill:_balance]">
-            {visible.map((item) => (
+          <div className="md:columns-2 gap-3 space-y-3 [column-fill:_balance]" data-onboarding="activity-gratitudes-list">
+            {visible.map((item, index) => (
               <div
                 key={item.id}
+                data-onboarding={index === 0 ? 'activity-gratitudes-item' : undefined}
                 className="rounded-2xl p-4 break-inside-avoid"
                 style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)' }}
               >

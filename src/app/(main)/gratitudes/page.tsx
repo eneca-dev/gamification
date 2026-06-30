@@ -44,12 +44,14 @@ export default async function GratitudesPage() {
             Отправленные и полученные благодарности
           </p>
         </div>
-        <SendGratitudeButton
-          senderId={wsUserId}
-          quota={quota}
-          recipients={recipients}
-          balance={balance}
-        />
+        <div>
+          <SendGratitudeButton
+            senderId={wsUserId}
+            quota={quota}
+            recipients={recipients}
+            balance={balance}
+          />
+        </div>
       </div>
 
       <div className="animate-fade-in-up stagger-1">

@@ -47,6 +47,7 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
       {!isOpen && (
         <div className="fixed top-16 right-4 md:top-6 md:right-6 z-50 group">
           <button
+            data-onboarding="chat-assistant"
             onClick={handleOpen}
             className="w-11 h-11 rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-105 hover:shadow-xl"
             style={{ background: 'var(--apex-primary)', color: '#fff' }}

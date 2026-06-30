@@ -104,7 +104,7 @@ export function TransactionsList({ items, currentSort, sortHref, isPending = fal
   }
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1" data-onboarding="transactions-list">
       <div
         className="hidden md:flex items-center gap-3 px-3 pb-2 mb-1"
         style={{ borderBottom: '1px solid var(--apex-border)' }}
@@ -190,7 +190,11 @@ export function TransactionsList({ items, currentSort, sortHref, isPending = fal
             : null
 
         return (
-          <div key={idx} className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
+          <div
+            key={idx}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+            data-onboarding={idx === 0 ? 'transactions-row-first' : undefined}
+          >
             {showId && (
               <button
                 type="button"

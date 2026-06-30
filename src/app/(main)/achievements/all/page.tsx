@@ -46,7 +46,7 @@ export default async function AllPersonalAchievementsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="animate-fade-in-up">
+      <div className="animate-fade-in-up" data-onboarding="achievements-all-header">
         <Link
           href="/achievements"
           className="inline-flex items-center gap-1.5 text-[13px] font-bold mb-3 transition-opacity hover:opacity-70"
@@ -82,20 +82,20 @@ export default async function AllPersonalAchievementsPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {months.map(([monthKey, monthAwards]) => {
+            {months.map(([monthKey, monthAwards], index) => {
               const [y, m] = monthKey.split('-').map(Number)
               const monthLabel = `${MONTH_NAMES_FULL[m - 1]} ${y}`
 
               return (
-                <div key={monthKey}>
+                <div key={monthKey} data-onboarding={index === 0 ? 'achievements-all-month' : undefined}>
                   <div
                     className="text-[11px] font-bold uppercase tracking-wider mb-3"
                     style={{ color: 'var(--text-muted)' }}
                   >
                     {monthLabel}
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {monthAwards.map((award) => {
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3" data-onboarding={index === 0 ? 'achievements-all-grid' : undefined}>
+                    {monthAwards.map((award, awardIndex) => {
                       const areaCfg = AREA_CONFIG[award.area] ?? AREA_CONFIG.gratitude
                       const entityCfg = ENTITY_CONFIG[award.entity_type]
                       const bonus = ACHIEVEMENT_BONUSES[award.entity_type]
@@ -105,6 +105,7 @@ export default async function AllPersonalAchievementsPage() {
                           key={`${award.entity_type}-${award.area}-${award.period_start}`}
                           className="rounded-2xl p-4 flex flex-col items-center gap-1.5"
                           style={{ background: areaCfg.bg, border: `1px solid ${areaCfg.color}33` }}
+                          data-onboarding={index === 0 && awardIndex === 0 ? 'achievements-all-card' : undefined}
                         >
                           <span className="text-3xl">{entityCfg.emoji}</span>
                           <span className="text-[12px] font-bold text-center" style={{ color: areaCfg.color }}>
@@ -113,7 +114,11 @@ export default async function AllPersonalAchievementsPage() {
                           <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
                             {areaCfg.label}
                           </span>
-                          <span className="text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                          <span
+                            className="text-[11px] font-semibold"
+                            style={{ color: 'var(--text-secondary)' }}
+                            data-onboarding={index === 0 && awardIndex === 0 ? 'achievements-all-bonus' : undefined}
+                          >
                             <span className="inline-flex items-center gap-0.5">
                               {award.days_in_top} дней &middot; +{bonus} <CoinIcon size={11} />
                             </span>

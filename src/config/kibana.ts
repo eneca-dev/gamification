@@ -17,46 +17,6 @@ export function buildKibanaHeaders(): HeadersInit {
   };
 }
 
-// Только плагины из утверждённого списка геймификации (без InstallationManager)
-export const PLUGIN_INDICES = [
-  'auditor-*', 'clashesmanager-*', 'linksmanager-*', 'sharemodel-*',
-  'sdt-*', 'paramoperator-*', 'apartmentlayouts-*',
-  'fasciacappings-*', 'spacesmanager-*', 'resavemodels-*', 'autoopenings-*',
-  'finishing-*', 'sharedcoordinates-*', 'eneca.sharedcoordinates-*',
-  'profilay-*', 'lookuptables-*', 'viewcloner-*', 'lintelstransfer-*',
-  'surfacegen-*', 'quickmount-*', 'schedulestable-*',
-  'settorevit-*', 'parkingslots-*', 'filterassistant-*',
-  'hvacautotag-*', 'evacuation-*', 'revitdataexporter-*',
-].join(',');
-
-// Маппинг Properties.AppName → читаемое название (ключи — точные значения из ES)
-export const PLUGIN_DISPLAY_NAMES: Record<string, string> = {
-  Auditor: 'Auditor',
-  'ClashesManager.Revit': 'Clashes Manager',
-  LinksManager: 'Links Manager',
-  ShareModel: 'Share Model',
-  SDT: 'Structural Design Toolkit',
-  ParamOperator: 'Param Operator',
-  ApartmentLayouts: 'Apartment Layouts',
-  FasciaCappings: 'Fascia Cappings',
-  SpacesManager: 'Spaces Manager',
-  ResaveModels: 'ReSave',
-  'ReSave Models': 'ReSave',
-  AutoOpenings: 'Auto Openings',
-  Finishing: 'Finishing',
-  SharedCoordinates: 'Shared Coordinates',
-  'Eneca.SharedCoordinates': 'Shared Coordinates',
-  ProfiLay: 'Profi Lay',
-  LookupTables: 'Lookup Tables',
-  ViewCloner: 'View Cloner',
-  LintelsTransfer: 'Lintels Transfer',
-  SurfaceGen: 'Surface Gen',
-  QuickMount: 'Quick Mount',
-  SchedulesTable: 'Schedules Table',
-  SetToRevit: 'Set to Revit',
-  ParkingSlots: 'Parking Slots',
-  FilterAssistant: 'Filter Assistant',
-  HVACAutoTag: 'HVAC Auto Tag',
-  Evacuation: 'Evacuation',
-  RevitDataExporter: 'Revit Data Exporter',
-};
+// Список плагинов геймификации — единый источник в @/config/plugins.
+// Реэкспорт для обратной совместимости (без InstallationManager).
+export { PLUGIN_INDICES, PLUGIN_DISPLAY_NAMES } from '@/config/plugins';

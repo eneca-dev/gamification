@@ -4,8 +4,7 @@ export const PAGE_SLUG_MAP: Record<string, string> = {
   '/achievements': 'achievements',
   '/store': 'store',
   '/activity': 'activity',
-  '/activity?feed=dept': 'activity-dept',
-  '/activity?feed=team': 'activity-team',
+  '/transactions': 'transactions',
   '/admin': 'admin',
   '/admin/users': 'admin-users',
   '/admin/products': 'admin-products',
@@ -15,8 +14,31 @@ export const PAGE_SLUG_MAP: Record<string, string> = {
   '/admin/achievements': 'admin-achievements',
   // [LOTTERY HIDDEN] '/admin/lottery': 'admin-lottery',
   '/admin/help': 'admin-help',
+  '/admin/day-off': 'admin-day-off',
+  '/admin/economy': 'admin-economy',
+  '/admin/feedback': 'admin-feedback',
+  '/admin/chatbot': 'admin-chatbot',
+  '/admin/shields': 'admin-shields',
   '/help': 'help',
-  '/master-planner': 'master-planner',
+}
+
+/**
+ * Динамические маршруты, где slug определяется по шаблону, а не точным
+ * совпадением (редактор статьи справки: /admin/help/<slug>/edit и /admin/help/new/edit).
+ */
+const PAGE_SLUG_PATTERNS: { pattern: RegExp; slug: string }[] = [
+  { pattern: /^\/admin\/help\/[^/]+\/edit$/, slug: 'admin-help-edit' },
+]
+
+/**
+ * Обратный маппинг slug → path (с учётом search).
+ * Нужен для программной навигации на нужную страницу перед запуском тура.
+ */
+export function getPathForSlug(slug: string): string | null {
+  for (const [path, s] of Object.entries(PAGE_SLUG_MAP)) {
+    if (s === slug) return path
+  }
+  return null
 }
 
 /**
@@ -28,7 +50,11 @@ export function getPageSlug(pathname: string, search?: string): string | null {
     const full = `${pathname}${search}`
     if (PAGE_SLUG_MAP[full]) return PAGE_SLUG_MAP[full]
   }
-  return PAGE_SLUG_MAP[pathname] ?? null
+  if (PAGE_SLUG_MAP[pathname]) return PAGE_SLUG_MAP[pathname]
+  for (const { pattern, slug } of PAGE_SLUG_PATTERNS) {
+    if (pattern.test(pathname)) return slug
+  }
+  return null
 }
 
 /**
@@ -39,6 +65,10 @@ export function getPageSlug(pathname: string, search?: string): string | null {
  */
 export function getPageSlugWithFallback(pathname: string): string | null {
   if (PAGE_SLUG_MAP[pathname]) return PAGE_SLUG_MAP[pathname]
+
+  for (const { pattern, slug } of PAGE_SLUG_PATTERNS) {
+    if (pattern.test(pathname)) return slug
+  }
 
   const sorted = Object.entries(PAGE_SLUG_MAP)
     .filter(([path]) => path !== '/')
