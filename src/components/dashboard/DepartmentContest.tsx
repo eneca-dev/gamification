@@ -196,7 +196,7 @@ function DisciplineColumn({
           >
             <span className="text-lg">📅</span>
             <div className="text-[12px] font-medium text-center" style={{ color: 'var(--apex-text-muted)' }}>
-              {isFirstOfMonth ? "Топ сброшен в начале месяца." : "Данные сброшены в связи с началом бета-тестирования."}<br />Данные появятся завтра.
+              {isFirstOfMonth ? "Топ сброшен в начале месяца." : "Данные сброшены."}<br />Данные появятся завтра.
             </div>
           </div>
         ) : null}
