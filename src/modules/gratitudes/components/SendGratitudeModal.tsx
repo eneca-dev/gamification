@@ -28,14 +28,26 @@ interface SendGratitudeModalProps {
   onSuccess?: () => void
 }
 
-function quotaDaysLeft(quota: SenderQuota): number {
-  if (!quota.period_end) return 0
-  return Math.max(0, Math.ceil((new Date(quota.period_end).getTime() - Date.now()) / 86400000) + 1)
+// Сегодня по Минску в формате YYYY-MM-DD (как на сервере fn_minsk_today)
+function minskTodayIso(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Minsk' })
 }
 
+// Целое число дней между двумя датами (без времени суток, чтобы не было TZ-сдвига)
+function daysBetween(fromIso: string, toIso: string): number {
+  return Math.round((Date.parse(`${toIso}T00:00:00Z`) - Date.parse(`${fromIso}T00:00:00Z`)) / 86400000)
+}
+
+// Дней до конца текущего периода включительно: первый день = длина периода, последний день = 1
+function quotaDaysLeft(quota: SenderQuota): number {
+  if (!quota.period_end) return 0
+  return Math.max(0, daysBetween(minskTodayIso(), quota.period_end) + 1)
+}
+
+// Дней до старта следующего периода (когда квота уже использована)
 function nextQuotaDays(quota: SenderQuota): number {
   if (!quota.next_quota_date) return 0
-  return Math.max(0, Math.ceil((new Date(quota.next_quota_date).getTime() - Date.now()) / 86400000))
+  return Math.max(0, daysBetween(minskTodayIso(), quota.next_quota_date))
 }
 
 export function SendGratitudeModal({

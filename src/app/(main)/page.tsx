@@ -176,8 +176,8 @@ export default async function DashboardPage() {
       isCurrentUser: r.entity_id === wsUserId,
     }))
 
-  // Дней до конца месяца
-  const now = new Date();
+  // Дней до конца месяца (по минскому времени, иначе на сервере в UTC дата сдвигается)
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Minsk' }));
   const daysLeft = Math.max(1, new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate());
 
   // Конвертируем RankingEntry[] в DepartmentEntry[]
