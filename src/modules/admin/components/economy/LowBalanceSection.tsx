@@ -165,17 +165,6 @@ export function LowBalanceSection({ users, designerFilter, totalCount, title, su
                     >
                       {user.last_name} {user.first_name}
                     </Link>
-                    {user.is_beta_tester && (
-                      <span
-                        className="ml-2 text-[11px] px-1.5 py-0.5 rounded-full font-medium"
-                        style={{
-                          background: 'var(--apex-success-bg)',
-                          color: 'var(--apex-primary)',
-                        }}
-                      >
-                        beta
-                      </span>
-                    )}
                   </td>
                   <td
                     className="px-4 py-2.5 hidden sm:table-cell"

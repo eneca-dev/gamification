@@ -50,7 +50,6 @@ export const getCurrentUser = cache(async function getCurrentUser(): Promise<Aut
           department: devUser.department,
           team: devUser.team,
           isAdmin: false,
-          isBetaTester: true,
           wsUserId: devUser.id,
           isImpersonating: true,
         }
@@ -81,17 +80,6 @@ export const getCurrentUser = cache(async function getCurrentUser(): Promise<Aut
     }
   }
 
-  // is_beta_tester из ws_users
-  let isBetaTester = false
-  if (wsUserId) {
-    const { data: wsUser } = await supabase
-      .from('ws_users')
-      .select('is_beta_tester')
-      .eq('id', wsUserId)
-      .single()
-    isBetaTester = wsUser?.is_beta_tester ?? false
-  }
-
   return {
     id: user.id,
     email: user.email ?? '',
@@ -101,7 +89,6 @@ export const getCurrentUser = cache(async function getCurrentUser(): Promise<Aut
     department: profile?.department ?? null,
     team: profile?.team ?? null,
     isAdmin,
-    isBetaTester,
     wsUserId,
   }
 })

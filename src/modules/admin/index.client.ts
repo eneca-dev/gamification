@@ -1,6 +1,6 @@
 export {
   updateEventType, updateRankingSetting, updateGratitudeSetting,
-  toggleAdmin, toggleBetaTester, updateOrderStatus, cancelOrder,
+  toggleAdmin, updateOrderStatus, cancelOrder,
   addCalendarHoliday, deleteCalendarHoliday, addCalendarWorkday, deleteCalendarWorkday,
   updateDepartmentGroup,
 } from './actions'

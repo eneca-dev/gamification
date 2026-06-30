@@ -1,5 +1,4 @@
 import { cookies } from 'next/headers'
-import { BetaAccessDenied } from '@/components/BetaAccessDenied'
 import { LayoutShell } from '@/components/LayoutShell'
 import { getCurrentUser } from '@/modules/auth'
 import { getUserBalance } from '@/modules/shop'
@@ -16,11 +15,6 @@ export default async function MainLayout({
   children: React.ReactNode
 }) {
   const user = await getCurrentUser()
-
-  // Бета-режим: только бета-тестеры имеют доступ
-  if (user && !user.isBetaTester) {
-    return <BetaAccessDenied />
-  }
 
   const balance = user?.wsUserId ? await getUserBalance(user.wsUserId) : 0
   const dayOffResolved = user?.wsUserId ? await getUserDayOffResolvedTimestamps(user.wsUserId) : []

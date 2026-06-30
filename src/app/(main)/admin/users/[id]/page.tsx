@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { checkIsAdmin, getUserDetail } from '@/modules/admin'
 import { getShieldDatesInRange } from '@/modules/streak-shield'
 import { RoleProvider, RoleBadge, RoleSwitch } from '@/modules/admin/components/RoleToggle'
-import { BetaProvider, BetaSwitch } from '@/modules/admin/components/BetaToggle'
 import { CoinStatic } from '@/components/CoinBalance'
 import { StreakPanel } from '@/components/dashboard/StreakPanel'
 import { getEventIcon, getTransactionDisplayDate, getUserTransactions } from '@/modules/transactions'
@@ -74,7 +73,6 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
         Назад к списку
       </Link>
 
-      <BetaProvider userId={user.id} initialIsBeta={user.is_beta_tester}>
       <RoleProvider userId={user.id} initialIsAdmin={user.is_admin}>
         <div className="flex gap-5 items-stretch">
           {/* Left: same height as grid */}
@@ -115,9 +113,6 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
                   {wsStreak.longestStreak} дн.
                 </span>
               </InfoCard>
-              <InfoCard label="Бета-тестирование">
-                <BetaSwitch />
-              </InfoCard>
             </div>
           </div>
 
@@ -127,7 +122,6 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           </div>
         </div>
       </RoleProvider>
-      </BetaProvider>
 
       {/* Transactions */}
       <div

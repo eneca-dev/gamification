@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Search, ChevronRight, ChevronDown, ChevronsUp, ChevronsDown, ChevronUp, Check, Users } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
-import { toggleAdmin, toggleBetaTester } from '@/modules/admin/index.client'
+import { toggleAdmin } from '@/modules/admin/index.client'
 
 import type { AdminUserRow } from '../types'
 
@@ -61,7 +61,6 @@ export function UsersTable({ users }: UsersTableProps) {
   const [search, setSearch] = useState('')
   const [deptFilter, setDeptFilter] = useState('all')
   const [adminsOnly, setAdminsOnly] = useState(false)
-  const [betaOnly, setBetaOnly] = useState(false)
   const [allExpanded, setAllExpanded] = useState(true)
   const [expandKey, setExpandKey] = useState(0)
   const [isPending, startTransition] = useTransition()
@@ -75,7 +74,6 @@ export function UsersTable({ users }: UsersTableProps) {
   const filtered = useMemo(() => {
     return items.filter((u) => {
       if (adminsOnly && !u.is_admin) return false
-      if (betaOnly && !u.is_beta_tester) return false
       if (deptFilter !== 'all' && u.department !== deptFilter) return false
       if (search) {
         const q = search.toLowerCase()
@@ -86,7 +84,7 @@ export function UsersTable({ users }: UsersTableProps) {
       }
       return true
     })
-  }, [items, search, deptFilter, adminsOnly, betaOnly])
+  }, [items, search, deptFilter, adminsOnly])
 
   const groups = useMemo(() => buildGroups(filtered), [filtered])
 
@@ -97,20 +95,6 @@ export function UsersTable({ users }: UsersTableProps) {
 
     startTransition(async () => {
       const result = await toggleAdmin(userId)
-      if (!result.success) {
-        setItems(prev)
-        setError(result.error)
-      }
-    })
-  }
-
-  function handleToggleBeta(userId: string, currentIsBeta: boolean) {
-    const prev = items
-    setItems(items.map((u) => (u.id === userId ? { ...u, is_beta_tester: !currentIsBeta } : u)))
-    setError(null)
-
-    startTransition(async () => {
-      const result = await toggleBetaTester(userId)
       if (!result.success) {
         setItems(prev)
         setError(result.error)
@@ -173,20 +157,6 @@ export function UsersTable({ users }: UsersTableProps) {
           >
             {adminsOnly && <Check size={12} />}
             Только админы
-          </button>
-
-          {/* Beta only — chip toggle */}
-          <button
-            onClick={() => setBetaOnly(!betaOnly)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-medium transition-colors"
-            style={{
-              background: betaOnly ? 'var(--apex-success-bg)' : 'transparent',
-              border: `1px solid ${betaOnly ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
-              color: betaOnly ? 'var(--apex-primary)' : 'var(--apex-text-secondary)',
-            }}
-          >
-            {betaOnly && <Check size={12} />}
-            Только бета
           </button>
 
           {/* Spacer */}
@@ -259,7 +229,6 @@ export function UsersTable({ users }: UsersTableProps) {
       >
         <div className="flex-1 min-w-0 px-3 py-2">Сотрудник</div>
         <div className="w-28 px-3 py-2 shrink-0 text-right">Баланс</div>
-        <div className="w-24 px-3 py-2 shrink-0 text-center">Бета</div>
         <div className="w-24 px-3 py-2 shrink-0 text-center" data-onboarding="admin-users-toggle">Админ</div>
         <div className="w-8 shrink-0" />
       </div>
@@ -272,7 +241,6 @@ export function UsersTable({ users }: UsersTableProps) {
             dept={dept}
             isLast={deptIdx === groups.length - 1}
             onToggleAdmin={handleToggleAdmin}
-            onToggleBeta={handleToggleBeta}
             isPending={isPending}
             defaultOpen={allExpanded}
             expandKey={expandKey}
@@ -304,7 +272,6 @@ function DeptSection({
   dept,
   isLast,
   onToggleAdmin,
-  onToggleBeta,
   isPending,
   defaultOpen,
   expandKey,
@@ -312,7 +279,6 @@ function DeptSection({
   dept: DeptGroup
   isLast: boolean
   onToggleAdmin: (id: string, current: boolean) => void
-  onToggleBeta: (id: string, current: boolean) => void
   isPending: boolean
   defaultOpen: boolean
   expandKey: number
@@ -367,7 +333,6 @@ function DeptSection({
           team={team}
           showHeader={hasMultipleTeams}
           onToggleAdmin={onToggleAdmin}
-          onToggleBeta={onToggleBeta}
           isPending={isPending}
         />
       ))}
@@ -381,13 +346,11 @@ function TeamSection({
   team,
   showHeader,
   onToggleAdmin,
-  onToggleBeta,
   isPending,
 }: {
   team: TeamGroup
   showHeader: boolean
   onToggleAdmin: (id: string, current: boolean) => void
-  onToggleBeta: (id: string, current: boolean) => void
   isPending: boolean
 }) {
   const [open, setOpen] = useState(true)
@@ -433,7 +396,6 @@ function TeamSection({
           key={user.id}
           user={user}
           onToggleAdmin={() => onToggleAdmin(user.id, user.is_admin)}
-          onToggleBeta={() => onToggleBeta(user.id, user.is_beta_tester)}
           isPending={isPending}
         />
       ))}
@@ -446,12 +408,10 @@ function TeamSection({
 function UserRow({
   user,
   onToggleAdmin,
-  onToggleBeta,
   isPending,
 }: {
   user: AdminUserRow
   onToggleAdmin: () => void
-  onToggleBeta: () => void
   isPending: boolean
 }) {
   return (
@@ -484,31 +444,6 @@ function UserRow({
       {/* Баланс */}
       <div className="w-28 px-3 py-3 shrink-0 flex justify-end">
         <CoinStatic amount={user.total_coins} size="sm" />
-      </div>
-
-      {/* Бета */}
-      <div
-        className="w-24 px-3 py-3 shrink-0 flex justify-center"
-        onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
-      >
-        <button
-          role="switch"
-          aria-checked={user.is_beta_tester}
-          aria-label="Переключить бета-тестера"
-          onClick={onToggleBeta}
-          disabled={isPending}
-          className="relative w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none"
-          style={{
-            background: user.is_beta_tester ? 'var(--apex-primary)' : 'var(--apex-border)',
-          }}
-        >
-          <span
-            className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200"
-            style={{
-              transform: user.is_beta_tester ? 'translateX(16px)' : 'translateX(0)',
-            }}
-          />
-        </button>
       </div>
 
       {/* Роль */}
