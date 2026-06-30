@@ -23,10 +23,8 @@ interface EconomyDashboardProps {
   period: EconomyPeriodPreset
   customFrom: string
   customTo: string
-  betaOnly: boolean
   topLevel: TopLevel
   designerFilter: DesignerFilter
-  capGratitudeAch: boolean
   overview: EconomyOverview
   categories: CategoryRow[]
   rate: number
@@ -50,10 +48,8 @@ export function EconomyDashboard({
   period,
   customFrom,
   customTo,
-  betaOnly,
   topLevel,
   designerFilter,
-  capGratitudeAch,
   overview,
   categories,
   rate,
@@ -71,9 +67,7 @@ export function EconomyDashboard({
         period={period}
         customFrom={customFrom}
         customTo={customTo}
-        betaOnly={betaOnly}
         topLevel={topLevel}
-        capGratitudeAch={capGratitudeAch}
       />
 
       <CrystalRateHistory rates={crystalRates} />

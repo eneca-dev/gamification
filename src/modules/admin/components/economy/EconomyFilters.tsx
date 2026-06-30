@@ -10,9 +10,7 @@ interface EconomyFiltersProps {
   period: EconomyPeriodPreset
   customFrom: string
   customTo: string
-  betaOnly: boolean
   topLevel: TopLevel
-  capGratitudeAch: boolean
 }
 
 const PERIOD_OPTIONS: { value: EconomyPeriodPreset; label: string }[] = [
@@ -53,7 +51,7 @@ function ChipButton({ active, onClick, children }: ChipButtonProps) {
   )
 }
 
-export function EconomyFilters({ period, customFrom, customTo, betaOnly, topLevel, capGratitudeAch }: EconomyFiltersProps) {
+export function EconomyFilters({ period, customFrom, customTo, topLevel }: EconomyFiltersProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -80,14 +78,6 @@ export function EconomyFilters({ period, customFrom, customTo, betaOnly, topLeve
 
   const handleCustomRange = (from: string, to: string) => {
     updateParam({ period: 'custom', from: from || null, to: to || null })
-  }
-
-  const handleBeta = () => {
-    updateParam({ beta: betaOnly ? 'off' : 'on' })
-  }
-
-  const handleCapGrat = () => {
-    updateParam({ capGratAch: capGratitudeAch ? null : 'on' })
   }
 
   const handleLevel = (next: TopLevel) => {
@@ -120,58 +110,6 @@ export function EconomyFilters({ period, customFrom, customTo, betaOnly, topLeve
       {period === 'custom' && (
         <DateRangePicker from={customFrom} to={customTo} onChange={handleCustomRange} />
       )}
-
-      <div className="h-6 w-px" style={{ background: 'var(--apex-border)' }} />
-
-      {/* Бета-тоггл */}
-      <button
-        onClick={handleBeta}
-        role="switch"
-        aria-checked={betaOnly}
-        className="flex items-center gap-2 px-3 py-1 rounded-full text-[12px] transition-all"
-        style={{
-          background: betaOnly ? 'var(--apex-success-bg)' : 'transparent',
-          color: betaOnly ? 'var(--apex-primary)' : 'var(--apex-text-secondary)',
-          border: `1px solid ${betaOnly ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
-          fontWeight: betaOnly ? 600 : 500,
-        }}
-      >
-        <span
-          className="w-7 h-3.5 rounded-full relative inline-block"
-          style={{ background: betaOnly ? 'var(--apex-primary)' : 'var(--apex-border)' }}
-        >
-          <span
-            className="absolute top-0.5 left-0.5 w-2.5 h-2.5 rounded-full bg-white transition-transform duration-200"
-            style={{ transform: betaOnly ? 'translateX(14px)' : 'translateX(0)' }}
-          />
-        </span>
-        Только бета-тестеры
-      </button>
-
-      {/* Тоггл: скрыть излишние достижения за благодарности */}
-      <button
-        onClick={handleCapGrat}
-        role="switch"
-        aria-checked={capGratitudeAch}
-        className="flex items-center gap-2 px-3 py-1 rounded-full text-[12px] transition-all"
-        style={{
-          background: capGratitudeAch ? 'var(--apex-success-bg)' : 'transparent',
-          color: capGratitudeAch ? 'var(--apex-primary)' : 'var(--apex-text-secondary)',
-          border: `1px solid ${capGratitudeAch ? 'var(--apex-primary)' : 'var(--apex-border)'}`,
-          fontWeight: capGratitudeAch ? 600 : 500,
-        }}
-      >
-        <span
-          className="w-7 h-3.5 rounded-full relative inline-block"
-          style={{ background: capGratitudeAch ? 'var(--apex-primary)' : 'var(--apex-border)' }}
-        >
-          <span
-            className="absolute top-0.5 left-0.5 w-2.5 h-2.5 rounded-full bg-white transition-transform duration-200"
-            style={{ transform: capGratitudeAch ? 'translateX(14px)' : 'translateX(0)' }}
-          />
-        </span>
-        Скрыть излишние достижения за благодарности
-      </button>
 
       <div className="h-6 w-px" style={{ background: 'var(--apex-border)' }} />
 
