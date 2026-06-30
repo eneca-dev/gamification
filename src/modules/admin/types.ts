@@ -30,7 +30,6 @@ export interface AdminUserRow {
   department: string | null
   team: string | null
   is_admin: boolean
-  is_beta_tester: boolean
   is_active: boolean
   total_coins: number
 }
@@ -247,7 +246,6 @@ export interface LowBalanceUser {
   email: string
   department: string | null
   team: string | null
-  is_beta_tester: boolean
   total_coins: number
   group_type: 'designer' | 'non_designer' | null
 }
@@ -255,7 +253,6 @@ export interface LowBalanceUser {
 export interface EconomyFilters {
   from: string | null
   to: string | null
-  betaOnly: boolean
 }
 
 export interface CrystalRateRow {

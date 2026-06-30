@@ -2,7 +2,7 @@ export {
   getEventTypes, getRankingSettings, getGratitudeSettings, getUsers, getUserDetail, getOrders,
   getCalendarHolidays, getCalendarWorkdays, getUsersLight,
   getEconomyOverview, getEconomyTop, getEconomyCategoryBreakdown, resolveEconomyPeriod,
-  getDepartmentGroups, getAllDepartments, getUsersSortedByBalance, getGratitudeAchievementExcess,
+  getDepartmentGroups, getAllDepartments, getUsersSortedByBalance,
   getCrystalRateHistory,
 } from './queries'
 export {
