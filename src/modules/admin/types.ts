@@ -30,7 +30,6 @@ export interface AdminUserRow {
   department: string | null
   team: string | null
   is_admin: boolean
-  is_beta_tester: boolean
   is_active: boolean
   total_coins: number
 }
