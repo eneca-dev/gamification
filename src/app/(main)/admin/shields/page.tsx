@@ -20,7 +20,7 @@ export default async function AdminShieldsPage() {
       className="rounded-2xl p-5"
       style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
     >
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4" data-onboarding="admin-shields-header">
         <Shield size={16} style={{ color: 'var(--apex-primary)' }} />
         <h2 className="text-[14px] font-semibold" style={{ color: 'var(--apex-text)' }}>
           Использования второй жизни
@@ -39,7 +39,7 @@ export default async function AdminShieldsPage() {
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-[13px]">
+          <table className="w-full text-[13px]" data-onboarding="admin-shields-table">
             <thead>
               <tr style={{ color: 'var(--apex-text-muted)' }}>
                 <th className="text-left font-medium pb-3 pr-4">Пользователь</th>
@@ -49,11 +49,12 @@ export default async function AdminShieldsPage() {
               </tr>
             </thead>
             <tbody>
-              {log.map((entry) => (
+              {log.map((entry, index) => (
                 <tr
                   key={entry.id}
                   className="border-t"
                   style={{ borderColor: 'var(--apex-border)' }}
+                  data-onboarding={index === 0 ? 'admin-shields-row' : undefined}
                 >
                   <td className="py-2.5 pr-4">
                     <div className="font-medium" style={{ color: 'var(--apex-text)' }}>
@@ -74,7 +75,11 @@ export default async function AdminShieldsPage() {
                       {typeLabels[entry.shieldType] ?? entry.shieldType}
                     </span>
                   </td>
-                  <td className="py-2.5 pr-4" style={{ color: 'var(--apex-text)' }}>
+                  <td
+                    className="py-2.5 pr-4"
+                    style={{ color: 'var(--apex-text)' }}
+                    data-onboarding={index === 0 ? 'admin-shields-protected-date' : undefined}
+                  >
                     {entry.protectedDate}
                   </td>
                   <td className="py-2.5" style={{ color: 'var(--apex-text-secondary)' }}>

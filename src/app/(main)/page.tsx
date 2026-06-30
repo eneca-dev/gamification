@@ -225,7 +225,7 @@ export default async function DashboardPage() {
             >
               <MasterPlannerPanel data={masterPlannerData} />
             </div>
-            <div className="hidden 3xl:block 3xl:col-span-2">
+            <div className="hidden 3xl:block 3xl:col-span-2" data-onboarding="alarms-widget">
               <AlarmsBanner alarms={activeAlarms} />
             </div>
           </div>
@@ -234,7 +234,7 @@ export default async function DashboardPage() {
 
       <div className="3xl:grid 3xl:grid-cols-2 3xl:gap-5 space-y-6 3xl:space-y-0">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-5 animate-fade-in-up stagger-1">
-          <div className="@container md:col-span-2 3xl:hidden">
+          <div className="@container md:col-span-2 3xl:hidden" data-onboarding="alarms-widget">
             <AlarmsBanner alarms={activeAlarms} />
           </div>
           <div className="@container md:col-span-3 3xl:col-span-5">

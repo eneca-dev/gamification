@@ -56,6 +56,26 @@
 
 ---
 
+## Изменения данных (2026-06-30)
+
+### Категория `eneca-game` скрыта из магазина
+- **Таблица**: `shop_categories`, **slug**: `draw`, **id**: `e493b896-bbb7-491e-be23-90b70f0eb7a2`
+- `is_active`: `true` → `false`
+- Причина: вкладка «eneca-game» в `/store` рендерится из `getCategories()` (только `is_active = true`). Товары-призы уже были `is_active=false`, но сама вкладка категории оставалась видимой.
+- **Восстановление**: `UPDATE shop_categories SET is_active = true WHERE slug = 'draw';`
+- Кэш `getCategories` (`tags: ['shop-categories']`, `revalidate: 1h`) — вкладка может оставаться видимой до ревалидации (до 1 часа) или редеплоя.
+
+### Завершена тестовая лотерея
+- **Таблица**: `lottery_draws`, **id**: `b9947507-16a5-4ad3-8d13-86efac697d80`, **name**: `тестовый приз!`
+- `status`: `active` → `completed`, `drawn_at` проставлен. Участников не было (0 заказов), победитель не выбирался (`winner_user_id = null`).
+- Товар-приз `eneca-game: тестовый приз!` (`shop_products` id `27f08bf0-c549-44dd-abf0-6e0322353a22`) **оставлен в БД** (`is_active=false`).
+- **Восстановление активной игры**: `UPDATE lottery_draws SET status = 'active', drawn_at = NULL WHERE id = 'b9947507-16a5-4ad3-8d13-86efac697d80';`
+
+### Про FK `lottery_draws_product_id_fkey`
+`lottery_draws.product_id → shop_products.id` без `ON DELETE`. Товар, на который ссылается любая запись `lottery_draws` (активная или завершённая), удалить нельзя — Postgres вернёт `violates foreign key constraint`. Чтобы удалить товар-приз, нужно сначала удалить соответствующую строку `lottery_draws`. Завершение лотереи (`completed`) ссылку не снимает.
+
+---
+
 ## Справка в базе данных
 
 Эти статьи удалены или изменены в таблице `help_articles`.

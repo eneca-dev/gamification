@@ -13,6 +13,12 @@ export interface OnboardingStep {
   id: string
   /** data-onboarding selector (null = модалка по центру экрана) */
   target: string | null
+  /**
+   * Дополнительные data-onboarding selectors для подсветки в том же шаге.
+   * Tooltip позиционируется по основному target; эти элементы только добавляют
+   * «дырки» в затемнении (например, подсветить пункт сайдбара вместе с контентом).
+   */
+  extraTargets?: string[]
   /** Заголовок подсказки */
   title: string
   /** Текст подсказки (строка или JSX для форматированного контента) */

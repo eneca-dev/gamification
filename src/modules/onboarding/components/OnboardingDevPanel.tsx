@@ -4,59 +4,59 @@ import { useState } from 'react'
 import { Play, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 
-import { useOnboardingContext } from './OnboardingProvider'
+import { TOURS, useOnboardingContext } from './OnboardingProvider'
 import { resetAllTours, resetTour } from '../storage'
+import { getPageSlugWithFallback } from '../page-slug'
 
 interface OnboardingDevPanelProps {
   userId: string
 }
 
-const TOUR_PAGES = [
-  { slug: 'dashboard', label: 'Главная' },
-  { slug: 'achievements', label: 'Достижения' },
-  { slug: 'store', label: 'Магазин' },
-  { slug: 'activity', label: 'Активность' },
-  { slug: 'help', label: 'Помощь' },
-  { slug: 'master-planner', label: 'Мастер-планировщик' },
-  { slug: 'admin', label: 'Админ' },
-  { slug: 'admin-users', label: 'Пользователи (адм)' },
-  { slug: 'admin-products', label: 'Товары (адм)' },
-  { slug: 'admin-orders', label: 'Заказы (адм)' },
-  { slug: 'admin-events', label: 'События (адм)' },
-  { slug: 'admin-calendar', label: 'Календарь (адм)' },
-  { slug: 'admin-achievements', label: 'Достижения (адм)' },
-  // [LOTTERY HIDDEN] { slug: 'admin-lottery', label: 'Лотерея (адм)' },
-  { slug: 'admin-help', label: 'Справка (адм)' },
-]
-
-const PATH_TO_SLUG: Record<string, string> = {
-  '/': 'dashboard',
-  '/achievements': 'achievements',
-  '/store': 'store',
-  '/activity': 'activity',
-  '/admin': 'admin',
-  '/admin/users': 'admin-users',
-  '/admin/products': 'admin-products',
-  '/admin/orders': 'admin-orders',
-  '/admin/events': 'admin-events',
-  '/admin/calendar': 'admin-calendar',
-  '/admin/achievements': 'admin-achievements',
-  // [LOTTERY HIDDEN] '/admin/lottery': 'admin-lottery',
-  '/admin/help': 'admin-help',
-  '/help': 'help',
-  '/master-planner': 'master-planner',
+/**
+ * Человекочитаемые подписи слугов. Список самих туров берётся из реестра
+ * `TOURS` — новые туры появляются в панели автоматически; при отсутствии
+ * подписи показывается сам slug.
+ */
+const SLUG_LABELS: Record<string, string> = {
+  dashboard: 'Главная',
+  achievements: 'Достижения',
+  'achievements-all': 'Достижения (все)',
+  store: 'Магазин',
+  activity: 'Активность',
+  'activity-dept': 'Активность: отдел',
+  'activity-team': 'Активность: команда',
+  'activity-achievements': 'Активность: достижения',
+  'activity-gratitudes': 'Активность: благодарности',
+  gratitudes: 'Благодарности',
+  transactions: 'Транзакции',
+  alarms: 'Напоминания',
+  help: 'Помощь',
+  admin: 'Админ',
+  'admin-users': 'Пользователи (адм)',
+  'admin-products': 'Товары (адм)',
+  'admin-orders': 'Заказы (адм)',
+  'admin-events': 'События (адм)',
+  'admin-calendar': 'Календарь (адм)',
+  'admin-achievements': 'Достижения (адм)',
+  'admin-help': 'Справка (адм)',
+  'admin-day-off': 'Отгулы (адм)',
+  'admin-economy': 'Экономика (адм)',
+  'admin-feedback': 'Обратная связь (адм)',
+  'admin-chatbot': 'Чат-бот (адм)',
+  'admin-shields': 'Щиты (адм)',
 }
 
 export function OnboardingDevPanel({ userId }: OnboardingDevPanelProps) {
   const [open, setOpen] = useState(false)
+  const [expandedSlug, setExpandedSlug] = useState<string | null>(null)
   const { startTour } = useOnboardingContext()
   const pathname = usePathname()
 
-  const currentSlug = PATH_TO_SLUG[pathname] ?? null
+  const currentSlug = getPageSlugWithFallback(pathname)
 
-  function handleStart(slug: string) {
+  function handleStart(slug: string, stepIndex = 0) {
     resetTour(userId, slug)
-    startTour(slug)
+    startTour(slug, stepIndex)
     setOpen(false)
   }
 
@@ -79,17 +79,52 @@ export function OnboardingDevPanel({ userId }: OnboardingDevPanelProps) {
             Туры онбординга
           </div>
 
-          {TOUR_PAGES.map(({ slug, label }) => (
-            <button
-              key={slug}
-              onClick={() => handleStart(slug)}
-              className="flex items-center justify-between w-full px-2 py-1.5 rounded-lg text-[12px] text-left transition-colors hover:bg-black/5"
-              style={{ color: slug === currentSlug ? 'var(--apex-primary)' : 'var(--apex-text)' }}
-            >
-              <span>{label}</span>
-              <Play size={11} className="opacity-50 flex-shrink-0" />
-            </button>
-          ))}
+          {TOURS.map(({ pageSlug: slug, steps }) => {
+            const label = SLUG_LABELS[slug] ?? slug
+            const isExpanded = expandedSlug === slug
+            return (
+              <div key={slug} className="flex flex-col">
+                <div
+                  className="flex items-center w-full rounded-lg transition-colors hover:bg-black/5"
+                  style={{ color: slug === currentSlug ? 'var(--apex-primary)' : 'var(--apex-text)' }}
+                >
+                  <button
+                    onClick={() => handleStart(slug)}
+                    className="flex items-center gap-1.5 flex-1 min-w-0 px-2 py-1.5 text-[12px] text-left"
+                  >
+                    <Play size={11} className="opacity-50 flex-shrink-0" />
+                    <span className="truncate">{label}</span>
+                  </button>
+                  {steps.length > 1 && (
+                    <button
+                      onClick={() => setExpandedSlug(isExpanded ? null : slug)}
+                      className="px-1.5 py-1.5 flex-shrink-0"
+                      style={{ color: 'var(--text-muted)' }}
+                      aria-label="Показать шаги"
+                    >
+                      {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                  )}
+                </div>
+
+                {isExpanded && (
+                  <div className="flex flex-col pl-2.5 mt-0.5 mb-1 ml-1.5" style={{ borderLeft: '1px solid var(--apex-border)' }}>
+                    {steps.map((step, i) => (
+                      <button
+                        key={step.id}
+                        onClick={() => handleStart(slug, i)}
+                        className="flex items-start gap-1.5 w-full px-2 py-1 rounded-lg text-[11px] text-left transition-colors hover:bg-black/5"
+                        style={{ color: 'var(--text-secondary)' }}
+                      >
+                        <span className="opacity-60 flex-shrink-0 tabular-nums">{i + 1}.</span>
+                        <span className="truncate">{step.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
 
           <div className="border-t mt-1 pt-2" style={{ borderColor: 'var(--apex-border)' }}>
             <button

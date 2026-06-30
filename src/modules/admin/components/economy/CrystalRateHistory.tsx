@@ -22,7 +22,7 @@ export function CrystalRateHistory({ rates }: CrystalRateHistoryProps) {
   const history = rates.slice(1)
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-3" data-onboarding="admin-economy-rate">
       <h2 className="text-[14px] font-bold" style={{ color: 'var(--apex-text)' }}>
         Курс кристаллов
       </h2>

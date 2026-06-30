@@ -46,7 +46,7 @@ export function TransactionsFilters({ currentSort, currentSource, currentDateFro
   }
 
   return (
-    <div className="space-y-2.5 pb-4 mb-2">
+    <div className="space-y-2.5 pb-4 mb-2" data-onboarding="transactions-filters">
       <FilterRow label="Тип">
         {SOURCE_OPTIONS.map((opt) => (
           <FilterPill

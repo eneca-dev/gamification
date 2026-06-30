@@ -1,3 +1,5 @@
+import { PLUGIN_NAMES } from '@/config/plugins'
+
 import type { OnboardingTour } from '../types'
 
 export const dashboardTour: OnboardingTour = {
@@ -8,7 +10,7 @@ export const dashboardTour: OnboardingTour = {
       target: null,
       title: 'Добро пожаловать в Геймификацию!',
       description:
-        'Вы зарабатываете 💎 за корректное ведение WorkSection, использование Revit-плагинов и помощь коллегам. 💎 можно потратить в магазине на реальные награды. Сейчас пройдёмся по ключевым блокам — это займёт пару минут.',
+        'Вы зарабатываете кристаллы 💎 за корректное ведение WorkSection, использование Revit-плагинов и помощь коллегам. Кристаллы 💎 можно потратить в магазине на реальные награды. Сейчас пройдёмся по ключевым блокам — это займёт пару минут.',
       placement: 'center',
     },
     {
@@ -16,7 +18,7 @@ export const dashboardTour: OnboardingTour = {
       target: 'sidebar-balance',
       title: 'Ваш баланс',
       description:
-        'Текущее количество 💎. 💎 начисляются или отнимаются автоматически каждый день. Потратить их можно в разделе «Магазин».',
+        'Текущее количество кристаллов 💎. Кристаллы 💎 начисляются или отнимаются автоматически каждый день. Потратить их можно в разделе «Магазин».',
       placement: 'right',
     },
     {
@@ -71,7 +73,7 @@ export const dashboardTour: OnboardingTour = {
             <span className="font-semibold" style={{ color: 'var(--orange-500)' }}>⭐ Автоматизации — запуски Revit-плагинов</span>
             <span className="pl-2" style={{ color: 'var(--text-secondary)' }}>Каждый день, когда вы запустили хотя бы один из плагинов, продлевает стрик:</span>
             <span className="pl-2 text-[11px]" style={{ color: 'var(--text-secondary)' }}>
-              Auditor, ClashesManager, LinksManager, ShareModel, SDT, ParamOperator, ApartmentLayouts, FasciaCappings, SpacesManager, ResaveModels, AutoOpenings, Finishing, SharedCoordinates, ProfiLay, LookupTables, ViewCloner, LintelsTransfer, SurfaceGen, QuickMount, SchedulesTable.
+              {PLUGIN_NAMES.join(', ')}.
             </span>
             <span className="pl-2 text-[11px] font-semibold" style={{ color: 'var(--apex-warning-text)' }}>
               ⚠️ Старые версии плагинов могут не передавать данные — обновите плагины перед использованием.
@@ -104,11 +106,16 @@ export const dashboardTour: OnboardingTour = {
         <span className="flex flex-col gap-2.5">
           <span className="flex flex-col gap-0.5">
             <span className="font-semibold" style={{ color: 'var(--apex-primary)' }}>Что такое стрик по бюджету</span>
-            <span className="pl-2" style={{ color: 'var(--text-secondary)' }}>Задача засчитывается в серию, если она была закрыта без превышения бюджета. Каждые 10 таких задач подряд — бонус 💎. Серия циклическая: после каждого рубежа счёт начинается заново.</span>
+            <span className="pl-2" style={{ color: 'var(--text-secondary)' }}>Задача засчитывается в серию, если она была закрыта без превышения бюджета. Каждые 10 таких задач подряд — бонус в кристаллах 💎. Серия циклическая: после каждого рубежа счёт начинается заново.</span>
           </span>
 
           <span className="flex flex-col gap-0.5">
             <span className="font-semibold" style={{ color: 'var(--apex-primary)' }}>L3 (3 уровень задач) и L2 (2 уровень задач) — две независимые серии</span>
+          </span>
+
+          <span className="flex flex-col gap-0.5">
+            <span className="font-semibold" style={{ color: 'var(--apex-primary)' }}>Задачи, закрытые в срок</span>
+            <span className="pl-2" style={{ color: 'var(--text-secondary)' }}>Задача, закрытая в срок (по дедлайну), приносит несколько кристаллов 💎, но в серию не складывается — серию формируют только задачи, закрытые без превышения бюджета.</span>
           </span>
 
           <span
@@ -119,10 +126,48 @@ export const dashboardTour: OnboardingTour = {
             }}
           >
             <span className="font-semibold" style={{ color: 'var(--apex-warning-text)' }}>⏳ Начисление через 30 дней</span>
-            <span style={{ color: 'var(--apex-warning-dark)' }}>После закрытия задачи бонус не начисляется сразу — задача ждёт 30 дней в разделе «Ожидают 30 дней». Если за это время бюджет не будет превышен, 💎 начислятся автоматически.</span>
+            <span style={{ color: 'var(--apex-warning-dark)' }}>После закрытия задачи бонус не начисляется сразу — задача ждёт 30 дней в разделе «Ожидают 30 дней». Если за это время бюджет не будет превышен, кристаллы 💎 начислятся автоматически.</span>
           </span>
 
           <span style={{ color: 'var(--text-secondary)' }}>Превышение бюджета обнуляет серию до 0. Здесь же видны последние события по задачам.</span>
+        </span>
+      ),
+      placement: 'left',
+    },
+    {
+      id: 'dashboard-alarms',
+      target: 'alarms-widget',
+      title: 'Напоминания',
+      description: (
+        <span className="flex flex-col gap-2.5">
+          <span>Здесь появляются задачи Worksection, в которых пора сменить метку прогресса — расход бюджета приближается к контрольной точке.</span>
+
+          <span className="flex flex-col gap-0.5">
+            <span className="font-semibold" style={{ color: 'var(--apex-text)' }}>Как считаются чекпоинты</span>
+            <span className="pl-2" style={{ color: 'var(--text-secondary)' }}>
+              Расход бюджета от планового делится на промежутки: 0–20%, 21–40%, 41–60% и так далее. В каждом промежутке должна быть хотя бы одна смена метки прогресса — важен сам факт смены. Напоминание появляется, когда бюджет вот-вот пройдёт границу промежутка, а метку ещё не меняли.
+            </span>
+          </span>
+
+          <span className="flex flex-col gap-0.5">
+            <span className="font-semibold" style={{ color: 'var(--apex-primary)' }}>Проверяются только метки L3</span>
+            <span className="pl-2" style={{ color: 'var(--text-secondary)' }}>
+              Но если метку L3 не сменить вовремя, красный день получают двое: ответственный за саму L3 и ответственный за L2, внутри которой лежит эта L3.
+            </span>
+          </span>
+
+          <span className="flex flex-col gap-0.5">
+            <span className="font-semibold" style={{ color: 'var(--orange-500)' }}>Напоминание видят оба</span>
+            <span className="pl-2" style={{ color: 'var(--text-secondary)' }}>
+              <span className="font-semibold" style={{ color: 'var(--apex-primary)' }}>L3</span> — ответственному за задачу: «Смените метку».
+              {' '}
+              <span className="font-semibold" style={{ color: 'var(--orange-500)' }}>L2</span> — ответственному за раздел: «Проверьте метку L3» с именем исполнителя.
+            </span>
+          </span>
+
+          <span className="text-[10px] pt-0.5" style={{ color: 'var(--text-muted)', borderTop: '1px solid var(--apex-border)' }}>
+            Закрывайте напоминания галочкой по мере смены меток. Полный список — по ссылке «Все напоминания».
+          </span>
         </span>
       ),
       placement: 'left',
@@ -140,7 +185,7 @@ export const dashboardTour: OnboardingTour = {
       target: 'transaction-feed',
       title: 'История операций',
       description:
-        'Здесь отображаются последние 5 операций: начисления за зелёные дни, стрик-бонусы, благодарности и покупки. Нажмите «Все операции» для полной истории.',
+        'Здесь отображаются последние 5 операций: начисления за зелёные дни, полученные бонусы, благодарности, покупки и прочее. Нажмите «Все операции» для полной истории.',
       placement: 'top',
     },
     {
@@ -148,7 +193,7 @@ export const dashboardTour: OnboardingTour = {
       target: 'leaderboard',
       title: 'Рейтинг сотрудников',
       description:
-        'В этих блоках показаны 5 лучших по Worksection и по Revit, но ваш ранг считается среди всех. Сотрудники в отпуске или на больничном не учитываются. Наведите на ℹ️ для подробностей.',
+        'В этих блоках показан рейтинг среди сотрудников по Worksection и по Revit. Сотрудники в отпуске или на больничном не учитываются. Наведите на ℹ️ для подробностей.',
       placement: 'top',
     },
     {
@@ -156,15 +201,61 @@ export const dashboardTour: OnboardingTour = {
       target: 'department-contest',
       title: 'Соревнование отделов',
       description:
-        'Ваш отдел соревнуется с другими по корректному ведению Worksection и использованию автоматизаций. По WS считается среднее 💎 на сотрудника, по Revit — (сумма 💎 × коэффициент вовлечённости) ÷ кол-во людей, где коэффициент вовлечённости = доля использующих плагины. Это уравнивает отделы разного размера. Наведите на ℹ️, чтобы узнать точную формулу. Ниже — аналогичное соревнование для команд.',
+        'Ваш отдел соревнуется с другими по корректному ведению Worksection и использованию автоматизаций. По WS считается среднее по заработанным кристаллам 💎 на сотрудника, по Revit — (сумма кристаллов 💎 × коэффициент вовлечённости) ÷ кол-во людей, где коэффициент вовлечённости = доля использующих плагины в отчетном периоде. Это уравнивает отделы разного размера. Наведите на ℹ️, чтобы узнать точную формулу. Ниже — аналогичное соревнование для команд.',
       placement: 'top',
+    },
+    {
+      id: 'dashboard-assistant',
+      target: 'chat-assistant',
+      title: 'AI-ассистент',
+      description:
+        'Не нашли ответ в справке? Спросите ассистента — он отвечает на вопросы о правилах геймификации: начислениях, стриках, достижениях и магазине. Кнопка доступна на любой странице в правом верхнем углу.',
+      placement: 'left',
+    },
+    {
+      id: 'dashboard-feedback',
+      target: 'feedback-button',
+      title: 'Обратная связь',
+      description:
+        'Что-то работает не так или есть идея, как улучшить систему? Нажмите «Обратная связь» — опишите баг или предложение и при необходимости приложите файлы. Кнопка доступна на любой странице в правом нижнем углу.',
+      placement: 'left',
+    },
+    {
+      id: 'dashboard-day-off',
+      target: 'day-off-type-switch',
+      extraTargets: ['sidebar-day-off'],
+      title: 'Запросить выходной',
+      description: (
+        <span className="flex flex-col gap-2.5">
+          <span>Вы находитесь в разделе «Запросить выходной» — открыть его всегда можно по подсвеченному пункту в боковом меню слева. Здесь оформляется заявка для системы геймификации, чтобы стрик заморозился и вы не получили красный день за отсутствие.</span>
+
+          <span className="flex flex-col gap-0.5">
+            <span className="font-semibold" style={{ color: 'var(--apex-primary)' }}>Соцотпуск</span>
+            <span className="pl-2" style={{ color: 'var(--text-secondary)' }}>Отпуск за свой счёт. Нужно указать даты и приложить скриншот согласования с руководителем.</span>
+          </span>
+
+          <span className="flex flex-col gap-0.5">
+            <span className="font-semibold" style={{ color: 'var(--orange-500)' }}>Командировка</span>
+            <span className="pl-2" style={{ color: 'var(--text-secondary)' }}>Достаточно указать даты и комментарий — скриншот не требуется.</span>
+          </span>
+
+          <span className="text-[10px] pt-0.5" style={{ color: 'var(--text-muted)', borderTop: '1px solid var(--apex-border)' }}>
+            Эта заявка только для системы геймификации — она не заменяет официальное оформление.
+          </span>
+        </span>
+      ),
+      placement: 'left',
+      // Перед показом переходим на страницу заявки на выходной
+      onBeforeShow: ({ router }) => {
+        router.push('/day-off')
+      },
     },
     {
       id: 'dashboard-coins-reference',
       target: 'help-article',
       title: 'Справочник начислений',
       description:
-        'Вы в разделе «Справка». Здесь — полный список действий, за которые начисляются 💎 и их суммы. L2 — задача 2-го уровня в Worksection, L3 — задача 3-го уровня в Worksection. Возвращайтесь сюда, чтобы свериться с правилами.',
+        'Вы в разделе «Справка». Здесь — полный список действий, за которые начисляются кристаллы 💎 и их суммы. L2 — задача 2-го уровня в Worksection, L3 — задача 3-го уровня в Worksection. Возвращайтесь сюда, чтобы свериться с правилами.',
       placement: 'left',
       // Открываем страницу справочника до показа подсказки
       onBeforeShow: ({ router }) => {
@@ -176,7 +267,7 @@ export const dashboardTour: OnboardingTour = {
       target: null,
       title: 'Вы готовы!',
       description:
-        'Зарабатывайте 💎, поддерживайте стрики, помогайте коллегам и обменивайте 💎 на награды в магазине. Загляните в «Достижения» и «Магазин» в боковом меню — там тоже будут подсказки при первом посещении.',
+        'Зарабатывайте кристаллы 💎, поддерживайте стрики, помогайте коллегам и обменивайте кристаллы 💎 на награды в магазине. Загляните в «Достижения» и «Магазин» в боковом меню — там тоже будут подсказки при первом посещении.',
       placement: 'center',
     },
   ],

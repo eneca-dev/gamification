@@ -55,7 +55,7 @@ export function KpiSummary({ overview, rate }: KpiSummaryProps) {
       : 0
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-3" data-onboarding="admin-economy-summary">
       <h2 className="text-[14px] font-bold" style={{ color: 'var(--apex-text)' }}>
         Сводка
       </h2>

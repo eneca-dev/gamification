@@ -2,10 +2,16 @@
 export const PAGE_SLUG_MAP: Record<string, string> = {
   '/': 'dashboard',
   '/achievements': 'achievements',
+  '/achievements/all': 'achievements-all',
   '/store': 'store',
   '/activity': 'activity',
   '/activity?feed=dept': 'activity-dept',
   '/activity?feed=team': 'activity-team',
+  '/activity/achievements': 'activity-achievements',
+  '/activity/gratitudes': 'activity-gratitudes',
+  '/gratitudes': 'gratitudes',
+  '/transactions': 'transactions',
+  '/alarms': 'alarms',
   '/admin': 'admin',
   '/admin/users': 'admin-users',
   '/admin/products': 'admin-products',
@@ -15,8 +21,12 @@ export const PAGE_SLUG_MAP: Record<string, string> = {
   '/admin/achievements': 'admin-achievements',
   // [LOTTERY HIDDEN] '/admin/lottery': 'admin-lottery',
   '/admin/help': 'admin-help',
+  '/admin/day-off': 'admin-day-off',
+  '/admin/economy': 'admin-economy',
+  '/admin/feedback': 'admin-feedback',
+  '/admin/chatbot': 'admin-chatbot',
+  '/admin/shields': 'admin-shields',
   '/help': 'help',
-  '/master-planner': 'master-planner',
 }
 
 /**

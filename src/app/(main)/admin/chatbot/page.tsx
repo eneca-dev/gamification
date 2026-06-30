@@ -16,7 +16,7 @@ export default async function AdminChatbotPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" data-onboarding="admin-chatbot-header">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
             <Bot size={18} style={{ color: 'var(--apex-primary)' }} />
@@ -28,7 +28,7 @@ export default async function AdminChatbotPage() {
             {articles.length} {articles.length === 1 ? 'статья' : articles.length >= 2 && articles.length <= 4 ? 'статьи' : 'статей'} · {totalChunks} чанков
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" data-onboarding="admin-chatbot-reembed">
           <ReembedButton />
           <Link
             href="/admin/chatbot/new/edit"
@@ -56,12 +56,13 @@ export default async function AdminChatbotPage() {
         </div>
       )}
 
-      <div className="space-y-4">
-        {articles.map((article) => (
+      <div className="space-y-4" data-onboarding="admin-chatbot-articles">
+        {articles.map((article, index) => (
           <div
             key={article.slug}
             className="rounded-2xl overflow-hidden"
             style={{ border: '1px solid var(--border)' }}
+            data-onboarding={index === 0 ? 'admin-chatbot-article' : undefined}
           >
             {/* Article header */}
             <div

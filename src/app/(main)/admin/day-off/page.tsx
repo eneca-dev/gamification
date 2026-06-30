@@ -30,7 +30,7 @@ export default async function AdminDayOffPage() {
 
   return (
     <div className="space-y-5">
-      <div>
+      <div data-onboarding="admin-day-off-header">
         <h2 className="text-[16px] font-bold" style={{ color: 'var(--apex-text)' }}>
           Заявки на выходной
         </h2>

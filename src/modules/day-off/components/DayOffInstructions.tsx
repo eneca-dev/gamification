@@ -13,6 +13,7 @@ export function DayOffInstructions({ requestType }: DayOffInstructionsProps) {
     <div
       className="rounded-2xl p-5 space-y-4"
       style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
+      data-onboarding="day-off-instructions"
     >
       <div>
         <h2 className="text-[15px] font-bold mb-1" style={{ color: 'var(--apex-text)' }}>

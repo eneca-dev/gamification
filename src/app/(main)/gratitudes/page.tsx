@@ -36,7 +36,7 @@ export default async function GratitudesPage() {
       </Link>
 
       <div className="flex items-center justify-between animate-fade-in-up">
-        <div>
+        <div data-onboarding="gratitudes-header">
           <h1 className="text-2xl font-extrabold" style={{ color: 'var(--text-primary)' }}>
             Благодарности
           </h1>
@@ -44,12 +44,14 @@ export default async function GratitudesPage() {
             Отправленные и полученные благодарности
           </p>
         </div>
-        <SendGratitudeButton
-          senderId={wsUserId}
-          quota={quota}
-          recipients={recipients}
-          balance={balance}
-        />
+        <div data-onboarding="gratitudes-send">
+          <SendGratitudeButton
+            senderId={wsUserId}
+            quota={quota}
+            recipients={recipients}
+            balance={balance}
+          />
+        </div>
       </div>
 
       <div className="animate-fade-in-up stagger-1">

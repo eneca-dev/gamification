@@ -84,14 +84,16 @@ export function EconomyDashboard({
 
       <CategoryBreakdownChart categories={categories} rate={rate} />
 
-      <LowBalanceSection
-        users={lowBalance}
-        designerFilter={designerFilter}
-        totalCount={poolSize}
-        title="Группа риска"
-        subtitle="Нижние 10% по балансу кристаллов"
-        showFilter
-      />
+      <div data-onboarding="admin-economy-low-balance">
+        <LowBalanceSection
+          users={lowBalance}
+          designerFilter={designerFilter}
+          totalCount={poolSize}
+          title="Группа риска"
+          subtitle="Нижние 10% по балансу кристаллов"
+          showFilter
+        />
+      </div>
 
       <LowBalanceSection
         users={highBalance}
@@ -103,7 +105,7 @@ export function EconomyDashboard({
 
       <DepartmentGroupsManager departments={allDepartments} initialGroups={deptGroups} />
 
-      <section className="space-y-3">
+      <section className="space-y-3" data-onboarding="admin-economy-tops">
         <h2 className="text-[14px] font-bold" style={{ color: 'var(--apex-text)' }}>
           Топы
         </h2>

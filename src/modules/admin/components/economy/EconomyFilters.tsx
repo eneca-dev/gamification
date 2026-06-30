@@ -96,6 +96,7 @@ export function EconomyFilters({ period, customFrom, customTo, betaOnly, topLeve
 
   return (
     <div
+      data-onboarding="admin-economy-filters"
       className={`rounded-2xl p-4 flex flex-wrap items-center gap-3 transition-opacity ${isPending ? 'opacity-70' : ''}`}
       style={{
         background: 'var(--apex-surface)',

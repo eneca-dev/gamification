@@ -27,6 +27,7 @@ export default async function AlarmsPage() {
     <div className="space-y-6">
       <Link
         href="/"
+        data-onboarding="alarms-back-link"
         className="inline-flex items-center gap-1.5 text-[13px] font-medium transition-colors"
         style={{ color: "var(--apex-text-muted)" }}
       >
@@ -39,14 +40,14 @@ export default async function AlarmsPage() {
           className="rounded-2xl p-6"
           style={{ background: "var(--apex-surface)", border: "1px solid var(--apex-border)" }}
         >
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6" data-onboarding="alarms-header">
             <div className="flex items-center gap-2">
               <Bell size={18} style={{ color: "var(--apex-warning-text)" }} fill="var(--apex-warning-text)" />
               <h1 className="text-[18px] font-bold" style={{ color: "var(--apex-text)" }}>
                 Все напоминания за сегодня
               </h1>
             </div>
-            <span className="text-[12px] font-semibold" style={{ color: "var(--apex-text-muted)" }}>
+            <span className="text-[12px] font-semibold" style={{ color: "var(--apex-text-muted)" }} data-onboarding="alarms-counter">
               {alarms.filter((a) => a.is_resolved).length}/{alarms.length}
             </span>
           </div>

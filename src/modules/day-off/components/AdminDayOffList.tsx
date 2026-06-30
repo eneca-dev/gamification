@@ -69,6 +69,7 @@ function RequestRow({
 
   return (
     <div
+      data-onboarding="admin-day-off-row"
       className="rounded-xl p-3 space-y-2"
       style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
     >
@@ -118,7 +119,7 @@ function RequestRow({
           </div>
 
           {isActive && (
-            <div className="flex items-center gap-2 flex-wrap mt-auto">
+            <div data-onboarding="admin-day-off-actions" className="flex items-center gap-2 flex-wrap mt-auto">
               <button
                 onClick={handleApprove}
                 disabled={isPending}
@@ -181,6 +182,7 @@ function RequestRow({
             <button
               type="button"
               onClick={() => onViewScreenshot(screenshotUrl)}
+              data-onboarding="admin-day-off-screenshot"
               className="relative group overflow-hidden flex-shrink-0"
               style={{ width: 72, height: 48, borderRadius: '8px', border: '1px solid var(--apex-border)' }}
             >
@@ -231,7 +233,7 @@ export function AdminDayOffList({ requests, screenshotUrls }: AdminDayOffListPro
 
       <div className="space-y-4">
         {active.length > 0 && (
-          <div className="space-y-2">
+          <div data-onboarding="admin-day-off-list" className="space-y-2">
             <h3 className="text-[13px] font-semibold uppercase tracking-wide" style={{ color: 'var(--apex-text-muted)' }}>
               На рассмотрении ({active.length})
             </h3>

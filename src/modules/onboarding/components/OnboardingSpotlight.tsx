@@ -44,16 +44,20 @@ export function OnboardingSpotlight({
   const [targetEl, setTargetEl] = useState<HTMLElement | null>(null)
   const [tooltipPos, setTooltipPos] = useState<TooltipPosition | null>(null)
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
+  const [extraRects, setExtraRects] = useState<DOMRect[]>([])
   const [ready, setReady] = useState(false)
 
   const isModal = step.target === null
   const isLastStep = stepIndex === totalSteps - 1
+  // Стабильный ключ дополнительных целей для зависимостей эффектов
+  const extraKey = (step.extraTargets ?? []).join(',')
 
   // Поиск target элемента в DOM с polling
   useEffect(() => {
     setReady(false)
     setTargetEl(null)
     setTargetRect(null)
+    setExtraRects([])
     setTooltipPos(null)
 
     // Подготовить DOM перед поиском target (переключить таб, перейти на страницу и т.п.)
@@ -67,9 +71,15 @@ export function OnboardingSpotlight({
     const startTime = Date.now()
 
     const poll = setInterval(() => {
-      const el = document.querySelector<HTMLElement>(
+      // Один и тот же data-onboarding может встречаться несколько раз
+      // (виджет дублируется под разные брейкпоинты) — берём видимый.
+      const candidates = document.querySelectorAll<HTMLElement>(
         `[data-onboarding="${step.target}"]`
       )
+      const el =
+        Array.from(candidates).find((c) => c.offsetParent !== null) ??
+        candidates[0] ??
+        null
       if (el) {
         clearInterval(poll)
         setTargetEl(el)
@@ -94,11 +104,12 @@ export function OnboardingSpotlight({
     const timer = setTimeout(() => {
       const rect = targetEl.getBoundingClientRect()
       setTargetRect(rect)
+      setExtraRects(collectRects(step.extraTargets))
       setReady(true)
     }, SCROLL_SETTLE_TIMEOUT)
 
     return () => clearTimeout(timer)
-  }, [targetEl, isModal])
+  }, [targetEl, isModal, extraKey, step.extraTargets])
 
   // Расчёт позиции tooltip после рендера
   useLayoutEffect(() => {
@@ -128,6 +139,7 @@ export function OnboardingSpotlight({
     const update = () => {
       const rect = targetEl.getBoundingClientRect()
       setTargetRect(rect)
+      setExtraRects(collectRects(step.extraTargets))
     }
 
     window.addEventListener('resize', update)
@@ -136,7 +148,7 @@ export function OnboardingSpotlight({
       window.removeEventListener('resize', update)
       window.removeEventListener('scroll', update, true)
     }
-  }, [targetEl, isModal])
+  }, [targetEl, isModal, extraKey, step.extraTargets])
 
   // Блокировка скролла body (сохраняем оригинальное значение)
   useEffect(() => {
@@ -239,22 +251,42 @@ export function OnboardingSpotlight({
   // Spotlight с target
   if (!targetRect) return null
 
-  const highlightStyle = {
-    position: 'fixed' as const,
-    top: targetRect.top - HIGHLIGHT_PADDING,
-    left: targetRect.left - HIGHLIGHT_PADDING,
-    width: targetRect.width + HIGHLIGHT_PADDING * 2,
-    height: targetRect.height + HIGHLIGHT_PADDING * 2,
-    borderRadius: 12,
-    boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)',
-    zIndex: 10001,
-    pointerEvents: 'none' as const,
-  }
+  // Все подсвечиваемые области: основной target + дополнительные
+  const holes = [targetRect, ...extraRects]
 
   return (
     <div className="fixed inset-0 z-[10000]" onClick={handleOverlayClick}>
-      {/* Highlight вокруг target */}
-      <div style={highlightStyle} />
+      {/* Затемнение с «дырками» вокруг каждой подсвеченной области */}
+      <svg
+        className="fixed inset-0 w-full h-full"
+        style={{ zIndex: 10001, pointerEvents: 'none' }}
+      >
+        <defs>
+          <mask id="onboarding-spotlight-mask">
+            <rect x="0" y="0" width="100%" height="100%" fill="white" />
+            {holes.map((r, i) => (
+              <rect
+                key={i}
+                x={r.left - HIGHLIGHT_PADDING}
+                y={r.top - HIGHLIGHT_PADDING}
+                width={r.width + HIGHLIGHT_PADDING * 2}
+                height={r.height + HIGHLIGHT_PADDING * 2}
+                rx={12}
+                ry={12}
+                fill="black"
+              />
+            ))}
+          </mask>
+        </defs>
+        <rect
+          x="0"
+          y="0"
+          width="100%"
+          height="100%"
+          fill="rgba(0,0,0,0.55)"
+          mask="url(#onboarding-spotlight-mask)"
+        />
+      </svg>
 
       {/* Tooltip */}
       <AnimatePresence mode="wait">
@@ -325,6 +357,20 @@ export function OnboardingSpotlight({
   )
 }
 
+/** Прямоугольники видимых элементов по списку data-onboarding selectors */
+function collectRects(selectors: string[] | undefined): DOMRect[] {
+  if (!selectors?.length) return []
+  const rects: DOMRect[] = []
+  for (const sel of selectors) {
+    const candidates = document.querySelectorAll<HTMLElement>(`[data-onboarding="${sel}"]`)
+    const el = Array.from(candidates).find((c) => c.offsetParent !== null)
+    if (!el) continue
+    const rect = el.getBoundingClientRect()
+    if (rect.width > 0 && rect.height > 0) rects.push(rect)
+  }
+  return rects
+}
+
 /** Расчёт позиции tooltip с учётом границ viewport */
 function calculatePosition(
   targetRect: DOMRect,
@@ -335,18 +381,39 @@ function calculatePosition(
   preferred: StepPlacement
 ): TooltipPosition {
   const placements: StepPlacement[] = [preferred, 'bottom', 'top', 'right', 'left']
+  const M = 8
+  const clamp = (v: number, min: number, max: number) =>
+    Math.min(Math.max(v, min), max)
 
   for (const placement of placements) {
     const pos = getPositionForPlacement(targetRect, tooltipW, tooltipH, placement)
 
-    // Проверяем, вписывается ли в viewport
-    if (
-      pos.top >= 8 &&
-      pos.left >= 8 &&
-      pos.top + tooltipH <= viewportH - 8 &&
-      pos.left + tooltipW <= viewportW - 8
-    ) {
-      return { ...pos, placement }
+    // Сторона размещения определяет ось без перекрытия target.
+    // По этой оси проверяем, что tooltip помещается; вторую ось зажимаем во viewport.
+    if (placement === 'top' || placement === 'bottom') {
+      const fits =
+        placement === 'top'
+          ? pos.top >= M
+          : pos.top + tooltipH <= viewportH - M
+      if (fits) {
+        return {
+          top: pos.top,
+          left: clamp(pos.left, M, viewportW - tooltipW - M),
+          placement,
+        }
+      }
+    } else if (placement === 'left' || placement === 'right') {
+      const fits =
+        placement === 'left'
+          ? pos.left >= M
+          : pos.left + tooltipW <= viewportW - M
+      if (fits) {
+        return {
+          top: clamp(pos.top, M, viewportH - tooltipH - M),
+          left: pos.left,
+          placement,
+        }
+      }
     }
   }
 

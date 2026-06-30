@@ -65,7 +65,7 @@ export function SpendingBreakdown({ channels, rate }: SpendingBreakdownProps) {
   const participantPlural = (n: number) => pluralize(n, 'участник', 'участника', 'участников')
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-3" data-onboarding="admin-economy-spending">
       <h2 className="text-[14px] font-bold" style={{ color: 'var(--apex-text)' }}>
         Куда уходят деньги
       </h2>

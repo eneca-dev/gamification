@@ -31,7 +31,7 @@ export default async function DayOffPage() {
 
   return (
     <div className="space-y-5">
-      <div className="animate-fade-in-up">
+      <div className="animate-fade-in-up" data-onboarding="day-off-header">
         <h1 className="text-[20px] font-bold" style={{ color: 'var(--apex-text)' }}>
           Запросить выходной
         </h1>
