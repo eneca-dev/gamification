@@ -1,4 +1,4 @@
-const PREFIX = 'onboarding_v1'
+const PREFIX = 'onboarding_v1_release'
 
 function buildKey(userId: string, pageSlug: string): string {
   return `${PREFIX}:${userId}:${pageSlug}`
