@@ -78,6 +78,9 @@ export const dashboardTour: OnboardingTour = {
             <span className="pl-2 text-[11px] font-semibold" style={{ color: 'var(--apex-warning-text)' }}>
               ⚠️ Старые версии плагинов могут не передавать данные — обновите плагины перед использованием.
             </span>
+            <span className="pl-2 text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+              Плагины не засчитываются? В справке «Кристаллы за плагины» есть список, что проверить.
+            </span>
           </span>
 
           <span
