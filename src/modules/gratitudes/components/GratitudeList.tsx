@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ArrowUpRight, ArrowDownLeft } from 'lucide-react'
 import { CoinIcon } from '@/components/CoinIcon'
 
+import { useMyGratitudes } from '../hooks/useGratitudes'
 import { GRATITUDE_CATEGORIES } from '../types'
 import type { GratitudeNew } from '../types'
 
@@ -32,8 +33,11 @@ interface GratitudeListProps {
   currentUserEmail: string
 }
 
-export function GratitudeList({ items, currentUserEmail }: GratitudeListProps) {
+export function GratitudeList({ items: initialItems, currentUserEmail }: GratitudeListProps) {
   const [tab, setTab] = useState<'all' | 'received' | 'sent'>('all')
+
+  // Live-данные: realtime-инвалидация обновляет список без перезагрузки страницы
+  const { data: items = initialItems } = useMyGratitudes(currentUserEmail, initialItems, 100)
 
   const filtered = items.filter((item) => {
     if (tab === 'received') return item.recipient_email === currentUserEmail

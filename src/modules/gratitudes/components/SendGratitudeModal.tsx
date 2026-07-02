@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useTransition, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Heart, Gift, Search, Send, Sparkles, Coins, CheckCircle } from 'lucide-react'
 import { CoinIcon } from '@/components/CoinIcon'
 
-import { sendGratitude } from '../actions'
+import { useSendGratitude } from '../hooks/useGratitudes'
 import { GRATITUDE_CATEGORIES } from '../types'
-import type { GratitudeCategory, SenderQuota, GratitudeRecipient } from '../types'
+import type { GratitudeCategory, SenderQuota, GratitudeRecipient, SendGratitudeInput } from '../types'
 
 function pluralizeDays(n: number): string {
   const mod10 = n % 10
@@ -25,7 +25,6 @@ interface SendGratitudeModalProps {
   quota: SenderQuota
   recipients: GratitudeRecipient[]
   balance: number
-  onSuccess?: () => void
 }
 
 // Сегодня по Минску в формате YYYY-MM-DD (как на сервере fn_minsk_today)
@@ -51,7 +50,7 @@ function nextQuotaDays(quota: SenderQuota): number {
 }
 
 export function SendGratitudeModal({
-  isOpen, onClose, senderId, quota, recipients, balance, onSuccess,
+  isOpen, onClose, senderId, quota, recipients, balance,
 }: SendGratitudeModalProps) {
   const [step, setStep] = useState<'form' | 'success'>('form')
   const [category, setCategory] = useState<GratitudeCategory | null>(null)
@@ -63,8 +62,9 @@ export function SendGratitudeModal({
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
   const [lastSentType, setLastSentType] = useState<'thanks' | 'gift'>('thanks')
+  const sendMutation = useSendGratitude(senderId)
+  const isPending = sendMutation.isPending
 
   const filteredRecipients = useMemo(() => {
     if (!searchQuery.trim()) return recipients.slice(0, 8)
@@ -102,21 +102,34 @@ export function SendGratitudeModal({
     return true
   }
 
+  // Оптимистичная отправка: экран успеха сразу, откат к форме при ошибке
+  function submit(input: SendGratitudeInput) {
+    setStep('success')
+    sendMutation.mutate(input, {
+      onSuccess: (result) => {
+        if (!result.success) {
+          setStep('form')
+          setError(result.error)
+        }
+      },
+      onError: () => {
+        setStep('form')
+        setError('Не удалось отправить. Попробуйте ещё раз')
+      },
+    })
+  }
+
   // Отправить простую благодарность
   function handleSendThanks() {
     if (!validate()) return
     setLastSentType('thanks')
-    startTransition(async () => {
-      const result = await sendGratitude(senderId, {
-        recipient_id: recipientId!,
-        message: message.trim(),
-        category: category!,
-        type: 'thanks',
-        gift_source: null,
-        coins_amount: 0,
-      })
-      if (result.success) { setStep('success'); onSuccess?.() }
-      else setError(result.error)
+    submit({
+      recipient_id: recipientId!,
+      message: message.trim(),
+      category: category!,
+      type: 'thanks',
+      gift_source: null,
+      coins_amount: 0,
     })
   }
 
@@ -124,17 +137,13 @@ export function SendGratitudeModal({
   function handleSendQuotaGift() {
     if (!validate()) return
     setLastSentType('gift')
-    startTransition(async () => {
-      const result = await sendGratitude(senderId, {
-        recipient_id: recipientId!,
-        message: message.trim(),
-        category: category!,
-        type: 'gift',
-        gift_source: 'quota',
-        coins_amount: 0,
-      })
-      if (result.success) { setStep('success'); onSuccess?.() }
-      else setError(result.error)
+    submit({
+      recipient_id: recipientId!,
+      message: message.trim(),
+      category: category!,
+      type: 'gift',
+      gift_source: 'quota',
+      coins_amount: 0,
     })
   }
 
@@ -150,17 +159,13 @@ export function SendGratitudeModal({
       return
     }
     setLastSentType('gift')
-    startTransition(async () => {
-      const result = await sendGratitude(senderId, {
-        recipient_id: recipientId!,
-        message: message.trim(),
-        category: category!,
-        type: 'gift',
-        gift_source: 'balance',
-        coins_amount: coinsAmount,
-      })
-      if (result.success) { setStep('success'); onSuccess?.() }
-      else setError(result.error)
+    submit({
+      recipient_id: recipientId!,
+      message: message.trim(),
+      category: category!,
+      type: 'gift',
+      gift_source: 'balance',
+      coins_amount: coinsAmount,
     })
   }
 
