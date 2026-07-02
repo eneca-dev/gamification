@@ -4,27 +4,8 @@ import { useState, useMemo } from 'react'
 import { ArrowRight, Search } from 'lucide-react'
 
 import { GRATITUDE_CATEGORIES } from '../types'
+import { getCategoryEmoji, getCategoryLabel, timeAgo } from '../format'
 import type { GratitudeNew } from '../types'
-
-function getCategoryEmoji(cat: string | null): string {
-  return GRATITUDE_CATEGORIES.find((c) => c.slug === cat)?.emoji ?? '💬'
-}
-
-function getCategoryLabel(cat: string | null): string {
-  return GRATITUDE_CATEGORIES.find((c) => c.slug === cat)?.label ?? 'Другое'
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 60) return `${mins} мин. назад`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} ч. назад`
-  const days = Math.floor(hours / 24)
-  if (days === 1) return 'вчера'
-  if (days < 7) return `${days} дн. назад`
-  return new Date(dateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
-}
 
 interface CompanyGratitudeListProps {
   items: GratitudeNew[]

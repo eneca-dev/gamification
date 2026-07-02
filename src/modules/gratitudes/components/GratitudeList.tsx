@@ -4,36 +4,20 @@ import { useState } from 'react'
 import { ArrowUpRight, ArrowDownLeft } from 'lucide-react'
 import { CoinIcon } from '@/components/CoinIcon'
 
-import { GRATITUDE_CATEGORIES } from '../types'
+import { useMyGratitudes } from '../hooks/useGratitudes'
+import { getCategoryEmoji, getCategoryLabel, timeAgo } from '../format'
 import type { GratitudeNew } from '../types'
-
-function getCategoryEmoji(cat: string | null): string {
-  return GRATITUDE_CATEGORIES.find((c) => c.slug === cat)?.emoji ?? '💬'
-}
-
-function getCategoryLabel(cat: string | null): string {
-  return GRATITUDE_CATEGORIES.find((c) => c.slug === cat)?.label ?? 'Другое'
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 60) return `${mins} мин. назад`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} ч. назад`
-  const days = Math.floor(hours / 24)
-  if (days === 1) return 'вчера'
-  if (days < 7) return `${days} дн. назад`
-  return new Date(dateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
-}
 
 interface GratitudeListProps {
   items: GratitudeNew[]
   currentUserEmail: string
 }
 
-export function GratitudeList({ items, currentUserEmail }: GratitudeListProps) {
+export function GratitudeList({ items: initialItems, currentUserEmail }: GratitudeListProps) {
   const [tab, setTab] = useState<'all' | 'received' | 'sent'>('all')
+
+  // Live-данные: realtime-инвалидация обновляет список без перезагрузки страницы
+  const { data: items = initialItems } = useMyGratitudes(currentUserEmail, initialItems, 100)
 
   const filtered = items.filter((item) => {
     if (tab === 'received') return item.recipient_email === currentUserEmail

@@ -280,7 +280,10 @@ myEntity: {
 
 ## Realtime
 
-Подписки настраиваются в `realtime/config.ts`. Активируются после подключения Supabase.
+Подписки настраиваются в `realtime/config.ts`. `RealtimeSync` создаёт по каналу
+`postgres_changes` на таблицу и при событии инвалидирует указанные query keys.
+Активные подписки: `gratitudes` (INSERT → `gratitudes.all`, `balance.all`),
+`gamification_transactions` (INSERT → `transactions.all`, `balance.all`; RLS отдаёт только свои строки).
 
 ### Добавление подписки
 
@@ -290,6 +293,7 @@ myEntity: {
 {
   table: 'achievements',
   invalidateKeys: [queryKeys.achievements.all],
+  event: 'INSERT', // опционально, по умолчанию '*'
 }
 ```
 
@@ -298,6 +302,10 @@ myEntity: {
 ```sql
 ALTER PUBLICATION supabase_realtime ADD TABLE achievements;
 ```
+
+3. Проверить RLS: события доставляются только строкам, которые видит
+аутентифицированный пользователь — нужна SELECT-политика (браузерный клиент
+работает с publishable key, политика только для service_role = событий не будет).
 
 ### Отключение Realtime
 

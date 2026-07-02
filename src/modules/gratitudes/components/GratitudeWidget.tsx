@@ -1,15 +1,13 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { useQueryClient } from '@tanstack/react-query'
 import { Heart, ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import { CoinIcon } from '@/components/CoinIcon'
 
 import { SendGratitudeModal } from './SendGratitudeModal'
 import { useMyGratitudes, useSenderQuota } from '../hooks/useGratitudes'
-import { queryKeys } from '@/modules/cache/keys/query-keys'
-import { GRATITUDE_CATEGORIES } from '../types'
+import { getCategoryEmoji, getCategoryLabel, timeAgo } from '../format'
 import type { GratitudeNew, SenderQuota, GratitudeRecipient } from '../types'
 
 interface GratitudeWidgetProps {
@@ -19,26 +17,6 @@ interface GratitudeWidgetProps {
   recipients: GratitudeRecipient[]
   balance: number
   myGratitudes: GratitudeNew[]
-}
-
-function getCategoryEmoji(cat: string | null): string {
-  return GRATITUDE_CATEGORIES.find((c) => c.slug === cat)?.emoji ?? '💬'
-}
-
-function getCategoryLabel(cat: string | null): string {
-  return GRATITUDE_CATEGORIES.find((c) => c.slug === cat)?.label ?? 'Другое'
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 60) return `${mins} мин. назад`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours} ч. назад`
-  const days = Math.floor(hours / 24)
-  if (days === 1) return 'вчера'
-  if (days < 7) return `${days} дн. назад`
-  return new Date(dateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
 }
 
 function GratitudeCard({
@@ -103,15 +81,9 @@ export function GratitudeWidget({
   senderId, currentUserEmail, quota: initialQuota, recipients, balance, myGratitudes: initialGratitudes,
 }: GratitudeWidgetProps) {
   const [showSendModal, setShowSendModal] = useState(false)
-  const queryClient = useQueryClient()
 
   const { data: myGratitudes = initialGratitudes } = useMyGratitudes(currentUserEmail, initialGratitudes)
   const { data: quota = initialQuota } = useSenderQuota(senderId, initialQuota)
-
-  const handleGratitudeSent = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.gratitudes.all })
-    queryClient.invalidateQueries({ queryKey: queryKeys.balance.all })
-  }, [queryClient])
 
   const received = myGratitudes.filter((g) => g.recipient_email === currentUserEmail)
   const sent = myGratitudes.filter((g) => g.sender_email === currentUserEmail)
@@ -193,7 +165,6 @@ export function GratitudeWidget({
         quota={quota}
         recipients={recipients}
         balance={balance}
-        onSuccess={handleGratitudeSent}
       />
 
     </>

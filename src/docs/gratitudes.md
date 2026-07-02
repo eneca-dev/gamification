@@ -6,6 +6,10 @@
 
 Пользователь отправляет благодарность через модалку на dashboard. Server action `sendGratitude` вставляет запись в таблицу `gratitudes`. Триггер `trg_award_gratitude_points_v2` начисляет получателю 💎 (`gratitude_recipient_points`, 20 ПК по умолчанию).
 
+Отправка оптимистичная: модалка показывает экран успеха сразу, при ошибке откатывается к форме с текстом ошибки. Мутация идёт через хук `useSendGratitude`, который при успехе инвалидирует ключи `gratitudes.*` и `balance.*`.
+
+Доставка получателю — realtime: таблица `gratitudes` в publication `supabase_realtime` (миграция 083), подписка на INSERT настроена в `@/modules/cache` (`realtime/config.ts`) и инвалидирует ленты/квоту/баланс у всех открытых вкладок. Для чтения событий добавлена RLS-политика SELECT для authenticated (лента и так видна всей компании). Fallback при обрыве соединения — `refetchOnWindowFocus` у хуков модуля.
+
 Квота: 1 начисление 💎 за подарок по квоте на отправителя в течение 14-дневного периода. Период — фиксированный 14-дневный цикл с якорем `2026-07-01`, граница считается по `fn_minsk_today()` (минское время). Используемость квоты определяется по `gamification_event_logs` (event_type = `gratitude_recipient_points`, `gift_source = 'quota'`) в текущем периоде — не по таблице `gratitudes`. Благодарности-«спасибо» без лимита; подарок за свой счёт (`gift_source = 'balance'`) квоту не расходует.
 
 Нельзя отправить благодарность самому себе (CHECK constraint + серверная валидация).
@@ -35,13 +39,14 @@
 
 ## Actions
 
-- `sendGratitude({ recipient_id, message, category })` — отправка. Валидация Zod, проверка sender != recipient, INSERT в gratitudes, revalidatePath('/')
+- `sendGratitude(senderId, input)` — отправка. Валидация Zod, проверка sender != recipient, затем параллельно одним батчем: sender+recipient одной выборкой из ws_users + квота (только для подарка по квоте). Баланс заранее не проверяется — триггер списывает атомарно и кидает P0001 «Insufficient balance», action маппит его в «Недостаточно 💎». INSERT в gratitudes, revalidatePath('/', '/activity', '/gratitudes')
 
 ## Компоненты
 
-- `GratitudeWidget` — виджет на дашборде. Шапка с кнопкой «Поблагодарить», до 3 благодарностей, ссылка «Все благодарности →». Приоритет отображения: полученные → отправленные → пустое состояние. Подзаголовок меняется динамически: «Последние полученные» / «Последние отправленные»
+- `GratitudeWidget` — виджет на дашборде. Шапка с кнопкой «Поблагодарить», до 3 благодарностей, ссылка «Все благодарности →». Приоритет отображения: полученные → отправленные → пустое состояние. Подзаголовок меняется динамически: «Последние полученные» / «Последние отправленные». Данные — `useMyGratitudes`/`useSenderQuota` с серверным initialData
 - `SendGratitudeButton` — standalone-кнопка «Поблагодарить» + модалка. Поиск получателя, ввод сообщения, категория, отображение квоты
-- `SendGratitudeModal` — модалка отправки, открывается из GratitudeWidget и SendGratitudeButton
+- `SendGratitudeModal` — модалка отправки, открывается из GratitudeWidget и SendGratitudeButton. Оптимистичная: успех сразу, откат к форме при ошибке
+- `GratitudeList` — список на /gratitudes (табы все/полученные/отправленные), live через `useMyGratitudes(email, initialData, 100)`
 - `GratitudeCard` — карточка благодарности (иконка направления, категория, имя, сообщение, время, 💎)
 
 ## Поле category

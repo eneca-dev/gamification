@@ -28,64 +28,43 @@ export async function sendGratitude(
     return { success: false, error: 'Не авторизован' }
   }
 
-  const supabase = createSupabaseAdminClient()
-
-  const { data: wsUser } = await supabase
-    .from('ws_users')
-    .select('id')
-    .eq('email', currentUser.email.toLowerCase())
-    .eq('id', senderId)
-    .eq('is_active', true)
-    .maybeSingle()
-
-  if (!wsUser) {
-    return { success: false, error: 'Не авторизован' }
-  }
-
-  // 3. Нельзя самому себе
+  // 3. Нельзя самому себе (без похода в БД)
   if (recipient_id === senderId) {
     return { success: false, error: 'Нельзя отправить благодарность самому себе' }
   }
 
-  // 4. Проверка что получатель активен
-  const { data: recipient } = await supabase
-    .from('ws_users')
-    .select('id')
-    .eq('id', recipient_id)
-    .eq('is_active', true)
-    .maybeSingle()
+  if (type === 'gift' && gift_source === 'balance' && coins_amount <= 0) {
+    return { success: false, error: 'Укажите сумму подарка' }
+  }
 
-  if (!recipient) {
+  const supabase = createSupabaseAdminClient()
+
+  // 4. Параллельно: отправитель + получатель одной выборкой, квота — только для подарка по ней.
+  // Баланс здесь не проверяем: триггер списывает атомарно и кидает исключение при нехватке.
+  const [usersRes, quota] = await Promise.all([
+    supabase
+      .from('ws_users')
+      .select('id, email')
+      .in('id', [senderId, recipient_id])
+      .eq('is_active', true),
+    type === 'gift' && gift_source === 'quota' ? getSenderQuota(senderId) : Promise.resolve(null),
+  ])
+
+  const users = usersRes.data ?? []
+  const senderOk = users.some(
+    (u) => u.id === senderId && u.email?.toLowerCase() === currentUser.email.toLowerCase()
+  )
+  if (!senderOk) {
+    return { success: false, error: 'Не авторизован' }
+  }
+  if (!users.some((u) => u.id === recipient_id)) {
     return { success: false, error: 'Получатель не найден или неактивен' }
   }
-
-  // 5a. Для подарка по квоте — проверка что квота не использована
-  if (type === 'gift' && gift_source === 'quota') {
-    const quota = await getSenderQuota(senderId)
-    if (quota.used) {
-      return { success: false, error: 'Бесплатная квота уже использована. Следующая доступна ' + (quota.next_quota_date ?? 'позже') }
-    }
+  if (quota?.used) {
+    return { success: false, error: 'Бесплатная квота уже использована. Следующая доступна ' + (quota.next_quota_date ?? 'позже') }
   }
 
-  // 5b. Для подарка за свой счёт — предварительная проверка баланса
-  // Атомарная защита от race condition в триггере (RAISE EXCEPTION если недостаточно)
-  if (type === 'gift' && gift_source === 'balance') {
-    if (coins_amount <= 0) {
-      return { success: false, error: 'Укажите сумму подарка' }
-    }
-
-    const { data: balance } = await supabase
-      .from('gamification_balances')
-      .select('total_coins')
-      .eq('user_id', senderId)
-      .single()
-
-    if (!balance || balance.total_coins < coins_amount) {
-      return { success: false, error: 'Недостаточно 💎' }
-    }
-  }
-
-  // 6. INSERT — триггер fn_award_gratitude_points_v2 сделает остальное
+  // 5. INSERT — триггер fn_award_gratitude_points_v2 сделает остальное
   const { error } = await supabase.from('gratitudes').insert({
     sender_id: senderId,
     recipient_id,
@@ -97,6 +76,10 @@ export async function sendGratitude(
   })
 
   if (error) {
+    // P0001 — RAISE EXCEPTION из триггера при нехватке баланса
+    if (error.code === 'P0001' && error.message.includes('Insufficient balance')) {
+      return { success: false, error: 'Недостаточно 💎' }
+    }
     console.error('sendGratitude:', error.message)
     return { success: false, error: 'Не удалось отправить. Попробуйте ещё раз' }
   }
@@ -104,6 +87,7 @@ export async function sendGratitude(
   if (type === 'gift' && gift_source === 'balance') {
     revalidateTag(balanceTag(senderId), 'max')
   }
+  revalidatePath('/')
   revalidatePath('/activity')
   revalidatePath('/gratitudes')
   return { success: true }

@@ -20,9 +20,13 @@ export const queryKeys = {
   gratitudes: {
     all: ['gratitudes'] as const,
     feed: () => [...queryKeys.gratitudes.all, 'feed'] as const,
-    my: (userId: string) => [...queryKeys.gratitudes.all, 'my', userId] as const,
+    my: (userId: string, limit: number) => [...queryKeys.gratitudes.all, 'my', userId, limit] as const,
     quota: (userId: string) => [...queryKeys.gratitudes.all, 'quota', userId] as const,
     recipients: () => [...queryKeys.gratitudes.all, 'recipients'] as const,
+  },
+  transactions: {
+    all: ['transactions'] as const,
+    recent: (email: string, limit: number) => [...queryKeys.transactions.all, 'recent', email, limit] as const,
   },
   orders: {
     all: ['orders'] as const,
