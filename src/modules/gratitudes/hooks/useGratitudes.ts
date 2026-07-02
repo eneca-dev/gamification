@@ -50,6 +50,9 @@ export function useSendGratitude(senderId: string) {
 
   return useMutation({
     mutationFn: (input: SendGratitudeInput) => sendGratitude(senderId, input),
+    // Без 'always' офлайн-мутация ставится на паузу вместо ошибки —
+    // оптимистичный экран успеха никогда не откатится
+    networkMode: 'always',
     onSuccess: (result) => {
       if (!result.success) return
       queryClient.invalidateQueries({ queryKey: queryKeys.gratitudes.all })
