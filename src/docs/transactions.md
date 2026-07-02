@@ -34,12 +34,19 @@
 - `getUserTransactions(email, limit, offset, filters)` — список транзакций с обогащением (описание, ссылки на задачи, имена). Кэш-тег `transactions:{email}`, TTL 5 мин
 - `getUserTransactionsCount(email, filters)` — общее число записей по фильтру (для пагинации)
 - `getUserTransactionsSum(email, filters)` — сумма монет по всем записям фильтра (не только текущей страницы). Может быть отрицательной. Отображается бейджем в заголовке страницы: зелёный при ≥ 0, красный при < 0
+- `getDashboardTransactions(email, limit)` — последние операции в формате отображения (`Transaction` из lib/data) для виджета дашборда. Без server-cache — данные тянет live-фид через realtime-инвалидацию
+- `fetchDashboardTransactions(email, limit)` (actions.client) — обёртка для TanStack Query, сверяет email с текущей сессией, чужие операции не отдаёт
+
+## Realtime
+
+Таблица `gamification_transactions` в publication `supabase_realtime` (миграция 084). RLS-политика SELECT для authenticated отдаёт только свои строки (`user_id = my_ws_user_id()`), поэтому событие INSERT приходит только владельцу транзакции. Подписка в `@/modules/cache` инвалидирует `transactions.*` и `balance.*`. Fallback — `refetchOnWindowFocus` у `useRecentTransactions`.
 
 ## Компоненты
 
 - `TransactionsList` — таблица операций. Поддерживает раскрытие задач master_planner. Source-тег с иконкой и цветом по `SOURCE_CONFIG`
 - `TransactionsFilters` — кнопки-пилюли по source + DateRangePicker
 - `SortToggle` — переключатель сортировки по дате (asc/desc)
+- `LiveTransactionFeed` — live-обёртка над `TransactionFeed` (дашборд): серверный initialData + `useRecentTransactions`
 
 ## Страница
 

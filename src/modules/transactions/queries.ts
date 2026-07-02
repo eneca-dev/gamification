@@ -1,6 +1,8 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { cached, CACHE_5M } from '@/lib/server-cache'
+import type { Transaction } from '@/lib/data'
 
+import { getEventIcon, getTransactionDisplayDate } from './types'
 import type { UserTransaction, TransactionSubItem, TransactionFilters } from './types'
 
 const WS_BASE_URL = 'https://eneca.worksection.com/project'
@@ -116,7 +118,7 @@ async function _getUserTransactions(
     redDayDateMap.set(eventDate, d.toISOString().slice(0, 10))
   }
 
-  let redReasonsMap = new Map<string, RedReason[]>()
+  const redReasonsMap = new Map<string, RedReason[]>()
   if (redDayDateMap.size > 0) {
     const { data: wsUser } = await supabase
       .from('ws_users')
@@ -150,7 +152,7 @@ async function _getUserTransactions(
     .map((r) => (r.details as Record<string, unknown>)?.ws_task_id as string)
     .filter(Boolean)
 
-  let deadlineUrlMap = new Map<string, string>()
+  const deadlineUrlMap = new Map<string, string>()
   if (deadlineTaskIds.length > 0) {
     const { data: l3Rows } = await supabase
       .from('ws_tasks_l3')
@@ -307,7 +309,7 @@ async function _getUserTransactions(
     .map((r) => (r.details as Record<string, unknown>)?.product_id as string)
     .filter(Boolean)
 
-  let productMap = new Map<string, { name: string; emoji: string | null; image_url: string | null }>()
+  const productMap = new Map<string, { name: string; emoji: string | null; image_url: string | null }>()
   if (purchaseProductIds.length > 0) {
     const { data: products } = await supabase
       .from('shop_products')
@@ -355,7 +357,7 @@ async function _getUserTransactions(
     }
   }
 
-  return rows.map((row, i) => {
+  return rows.map((row) => {
     const eventType = row.event_type as string
     const details = row.details as Record<string, unknown> | null
     const redReasons = redReasonsMap.get(row.event_date as string)
@@ -436,6 +438,30 @@ export const getUserTransactions = (userEmail: string, limit = 10, offset = 0, f
     ['transactions', userEmail, String(limit), String(offset), filters.sort ?? 'date_desc', filters.source ?? 'all', filters.dateFrom ?? '', filters.dateTo ?? ''],
     { tags: [`transactions:${userEmail}`], revalidate: CACHE_5M },
   )()
+
+// Последние операции для дашборда в формате отображения.
+// Без server-cache: данные тянет live-фид, realtime-инвалидация должна получать свежие строки
+export async function getDashboardTransactions(userEmail: string, limit = 5): Promise<Transaction[]> {
+  const rows = await _getUserTransactions(userEmail, limit)
+  return rows.map((tx, i) => {
+    const details = tx.details as Record<string, unknown> | null
+    const plugins = tx.event_type === 'revit_using_plugins'
+      ? (details?.plugins as Array<{ plugin_name: string; launch_count: number }> | undefined)
+      : undefined
+    return {
+      id: i + 1,
+      source: tx.source as Transaction['source'],
+      category: 'daily_green' as Transaction['category'],
+      description: tx.description,
+      amount: tx.coins,
+      date: getTransactionDisplayDate(tx.event_type, tx.event_date, { day: 'numeric', month: 'short' }),
+      icon: getEventIcon(tx.event_type),
+      plugins,
+      subItems: tx.subItems,
+      inlineLink: tx.inlineLink,
+    }
+  })
+}
 
 async function _getUserTransactionsCount(userEmail: string, filters: TransactionFilters = {}): Promise<number> {
   const supabase = createSupabaseAdminClient()

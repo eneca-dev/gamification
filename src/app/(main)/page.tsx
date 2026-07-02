@@ -1,16 +1,16 @@
 import { CoinIcon } from "@/components/CoinIcon";
 import { AlarmsBanner } from "@/modules/alarms/components/AlarmsBanner";
 import { StreakPanel } from "@/components/dashboard/StreakPanel";
-import { TransactionFeed } from "@/components/dashboard/TransactionFeed";
+import { LiveTransactionFeed } from "@/modules/transactions/components/LiveTransactionFeed";
 import { Leaderboard } from "@/components/dashboard/Leaderboard";
 import { DepartmentContest } from "@/components/dashboard/DepartmentContest";
-import type { Transaction, DepartmentEntry } from "@/lib/data";
+import type { DepartmentEntry } from "@/lib/data";
 import { getCurrentUser } from "@/modules/auth/queries";
 import {
   getRevitWidgetData,
   getRevitTransactions,
 } from "@/modules/revit";
-import { getUserTransactions, getEventIcon, getTransactionDisplayDate } from "@/modules/transactions";
+import { getDashboardTransactions } from "@/modules/transactions";
 import {
   getRevitPersonalRanking,
   getRevitTeamRanking,
@@ -112,7 +112,7 @@ export default async function DashboardPage() {
       getRevitDepartmentRanking(50),
       getWsDepartmentRanking(50),
       userEmail ? getRevitTransactions(userEmail, 10) : Promise.resolve([]),
-      userEmail ? getUserTransactions(userEmail, 5) : Promise.resolve([]),
+      userEmail ? getDashboardTransactions(userEmail, 5) : Promise.resolve([]),
       wsUserId ? getActiveAlarms(wsUserId) : Promise.resolve([]),
       // Благодарности
       wsUserId ? getSenderQuota(wsUserId) : Promise.resolve({ used: true, coins_per_gratitude: 0, period_start: '', period_end: '', next_quota_date: null }),
@@ -145,26 +145,6 @@ export default async function DashboardPage() {
     ws: wsStreak,
     revit: revitStreak,
   };
-
-  // Транзакции из view_user_transactions (все источники)
-  const allTransactions: Transaction[] = recentTransactions.map((tx, i) => {
-    const details = tx.details as Record<string, unknown> | null
-    const plugins = tx.event_type === 'revit_using_plugins'
-      ? (details?.plugins as Array<{ plugin_name: string; launch_count: number }> | undefined)
-      : undefined
-    return {
-      id: i + 1,
-      source: tx.source as Transaction["source"],
-      category: "daily_green" as Transaction["category"],
-      description: tx.description,
-      amount: tx.coins,
-      date: getTransactionDisplayDate(tx.event_type, tx.event_date, { day: "numeric", month: "short" }),
-      icon: getEventIcon(tx.event_type),
-      plugins,
-      subItems: tx.subItems,
-      inlineLink: tx.inlineLink,
-    }
-  });
 
   // Конвертируем RankingEntry[] в формат для Leaderboard
   const toLeaderboardEntries = (entries: typeof wsPersonalRanking) =>
@@ -253,7 +233,7 @@ export default async function DashboardPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-5 animate-fade-in-up stagger-2">
           <div className="@container md:col-span-2">
-            <TransactionFeed transactions={allTransactions} />
+            <LiveTransactionFeed userEmail={userEmail} initialTransactions={recentTransactions} />
           </div>
           <div className="@container md:col-span-3" data-onboarding="leaderboard">
             <Leaderboard
