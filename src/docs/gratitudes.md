@@ -39,7 +39,7 @@
 
 ## Actions
 
-- `sendGratitude(senderId, input)` — отправка. Валидация Zod, проверка sender != recipient, затем параллельно одним батчем: sender+recipient одной выборкой из ws_users + квота (только для подарка по квоте). Баланс заранее не проверяется — триггер списывает атомарно и кидает P0001 «Insufficient balance», action маппит его в «Недостаточно 💎». INSERT в gratitudes, revalidatePath('/', '/activity', '/gratitudes')
+- `sendGratitude(senderId, input)` — отправка. Валидация Zod, проверка sender != recipient, затем параллельно одним батчем: sender+recipient одной выборкой из ws_users + квота (только для подарка по квоте). Баланс заранее не проверяется — триггер списывает атомарно и кидает P0001 «Insufficient balance», action маппит его в «Недостаточно 💎». INSERT в gratitudes, revalidatePath('/', '/activity', '/gratitudes'). Для подарка (`type = 'gift'`) дополнительно revalidateTag(`achievements:{recipient_id}`) — подарок засчитывается в достижения получателя, сброс кэша прогресса на странице /achievements (live-обновление прогресс-бара идёт через realtime-подписку на gratitudes)
 
 ## Компоненты
 

@@ -24,6 +24,10 @@ export const queryKeys = {
     quota: (userId: string) => [...queryKeys.gratitudes.all, 'quota', userId] as const,
     recipients: () => [...queryKeys.gratitudes.all, 'recipients'] as const,
   },
+  achievements: {
+    all: ['achievements'] as const,
+    gratitudeProgress: (userId: string) => [...queryKeys.achievements.all, 'gratitude-progress', userId] as const,
+  },
   transactions: {
     all: ['transactions'] as const,
     recent: (email: string, limit: number) => [...queryKeys.transactions.all, 'recent', email, limit] as const,
