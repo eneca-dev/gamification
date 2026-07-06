@@ -10,6 +10,10 @@
 
 Фильтр `achievements` на клиенте включает source `achievements` и `contest` — оба отображаются под одной кнопкой.
 
+Метаданные под описанием (виджет дашборда и страница операций, единый рендер через `@/components/transactions/TransactionMeta`):
+- `revit_using_plugins` — список плагинов с числом запусков (`details.plugins`, поле `plugins`)
+- благодарности (`gratitude_recipient_points`, `gratitude_gift_sent`) — категория (emoji + подпись из `@/lib/gratitude-categories`) и тип: квота при `details.gift_source === 'quota'`, иначе подарок (поле `gratitude`, хелпер `getGratitudeMeta`). «Спасибо» не создаёт транзакций (0 монет), поэтому в операциях не встречается
+
 ## Зависимости
 
 - `view_user_transactions` — основной источник данных
@@ -43,7 +47,8 @@
 
 ## Компоненты
 
-- `TransactionsList` — таблица операций. Поддерживает раскрытие задач master_planner. Source-тег с иконкой и цветом по `SOURCE_CONFIG`
+- `TransactionsList` — таблица операций. Поддерживает раскрытие задач master_planner. Source-тег с иконкой и цветом по `SOURCE_CONFIG`. Строки плагинов/благодарностей — через `PluginUsageLine` / `GratitudeMetaLine`
+- `@/components/transactions/TransactionMeta` — общие строки метаданных (`PluginUsageLine`, `GratitudeMetaLine`), переиспользуются виджетом и страницей
 - `TransactionsFilters` — кнопки-пилюли по source + DateRangePicker
 - `SortToggle` — переключатель сортировки по дате (asc/desc)
 - `LiveTransactionFeed` — live-обёртка над `TransactionFeed` (дашборд): серверный initialData + `useRecentTransactions`

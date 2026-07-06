@@ -1,9 +1,10 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { cached, CACHE_5M } from '@/lib/server-cache'
+import { getCategoryLabel } from '@/lib/gratitude-categories'
 import type { Transaction } from '@/lib/data'
 
-import { getEventIcon, getTransactionDisplayDate } from './types'
-import type { UserTransaction, TransactionSubItem, TransactionFilters } from './types'
+import { getEventIcon, getTransactionDisplayDate, getGratitudeMeta } from './types'
+import type { UserTransaction, TransactionSubItem, TransactionFilters, PluginUsage } from './types'
 
 const WS_BASE_URL = 'https://eneca.worksection.com/project'
 
@@ -413,6 +414,10 @@ async function _getUserTransactions(
 
     const enriched = enrichTransaction(eventType, row.description as string, details, redReasons, product?.name, taskUrl, budgetTaskInfo, senderName, recipientName)
 
+    const plugins = eventType === 'revit_using_plugins'
+      ? (details?.plugins as PluginUsage[] | undefined)
+      : undefined
+
     return {
       id: row.transaction_id as string,
       event_type: eventType,
@@ -428,6 +433,8 @@ async function _getUserTransactions(
       productImageUrl: product?.image_url ?? undefined,
       taskClosedAt,
       bonusTasks,
+      plugins,
+      gratitude: getGratitudeMeta(eventType, details),
     }
   })
 }
@@ -444,10 +451,6 @@ export const getUserTransactions = (userEmail: string, limit = 10, offset = 0, f
 export async function getDashboardTransactions(userEmail: string, limit = 5): Promise<Transaction[]> {
   const rows = await _getUserTransactions(userEmail, limit)
   return rows.map((tx, i) => {
-    const details = tx.details as Record<string, unknown> | null
-    const plugins = tx.event_type === 'revit_using_plugins'
-      ? (details?.plugins as Array<{ plugin_name: string; launch_count: number }> | undefined)
-      : undefined
     return {
       id: i + 1,
       source: tx.source as Transaction['source'],
@@ -456,7 +459,8 @@ export async function getDashboardTransactions(userEmail: string, limit = 5): Pr
       amount: tx.coins,
       date: getTransactionDisplayDate(tx.event_type, tx.event_date, { day: 'numeric', month: 'short' }),
       icon: getEventIcon(tx.event_type),
-      plugins,
+      plugins: tx.plugins,
+      gratitude: tx.gratitude,
       subItems: tx.subItems,
       inlineLink: tx.inlineLink,
     }
@@ -539,15 +543,6 @@ interface RedReason {
   ws_project_id?: string
   ws_task_url?: string
   task_status?: string
-}
-
-const GRATITUDE_CATEGORY_LABELS: Record<string, string> = {
-  help: 'Помощь и поддержка',
-  quality: 'Профессионализм',
-  mentoring: 'Наставничество',
-  teamwork: 'Командная работа',
-  atmosphere: 'Позитив и атмосфера',
-  other: 'Другое',
 }
 
 const RED_REASON_LABELS: Record<string, string> = {
@@ -766,7 +761,7 @@ function enrichTransaction(
     default: {
       if (eventType.startsWith('ach_gratitude_')) {
         const slug = eventType.slice('ach_gratitude_'.length)
-        const label = GRATITUDE_CATEGORY_LABELS[slug] ?? slug
+        const label = getCategoryLabel(slug)
         const threshold = details?.threshold as number | undefined
         return {
           description: threshold

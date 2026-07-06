@@ -2,6 +2,7 @@
 
 import { Receipt, ExternalLink } from "lucide-react";
 
+import { PluginUsageLine, GratitudeMetaLine } from "@/components/transactions/TransactionMeta";
 import type { Transaction } from "@/lib/data";
 
 interface TransactionFeedProps {
@@ -105,9 +106,10 @@ export function TransactionFeed({ transactions }: TransactionFeedProps) {
                   )}
                 </div>
                 {tx.plugins && tx.plugins.length > 0 && (
-                  <div className="text-[11px] mt-0.5 truncate" style={{ color: "var(--apex-text-muted)" }}>
-                    {tx.plugins.map((p) => p.plugin_name).join(' · ')}
-                  </div>
+                  <PluginUsageLine plugins={tx.plugins} />
+                )}
+                {tx.gratitude && (
+                  <GratitudeMetaLine isQuota={tx.gratitude.isQuota} categorySlug={tx.gratitude.categorySlug} />
                 )}
                 {tx.subItems && tx.subItems.length > 0 && (
                   <div className="mt-0.5 space-y-0.5">

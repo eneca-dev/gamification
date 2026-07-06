@@ -1,14 +1,9 @@
 import { z } from 'zod'
 
+import { GRATITUDE_CATEGORIES } from '@/lib/gratitude-categories'
+
 // --- Категории благодарностей ---
-export const GRATITUDE_CATEGORIES = [
-  { slug: 'help', label: 'Помощь и поддержка', emoji: '🤝' },
-  { slug: 'quality', label: 'Профессионализм', emoji: '⭐' },
-  { slug: 'mentoring', label: 'Наставничество', emoji: '📚' },
-  { slug: 'teamwork', label: 'Командная работа', emoji: '🛡️' },
-  { slug: 'atmosphere', label: 'Позитив и атмосфера', emoji: '☀️' },
-  { slug: 'other', label: 'Другое', emoji: '💬' },
-] as const
+export { GRATITUDE_CATEGORIES }
 
 export type GratitudeCategory = (typeof GRATITUDE_CATEGORIES)[number]['slug']
 
