@@ -451,10 +451,14 @@ export const getUserTransactions = (userEmail: string, limit = 10, offset = 0, f
 export async function getDashboardTransactions(userEmail: string, limit = 5): Promise<Transaction[]> {
   const rows = await _getUserTransactions(userEmail, limit)
   return rows.map((tx, i) => {
+    let category: Transaction['category'] = 'daily_green'
+    if (tx.event_type === 'gratitude_gift_sent') category = 'gratitude_sent'
+    else if (tx.event_type === 'gratitude_recipient_points') category = 'gratitude_received'
+
     return {
       id: i + 1,
       source: tx.source as Transaction['source'],
-      category: 'daily_green' as Transaction['category'],
+      category,
       description: tx.description,
       amount: tx.coins,
       date: getTransactionDisplayDate(tx.event_type, tx.event_date, { day: 'numeric', month: 'short' }),
