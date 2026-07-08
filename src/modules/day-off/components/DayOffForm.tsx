@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
-import { Upload, X, Loader2 } from 'lucide-react'
+import { AlertTriangle, Upload, X, Loader2 } from 'lucide-react'
 import { submitBatchDayOffRequests, uploadDayOffScreenshot } from '@/modules/day-off/index.client'
 import { DatePicker } from '@/components/DatePicker'
+import { DAY_OFF_CUTOFF_LABEL, getMinDayOffDate, isSameDayCutoffPassed } from '../utils'
 import type { DayOffRequestType } from '../types'
 
 interface DayOffFormProps {
@@ -24,9 +25,8 @@ export function DayOffForm({ bookedDates, requestType, onRequestTypeChange, onSu
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const minDate = new Date()
-  minDate.setDate(minDate.getDate() + 1)
-  const minDateStr = minDate.toISOString().split('T')[0]
+  const minDateStr = getMinDayOffDate()
+  const cutoffPassed = isSameDayCutoffPassed()
 
   const isBusinessTrip = requestType === 'business_trip'
 
@@ -157,6 +157,22 @@ export function DayOffForm({ bookedDates, requestType, onRequestTypeChange, onSu
           disabledDates={bookedDates}
           placeholder="Выберите даты"
         />
+        {cutoffPassed ? (
+          <div
+            className="flex items-start gap-2 p-2.5 rounded-xl mt-2"
+            style={{ background: 'var(--apex-warning-bg)', border: '1px solid var(--apex-warning-border)' }}
+          >
+            <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" style={{ color: 'var(--apex-warning-text)' }} />
+            <p className="text-[11px] leading-relaxed" style={{ color: 'var(--apex-warning-dark)' }}>
+              На сегодня заявку оформить уже нельзя — приём заявок на сегодня закончился в {DAY_OFF_CUTOFF_LABEL}.
+              Ближайшая доступная дата — завтра.
+            </p>
+          </div>
+        ) : (
+          <p className="text-[11px] mt-1.5" style={{ color: 'var(--apex-text-muted)' }}>
+            Заявку на сегодня можно подать до {DAY_OFF_CUTOFF_LABEL} — позже HR не успеет её рассмотреть.
+          </p>
+        )}
       </div>
 
       <div>

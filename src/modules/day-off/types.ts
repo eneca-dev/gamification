@@ -42,8 +42,7 @@ export interface DayOffRequestAdmin extends DayOffRequest {
 export const submitDayOffSchema = z.object({
   requested_date: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Некорректный формат даты')
-    .refine((d) => new Date(d) > new Date(), 'Дата должна быть в будущем'),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Некорректный формат даты'),
   request_type: z.enum(DAY_OFF_REQUEST_TYPES).default('day_off'),
   note: z.string().max(500).optional(),
   screenshot_url: z.string().nullable().optional(),
