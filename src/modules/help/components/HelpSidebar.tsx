@@ -6,10 +6,10 @@ import { usePathname } from 'next/navigation'
 import { FileText, FolderOpen, FolderClosed } from 'lucide-react'
 
 import { useHelpSearch } from './HelpSearchContext'
-import type { HelpFolder } from '../types'
+import type { HelpFolderWithArticles } from '../types'
 
 interface HelpSidebarProps {
-  folders: HelpFolder[]
+  folders: HelpFolderWithArticles[]
 }
 
 export function HelpSidebar({ folders }: HelpSidebarProps) {
@@ -20,10 +20,10 @@ export function HelpSidebar({ folders }: HelpSidebarProps) {
   const initialOpen = new Set(
     folders
       .filter((f) => f.articles.some((a) => pathname === `/help/${a.slug}`))
-      .map((f) => f.folder)
+      .map((f) => f.id)
   )
   if (initialOpen.size === 0 && folders.length > 0) {
-    initialOpen.add(folders[0].folder)
+    initialOpen.add(folders[0].id)
   }
 
   const [openFolders, setOpenFolders] = useState<Set<string>>(initialOpen)
@@ -68,11 +68,11 @@ export function HelpSidebar({ folders }: HelpSidebarProps) {
   return (
     <nav className="space-y-0.5">
       {displayFolders.map((folder) => {
-        const isOpen = isSearching || openFolders.has(folder.folder)
+        const isOpen = isSearching || openFolders.has(folder.id)
         return (
-          <div key={folder.folder}>
+          <div key={folder.id}>
             <button
-              onClick={() => !isSearching && toggleFolder(folder.folder)}
+              onClick={() => !isSearching && toggleFolder(folder.id)}
               className="flex items-center gap-2 w-full px-3 py-1.5 rounded-lg text-[13px] font-semibold transition-colors text-left"
               style={{ color: 'var(--text-primary)' }}
             >
@@ -81,7 +81,7 @@ export function HelpSidebar({ folders }: HelpSidebarProps) {
               ) : (
                 <FolderClosed size={15} className="shrink-0" style={{ color: 'var(--apex-primary)' }} />
               )}
-              {folder.folder_label}
+              {folder.label}
             </button>
 
             {isOpen && (

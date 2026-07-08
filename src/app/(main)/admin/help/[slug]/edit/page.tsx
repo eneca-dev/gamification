@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 
 import { checkIsAdmin } from '@/modules/admin'
-import { getAllHelpArticles, getHelpVariablesMeta } from '@/modules/help'
+import { getAllHelpArticles, getAllHelpFolders, getHelpVariablesMeta } from '@/modules/help'
 import { HelpEditor } from '@/modules/help/components/HelpEditor'
 
 interface AdminHelpEditPageProps {
@@ -16,9 +16,10 @@ export default async function AdminHelpEditPage({ params }: AdminHelpEditPagePro
 
   const isNew = slug === 'new'
 
-  const [articles, variables] = await Promise.all([
+  const [articles, variables, folders] = await Promise.all([
     isNew ? Promise.resolve([]) : getAllHelpArticles(),
     getHelpVariablesMeta(),
+    getAllHelpFolders(),
   ])
 
   const article = isNew ? null : (articles.find((a) => a.slug === slug) ?? null)
@@ -40,12 +41,12 @@ export default async function AdminHelpEditPage({ params }: AdminHelpEditPagePro
         slug: article.slug,
         title: article.title,
         content: article.content,
-        folder: article.folder,
-        folder_label: article.folder_label,
+        folder_id: article.folder.id,
         is_published: article.is_published,
       } : null}
       isNew={isNew}
       variables={variables}
+      folders={folders}
     />
   )
 }
