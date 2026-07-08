@@ -67,7 +67,7 @@ function InfoTooltip({ text }: { text: string }) {
             {text}
           </div>
           <div className="text-[9px] mt-1.5 pt-1" style={{ color: "var(--text-muted)", borderTop: "1px solid var(--apex-border)" }}>
-            Сотрудники на больничном, в отпуске или отгуле не учитываются.
+            Сотрудники на больничном, в отпуске или на сикдее не учитываются.
           </div>
           <div
             className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 rotate-45"

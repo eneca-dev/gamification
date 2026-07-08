@@ -366,7 +366,7 @@ UNIQUE(user_email, ws_task_id, cost_date).
 
 **Частота обновления:** ежедневно VPS-скриптом `sync-plugin-launches` (часть `revitSteps` оркестратора). Одна строка = один пользователь + один плагин + один день. Upsert по (user_email, work_date, plugin_name). Старые данные не стираются.
 
-**Триггер:** `trg_award_revit_points` → `fn_award_revit_points()` — начисляет `revit_using_plugins` (+5) за первый плагин дня (идемпотентно через `details.plugins[]`). Стрики и milestones — отдельным VPS-скриптом `compute-revit-gamification` (миграция 040).
+**Триггер:** `trg_award_revit_points` → `fn_award_revit_points()` — начисляет `revit_using_plugins` (+10) за первый плагин дня (идемпотентно через `details.plugins[]`). Стрики и milestones — отдельным VPS-скриптом `compute-revit-gamification` (миграция 040).
 
 #### `at_gratitudes` — устаревшая таблица (не используется)
 
@@ -396,7 +396,7 @@ UNIQUE(user_email, ws_task_id, cost_date).
 | `revit_streak_7_bonus`       | +25   | Бонус за стрик 7 дней (Revit)                            |
 | `ws_streak_7`                | +25   | Бонус за стрик 7 зелёных дней (WS)                       |
 | `gratitude_recipient_points` | +20   | 💎 получателю благодарности                              |
-| `revit_using_plugins`        | +5    | 💎 за использование плагина                              |
+| `revit_using_plugins`        | +10   | 💎 за использование плагина                              |
 | `budget_ok_l3_lead_bonus`    | +5    | Бонус тимлиду L2 за закрытие дочерней L3 в бюджете       |
 | `green_day`                  | +3    | Зелёный день (все проверки пройдены)                     |
 | `budget_revoked_l3_lead`     | -5    | Отзыв бонуса тимлиду: бюджет L3 превышен                 |

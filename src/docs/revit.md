@@ -19,7 +19,7 @@
 - `revit_user_streaks` — таблица-снапшот: `streak_start_date`, `best_streak`, `completed_cycles`, `pending_reset_date/expires_at`. Управляется VPS-скриптом, для UI не используется напрямую (кроме pending для streak-shield).
 - `view_user_transactions` — view для ленты операций (coins, event_type, description, details). Нужен adminClient.
 - `ws_users` — имена, email, department_code для лидерборда и соревнования.
-- `gamification_event_types` — справочник: `revit_using_plugins=5`, `revit_streak_7_bonus=25`, `revit_streak_30_bonus=100`, `revit_streak_reset=0`.
+- `gamification_event_types` — справочник: `revit_using_plugins=10`, `revit_streak_7_bonus=25`, `revit_streak_30_bonus=100`, `revit_streak_reset=0`.
 
 ## Типы
 
