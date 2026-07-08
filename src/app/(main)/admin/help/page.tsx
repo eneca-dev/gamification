@@ -10,15 +10,15 @@ export default async function AdminHelpPage() {
   if (!isAdmin) redirect('/')
 
   const allArticles = await getAllHelpArticles()
-  const articles = allArticles.filter((a) => a.folder !== 'chatbot')
+  const articles = allArticles.filter((a) => a.folder.slug !== 'chatbot')
 
   // Группировка по папкам
   const folders = new Map<string, { label: string; articles: typeof articles }>()
   for (const a of articles) {
-    if (!folders.has(a.folder)) {
-      folders.set(a.folder, { label: a.folder_label, articles: [] })
+    if (!folders.has(a.folder.id)) {
+      folders.set(a.folder.id, { label: a.folder.label, articles: [] })
     }
-    folders.get(a.folder)!.articles.push(a)
+    folders.get(a.folder.id)!.articles.push(a)
   }
 
   return (

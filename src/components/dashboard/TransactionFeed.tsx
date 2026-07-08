@@ -1,7 +1,8 @@
 "use client";
 
-import { Receipt, ExternalLink } from "lucide-react";
+import { Receipt, ExternalLink, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 
+import { PluginUsageLine, GratitudeMetaLine } from "@/components/transactions/TransactionMeta";
 import type { Transaction } from "@/lib/data";
 
 interface TransactionFeedProps {
@@ -68,17 +69,37 @@ export function TransactionFeed({ transactions }: TransactionFeedProps) {
             ? `1px solid rgba(var(--apex-danger-rgb), 0.12)`
             : "1px solid var(--apex-border)";
 
+          const gratitudeArrow =
+            tx.category === "gratitude_sent"
+              ? "sent"
+              : tx.category === "gratitude_received"
+                ? "received"
+                : null;
+
           return (
             <div
               key={tx.id}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors"
               style={{ cursor: "default" }}
             >
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
-                style={{ background: iconBg, border: iconBorder }}
-              >
-                {tx.icon}
+              <div className="relative flex-shrink-0">
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+                  style={{ background: iconBg, border: iconBorder }}
+                >
+                  {tx.icon}
+                </div>
+                {gratitudeArrow && (
+                  <div
+                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
+                    style={{ background: "var(--apex-surface)", border: "1px solid var(--apex-border)" }}
+                  >
+                    {gratitudeArrow === "sent"
+                      ? <ArrowUpRight size={10} style={{ color: "var(--apex-text-muted)" }} />
+                      : <ArrowDownLeft size={10} style={{ color: "var(--apex-primary)" }} />
+                    }
+                  </div>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1 min-w-0 flex-wrap">
@@ -105,9 +126,10 @@ export function TransactionFeed({ transactions }: TransactionFeedProps) {
                   )}
                 </div>
                 {tx.plugins && tx.plugins.length > 0 && (
-                  <div className="text-[11px] mt-0.5 truncate" style={{ color: "var(--apex-text-muted)" }}>
-                    {tx.plugins.map((p) => p.plugin_name).join(' · ')}
-                  </div>
+                  <PluginUsageLine plugins={tx.plugins} />
+                )}
+                {tx.gratitude && (
+                  <GratitudeMetaLine isQuota={tx.gratitude.isQuota} categorySlug={tx.gratitude.categorySlug} />
                 )}
                 {tx.subItems && tx.subItems.length > 0 && (
                   <div className="mt-0.5 space-y-0.5">

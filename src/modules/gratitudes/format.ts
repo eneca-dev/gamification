@@ -1,12 +1,4 @@
-import { GRATITUDE_CATEGORIES } from './types'
-
-export function getCategoryEmoji(cat: string | null): string {
-  return GRATITUDE_CATEGORIES.find((c) => c.slug === cat)?.emoji ?? '💬'
-}
-
-export function getCategoryLabel(cat: string | null): string {
-  return GRATITUDE_CATEGORIES.find((c) => c.slug === cat)?.label ?? 'Другое'
-}
+export { getCategoryEmoji, getCategoryLabel } from '@/lib/gratitude-categories'
 
 export function timeAgo(dateStr: string): string {
   // clamp: created_at с сервера может быть «в будущем» из-за расхождения часов клиента

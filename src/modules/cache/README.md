@@ -282,7 +282,8 @@ myEntity: {
 
 Подписки настраиваются в `realtime/config.ts`. `RealtimeSync` создаёт по каналу
 `postgres_changes` на таблицу и при событии инвалидирует указанные query keys.
-Активные подписки: `gratitudes` (INSERT → `gratitudes.all`, `balance.all`),
+Активные подписки: `gratitudes` (INSERT → `gratitudes.all`, `balance.all`,
+`achievements.all` — прогресс достижений за благодарности у получателя),
 `gamification_transactions` (INSERT → `transactions.all`, `balance.all`; RLS отдаёт только свои строки).
 
 ### Добавление подписки

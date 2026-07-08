@@ -11,20 +11,20 @@ import rehypeRaw from 'rehype-raw'
 
 import { updateHelpArticle, createHelpArticle, deleteHelpArticle, triggerReembed } from '../actions'
 import { SelectionToolbar } from './SelectionToolbar'
-import type { HelpVariableMeta } from '../types'
+import type { HelpFolder, HelpVariableMeta } from '../types'
 
 interface HelpEditorProps {
   article: {
     slug: string
     title: string
     content: string
-    folder: string
-    folder_label: string
+    folder_id: string
     is_published: boolean
   } | null
   isNew: boolean
   variables: HelpVariableMeta[]
-  defaultFolder?: string
+  folders: HelpFolder[]
+  defaultFolderSlug?: string
 }
 
 const KEY_PREFIX_TO_GROUP: Record<string, string> = {
@@ -65,7 +65,7 @@ interface VarMenuState {
 
 type ReembedStatus = 'idle' | 'pending' | 'done' | 'error'
 
-export function HelpEditor({ article, isNew, variables, defaultFolder }: HelpEditorProps) {
+export function HelpEditor({ article, isNew, variables, folders, defaultFolderSlug }: HelpEditorProps) {
   const varGroups = groupVariables(variables)
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -78,13 +78,15 @@ export function HelpEditor({ article, isNew, variables, defaultFolder }: HelpEdi
   const [reembedStatus, setReembedStatus] = useState<ReembedStatus>('idle')
   const [reembedError, setReembedError] = useState<string | null>(null)
 
+  const defaultFolderId = folders.find((f) => f.slug === defaultFolderSlug)?.id ?? folders[0]?.id ?? ''
+
   const [slug, setSlug] = useState(article?.slug ?? '')
   const [title, setTitle] = useState(article?.title ?? '')
   const [content, setContent] = useState(article?.content ?? '')
-  const [folder, setFolder] = useState(article?.folder ?? defaultFolder ?? 'general')
-  const [folderLabel, setFolderLabel] = useState(article?.folder_label ?? (defaultFolder === 'chatbot' ? 'Чат-бот: определения' : 'Общее'))
+  const [folderId, setFolderId] = useState(article?.folder_id ?? defaultFolderId)
   const [isPublished, setIsPublished] = useState(article?.is_published ?? true)
-  const backUrl = folder === 'chatbot' ? '/admin/chatbot' : '/admin/help'
+  const isChatbotFolder = folders.find((f) => f.id === folderId)?.slug === 'chatbot'
+  const backUrl = isChatbotFolder ? '/admin/chatbot' : '/admin/help'
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -114,25 +116,6 @@ export function HelpEditor({ article, isNew, variables, defaultFolder }: HelpEdi
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [varMenu])
-
-  const FOLDERS = [
-    { value: 'general', label: 'Общее' },
-    { value: 'ws', label: 'Worksection' },
-    { value: 'revit', label: 'Автоматизация' },
-    { value: 'shields', label: 'Вторая жизнь' },
-    { value: 'gratitudes', label: 'Благодарности' },
-    { value: 'achievements', label: 'Достижения' },
-    { value: 'store', label: 'Магазин' },
-    { value: 'faq', label: 'Частые вопросы' },
-    // protected: не удалять — папка всегда должна существовать для базы знаний чат-бота
-    { value: 'chatbot', label: 'Чат-бот: определения' },
-  ]
-
-  function handleFolderChange(value: string) {
-    setFolder(value)
-    const found = FOLDERS.find((f) => f.value === value)
-    if (found) setFolderLabel(found.label)
-  }
 
   function handleContextMenu(e: React.MouseEvent<HTMLTextAreaElement>) {
     e.preventDefault()
@@ -164,10 +147,9 @@ export function HelpEditor({ article, isNew, variables, defaultFolder }: HelpEdi
         slug,
         title,
         content,
-        folder,
-        folder_label: folderLabel,
+        folder_id: folderId,
         is_published: isPublished,
-        show_in_help: folder !== 'chatbot',
+        show_in_help: !isChatbotFolder,
       }
       const result = isNew ? await createHelpArticle(input) : await updateHelpArticle(input)
 
@@ -348,13 +330,13 @@ export function HelpEditor({ article, isNew, variables, defaultFolder }: HelpEdi
             Папка
           </label>
           <select
-            value={folder}
-            onChange={(e) => handleFolderChange(e.target.value)}
+            value={folderId}
+            onChange={(e) => setFolderId(e.target.value)}
             className="w-full px-3 py-2 rounded-xl text-[13px] outline-none"
             style={{ background: 'var(--surface-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
           >
-            {FOLDERS.map((f) => (
-              <option key={f.value} value={f.value}>{f.label}</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>{f.label}</option>
             ))}
           </select>
         </div>

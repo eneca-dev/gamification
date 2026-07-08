@@ -87,6 +87,11 @@ export async function sendGratitude(
   if (type === 'gift' && gift_source === 'balance') {
     revalidateTag(balanceTag(senderId), 'max')
   }
+  // Подарок засчитывается в достижения получателя — сбрасываем его кэш прогресса,
+  // чтобы прогресс-бар был свежим при навигации/обновлении (live идёт через realtime)
+  if (type === 'gift') {
+    revalidateTag(`achievements:${recipient_id}`, 'max')
+  }
   revalidatePath('/')
   revalidatePath('/activity')
   revalidatePath('/gratitudes')

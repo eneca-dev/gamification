@@ -36,6 +36,7 @@ import { getUserOrders } from "@/modules/shop";
 import { getPendingResets, getShieldDatesInRange } from "@/modules/streak-shield";
 import { getMasterPlannerPanel } from "@/modules/master-planner";
 import { MasterPlannerPanel } from "@/modules/master-planner/components/MasterPlannerPanel";
+import { TrackedProjectsInfo } from "@/modules/master-planner/components/TrackedProjectsInfo";
 import { getContestWinners } from "@/modules/contests";
 import { GratitudeWidget } from "@/modules/gratitudes/components/GratitudeWidget";
 import type { RedReason, StreakPanelData } from "@/modules/streak-panel";
@@ -189,6 +190,10 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <div className="animate-fade-in-up">
+        <TrackedProjectsInfo />
+      </div>
+
       <div className="flex flex-col xl:flex-row gap-5 animate-fade-in-up">
         <div className="xl:shrink-0 overflow-x-auto">
           <StreakPanel streakData={streakPanelData} pendingResets={pendingResets} userBalance={userBalance} />

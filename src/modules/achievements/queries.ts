@@ -93,6 +93,10 @@ export const getGratitudeAchievementProgress = (wsUserId: string) =>
     tags: [`achievements:${wsUserId}`], revalidate: CACHE_5M,
   })(wsUserId)
 
+// Uncached-версия — для realtime-рефетча на клиенте: обходит 5-мин кэш,
+// чтобы прогресс-бар всегда отражал актуальное число благодарностей
+export const getGratitudeAchievementProgressFresh = _getGratitudeAchievementProgress
+
 // --- Достижения компании (все пользователи) ---
 export async function getCompanyAwards(
   periodStart?: string,

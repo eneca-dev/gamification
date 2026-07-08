@@ -5,7 +5,8 @@ import { ChevronDown, ChevronUp, ExternalLink, XCircle, Briefcase, Building2, He
 import type { LucideIcon } from 'lucide-react'
 
 import { CoinIcon } from '@/components/CoinIcon'
-import type { TransactionSubItem } from '../types'
+import { PluginUsageLine, GratitudeMetaLine } from '@/components/transactions/TransactionMeta'
+import type { TransactionSubItem, PluginUsage, GratitudeMeta } from '../types'
 
 interface BonusTaskItem {
   id: string
@@ -29,6 +30,8 @@ export interface TransactionItem {
   bonusTasks?: BonusTaskItem[]
   details?: Record<string, unknown> | null
   taskClosedAt?: string
+  plugins?: PluginUsage[]
+  gratitude?: GratitudeMeta
 }
 
 interface TransactionsListProps {
@@ -268,6 +271,14 @@ export function TransactionsList({ items, currentSort, sortHref, isPending = fal
                   )
                 )}
               </div>
+
+              {tx.plugins && tx.plugins.length > 0 && (
+                <PluginUsageLine plugins={tx.plugins} />
+              )}
+
+              {tx.gratitude && (
+                <GratitudeMetaLine isQuota={tx.gratitude.isQuota} categorySlug={tx.gratitude.categorySlug} />
+              )}
 
               {hasBonusTasks && isExpanded && (
                 <div className="mt-2 px-3 py-2 rounded-xl space-y-1" style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}>

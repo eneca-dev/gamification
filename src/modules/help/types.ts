@@ -4,11 +4,17 @@ export interface HelpVariableMeta {
   value: string
 }
 
+export interface HelpFolder {
+  id: string
+  slug: string
+  label: string
+  sort_order: number
+}
+
 export interface HelpArticle {
   id: string
   slug: string
-  folder: string
-  folder_label: string
+  folder: Pick<HelpFolder, 'id' | 'slug' | 'label'>
   title: string
   content: string
   sort_order: number
@@ -17,9 +23,10 @@ export interface HelpArticle {
   updated_at: string
 }
 
-export interface HelpFolder {
-  folder: string
-  folder_label: string
+export interface HelpFolderWithArticles {
+  id: string
+  slug: string
+  label: string
   articles: Pick<HelpArticle, 'slug' | 'title' | 'content'>[]
 }
 

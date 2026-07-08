@@ -3,6 +3,32 @@ export interface TransactionSubItem {
   url?: string
 }
 
+// Запуски Revit-плагинов внутри одной транзакции revit_using_plugins
+export interface PluginUsage {
+  plugin_name: string
+  launch_count: number
+}
+
+// Отображаемые метаданные благодарности. В транзакциях встречаются только подарки:
+// gift_source === 'quota' → квота, иначе (balance / gift_sent) → подарок.
+export interface GratitudeMeta {
+  isQuota: boolean
+  categorySlug: string | null
+}
+
+const GRATITUDE_EVENT_TYPES = new Set(['gratitude_recipient_points', 'gratitude_gift_sent'])
+
+export function getGratitudeMeta(
+  eventType: string,
+  details: Record<string, unknown> | null,
+): GratitudeMeta | undefined {
+  if (!GRATITUDE_EVENT_TYPES.has(eventType)) return undefined
+  return {
+    isQuota: (details?.gift_source as string | undefined) === 'quota',
+    categorySlug: (details?.category as string | undefined) ?? null,
+  }
+}
+
 export interface UserTransaction {
   id: string
   event_type: string
@@ -18,6 +44,8 @@ export interface UserTransaction {
   productImageUrl?: string | null
   bonusTasks?: { id: string; name: string; url?: string; dateClosed?: string }[]
   taskClosedAt?: string
+  plugins?: PluginUsage[]
+  gratitude?: GratitudeMeta
 }
 
 // Маппинг event_type → иконка

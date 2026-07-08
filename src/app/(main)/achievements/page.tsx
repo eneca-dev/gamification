@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/modules/auth/queries'
 import { getAchievementProgress, getGratitudeAchievementProgress } from '@/modules/achievements'
 import { RankingBlock, GratitudeBlock } from '@/modules/achievements/components/AchievementBlock'
+import { GratitudeBlockLive } from '@/modules/achievements/components/GratitudeBlockLive'
 import { TrophyShelf } from '@/modules/achievements/components/TrophyShelf'
 
 function getMonthName(dateStr: string): string {
@@ -72,7 +73,9 @@ export default async function AchievementsPage() {
         />
 
         <div data-onboarding="gratitude-block">
-          <GratitudeBlock items={gratitudeProgress} />
+          {user.wsUserId
+            ? <GratitudeBlockLive userId={user.wsUserId} initialItems={gratitudeProgress} />
+            : <GratitudeBlock items={gratitudeProgress} />}
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 import { createSupabaseAdminClient, createSupabaseServerClient } from '@/config/supabase'
 
-import type { HelpArticle, HelpChunk, HelpFolder, HelpVariableMeta, ReembedLog } from './types'
+import type { HelpArticle, HelpChunk, HelpFolder, HelpFolderWithArticles, HelpVariableMeta, ReembedLog } from './types'
 
 // --- Шаблонные переменные {{key}} → значения из БД ---
 
@@ -95,12 +95,14 @@ function applyVariables(articles: HelpArticle[], vars: Record<string, string>): 
 // --- Запросы ---
 
 /** Статьи для пользовательской справки: опубликованные и show_in_help = true */
+const ARTICLE_WITH_FOLDER_SELECT = '*, folder:help_folders(id, slug, label)'
+
 export async function getHelpArticles(): Promise<HelpArticle[]> {
   const supabase = await createSupabaseServerClient()
   const [articlesResult, vars] = await Promise.all([
     supabase
       .from('help_articles')
-      .select('*')
+      .select(ARTICLE_WITH_FOLDER_SELECT)
       .eq('is_published', true)
       .eq('show_in_help', true)
       .order('sort_order'),
@@ -116,7 +118,7 @@ export async function getHelpArticle(slug: string): Promise<HelpArticle | null> 
   const [articleResult, vars] = await Promise.all([
     supabase
       .from('help_articles')
-      .select('*')
+      .select(ARTICLE_WITH_FOLDER_SELECT)
       .eq('slug', slug)
       .eq('is_published', true)
       .single(),
@@ -132,18 +134,37 @@ export async function getHelpArticle(slug: string): Promise<HelpArticle | null> 
   return { ...article, content: replaceVariables(article.content, vars) }
 }
 
-export async function getHelpFolders(): Promise<HelpFolder[]> {
-  const articles = await getHelpArticles()
+/** Папки для навигации по справке, с вложенными опубликованными статьями (только show_in_help = true) */
+export async function getHelpFolders(): Promise<HelpFolderWithArticles[]> {
+  const supabase = await createSupabaseServerClient()
+  const [foldersResult, articles] = await Promise.all([
+    supabase.from('help_folders').select('id, slug, label').order('sort_order'),
+    getHelpArticles(),
+  ])
 
-  const map = new Map<string, HelpFolder>()
+  if (foldersResult.error) throw foldersResult.error
+
+  const articlesByFolder = new Map<string, HelpArticle[]>()
   for (const a of articles) {
-    if (!map.has(a.folder)) {
-      map.set(a.folder, { folder: a.folder, folder_label: a.folder_label, articles: [] })
-    }
-    map.get(a.folder)!.articles.push({ slug: a.slug, title: a.title, content: a.content })
+    if (!articlesByFolder.has(a.folder.id)) articlesByFolder.set(a.folder.id, [])
+    articlesByFolder.get(a.folder.id)!.push(a)
   }
 
-  return [...map.values()]
+  return (foldersResult.data ?? [])
+    .map((f) => ({
+      ...f,
+      articles: (articlesByFolder.get(f.id) ?? []).map((a) => ({ slug: a.slug, title: a.title, content: a.content })),
+    }))
+    .filter((f) => f.articles.length > 0)
+}
+
+/** Все папки, отсортированные для использования в форме редактирования статьи */
+export async function getAllHelpFolders(): Promise<HelpFolder[]> {
+  const supabase = createSupabaseAdminClient()
+  const { data, error } = await supabase.from('help_folders').select('id, slug, label, sort_order').order('sort_order')
+
+  if (error) throw error
+  return data ?? []
 }
 
 /** Все статьи для админки (включая неопубликованные) — без подстановки переменных */
@@ -151,7 +172,7 @@ export async function getAllHelpArticles(): Promise<HelpArticle[]> {
   const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase
     .from('help_articles')
-    .select('*')
+    .select(ARTICLE_WITH_FOLDER_SELECT)
     .order('sort_order')
 
   if (error) throw error
@@ -166,7 +187,7 @@ export async function getChatbotArticlesWithChunks(): Promise<
 
   const { data: articles, error: articlesError } = await supabase
     .from('help_articles')
-    .select('*')
+    .select(ARTICLE_WITH_FOLDER_SELECT)
     .eq('show_in_help', false)
     .order('sort_order')
 

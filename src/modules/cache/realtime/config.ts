@@ -23,10 +23,11 @@ export interface TableSubscription {
  *   },
  */
 export const realtimeSubscriptions: TableSubscription[] = [
-  // Благодарности: новая запись → обновить ленты/квоту у всех и баланс (подарки)
+  // Благодарности: новая запись → обновить ленты/квоту у всех, баланс (подарки)
+  // и прогресс достижений за благодарности у получателя
   {
     table: 'gratitudes',
-    invalidateKeys: [queryKeys.gratitudes.all, queryKeys.balance.all],
+    invalidateKeys: [queryKeys.gratitudes.all, queryKeys.balance.all, queryKeys.achievements.all],
     event: 'INSERT',
   },
   // Транзакции: RLS отдаёт только свои строки → событие приходит только владельцу

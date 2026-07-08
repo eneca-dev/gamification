@@ -57,6 +57,10 @@
   --tag-purple-text:       #5B21B6;
   --tag-gray-bg:           #F3F4F6;
   --tag-gray-text:         #374151;
+  --tag-sync-bg:           #E5E5E5;
+  --tag-sync-text:         #777777;
+  --tag-sync-os-bg:        #D7E0EF;
+  --tag-sync-os-text:      #2D4671;
 
   /* ── Gamification orange accent ─────────────────────────── */
   --orange-50:             #FFEDD5;

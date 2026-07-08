@@ -5,6 +5,7 @@ import { createSupabaseAdminClient } from '@/config/supabase'
 import { getCurrentUser } from '@/modules/auth/queries'
 import { checkIsAdmin } from '@/modules/admin/checkIsAdmin'
 import { submitDayOffSchema, rejectDayOffSchema, submitBatchDayOffSchema } from './types'
+import { getDayOffDateError } from './utils'
 import type { SubmitDayOffInput, RejectDayOffInput, SubmitBatchDayOffInput } from './types'
 
 export async function submitDayOffRequest(
@@ -15,6 +16,9 @@ export async function submitDayOffRequest(
 
   const parsed = submitDayOffSchema.safeParse(input)
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message }
+
+  const dateError = getDayOffDateError(parsed.data.requested_date)
+  if (dateError) return { success: false, error: dateError }
 
   if (parsed.data.request_type === 'day_off' && !parsed.data.screenshot_url) {
     return { success: false, error: 'Скриншот обязателен' }
@@ -64,11 +68,9 @@ export async function submitBatchDayOffRequests(
     return { success: false, error: 'Скриншот обязателен' }
   }
 
-  const now = new Date()
   for (const date of parsed.data.requested_dates) {
-    if (new Date(date) <= now) {
-      return { success: false, error: `Дата ${date} должна быть в будущем` }
-    }
+    const dateError = getDayOffDateError(date)
+    if (dateError) return { success: false, error: dateError }
   }
 
   const supabase = createSupabaseAdminClient()

@@ -11,8 +11,7 @@ interface UpdateArticleInput {
   slug: string
   title: string
   content: string
-  folder: string
-  folder_label: string
+  folder_id: string
   is_published: boolean
   show_in_help: boolean
 }
@@ -28,8 +27,7 @@ export async function updateHelpArticle(input: UpdateArticleInput) {
     .update({
       title: input.title,
       content: input.content,
-      folder: input.folder,
-      folder_label: input.folder_label,
+      folder_id: input.folder_id,
       is_published: input.is_published,
       show_in_help: input.show_in_help,
     })
@@ -53,8 +51,7 @@ interface CreateArticleInput {
   slug: string
   title: string
   content: string
-  folder: string
-  folder_label: string
+  folder_id: string
   is_published?: boolean
   show_in_help?: boolean
 }
@@ -72,7 +69,7 @@ export async function createHelpArticle(input: CreateArticleInput) {
   const { data: maxRow } = await supabase
     .from('help_articles')
     .select('sort_order')
-    .eq('folder', input.folder)
+    .eq('folder_id', input.folder_id)
     .order('sort_order', { ascending: false })
     .limit(1)
     .single()
@@ -85,8 +82,7 @@ export async function createHelpArticle(input: CreateArticleInput) {
       slug: input.slug,
       title: input.title,
       content: input.content,
-      folder: input.folder,
-      folder_label: input.folder_label,
+      folder_id: input.folder_id,
       sort_order: sortOrder,
       is_published: input.is_published ?? false,
       show_in_help: input.show_in_help ?? true,

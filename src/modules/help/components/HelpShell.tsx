@@ -5,10 +5,10 @@ import { HelpCircle } from 'lucide-react'
 import { HelpSearchProvider } from './HelpSearchContext'
 import { HelpSearchInput } from './HelpSearchInput'
 import { HelpSidebar } from './HelpSidebar'
-import type { HelpFolder } from '../types'
+import type { HelpFolderWithArticles } from '../types'
 
 interface HelpShellProps {
-  folders: HelpFolder[]
+  folders: HelpFolderWithArticles[]
   children: React.ReactNode
 }
 
