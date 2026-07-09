@@ -5,6 +5,7 @@
 Сейчас Revit-стрик ведёт триггер `fn_award_revit_points` в БД (на каждый INSERT в `elk_plugin_launches`), а Kibana-синк живёт в Edge Function `sync-plugin-launches`, запускаемой через `pg_cron`. Финализация просроченных pending делается из той же Edge Function.
 
 Проблемы:
+
 - Стрик в `revit_user_streaks.current_streak` обновляется только в момент работы триггера и «застывает» между запусками плагинов — UI показывает старое значение.
 - Финализация pending зависит от прогона Edge Function — пока он не отработал, стрик в таблице остаётся «дореdным».
 - Логика расчёта размазана между триггером БД и Edge Function. Сложно отлаживать и сравнивать с WS.
@@ -23,7 +24,7 @@
 - [x] Шаг 7 — фронт на view (queries в streak-panel, revit, streak-shield; legacy-поля `last_green_date`/`is_frozen` удалены из типа `RevitStreak`)
 - [x] Шаг 8 — `compute-achievements.ts` (создан, подключён в `wsSteps` оркестратора)
 - [x] Шаг 9 — миграции 041/042 + очистка Edge Function. **Решение: Edge Function удаляется сразу после первого успешного ночного прогона VPS, без 1-2 недель холодного периода — VPS-скрипты полностью её замещают.**
-- [x] Шаг 10 — документация (3 новых docs/scripts/*.md в vps; 5 docs обновлены в gamification; PLAN.md и docs/* в vps обновлены)
+- [x] Шаг 10 — документация (3 новых docs/scripts/_.md в vps; 5 docs обновлены в gamification; PLAN.md и docs/_ в vps обновлены)
 
 ## Замечание по применению миграций
 
@@ -32,25 +33,27 @@
 Критическая зависимость: Edge Function `sync-plugin-launches` вызывает `fn_finalize_expired_revit_pendings` ([supabase/functions/sync-plugin-launches/index.ts:182](../../../supabase/functions/sync-plugin-launches/index.ts#L182)). Если применить `040_revit_streak_view.sql` (с `DROP FUNCTION`) до того, как Edge Function перестанет звать эту функцию, очередной прогон Edge упадёт с ошибкой RPC. Поэтому DROP-часть вынесена в отдельную миграцию `041_drop_fn_finalize_expired_revit_pendings.sql` — она применяется позже, когда VPS уже взял финализацию на себя и Edge Function либо обновлена, либо снята с cron.
 
 Итоговый порядок применения миграций:
+
 - `040_revit_streak_view.sql` — ALTER + CREATE VIEW + упрощённая `fn_award_revit_points`. **Применяется первой**, после её применения Edge Function продолжает работать как раньше (вызов `fn_finalize_expired_revit_pendings` ещё валиден).
 - `041_drop_fn_finalize_expired_revit_pendings.sql` — DROP FUNCTION. **Применяется позже**, после Шага 9 (декомиссия Edge Function / удаление вызова из её кода).
 
 ## Целевая архитектура
 
-| | WS (как есть) | Revit (целевое) |
-|---|---|---|
-| Сырые данные | `ws_daily_reports`, `ws_tasks_*` | `elk_plugin_launches` |
-| Per-day статусы | `ws_daily_statuses` | **не нужны** (walk прямо по сырым) |
-| Стрик на UI | view `ws_user_streaks_effective` | **новая** view `revit_user_streaks_effective` |
-| Снапшот | `ws_user_streaks` | `revit_user_streaks` (+ `streak_start_date`) |
-| Кто пишет | VPS `compute-gamification` | **новый** VPS `compute-revit-gamification` |
-| Финализация pending | phase 1 vps + view-fallback после грейса | phase 1 vps + view-fallback после грейса |
-| Триггер на launch | — | **упрощён**: только идемпотентный лог + 5 💎, без стрика |
-| Kibana-синк | — | **новый** VPS `sync-plugin-launches` (вместо Edge Function) |
+|                     | WS (как есть)                            | Revit (целевое)                                             |
+| ------------------- | ---------------------------------------- | ----------------------------------------------------------- |
+| Сырые данные        | `ws_daily_reports`, `ws_tasks_*`         | `elk_plugin_launches`                                       |
+| Per-day статусы     | `ws_daily_statuses`                      | **не нужны** (walk прямо по сырым)                          |
+| Стрик на UI         | view `ws_user_streaks_effective`         | **новая** view `revit_user_streaks_effective`               |
+| Снапшот             | `ws_user_streaks`                        | `revit_user_streaks` (+ `streak_start_date`)                |
+| Кто пишет           | VPS `compute-gamification`               | **новый** VPS `compute-revit-gamification`                  |
+| Финализация pending | phase 1 vps + view-fallback после грейса | phase 1 vps + view-fallback после грейса                    |
+| Триггер на launch   | —                                        | **упрощён**: только идемпотентный лог + 5 💎, без стрика    |
+| Kibana-синк         | —                                        | **новый** VPS `sync-plugin-launches` (вместо Edge Function) |
 
 ### Семантика дельт view (зеркало WS)
 
 Для каждого дня `d ∈ [streak_start_date, fn_minsk_today() - 1]`:
+
 - `d ∈ ws_user_absences` (vacation / sick_leave / sick_day) → **0** (заморозка)
 - `d ∈ calendar_workdays` → green if `exists(elk_plugin_launches on d)` else red
 - `dow(d) ∈ (0, 6)` (Сб/Вс) → **+1** (выходной)
@@ -72,10 +75,12 @@
 Файлы созданы, миграции **не применены** — применяются вручную в порядке, описанном ниже.
 
 **1a. ALTER `revit_user_streaks`**
+
 ```sql
 ALTER TABLE revit_user_streaks
   ADD COLUMN streak_start_date date NULL;
 ```
+
 Якорь walk'а — день первого зелёного в текущей серии. Для существующих стриков заполняется бэкфиллом (Шаг 2).
 
 **1b. CREATE VIEW `revit_user_streaks_effective`**
@@ -164,10 +169,12 @@ GRANT SELECT ON revit_user_streaks_effective TO service_role;
 **1c. Упростить `fn_award_revit_points`**
 
 Оставляем только:
+
 - Идемпотентный INSERT в `gamification_event_logs` с накоплением `details.plugins[]`.
 - Транзакция +5 💎 на первый плагин дня (`revit_using_plugins`) → `gamification_transactions` + `gamification_balances`.
 
 Полностью убираем:
+
 - Все ветки про `revit_user_streaks` (UPDATE стрика, milestones 7/30, completed_cycles).
 - Расчёт `gap_days`, pending, сброс.
 
@@ -178,6 +185,7 @@ GRANT SELECT ON revit_user_streaks_effective TO service_role;
 Edge Function `sync-plugin-launches` всё ещё вызывает эту функцию через RPC. Дроп выносим в отдельную миграцию `041_drop_fn_finalize_expired_revit_pendings.sql`, которая применяется на Шаге 9 — после того, как VPS взял финализацию и Edge Function либо обновлена, либо снята с cron.
 
 Содержимое `041_drop_fn_finalize_expired_revit_pendings.sql`:
+
 ```sql
 DROP FUNCTION IF EXISTS public.fn_finalize_expired_revit_pendings();
 ```
@@ -220,7 +228,7 @@ DROP FUNCTION IF EXISTS public.fn_finalize_expired_revit_pendings();
 
 Создан: [gamification-vps-scripts/src/scripts/compute-revit-gamification.ts](../../../../gamification-vps-scripts/src/scripts/compute-revit-gamification.ts). В оркестратор пока **не подключён** — это делает Шаг 6.
 
-В миграцию `040` добавлен новый event_type `revit_streak_reset` (coins=0) — используется Phase 1 при финализации просроченных pending. Аналог WS `streak_reset_*`.
+В миграцию `040` добавлен новый event*type `revit_streak_reset` (coins=0) — используется Phase 1 при финализации просроченных pending. Аналог WS `streak_reset*\*`.
 
 - **Файл**: `gamification-vps-scripts/src/scripts/compute-revit-gamification.ts`. Структурно — облегчённая копия `updateStreaks` блока из [compute-gamification.ts:509-695](../../../../gamification-vps-scripts/src/scripts/compute-gamification.ts#L509-L695). Адаптации: `ws_user_streaks` → `revit_user_streaks`, `ws_user_streaks_effective` → `revit_user_streaks_effective`, статусы вычисляются прямо из `elk_plugin_launches` + `ws_user_absences` + `calendar_*` (без `ws_daily_statuses`), milestones 7/30 вместо 7/30/90.
 - **Зависимости**: `lib/supabase.ts`, `lib/logger.ts`, `lib/types.ts` (`ScriptResult`).
@@ -229,19 +237,23 @@ DROP FUNCTION IF EXISTS public.fn_finalize_expired_revit_pendings();
 - **Самостоятельный запуск**: `process.argv[1]?.includes('compute-revit-gamification')` → `.catch()` + `process.exit(1)`.
 
 **Phase 1 — финализация просроченных pending**
+
 ```sql
 SELECT user_id, current_streak, pending_reset_date
 FROM revit_user_streaks
 WHERE pending_reset_date IS NOT NULL
   AND pending_reset_date < <yesterdayIso>;
 ```
+
 Для каждой строки:
+
 - Эмитим событие `revit_streak_reset` с `details: { streak_was, shield_expired: true }`, идемпотентный ключ `revit_streak_reset_<user_id>_<pending_reset_date>`.
 - UPDATE: `current_streak = 0`, `streak_start_date = pending_reset_date + 1`, `pending_reset_date = NULL`, `pending_reset_expires_at = NULL`, `pending_gap_days = NULL`.
 
 **Phase 2 — обработка вчерашнего дня**
 
 Преднагрузка в память:
+
 - Все `ws_users` (id, email, is_active).
 - `elk_plugin_launches` за вчера (Set email'ов с launches).
 - `ws_user_absences` за вчера (Set email'ов).
@@ -275,6 +287,7 @@ WHERE pending_reset_date IS NOT NULL
    - Для каждого нового события — INSERT в `gamification_transactions` и UPDATE `gamification_balances` (в одной transaction, как в WS-скрипте).
 
 **Stats для Telegram-репорта**:
+
 - `green_days`, `red_days`, `absent_days`
 - `streak_milestones`
 - `pending_set` (новых pending за прогон)
@@ -289,23 +302,26 @@ WHERE pending_reset_date IS NOT NULL
 Текущий [lib/telegram.ts](../../../../gamification-vps-scripts/src/lib/telegram.ts) знает только один чат, и читает env **напрямую через `process.env`** на уровне модуля (строки 5-7), в обход `lib/env.ts`. Унифицируем паттерн: все env-переменные проходят через `env.ts`.
 
 **Env**:
+
 ```
 TELEGRAM_BOT_TOKEN=<существующий>
 TELEGRAM_CHAT_ID_WS=-1003861305864
-TELEGRAM_MENTION_WS=@zoraleta
+TELEGRAM_MENTION_WS=@brrr_s
 TELEGRAM_CHAT_ID_REVIT=<правильный chat_id>
 TELEGRAM_MENTION_REVIT=
 ```
+
 Старые `TELEGRAM_CHAT_ID` и `TELEGRAM_MENTION` удаляются. `TELEGRAM_BOT_TOKEN` остаётся один — токен общий, разделяется только chat_id.
 
 **Код**:
+
 - `lib/env.ts` — добавить:
   - `telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? ''` (опционально — если пусто, send() пропускает отправку с warn-логом)
   - `telegramChatIdWs: process.env.TELEGRAM_CHAT_ID_WS ?? ''`
   - `telegramChatIdRevit: process.env.TELEGRAM_CHAT_ID_REVIT ?? ''`
   - `telegramMentionWs: process.env.TELEGRAM_MENTION_WS ?? ''`
   - `telegramMentionRevit: process.env.TELEGRAM_MENTION_REVIT ?? ''`
-  Telegram-поля — НЕ через `requireEnv()` (фича опциональная, должна работать без неё).
+    Telegram-поля — НЕ через `requireEnv()` (фича опциональная, должна работать без неё).
 - `lib/telegram.ts`:
   - Подпись: `send(text: string, channel: 'ws' | 'revit'): Promise<void>` и `getMention(channel: 'ws' | 'revit'): string`.
   - Внутри: маппинг `channel → { chatId, mention }` через `env.telegramChatId{Ws,Revit}` / `env.telegramMention{Ws,Revit}`.
@@ -320,24 +336,25 @@ TELEGRAM_MENTION_REVIT=
 
 ```ts
 const wsSteps: Step[] = [
-  { name: 'sync-ws-users', fn: syncWsUsers },
-  { name: 'sync-ws-projects', fn: syncWsProjects },
-  { name: 'sync-ws-tasks', fn: syncWsTasks },
-  { name: 'sync-ws-costs', fn: syncWsCosts },
-  { name: 'sync-task-events', fn: syncTaskEvents },
-  { name: 'snapshot-task-percent', fn: snapshotTaskPercent },
-  { name: 'sync-ws-absences', fn: syncWsAbsences },
-  { name: 'compute-gamification', fn: computeGamification },
-]
+  { name: "sync-ws-users", fn: syncWsUsers },
+  { name: "sync-ws-projects", fn: syncWsProjects },
+  { name: "sync-ws-tasks", fn: syncWsTasks },
+  { name: "sync-ws-costs", fn: syncWsCosts },
+  { name: "sync-task-events", fn: syncTaskEvents },
+  { name: "snapshot-task-percent", fn: snapshotTaskPercent },
+  { name: "sync-ws-absences", fn: syncWsAbsences },
+  { name: "compute-gamification", fn: computeGamification },
+];
 
 const revitSteps: Step[] = [
-  { name: 'sync-plugin-launches', fn: syncPluginLaunches },
-  { name: 'compute-revit-gamification', fn: computeRevitGamification },
-]
+  { name: "sync-plugin-launches", fn: syncPluginLaunches },
+  { name: "compute-revit-gamification", fn: computeRevitGamification },
+];
 ```
 
 Логика:
-1. Прогнать `wsSteps` последовательно, собрать сводку → `send(wsMessage, 'ws')`. Mention `@zoraleta` при ошибках через `getMention('ws')`.
+
+1. Прогнать `wsSteps` последовательно, собрать сводку → `send(wsMessage, 'ws')`. Mention `@brrr_s` при ошибках через `getMention('ws')`.
 2. Прогнать `revitSteps` последовательно, собрать сводку → `send(revitMessage, 'revit')`. Без mention'а (`TELEGRAM_MENTION_REVIT=''`).
 3. Fatal-error в `main().catch(...)` — `Promise.allSettled([send(text, 'ws'), send(text, 'revit')])` чтобы упасть только если оба чата недоступны. Mention каждого канала свой.
 
@@ -346,6 +363,7 @@ const revitSteps: Step[] = [
 ### Шаг 7. ✅ Фронт: переключение queries на view
 
 Изменено:
+
 - [src/modules/streak-panel/queries.ts](../../../modules/streak-panel/queries.ts) `_getRevitStreakData` — view вместо таблицы.
 - [src/modules/revit/queries.ts](../../../modules/revit/queries.ts) `getRevitStreak` — view; `last_green_date`/`is_frozen` убраны (нигде в UI не читаются — поля удалены из типа `RevitStreak` в [revit/types.ts](../../../modules/revit/types.ts) полностью, не оставлены как legacy).
 - [src/modules/streak-shield/queries.ts](../../../modules/streak-shield/queries.ts) `getActivePendings` — view для revit pending (логика щита эквивалентна, view возвращает frozen `current_streak` во время грейса).
@@ -353,10 +371,12 @@ const revitSteps: Step[] = [
 ⚠️ **Важно**: миграция 040 поправлена на `s.best_streak` (была опечатка `s.longest_streak` — такой колонки в `revit_user_streaks` нет, в отличие от WS).
 
 [src/modules/streak-panel/queries.ts:89-114](../../../modules/streak-panel/queries.ts#L89-L114) — `getRevitStreakData(userId)`:
+
 - `from('revit_user_streaks')` → `from('revit_user_streaks_effective')`.
 - Добавить `completed_cycles` в select (если потом захотим показывать на UI — пока не показываем).
 
 [src/modules/revit/queries.ts:38-70](../../../modules/revit/queries.ts#L38-L70) — `getRevitStreak(email)`:
+
 - Тот же переход на view.
 - `is_frozen` и `last_green_date` — оставить временно (виджет на дашборде их использует), читать из таблицы отдельным селектом если нужно.
 
@@ -365,6 +385,7 @@ const revitSteps: Step[] = [
 Создан: [gamification-vps-scripts/src/scripts/compute-achievements.ts](../../../../gamification-vps-scripts/src/scripts/compute-achievements.ts). Подключён последним шагом в `wsSteps` оркестратора. npm-алиас `compute:achievements`.
 
 Edge Function [sync-plugin-launches/index.ts:191-207](../../../supabase/functions/sync-plugin-launches/index.ts#L191-L207) после Kibana-синка вызывает:
+
 - `fn_ach_snapshot_rankings()`
 - `fn_ach_check_gratitude_achievements()`
 
@@ -379,6 +400,7 @@ Edge Function [sync-plugin-launches/index.ts:191-207](../../../supabase/function
 ### Шаг 9. ✅ Декомиссия Edge Function
 
 Подготовлено (но **не применено к проду**):
+
 - Миграция [supabase/migrations/042_unschedule_sync_plugin_launches.sql](../../../supabase/migrations/042_unschedule_sync_plugin_launches.sql) — снимает pg_cron расписание `sync-plugin-launches-daily`.
 - Тело Edge Function [supabase/functions/sync-plugin-launches/index.ts](../../../supabase/functions/sync-plugin-launches/index.ts) очищено от вызовов `fn_finalize_expired_revit_pendings`, `fn_ach_snapshot_rankings`, `fn_ach_check_gratitude_achievements` — на случай если 042 применят раньше удаления функции.
 - Миграция [supabase/migrations/041_drop_fn_finalize_expired_revit_pendings.sql](../../../supabase/migrations/041_drop_fn_finalize_expired_revit_pendings.sql) — финальный DROP, применяется после 042.
@@ -388,6 +410,7 @@ Edge Function удаляется чисто (`supabase functions delete sync-plu
 ### Шаг 10. ✅ Документация
 
 Обновлено:
+
 - **gamification-vps-scripts**: новые `docs/scripts/sync-plugin-launches.md`, `compute-revit-gamification.md`, `compute-achievements.md`. Обновлены `docs/architecture.md`, `docs/orchestrator.md`, `docs/lib.md`, `PLAN.md`.
 - **gamification (web)**: обновлены `src/docs/streak-panel.md`, `src/docs/revit.md`, `src/docs/streak-shield.md`, `src/docs/gamification-events.md`, `src/docs/gamification-db.md`.
 
@@ -448,12 +471,13 @@ KIBANA_API_KEY=<значение "encoded:" из письма>
 # Telegram — опциональные (если нет — отправка в данный канал пропускается с warn)
 TELEGRAM_BOT_TOKEN=<существующий>
 TELEGRAM_CHAT_ID_WS=-1003861305864
-TELEGRAM_MENTION_WS=@zoraleta
+TELEGRAM_MENTION_WS=@brrr_s
 TELEGRAM_CHAT_ID_REVIT=<уточнить>
 TELEGRAM_MENTION_REVIT=
 ```
 
 Регистрация в `lib/env.ts`:
+
 - Kibana — через `requireEnv()` (упадём на старте, если не заданы — это ок, скрипт без них бесполезен).
 - Telegram — через `process.env.X ?? ''`, проверка на пустоту делается в `telegram.ts:isConfigured(channel)`.
 
