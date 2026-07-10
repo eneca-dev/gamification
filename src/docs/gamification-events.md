@@ -68,7 +68,7 @@ revitSteps:
 
 **Условие:** запись в `elk_plugin_launches` с (user_email, work_date)
 **Получатель:** сотрудник
-**💎:** `revit_using_plugins` → **+5**
+**💎:** `revit_using_plugins` → **+10**
 
 ```
 event_type:      revit_using_plugins
@@ -357,7 +357,7 @@ idempotency_key: deadline_ok_l3_{ws_task_id}_{user_id}
 | `revit_streak_7_bonus`       | +25  | revit      | PG-триггер                            |
 | `ws_streak_7`                | +25  | ws         | compute-gamification                  |
 | `gratitude_recipient_points` | +20  | gratitudes | PG-триггер                            |
-| `revit_using_plugins`        | +5   | revit      | PG-триггер                            |
+| `revit_using_plugins`        | +10  | revit      | PG-триггер                            |
 | `budget_ok_l3_lead_bonus`    | +5   | ws         | compute-gamification                  |
 | `green_day`                  | +3   | ws         | compute-gamification                  |
 | `deadline_ok_l3`             | +3   | ws         | compute-gamification                  |
