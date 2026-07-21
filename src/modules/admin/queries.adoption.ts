@@ -404,11 +404,21 @@ export async function getAdoptionPlugins(): Promise<AdoptionPluginsData> {
   const byDay = new Map<string, { users: Set<string>; launches: number }>()
   for (const r of [...baseline, ...live]) {
     if (!allWorkdaySet.has(r.work_date)) continue
+    const email = r.user_email.toLowerCase()
     let day = byDay.get(r.work_date)
     if (!day) { day = { users: new Set(), launches: 0 }; byDay.set(r.work_date, day) }
-    day.users.add(r.user_email.toLowerCase())
+    day.users.add(email)
     day.launches += r.launch_count
   }
+
+  // Новые пользователи плагинов: активны с 01.07, но не пользовались в июне.
+  // Сравнение с целым месяцем (а не двумя днями ДО) — чтобы не завышать число
+  const juneUsers = new Set<string>()
+  for (const r of baseline) {
+    if (r.work_date >= JUNE_FROM && r.work_date <= BEFORE_TO) juneUsers.add(r.user_email.toLowerCase())
+  }
+  const afterUsers = new Set(live.map((r) => r.user_email.toLowerCase()))
+  const newUsersAfter = [...afterUsers].filter((e) => !juneUsers.has(e)).length
 
   // Средние за рабочий день по окну дат (дни без запусков считаются нулями)
   function dailyAvg(from: string, to: string, num: (d: { users: Set<string>; launches: number }) => number): number {
@@ -421,24 +431,20 @@ export async function getAdoptionPlugins(): Promise<AdoptionPluginsData> {
     return Math.round(total / days.length)
   }
 
-  // Недельные агрегаты: понедельник ISO-недели → рабочие дни, активные, запуски
+  // Недельная аудитория: уникальные пользователи по ISO-неделям (для примечания к графику)
   function weekMonday(day: string): string {
     const d = new Date(day + 'T00:00:00Z')
     d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7))
     return d.toISOString().slice(0, 10)
   }
-  const weekMap = new Map<string, { workdays: string[]; users: Set<string>; userDays: number; launches: number }>()
+  const weekMap = new Map<string, { workdays: string[]; users: Set<string> }>()
   for (const d of allWorkdays) {
     const wk = weekMonday(d)
     let w = weekMap.get(wk)
-    if (!w) { w = { workdays: [], users: new Set(), userDays: 0, launches: 0 }; weekMap.set(wk, w) }
+    if (!w) { w = { workdays: [], users: new Set() }; weekMap.set(wk, w) }
     w.workdays.push(d)
     const agg = byDay.get(d)
-    if (agg) {
-      w.userDays += agg.users.size
-      w.launches += agg.launches
-      for (const u of agg.users) w.users.add(u)
-    }
+    if (agg) for (const u of agg.users) w.users.add(u)
   }
   const weeks = [...weekMap.entries()].sort(([a], [b]) => (a < b ? -1 : 1))
 
@@ -452,19 +458,11 @@ export async function getAdoptionPlugins(): Promise<AdoptionPluginsData> {
 
   // Полные недели (последний рабочий день недели уже прошёл) — для метрик «на неделю»
   const fullWeeks = weeks.filter(([, w]) => w.workdays[w.workdays.length - 1] <= today && w.users.size > 0)
-  function daysPerUser(filter: (week: string) => boolean): number {
-    const rows = fullWeeks.filter(([wk]) => filter(wk))
-    if (rows.length === 0) return 0
-    const avg = rows.reduce((s, [, w]) => s + w.userDays / w.users.size, 0) / rows.length
-    return Math.round(avg * 10) / 10
-  }
-  // Неделя запуска (29.06) смешивает ДО и ПОСЛЕ — в оба окна не входит
-  const launchWeek = weekMonday(LAUNCH_DATE)
-  const daysPerUserBefore = daysPerUser((wk) => wk >= JUNE_FROM && wk < launchWeek)
-  const daysPerUserAfter = daysPerUser((wk) => wk > launchWeek)
   const weeklyAudience = fullWeeks.length > 0
     ? Math.round(fullWeeks.reduce((s, [, w]) => s + w.users.size, 0) / fullWeeks.length)
     : 0
+
+  const cohortSize = Number(coverageRes.data?.[0]?.total_employees ?? 0)
 
   // Эффект вовлечения: доля группы, запускавшая плагины в средний рабочий день.
   // Нормировано по числу рабочих дней — периоды разной длины сравниваются честно
@@ -492,11 +490,10 @@ export async function getAdoptionPlugins(): Promise<AdoptionPluginsData> {
     daily_active_after: dailyAvg(LAUNCH_DATE, today, (d) => d.users.size),
     launches_day_before: dailyAvg(JUNE_FROM, BEFORE_TO, (d) => d.launches),
     launches_day_after: dailyAvg(LAUNCH_DATE, today, (d) => d.launches),
-    days_per_user_before: daysPerUserBefore,
-    days_per_user_after: daysPerUserAfter,
+    new_users_after: newUsersAfter,
     weekly_audience: weeklyAudience,
     daily,
-    total_cohort: Number(coverageRes.data?.[0]?.total_employees ?? 0),
+    total_cohort: cohortSize,
     effect_logged: {
       users: loggedEmails.size,
       active_before: computeDailyActivePct(baseline, beforeWorkdays, loggedEmails),

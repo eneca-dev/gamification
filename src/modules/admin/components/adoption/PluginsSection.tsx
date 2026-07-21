@@ -68,6 +68,37 @@ function GrowthCard({ label, before, after, unit = '', hint, tooltip }: GrowthCa
   )
 }
 
+// Карточка с одиночным значением (не «до → после») — например, приток новых пользователей
+function StatCard({
+  label,
+  value,
+  hint,
+  tooltip,
+}: {
+  label: string
+  value: string
+  hint: string
+  tooltip?: React.ReactNode
+}) {
+  return (
+    <div
+      className="rounded-2xl p-5 flex flex-col gap-2"
+      style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
+    >
+      <span className="flex items-center gap-1 text-[12px] font-medium" style={{ color: 'var(--apex-text-secondary)' }}>
+        {label}
+        {tooltip}
+      </span>
+      <span className="text-[22px] font-bold tabular-nums" style={{ color: 'var(--apex-text)' }}>
+        {value}
+      </span>
+      <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
+        {hint}
+      </span>
+    </div>
+  )
+}
+
 export function PluginsSection({ data }: Props) {
   return (
     <section className="space-y-4">
@@ -77,8 +108,9 @@ export function PluginsSection({ data }: Props) {
         </h2>
         <p className="text-[12px]" style={{ color: 'var(--apex-text-secondary)' }}>
           Сравнение с июнем — стабильной месячной базой до запуска (историческая выгрузка с 4 мая).
-          Только рабочие дни, только выборка проектировщиков. Все три метрики нормированы
-          на рабочий день, поэтому окна разной длины сопоставимы.
+          Только рабочие дни, только выборка проектировщиков. Первые две метрики нормированы
+          на рабочий день, поэтому окна разной длины сопоставимы; третья — приток новых
+          пользователей относительно июня.
         </p>
       </div>
 
@@ -107,15 +139,14 @@ export function PluginsSection({ data }: Props) {
             />
           }
         />
-        <GrowthCard
-          label="Дней использования в неделю"
-          before={data.days_per_user_before}
-          after={data.days_per_user_after}
-          hint="в скольких днях недели типичный пользователь открывает плагины"
+        <StatCard
+          label="Новых пользователей плагинов"
+          value={`${data.new_users_after} чел.`}
+          hint="не пользовались плагинами в июне, начали с 1 июля"
           tooltip={
             <InfoTooltip
-              desc="Регулярность использования: в скольких рабочих днях недели сотрудник в среднем открывает плагины. Считается по полным неделям."
-              formula={<>среднее <Fraction num="дней с запусками" den="активных за неделю" /></>}
+              desc="Приток новых пользователей: проектировщики, которые в июне плагинами не пользовались, а с 1 июля начали. Сравнение с целым месяцем, а не с двумя днями до запуска, чтобы не завышать."
+              formula="уникальные с 01.07, кроме активных в июне"
             />
           }
         />
@@ -221,7 +252,7 @@ export function PluginsSection({ data }: Props) {
             tooltip={
               <InfoTooltip
                 desc="Активность вошедших в плагинах выросла — тот же эффект вовлечения, что и в дисциплине Worksection. Нормировка на число рабочих дней делает периоды сопоставимыми."
-                formula={<><Fraction num="пар (день, сотрудник)" den="раб. дней × группа" /> × 100</>}
+                formula={<><Fraction num="Σ активных за день" den="дней × размер группы" /> × 100</>}
               />
             }
           />
@@ -234,7 +265,7 @@ export function PluginsSection({ data }: Props) {
             tooltip={
               <InfoTooltip
                 desc="Контрольная группа: плагины доступны им так же, но их активность не выросла. Это подтверждает, что рост связан с запуском геймификации."
-                formula={<><Fraction num="пар (день, сотрудник)" den="раб. дней × группа" /> × 100</>}
+                formula={<><Fraction num="Σ активных за день" den="дней × размер группы" /> × 100</>}
               />
             }
           />
