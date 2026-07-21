@@ -123,8 +123,7 @@ export interface AdoptionPluginsData {
   daily_active_after: number
   launches_day_before: number    // запусков за рабочий день
   launches_day_after: number
-  days_per_user_before: number   // дней использования на активного в неделю (полные недели)
-  days_per_user_after: number
+  new_users_after: number        // активны с 01.07, но не пользовались плагинами в июне
   weekly_audience: number        // средняя недельная аудитория по полным неделям (стабильна)
   daily: AdoptionPluginsDay[]    // по рабочим дням с 29.06
   total_cohort: number           // размер выборки (для контекста)
