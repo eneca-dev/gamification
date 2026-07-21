@@ -514,7 +514,7 @@ export async function getAdoptionSideEffects(
 
   type CrystalStatsRow = { earners: string; spent_total: string; balance_total: string }
 
-  const [gratitudesRes, crystalsRes, ordersRes, chatRes, cohortIdsRes, cohortEmailsRes, profilesRes] =
+  const [gratitudesRes, crystalsRes, ordersRes, chatRes, cohortIdsRes, cohortEmailsRes, profilesRes, productsRes, wsStreaksRes, revitStreaksRes] =
     await Promise.all([
       supabase
         .from('gratitudes')
@@ -525,7 +525,7 @@ export async function getAdoptionSideEffects(
       }) as unknown as Promise<{ data: CrystalStatsRow[] | null; error: RpcError }>,
       supabase
         .from('shop_orders')
-        .select('user_id')
+        .select('user_id, product_id')
         .gte('created_at', launchDate)
         .neq('status', 'cancelled'),
       supabase
@@ -542,6 +542,10 @@ export async function getAdoptionSideEffects(
         error: RpcError
       }>,
       supabase.from('profiles').select('user_id, email'),
+      // effect != null → «Вторая жизнь» (защита стрика), а не реальная покупка
+      supabase.from('shop_products').select('id, effect'),
+      supabase.from('ws_user_streaks_effective').select('user_id, current_streak'),
+      supabase.from('revit_user_streaks_effective').select('user_id, current_streak'),
     ])
 
   if (crystalsRes.error) throw new Error(crystalsRes.error.message)
@@ -559,8 +563,21 @@ export async function getAdoptionSideEffects(
   )
 
   const gratitudes = (gratitudesRes.data ?? []).filter((g) => cohortWsIds.has(g.sender_id))
-  const orders = (ordersRes.data ?? []).filter((o) => cohortWsIds.has(o.user_id))
   const chats = (chatRes.data ?? []).filter((c) => cohortProfileIds.has(c.user_id))
+
+  // Товары с effect (streak_shield_*) — это «Вторая жизнь», а не реальная покупка
+  const shieldProductIds = new Set(
+    (productsRes.data ?? []).filter((p) => p.effect).map((p) => p.id),
+  )
+  const cohortOrders = (ordersRes.data ?? []).filter((o) => cohortWsIds.has(o.user_id))
+  const realOrders = cohortOrders.filter((o) => !shieldProductIds.has(o.product_id))
+  const secondLifeOrders = cohortOrders.filter((o) => shieldProductIds.has(o.product_id))
+
+  // Стрики: серии рабочих дней подряд без нарушений (привычка)
+  const countStreak = (rows: { current_streak: number | null }[], min: number) =>
+    rows.filter((r) => (r.current_streak ?? 0) >= min).length
+  const wsStreaks = (wsStreaksRes.data ?? []).filter((s) => cohortWsIds.has(s.user_id))
+  const revitStreaks = (revitStreaksRes.data ?? []).filter((s) => cohortWsIds.has(s.user_id))
 
   const crystals = crystalsRes.data?.[0]
   const earners = Number(crystals?.earners ?? 0)
@@ -575,9 +592,15 @@ export async function getAdoptionSideEffects(
     gratitude_total: gratitudes.length,
     gratitude_senders: new Set(gratitudes.map((g) => g.sender_id)).size,
     gratitude_recipients: new Set(gratitudes.map((g) => g.recipient_id)).size,
-    shop_orders_total: orders.length,
-    shop_orders_unique_users: new Set(orders.map((o) => o.user_id)).size,
+    shop_orders_total: realOrders.length,
+    shop_orders_unique_users: new Set(realOrders.map((o) => o.user_id)).size,
+    second_life_total: secondLifeOrders.length,
+    second_life_users: new Set(secondLifeOrders.map((o) => o.user_id)).size,
     chatbot_messages_total: chats.length,
     chatbot_unique_users: new Set(chats.map((c) => c.user_id)).size,
+    ws_streak_holders: countStreak(wsStreaks, 1),
+    ws_streak_7plus: countStreak(wsStreaks, 7),
+    revit_streak_holders: countStreak(revitStreaks, 1),
+    revit_streak_7plus: countStreak(revitStreaks, 7),
   }
 }

@@ -141,8 +141,14 @@ export interface AdoptionSideEffectsData {
   gratitude_total: number
   gratitude_senders: number
   gratitude_recipients: number
-  shop_orders_total: number
+  shop_orders_total: number       // только реальные покупки (без «Второй жизни»)
   shop_orders_unique_users: number
+  second_life_total: number       // куплено «Вторых жизней» (защита стрика)
+  second_life_users: number
   chatbot_messages_total: number
   chatbot_unique_users: number
+  ws_streak_holders: number       // держат WS-стрик (серия ≥ 1 без нарушений)
+  ws_streak_7plus: number         // из них серия 7+ дней
+  revit_streak_holders: number    // держат Revit-стрик
+  revit_streak_7plus: number
 }
