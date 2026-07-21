@@ -5,12 +5,12 @@ import { CoinIcon } from '@/components/CoinIcon'
 
 interface CoinBalanceProps {
   amount: number;
-  size?: "xs" | "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
-const sizeClasses = { xs: "text-[10px]", sm: "text-sm", md: "text-lg", lg: "text-3xl" };
-const coinSizes = { xs: 12, sm: 16, md: 20, lg: 28 };
+const sizeClasses = { xs: "text-[10px]", sm: "text-sm", md: "text-lg", lg: "text-3xl", xl: "text-[24px]" };
+const coinSizes = { xs: 12, sm: 16, md: 20, lg: 28, xl: 24 };
 
 export function CoinBalance({ amount, size = "md" }: CoinBalanceProps) {
   const formatted = amount.toLocaleString("ru-RU");

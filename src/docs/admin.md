@@ -67,6 +67,7 @@
 - `getEconomyTop(filters, source, level)` — RPC `get_economy_top`. Топ-список по одному из 6 источников (`'earned' | 'shop' | 'lottery' | 'second_life' | 'paid_gratitude' | 'revoked'`) на одном из 3 уровней (`'user' | 'team' | 'department'`). Возвращает все строки (slice до 10 на UI). Без `team`/`department` группируются как «Без команды» / «Без отдела». Источник `'revoked'` использует тот же cutoff по дате закрытия задачи (≥ 2026-03-25), что и `getEconomyOverview`
 - `getEconomyCategoryBreakdown(filters)` — RPC `get_economy_category_breakdown`. Категории магазина с агрегатом 💎/orders + JSON-массив товаров категории (для детализации по клику). Возвращает только категории с покупками за период (coins > 0)
 - `resolveEconomyPeriod(preset, customFrom?, customTo?)` — утилита: преобразует пресет периода (`7d/30d/90d/year/all/custom`) в ISO-границы `{from, to}`. `'all'` → `{null, null}`
+- `queries.adoption.ts` — метрики дашборда внедрения `/admin/adoption`: `getAdoptionCoverage`, `getAdoptionOverview` (входы + линии улучшений + Revit по дням), `getAdoptionWorksection` (дисциплина WS ДО/ПОСЛЕ, эффект вовлечения, нарушения, чекпойнты), `getAdoptionPlugins` (карточки Revit ДО/ПОСЛЕ), `getAdoptionSideEffects`. Все — по когорте проектировщиков через RPC-функции `get_adoption_*` и `adoption_designer_ids/emails`. Полная методика: `src/docs-features/admin/adoption-metrics-report.md`
 
 ## Компоненты
 
@@ -88,6 +89,7 @@
 - `ProductFormModal` — модалка создания/редактирования товара: два инпута (Себестоимость BYN + Коэффициент) с live-превью цены в кристаллах, кастомный дропдаун категории, эмодзи-инпут (Win+.), drag-and-drop загрузка изображений, блокировка скролла. Принимает `rate`. Рендерится через портал
 - `AdminOrdersClient` — управление заказами: дропдаун статуса на бейдже (через портал, вложенный `StatusDropdown` с позиционированием через useRef), кнопка отмены, раскрываемые комментарии, модал подтверждения отмены (через портал)
 - `CalendarClient` — визуальный календарь на год + 1 месяц (январь текущего года → январь следующего). Подкомпоненты: `MonthCard` (сетка дней одного месяца), `LegendItem` (элемент легенды). Четыре состояния дня: workday (белый фон), weekend (серый), holiday (красный, из calendar_holidays), workday_transfer (зелёный, из calendar_workdays). Клик по дню переключает состояние. Optimistic updates без блокировки — параллельные клики работают, каждый startTransition независим. Подсветка текущего дня через inset box-shadow
+- `adoption/AdoptionDashboard` — контейнер дашборда внедрения: `OverviewSection` (карточки охвата + 3 графика), `WorksectionSection` (KPI ДО→ПОСЛЕ, дневной график трёх измерений, эффект вовлечения, нарушения, чекпойнты), `PluginsSection` (карточки Revit), `SideEffectsSection` (активность в системе)
 - `AdminPlaceholder` — заглушка для неактивных разделов
 - `AdminTableSkeleton` — скелетон загрузки таблиц
 
@@ -119,6 +121,7 @@
 - `/admin/products` — `getAllProducts()` + `getAllCategories()` параллельно → `ProductsClient`
 - `/admin/orders` — `getOrders()` → `AdminOrdersClient`
 - `/admin/calendar` — `getCalendarHolidays()` + `getCalendarWorkdays()` параллельно → `CalendarClient`
+- `/admin/adoption` — `checkIsAdmin()` → `Promise.all` из 5 adoption-queries → `AdoptionDashboard`. Аналитика внедрения геймификации по когорте проектировщиков (ДО = 29–30.06.2026, ПОСЛЕ = с 01.07)
 - `/admin/economy` — Server Component с `checkIsAdmin()` (редирект на `/` для не-админов). Парсит searchParams (`period`, `from`, `to`, `topLevel`), резолвит ISO-границы периода через `resolveEconomyPeriod` (для `'custom'` конвертирует YYYY-MM-DD → ISO начала/конца дня). Параллельно (`Promise.all`) вызывает `getEconomyOverview` + 6× `getEconomyTop` (по одному на каждый источник топа). Передаёт URL-state и данные в `EconomyDashboard`. Дефолты: `period='all'`, `topLevel='user'`
 
 Все страницы с данными имеют `loading.tsx` со скелетонами.

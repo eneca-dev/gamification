@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../gamification-vps-scripts"
+		},
+		{
+			"path": "../worksection-mcp"
+		}
+	],
+	"settings": {}
+}

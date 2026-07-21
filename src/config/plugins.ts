@@ -40,6 +40,7 @@ export const PLUGINS: PluginDef[] = [
   { name: 'HVACAutoTag', display: 'HVAC Auto Tag', appNames: ['HVACAutoTag'], indices: ['hvacautotag-*'] },
   { name: 'Evacuation', display: 'Evacuation', appNames: ['Evacuation'], indices: ['evacuation-*'] },
   { name: 'RevitDataExporter', display: 'Revit Data Exporter', appNames: ['RevitDataExporter'], indices: ['revitdataexporter-*'] },
+  { name: 'EnecaFamilies', display: 'Eneca Families', appNames: ['EnecaFamilies.Frontend', 'EnecaFamilies.Backend'], indices: ['enecafamilies-*'] },
 ];
 
 // Технические имена для отображения в UI (подсказки, списки)
