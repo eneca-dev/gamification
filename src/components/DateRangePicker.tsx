@@ -7,6 +7,7 @@ interface DateRangePickerProps {
   from: string   // YYYY-MM-DD или ''
   to: string     // YYYY-MM-DD или ''
   onChange: (from: string, to: string) => void
+  months?: number // сколько месяцев показывать рядом (по умолчанию 1)
 }
 
 // ── Утилиты ───────────────────────────────────────────────────────────────────
@@ -38,7 +39,7 @@ const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
 // ── Компонент ─────────────────────────────────────────────────────────────────
 
-export function DateRangePicker({ from, to, onChange }: DateRangePickerProps) {
+export function DateRangePicker({ from, to, onChange, months = 1 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState<Date | null>(null)
   const [hover, setHover] = useState<Date | null>(null)
@@ -114,18 +115,7 @@ export function DateRangePicker({ from, to, onChange }: DateRangePickerProps) {
     setPending(null)
   }
 
-  // Строим ячейки месяца
-  const year = currentMonth.getFullYear()
-  const month = currentMonth.getMonth()
-  const firstOffset = (new Date(year, month, 1).getDay() + 6) % 7
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const cells: (Date | null)[] = [
-    ...Array(firstOffset).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1)),
-  ]
-
-  // Вычисляем отображаемый диапазон (с учётом hover-предпросмотра)
-  // Во время нового выбора скрываем старый диапазон
+  // Отображаемый диапазон (с учётом hover-предпросмотра при новом выборе)
   let rangeFrom = fromDate
   let rangeTo = toDate
   if (pending) {
@@ -134,7 +124,88 @@ export function DateRangePicker({ from, to, onChange }: DateRangePickerProps) {
     rangeTo = pending < hoverTarget ? hoverTarget : pending
   }
 
-  const monthTitle = currentMonth.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+  // Кнопка одного дня (подсветка выбора/диапазона/сегодня)
+  const dayButton = (d: Date, key: number) => {
+    const isToday = sameDay(d, today)
+    const isFrom = rangeFrom && sameDay(d, rangeFrom)
+    const isTo = rangeTo && rangeFrom && !sameDay(rangeFrom, rangeTo) && sameDay(d, rangeTo)
+    const isSingleDay = rangeFrom && rangeTo && sameDay(rangeFrom, rangeTo) && sameDay(d, rangeFrom)
+    const inRange = rangeFrom && rangeTo && d > rangeFrom && d < rangeTo
+
+    let bg = 'transparent'
+    let color = 'var(--apex-text)'
+    let borderColor = 'transparent'
+    let extraClass = 'hover:bg-black/[0.04]'
+    if (isFrom || isTo || isSingleDay) { bg = 'var(--apex-primary)'; color = '#ffffff'; extraClass = '' }
+    else if (inRange) { bg = 'rgba(27, 107, 88, 0.10)'; color = 'var(--apex-primary)'; extraClass = 'hover:bg-[rgba(27,107,88,0.18)]' }
+    else if (isToday) { borderColor = 'var(--apex-primary)'; color = 'var(--apex-primary)' }
+
+    return (
+      <button
+        key={key}
+        onClick={() => handleDay(d)}
+        onDoubleClick={() => handleDayDouble(d)}
+        onMouseEnter={() => pending && setHover(d)}
+        onMouseLeave={() => setHover(null)}
+        className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-medium transition-all cursor-pointer ${extraClass}`}
+        style={{ background: bg, color, border: `1px solid ${borderColor}` }}
+      >
+        {d.getDate()}
+      </button>
+    )
+  }
+
+  // Один месяц: заголовок (со стрелками по краям), дни недели, сетка дней
+  const renderMonth = (offset: number) => {
+    const base = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1)
+    const y = base.getFullYear()
+    const m = base.getMonth()
+    const firstOffset = (new Date(y, m, 1).getDay() + 6) % 7
+    const daysInMonth = new Date(y, m + 1, 0).getDate()
+    const cells: (Date | null)[] = [
+      ...Array(firstOffset).fill(null),
+      ...Array.from({ length: daysInMonth }, (_, i) => new Date(y, m, i + 1)),
+    ]
+    const title = base.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+
+    return (
+      <div key={offset} style={{ width: '224px' }}>
+        <div className="flex items-center justify-between mb-2.5 h-6">
+          {offset === 0 ? (
+            <button
+              onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
+              className="w-6 h-6 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--apex-bg)]"
+              style={{ color: 'var(--apex-text-muted)' }}
+            >
+              <ChevronLeft size={14} />
+            </button>
+          ) : <span className="w-6" />}
+          <span className="text-[12px] font-semibold capitalize" style={{ color: 'var(--apex-text)' }}>{title}</span>
+          {offset === months - 1 ? (
+            <button
+              onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
+              className="w-6 h-6 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--apex-bg)]"
+              style={{ color: 'var(--apex-text-muted)' }}
+            >
+              <ChevronRight size={14} />
+            </button>
+          ) : <span className="w-6" />}
+        </div>
+        <div className="grid grid-cols-7 mb-1">
+          {WEEKDAYS.map((wd, i) => (
+            <div key={wd} className="h-6 flex items-center justify-center text-[10px] font-semibold" style={{ color: i >= 5 ? 'var(--apex-text-secondary)' : 'var(--apex-text-muted)' }}>
+              {wd}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7">
+          {cells.map((d, i) => (d ? dayButton(d, i) : <div key={i} className="w-8 h-8" />))}
+        </div>
+      </div>
+    )
+  }
+
+  const popupWidth = months * 224 + (months - 1) * 16 + 24
 
   return (
     <div className="relative" ref={ref}>
@@ -171,88 +242,11 @@ export function DateRangePicker({ from, to, onChange }: DateRangePickerProps) {
             background: 'var(--apex-surface)',
             border: '1px solid var(--apex-border)',
             boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-            width: '232px',
+            width: `${popupWidth}px`,
           }}
         >
-          {/* Навигация по месяцу */}
-          <div className="flex items-center justify-between mb-2.5">
-            <button
-              onClick={() => setCurrentMonth(new Date(year, month - 1, 1))}
-              className="w-6 h-6 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--apex-bg)]"
-              style={{ color: 'var(--apex-text-muted)' }}
-            >
-              <ChevronLeft size={14} />
-            </button>
-            <span className="text-[12px] font-semibold capitalize" style={{ color: 'var(--apex-text)' }}>
-              {monthTitle}
-            </span>
-            <button
-              onClick={() => setCurrentMonth(new Date(year, month + 1, 1))}
-              className="w-6 h-6 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--apex-bg)]"
-              style={{ color: 'var(--apex-text-muted)' }}
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
-
-          {/* Дни недели */}
-          <div className="grid grid-cols-7 mb-1">
-            {WEEKDAYS.map((wd, i) => (
-              <div
-                key={wd}
-                className="h-6 flex items-center justify-center text-[10px] font-semibold"
-                style={{ color: i >= 5 ? 'var(--apex-text-secondary)' : 'var(--apex-text-muted)' }}
-              >
-                {wd}
-              </div>
-            ))}
-          </div>
-
-          {/* Сетка дней */}
-          <div className="grid grid-cols-7">
-            {cells.map((d, i) => {
-              if (!d) return <div key={i} className="w-8 h-8" />
-
-              const isToday = sameDay(d, today)
-              const isFrom = rangeFrom && sameDay(d, rangeFrom)
-              const isTo = rangeTo && !sameDay(rangeFrom!, rangeTo) && sameDay(d, rangeTo)
-              const isSingleDay = rangeFrom && rangeTo && sameDay(rangeFrom, rangeTo) && sameDay(d, rangeFrom)
-              const inRange = rangeFrom && rangeTo && d > rangeFrom && d < rangeTo
-
-              let bg = 'transparent'
-              let color = 'var(--apex-text)'
-              let borderColor = 'transparent'
-              let extraClass = 'hover:bg-black/[0.04]'
-
-              if (isFrom || isTo || isSingleDay) {
-                bg = 'var(--apex-primary)'
-                color = '#ffffff'
-                borderColor = 'transparent'
-                extraClass = ''
-              } else if (inRange) {
-                bg = 'rgba(27, 107, 88, 0.10)'
-                color = 'var(--apex-primary)'
-                borderColor = 'transparent'
-                extraClass = 'hover:bg-[rgba(27,107,88,0.18)]'
-              } else if (isToday) {
-                borderColor = 'var(--apex-primary)'
-                color = 'var(--apex-primary)'
-              }
-
-              return (
-                <button
-                  key={i}
-                  onClick={() => handleDay(d)}
-                  onDoubleClick={() => handleDayDouble(d)}
-                  onMouseEnter={() => pending && setHover(d)}
-                  onMouseLeave={() => setHover(null)}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-medium transition-all cursor-pointer ${extraClass}`}
-                  style={{ background: bg, color, border: `1px solid ${borderColor}` }}
-                >
-                  {d.getDate()}
-                </button>
-              )
-            })}
+          <div className="flex gap-4">
+            {Array.from({ length: months }, (_, k) => renderMonth(k))}
           </div>
 
           {/* Подсказка */}
