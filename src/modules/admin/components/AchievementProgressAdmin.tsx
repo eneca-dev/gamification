@@ -171,6 +171,11 @@ function UserProgressDetail({ progress }: { progress: FullAchievementProgress })
                           #{p.current_rank}
                         </span>
                       )}
+                      {p.current_rank_launches != null && (
+                        <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
+                          · запуски #{p.current_rank_launches}
+                        </span>
+                      )}
                       {p.earned && (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5" style={{ background: 'var(--apex-success-bg)', color: 'var(--apex-primary)' }}>
                           +{ACHIEVEMENT_BONUSES.user} <CoinIcon size={10} />

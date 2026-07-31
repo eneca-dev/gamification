@@ -42,7 +42,9 @@ const RANKING_EMOJIS: Record<string, Record<AchievementEntityType, string>> = {
 
 const RANKING_RULES: Record<string, Record<AchievementEntityType, string>> = {
   revit: {
-    user: 'Продержитесь 10 дней в Топ-10 Revit на главной',
+    // user: см. buildRevitUserRule() ниже — правило зависит от того, подключено ли
+    // второе условие (топ по запускам), поэтому не статичная строка.
+    user: 'Продержитесь {threshold} дней в Топ-10 Revit на главной',
     team: 'Команда должна 10 дней быть в Топ-5 Revit на главной',
     department: 'Отдел должен 10 дней быть в Топ-5 Revit на главной',
   },
@@ -53,16 +55,51 @@ const RANKING_RULES: Record<string, Record<AchievementEntityType, string>> = {
   },
 }
 
-const GRATITUDE_NAMES: Record<string, string> = {
-  help: 'Поддержка коллег',
-  quality: 'Профессиональное признание',
-  mentoring: 'Наставничество',
-}
-
 const GRATITUDE_EMOJIS: Record<string, string> = {
   help: '🤝',
   quality: '⭐',
   mentoring: '📚',
+}
+
+// Правило revit/user зависит от того, подключено ли второе условие (топ по
+// запускам). Сигнал — присутствует ли поле current_rank_launches в ответе API
+// вообще (undefined = бэкенд ещё не отдаёт), а не его значение (null — это
+// нормальное состояние "у человека сейчас нет ранга по запускам", а не "фичи нет").
+function buildRule(area: string, entityType: AchievementEntityType, threshold: number, currentRankLaunches?: number | null): string {
+  if (area === 'revit' && entityType === 'user') {
+    return currentRankLaunches === undefined
+      ? `Продержитесь ${threshold} дней в Топ-10 Revit на главной`
+      : `Продержитесь ${threshold} дней одновременно в Топ-10 по 💎 и Топ-10 по количеству запусков плагинов`
+  }
+  return RANKING_RULES[area][entityType].replace('{threshold}', String(threshold))
+}
+
+// Объясняет, почему вчерашний день не засчитался в счётчик (только revit/user,
+// только когда фича с запусками уже подключена — currentRankLaunches !== undefined).
+// Топ-10 — фиксированный отсечка условий в БД (v_top_personal), не настройка.
+function buildMissReason(
+  area: string,
+  entityType: AchievementEntityType,
+  earned: boolean,
+  currentRank: number | null,
+  currentRankLaunches?: number | null,
+): string | null {
+  if (area !== 'revit' || entityType !== 'user' || earned || currentRankLaunches === undefined) return null
+  if (currentRank === null && currentRankLaunches === null) return null // нет вообще никакой активности — не в чем "не дотянуть"
+
+  const missedCoins = currentRank === null || currentRank > 10
+  const missedLaunches = currentRankLaunches === null || currentRankLaunches > 10
+  if (!missedCoins && !missedLaunches) return null
+
+  const rankLabel = (r: number | null) => (r === null ? 'не в топе' : `#${r}`)
+
+  if (missedCoins && missedLaunches) {
+    return `Вчера не хватило по обоим условиям: ${rankLabel(currentRank)} по 💎, ${rankLabel(currentRankLaunches)} по запускам (нужно ≤10 по обоим).`
+  }
+  if (missedCoins) {
+    return `Вчера не хватило места по 💎: ${rankLabel(currentRank)} (нужно ≤10). По запускам всё ок — ${rankLabel(currentRankLaunches)}.`
+  }
+  return `Вчера не хватило места по запускам: ${rankLabel(currentRankLaunches)} (нужно ≤10). По 💎 всё ок — ${rankLabel(currentRank)}.`
 }
 
 const ENTITY_TAG_STYLES: Record<AchievementEntityType, { color: string; bg: string }> = {
@@ -74,6 +111,7 @@ const ENTITY_TAG_STYLES: Record<AchievementEntityType, { color: string; bg: stri
 // --- Строка достижения по рейтингу ---
 
 function RankingRow({
+  area,
   name,
   emoji,
   entityType,
@@ -82,6 +120,7 @@ function RankingRow({
   progress,
   threshold,
   currentRank,
+  currentRankLaunches,
   earned,
   bonus,
   rule,
@@ -89,6 +128,7 @@ function RankingRow({
   daysElapsed,
   periodDays,
 }: {
+  area: string
   name: string
   emoji: string
   entityType: AchievementEntityType
@@ -97,6 +137,7 @@ function RankingRow({
   progress: number
   threshold: number
   currentRank: number | null
+  currentRankLaunches?: number | null
   earned: boolean
   bonus: number
   rule: string
@@ -107,6 +148,7 @@ function RankingRow({
   const [showTip, setShowTip] = useState(false)
   const pct = threshold > 0 ? Math.min((progress / threshold) * 100, 100) : 0
   const remaining = threshold - progress
+  const missReason = buildMissReason(area, entityType, earned, currentRank, currentRankLaunches)
 
   return (
     <div className="py-2.5">
@@ -127,6 +169,9 @@ function RankingRow({
               >
                 <div className="font-bold mb-1">{name}</div>
                 <div className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{rule}</div>
+                {missReason && (
+                  <div className="text-[10px] mt-1" style={{ color: 'var(--apex-danger, #e05252)' }}>{missReason}</div>
+                )}
                 <div className="text-[10px] font-semibold mt-1 inline-flex items-center gap-0.5" style={{ color }}>Награда: +{bonus} <CoinIcon size={10} /></div>
                 <div className="absolute top-full left-4 w-2 h-2 rotate-45" style={{ background: 'var(--surface-elevated)', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }} />
               </div>
@@ -141,6 +186,11 @@ function RankingRow({
           {currentRank !== null && (
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: 'var(--surface)', color: 'var(--text-muted)' }} title={`Текущая позиция в рейтинге: ${currentRank}`}>
               #{currentRank}
+            </span>
+          )}
+          {currentRankLaunches != null && (
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: 'var(--surface)', color: 'var(--text-muted)' }} title={`Позиция по количеству запусков плагинов: ${currentRankLaunches}`}>
+              #{currentRankLaunches} по запускам
             </span>
           )}
         </div>
@@ -256,7 +306,6 @@ export function RankingBlock({
   const Icon = AREA_ICONS[area]
   const names = RANKING_ACHIEVEMENT_NAMES[area]
   const emojis = RANKING_EMOJIS[area]
-  const rules = RANKING_RULES[area]
 
   const rows: { entityType: AchievementEntityType; progress: AreaProgress; groupName?: string }[] = []
 
@@ -277,7 +326,7 @@ export function RankingBlock({
         </div>
         <div>
           <div className="text-[13px] font-extrabold" style={{ color: 'var(--text-primary)' }}>{title}</div>
-          <div className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>10 дней в топе за месяц</div>
+          <div className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>Дней в топе за месяц</div>
         </div>
       </div>
 
@@ -286,6 +335,7 @@ export function RankingBlock({
         {rows.map((r) => (
           <RankingRow
             key={r.entityType}
+            area={area}
             name={names[r.entityType]}
             emoji={emojis[r.entityType]}
             entityType={r.entityType}
@@ -294,9 +344,10 @@ export function RankingBlock({
             progress={r.progress.days_in_top}
             threshold={r.progress.threshold}
             currentRank={r.progress.current_rank}
+            currentRankLaunches={r.entityType === 'user' ? r.progress.current_rank_launches : undefined}
             earned={r.progress.earned}
             bonus={ACHIEVEMENT_BONUSES[r.entityType]}
-            rule={rules[r.entityType]}
+            rule={buildRule(area, r.entityType, r.progress.threshold, r.entityType === 'user' ? r.progress.current_rank_launches : undefined)}
             color={style.accent}
             daysElapsed={daysElapsed}
             periodDays={periodDays}
