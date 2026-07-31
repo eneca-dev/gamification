@@ -57,6 +57,7 @@ function AchievementBadge({
   threshold,
   earned,
   currentRank,
+  currentRankLaunches,
   bonus,
   groupName,
 }: {
@@ -65,6 +66,7 @@ function AchievementBadge({
   threshold: number
   earned: boolean
   currentRank: number | null
+  currentRankLaunches?: number | null
   bonus: number
   groupName?: string
 }) {
@@ -168,6 +170,7 @@ function AchievementBadge({
             {groupName && <div>{entityType === 'team' ? 'Ваша команда' : 'Ваш отдел'}: {groupName}</div>}
             {currentRank && <div>Сейчас: #{currentRank} в рейтинге</div>}
             {!currentRank && <div>Сейчас: не в топе</div>}
+            {currentRankLaunches != null && <div>По запускам плагинов: #{currentRankLaunches}</div>}
             <div>Прогресс: {progress} из {threshold} дней в топе</div>
             <div className="mt-1 inline-flex items-center gap-0.5">Награда: +{bonus} <CoinIcon size={10} />{entityType !== 'user' ? ' каждому' : ''}</div>
             {earned
@@ -231,19 +234,21 @@ export function AchievementProgressPanel({ progress }: AchievementProgressProps)
     threshold: number
     earned: boolean
     currentRank: number | null
+    currentRankLaunches?: number | null
     groupName?: string
   }[] = [
     {
       entityType: 'user',
       progress: personalRevit?.days_in_top ?? 0,
-      threshold: 10,
+      threshold: personalRevit?.threshold ?? 10,
       earned: personalRevit?.earned ?? false,
       currentRank: personalRevit?.current_rank ?? null,
+      currentRankLaunches: personalRevit?.current_rank_launches ?? null,
     },
     {
       entityType: 'team',
       progress: teamRevit?.days_in_top ?? 0,
-      threshold: 10,
+      threshold: teamRevit?.threshold ?? 10,
       earned: teamRevit?.earned ?? false,
       currentRank: teamRevit?.current_rank ?? null,
       groupName: hasTeam ? (progress.team ?? undefined) : undefined,
@@ -251,7 +256,7 @@ export function AchievementProgressPanel({ progress }: AchievementProgressProps)
     {
       entityType: 'department',
       progress: deptRevit?.days_in_top ?? 0,
-      threshold: 10,
+      threshold: deptRevit?.threshold ?? 10,
       earned: deptRevit?.earned ?? false,
       currentRank: deptRevit?.current_rank ?? null,
       groupName: progress.department ?? undefined,
@@ -314,6 +319,7 @@ export function AchievementProgressPanel({ progress }: AchievementProgressProps)
             threshold={badge.threshold}
             earned={badge.earned}
             currentRank={badge.currentRank}
+            currentRankLaunches={badge.currentRankLaunches}
             bonus={ACHIEVEMENT_BONUSES[badge.entityType]}
             groupName={badge.groupName}
           />
