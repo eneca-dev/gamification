@@ -21,7 +21,9 @@ const AREA_CONFIG = {
 
 const AREA_RULES: Record<AchievementArea, Record<AchievementEntityType, string>> = {
   revit: {
-    user: 'Попадите в топ-10 сотрудников по Revit-💎 и продержитесь 10 дней за месяц. 💎 = 💎 за использование плагинов + стрик-бонусы.',
+    // user: см. buildRevitUserRule() ниже — правило зависит от того, подключено ли
+    // второе условие (топ по запускам), поэтому не статичная строка.
+    user: 'Попадите в топ-10 сотрудников по Revit-💎 и продержитесь {threshold} дней за месяц. 💎 = 💎 за использование плагинов + стрик-бонусы.',
     team: 'Ваша команда должна попасть в топ-5 команд по Revit и продержаться 10 дней. Формула: 💎 команды с учётом вовлечённости.',
     department: 'Ваш отдел должен попасть в топ-5 отделов по Revit и продержаться 10 дней. Формула: 💎 отдела с учётом вовлечённости.',
   },
@@ -35,6 +37,41 @@ const AREA_RULES: Record<AchievementArea, Record<AchievementEntityType, string>>
     team: 'Ваша команда должна попасть в топ-5 по благодарностям и продержаться 10 дней.',
     department: 'Ваш отдел должен попасть в топ-5 по благодарностям и продержаться 10 дней.',
   },
+}
+
+// Правило для revit/user зависит от того, подключено ли второе условие (топ по
+// запускам). Сигнал — присутствует ли поле current_rank_launches вообще
+// (undefined = бэкенд ещё не отдаёт), а не его значение (null — нормальное
+// состояние "сейчас нет ранга по запускам", а не "фичи нет").
+function buildRule(item: AreaProgress, entityType: AchievementEntityType): string {
+  if (item.area === 'revit' && entityType === 'user') {
+    const base = `Попадите в топ-10 сотрудников по Revit-💎 и продержитесь ${item.threshold} дней за месяц.`
+    return item.current_rank_launches === undefined
+      ? `${base} 💎 = 💎 за использование плагинов + стрик-бонусы.`
+      : `${base} Нужно одновременно быть и в топ-10 по 💎, и в топ-10 по количеству запусков плагинов.`
+  }
+  return AREA_RULES[item.area][entityType].replace('{threshold}', String(item.threshold))
+}
+
+// Объясняет, почему вчерашний день не засчитался (только revit/user, только когда
+// фича с запусками уже подключена). Топ-10 — фиксированная отсечка в БД (v_top_personal).
+function buildMissReason(item: AreaProgress, entityType: AchievementEntityType): string | null {
+  if (item.area !== 'revit' || entityType !== 'user' || item.earned || item.current_rank_launches === undefined) return null
+  if (item.current_rank === null && item.current_rank_launches === null) return null // нет вообще никакой активности — не в чем "не дотянуть"
+
+  const missedCoins = item.current_rank === null || item.current_rank > 10
+  const missedLaunches = item.current_rank_launches === null || item.current_rank_launches > 10
+  if (!missedCoins && !missedLaunches) return null
+
+  const rankLabel = (r: number | null) => (r === null ? 'не в топе' : `#${r}`)
+
+  if (missedCoins && missedLaunches) {
+    return `Вчера не хватило по обоим условиям: ${rankLabel(item.current_rank)} по 💎, ${rankLabel(item.current_rank_launches ?? null)} по запускам (нужно ≤10 по обоим).`
+  }
+  if (missedCoins) {
+    return `Вчера не хватило места по 💎: ${rankLabel(item.current_rank)} (нужно ≤10). По запускам всё ок — ${rankLabel(item.current_rank_launches ?? null)}.`
+  }
+  return `Вчера не хватило места по запускам: ${rankLabel(item.current_rank_launches ?? null)} (нужно ≤10). По 💎 всё ок — ${rankLabel(item.current_rank)}.`
 }
 
 const SCOPE_CONFIG: Record<AchievementEntityType, { icon: typeof Trophy; label: string }> = {
@@ -119,7 +156,8 @@ function AreaRow({ item, entityType, daysElapsed, periodDays }: {
   const pct = Math.min((item.days_in_top / item.threshold) * 100, 100)
   const remaining = Math.max(item.threshold - item.days_in_top, 0)
   const bonus = ACHIEVEMENT_BONUSES[entityType]
-  const rule = AREA_RULES[item.area][entityType]
+  const rule = buildRule(item, entityType)
+  const missReason = buildMissReason(item, entityType)
 
   return (
               <div>
@@ -148,6 +186,11 @@ function AreaRow({ item, entityType, daysElapsed, periodDays }: {
                           <div className="text-[10px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                             {rule}
                           </div>
+                          {missReason && (
+                            <div className="text-[10px] leading-relaxed mt-1" style={{ color: 'var(--apex-danger, #e05252)' }}>
+                              {missReason}
+                            </div>
+                          )}
                           <div className="text-[10px] font-semibold mt-1 inline-flex items-center gap-0.5" style={{ color: cfg.color }}>
                             Награда: +{bonus} <CoinIcon size={10} />
                           </div>
@@ -161,6 +204,11 @@ function AreaRow({ item, entityType, daysElapsed, periodDays }: {
                     {item.current_rank && (
                       <span className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>
                         #{item.current_rank}
+                      </span>
+                    )}
+                    {item.current_rank_launches != null && (
+                      <span className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>
+                        · по запускам #{item.current_rank_launches}
                       </span>
                     )}
                   </div>

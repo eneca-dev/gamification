@@ -77,7 +77,7 @@ export default async function AllPersonalAchievementsPage() {
               Пока нет достижений
             </div>
             <div className="text-[12px] font-medium mt-1" style={{ color: 'var(--text-muted)' }}>
-              Держитесь в топе рейтинга 10 дней за период — и получите первое достижение
+              Держитесь в топе рейтинга нужное число дней за период — и получите первое достижение
             </div>
           </div>
         ) : (

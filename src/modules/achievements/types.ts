@@ -11,6 +11,8 @@ export interface AreaProgress {
   threshold: number
   current_rank: number | null
   earned: boolean
+  // Место в рейтинге по кол-ву запусков плагинов (revit/user, второе условие ачивки)
+  current_rank_launches?: number | null
   // Дополнительные поля для team/department
   team?: string
   department?: string
