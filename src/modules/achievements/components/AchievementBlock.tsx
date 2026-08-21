@@ -49,7 +49,7 @@ const RANKING_RULES: Record<string, Record<AchievementEntityType, string>> = {
     department: 'Отдел должен 10 дней быть в Топ-5 Revit на главной',
   },
   ws: {
-    user: 'Продержитесь 10 дней в Топ-10 Worksection на главной',
+    user: 'Продержитесь {threshold} дней в Топ-10 Worksection на главной',
     team: 'Команда должна 10 дней быть в Топ-5 Worksection на главной',
     department: 'Отдел должен 10 дней быть в Топ-5 Worksection на главной',
   },
@@ -153,7 +153,7 @@ function RankingRow({
   return (
     <div className="py-2.5">
       <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <span className="text-sm">{emoji}</span>
           <span
             className="text-[12px] font-bold cursor-help relative"
@@ -189,7 +189,11 @@ function RankingRow({
             </span>
           )}
           {currentRankLaunches != null && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: 'var(--surface)', color: 'var(--text-muted)' }} title={`Позиция по количеству запусков плагинов: ${currentRankLaunches}`}>
+            <span
+              className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md truncate min-w-0"
+              style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
+              title={`Позиция по количеству запусков плагинов: ${currentRankLaunches}`}
+            >
               #{currentRankLaunches} по запускам
             </span>
           )}
