@@ -1,6 +1,7 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { cached, CACHE_5M } from '@/lib/server-cache'
 import { getCategoryLabel } from '@/lib/gratitude-categories'
+import { pluralizeRu } from '@/lib/pluralize'
 import type { Transaction } from '@/lib/data'
 
 import { getEventIcon, getTransactionDisplayDate, getGratitudeMeta } from './types'
@@ -718,11 +719,11 @@ function enrichTransaction(
       const plugins = details?.plugins as Array<{ plugin_name: string; launch_count: number }> | undefined
       if (plugins && plugins.length > 1) {
         const total = plugins.reduce((sum, p) => sum + p.launch_count, 0)
-        return { description: `Revit-плагины: ${total} запусков` }
+        return { description: `Revit-плагины: ${total} ${pluralizeRu(total, ['запуск', 'запуска', 'запусков'])}` }
       }
       const name = details?.plugin_name as string | undefined
-      const count = details?.launch_count as number | undefined
-      return { description: name ? `${name}: ${count ?? 1} запусков` : defaultDesc }
+      const count = (details?.launch_count as number | undefined) ?? 1
+      return { description: name ? `${name}: ${count} ${pluralizeRu(count, ['запуск', 'запуска', 'запусков'])}` : defaultDesc }
     }
     case 'gratitude_recipient_points': {
       return { description: senderName ? `Благодарность от ${senderName}` : defaultDesc }

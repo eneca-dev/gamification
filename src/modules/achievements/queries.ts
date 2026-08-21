@@ -1,7 +1,24 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { cached, CACHE_1H, CACHE_5M } from '@/lib/server-cache'
 
-import type { AchievementProgress, RankingEntry, GratitudeAchProgress, CompanyAward, CompanyProgressEntry } from './types'
+import type { AchievementProgress, AreaProgress, RankingEntry, GratitudeAchProgress, CompanyAward, CompanyProgressEntry } from './types'
+
+// fn_ach_get_progress берёт current_rank из последнего снепшота ЛЮБОЙ давности,
+// из-за чего бейдж мог показывать позицию недельной/месячной давности как
+// текущую. Подменяем current_rank живыми данными из тех же view_top_*, что
+// использует вкладка "Топы": если сущности сейчас нет в топе — null (бейдж не
+// отображается).
+function patchCurrentRank(
+  items: AreaProgress[],
+  entityId: string | null,
+  liveByArea: Record<string, RankingEntry[]>,
+): AreaProgress[] {
+  if (!entityId) return items.map((i) => ({ ...i, current_rank: null }))
+  return items.map((i) => ({
+    ...i,
+    current_rank: liveByArea[i.area]?.find((r) => r.entity_id === entityId)?.rank ?? null,
+  }))
+}
 
 async function _getAchievementProgress(wsUserId: string): Promise<AchievementProgress | null> {
   const supabase = createSupabaseAdminClient()
@@ -10,7 +27,28 @@ async function _getAchievementProgress(wsUserId: string): Promise<AchievementPro
     console.error('getAchievementProgress:', error.message)
     return null
   }
-  return data as AchievementProgress
+  const progress = data as AchievementProgress | null
+  if (!progress) return null
+
+  const [revitPersonal, wsPersonal, revitTeam, wsTeam, revitDept, wsDept] = await Promise.all([
+    getRevitPersonalRanking(),
+    getWsPersonalRanking(),
+    getRevitTeamRanking(),
+    getWsTeamRanking(),
+    getRevitDepartmentRanking(),
+    getWsDepartmentRanking(),
+  ])
+
+  const personalByArea = { revit: revitPersonal, ws: wsPersonal }
+  const teamByArea = { revit: revitTeam, ws: wsTeam }
+  const deptByArea = { revit: revitDept, ws: wsDept }
+
+  return {
+    ...progress,
+    personal: patchCurrentRank(progress.personal, wsUserId, personalByArea),
+    team_progress: patchCurrentRank(progress.team_progress, progress.team, teamByArea),
+    department_progress: patchCurrentRank(progress.department_progress, progress.department, deptByArea),
+  }
 }
 
 export const getAchievementProgress = (wsUserId: string) =>
@@ -165,11 +203,15 @@ export async function getRankingProgressAll(): Promise<CompanyProgressEntry[]> {
   const periodStart = periodData as string | null
   if (!periodStart) return []
 
-  // Снапшоты за текущий период — считаем дни в топе
+  // Снапшоты за текущий период — считаем дни в топе.
+  // Без явного .limit() PostgREST молча обрезает ответ до 1000 строк по
+  // умолчанию — за месяц (все сущности × все области) строк больше, часть
+  // дней терялась. Лимит с запасом на весь месяц.
   const { data: snapshots, error: snapErr } = await supabase
     .from('ach_ranking_snapshots')
     .select('entity_id, entity_type, area, snapshot_date')
     .eq('period_start', periodStart)
+    .limit(10000)
 
   if (snapErr || !snapshots) {
     console.error('getRankingProgressAll:', snapErr?.message)
@@ -248,6 +290,7 @@ export async function getGratitudeProgressAll(): Promise<CompanyProgressEntry[]>
     .select('recipient_id, category')
     .eq('type', 'gift')
     .gte('created_at', monthStart.toISOString())
+    .limit(10000)
 
   if (gErr || !gifts) {
     console.error('getGratitudeProgressAll:', gErr?.message)
