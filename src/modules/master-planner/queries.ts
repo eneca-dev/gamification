@@ -10,8 +10,6 @@ import type {
 
 const WS_BASE = 'https://eneca.worksection.com/project'
 
-const DEFAULT_STREAK: MasterPlannerStreakData = { currentStreak: 0, completedCycles: 0, reward: 0 }
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function buildTaskUrl(projectId: string | null, l1Id: string | null, taskId: string | null): string | null {
@@ -159,6 +157,7 @@ function mapRowToEvent(
   row: ViewRow,
   bonusInfoMaps?: { l3: Map<string, BonusTaskInfo>; l2: Map<string, BonusTaskInfo> },
   taskClosedAtMap?: Map<string, string>,
+  streakPositions?: Map<string, string>,
 ): MasterPlannerEvent {
   const infoMap = row.level === 'L2' ? bonusInfoMaps?.l2 : bonusInfoMaps?.l3
   const enrich = (
@@ -195,7 +194,114 @@ function mapRowToEvent(
     revokedTasks: enrich(row.revoked_tasks),
     plannedEnd: row.planned_end ?? null,
     dateClosed,
+    streakPosition: streakPositions?.get(row.event_id) ?? null,
   }
+}
+
+type MasterPlannerLevel = 'l3' | 'l2'
+
+interface BudgetEventRow {
+  event_type: string
+  event_date: string
+  created_at: string
+  details: Record<string, unknown> | null
+}
+
+function calculateMasterPlannerStreak(rows: BudgetEventRow[], level: MasterPlannerLevel): MasterPlannerStreakData {
+  const types = level === 'l3'
+    ? { ok: 'budget_ok_l3', exceeded: 'budget_exceeded_l3', revoked: 'budget_revoked_l3', reward: 450 }
+    : { ok: 'budget_ok_l2', exceeded: 'budget_exceeded_l2', revoked: 'budget_revoked_l2', reward: 400 }
+  const relevant = rows.filter((row) => [types.ok, types.exceeded, types.revoked].includes(row.event_type))
+  const revokedTaskIds = new Set(
+    relevant
+      .filter((row) => row.event_type === types.revoked)
+      .map((row) => row.details?.ws_task_id)
+      .filter((id): id is string => typeof id === 'string'),
+  )
+
+  let currentStreak = 0
+  let completedCycles = 0
+  for (const row of relevant) {
+    const taskId = row.details?.ws_task_id
+    if (row.event_type === types.ok && typeof taskId === 'string' && revokedTaskIds.has(taskId)) continue
+    if (row.event_type === types.ok) {
+      currentStreak++
+      if (currentStreak % 10 === 0) completedCycles++
+    } else if (row.event_type === types.exceeded) {
+      currentStreak = 0
+    }
+  }
+
+  return { currentStreak, completedCycles, reward: types.reward }
+}
+
+async function getMasterPlannerStreaks(userId: string): Promise<{ l3: MasterPlannerStreakData; l2: MasterPlannerStreakData }> {
+  const supabase = createSupabaseAdminClient()
+  const { data } = await supabase
+    .from('gamification_event_logs')
+    .select('event_type, event_date, created_at, details')
+    .eq('user_id', userId)
+    .in('event_type', [
+      'budget_ok_l3', 'budget_exceeded_l3', 'budget_revoked_l3',
+      'budget_ok_l2', 'budget_exceeded_l2', 'budget_revoked_l2',
+    ])
+    .order('event_date', { ascending: true })
+    .order('created_at', { ascending: true })
+
+  const rows = (data ?? []) as BudgetEventRow[]
+  return {
+    l3: calculateMasterPlannerStreak(rows, 'l3'),
+    l2: calculateMasterPlannerStreak(rows, 'l2'),
+  }
+}
+
+interface HistoryStreakRow extends BudgetEventRow {
+  id: string
+}
+
+async function getHistoryStreakPositions(userId: string): Promise<Map<string, string>> {
+  const supabase = createSupabaseAdminClient()
+  const { data } = await supabase
+    .from('gamification_event_logs')
+    .select('id, event_type, event_date, created_at, details')
+    .eq('user_id', userId)
+    .in('event_type', [
+      'budget_ok_l3', 'budget_exceeded_l3', 'budget_revoked_l3', 'master_planner', 'master_planner_revoked',
+      'budget_ok_l2', 'budget_exceeded_l2', 'budget_revoked_l2', 'master_planner_l2', 'master_planner_l2_revoked',
+    ])
+    .order('event_date', { ascending: true })
+    .order('created_at', { ascending: true })
+
+  const rows = (data ?? []) as HistoryStreakRow[]
+  const revokedByLevel = { l3: new Set<string>(), l2: new Set<string>() }
+  for (const row of rows) {
+    if (!row.event_type.startsWith('budget_revoked')) continue
+    const taskId = row.details?.ws_task_id
+    if (typeof taskId === 'string') revokedByLevel[row.event_type.endsWith('_l2') ? 'l2' : 'l3'].add(taskId)
+  }
+
+  const streaks = { l3: 0, l2: 0 }
+  const positions = new Map<string, string>()
+  for (const row of rows) {
+    const level: MasterPlannerLevel = row.event_type.includes('_l2') ? 'l2' : 'l3'
+    const taskId = row.details?.ws_task_id
+    if (row.event_type.startsWith('budget_ok')) {
+      if (typeof taskId === 'string' && revokedByLevel[level].has(taskId)) {
+        positions.set(row.id, 'Отозвано')
+      } else {
+        streaks[level]++
+        positions.set(row.id, String(streaks[level]))
+      }
+    } else if (row.event_type.startsWith('budget_exceeded')) {
+      streaks[level] = 0
+      positions.set(row.id, 'Сброс')
+    } else if (row.event_type.startsWith('budget_revoked') || row.event_type.includes('planner') && row.event_type.includes('revoked')) {
+      positions.set(row.id, 'Отозвано')
+    } else if (row.event_type === 'master_planner' || row.event_type === 'master_planner_l2') {
+      positions.set(row.id, 'Бонус')
+    }
+  }
+  return positions
 }
 
 // ─── Панель на дашборде ─────────────────────────────────────────────────────
@@ -203,14 +309,9 @@ function mapRowToEvent(
 export async function getMasterPlannerPanel(userId: string): Promise<MasterPlannerPanelData> {
   const supabase = createSupabaseAdminClient()
 
-  // Стрики из master_planner_state
-  const { data: stateRows } = await supabase
-    .from('master_planner_state')
-    .select('level, current_streak, completed_cycles')
-    .eq('user_id', userId)
-
-  const l3State = stateRows?.find((r) => r.level === 'l3')
-  const l2State = stateRows?.find((r) => r.level === 'l2')
+  // Считаем по журналу событий — это источник истины. Кэш master_planner_state
+  // может отсутствовать, поэтому не используем его для отображения прогресса.
+  const streaksPromise = getMasterPlannerStreaks(userId)
 
   // Последние 5 событий (budget + deadline теперь в одной вью)
   const { data: recentRows } = await supabase
@@ -223,6 +324,7 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
 
   const recentBonusInfoMaps = await buildBonusTaskInfoMaps((recentRows ?? []) as unknown as ViewRow[])
   const recentTaskClosedAtMap = await buildEventTaskClosedAtMap((recentRows ?? []) as unknown as ViewRow[])
+  const streaks = await streaksPromise
 
   // Budget pending
   const { data: budgetPendingRows } = await supabase
@@ -268,12 +370,8 @@ export async function getMasterPlannerPanel(userId: string): Promise<MasterPlann
     .sort((a, b) => a.daysRemaining - b.daysRemaining)
 
   return {
-    l3: l3State
-      ? { currentStreak: l3State.current_streak, completedCycles: l3State.completed_cycles, reward: 450 }
-      : { ...DEFAULT_STREAK, reward: 450 },
-    l2: l2State
-      ? { currentStreak: l2State.current_streak, completedCycles: l2State.completed_cycles, reward: 400 }
-      : { ...DEFAULT_STREAK, reward: 400 },
+    l3: streaks.l3,
+    l2: streaks.l2,
     recentEvents: (recentRows ?? []).map((r) => mapRowToEvent(r as unknown as ViewRow, recentBonusInfoMaps, recentTaskClosedAtMap)),
     pendingTasks: allPending,
   }
@@ -397,43 +495,10 @@ export async function getMasterPlannerHistory(
 
   const historyBonusInfoMaps = await buildBonusTaskInfoMaps((rows ?? []) as unknown as ViewRow[])
   const historyTaskClosedAtMap = await buildEventTaskClosedAtMap((rows ?? []) as unknown as ViewRow[])
-
-  // Доп. запрос — startPosition для нижней строки страницы
-  let startPosition = 0
-  const tailOffset = offset + PAGE_SIZE
-
-  if (count != null && tailOffset < count) {
-    let tailQuery = supabase
-      .from('view_master_planner_history')
-      .select('event_type')
-      .eq('user_id', userId)
-      .order('event_date', { ascending: false })
-      .order('created_at', { ascending: false })
-      .range(tailOffset, tailOffset + 199)
-
-    if (level) {
-      tailQuery = tailQuery.eq('level', level)
-    }
-    const tailOrFilter = buildEventTypeOrFilter(status, category)
-    if (tailOrFilter) {
-      tailQuery = tailQuery.or(tailOrFilter)
-    }
-
-    const { data: tailRows } = await tailQuery
-
-    for (const r of tailRows ?? []) {
-      const t = r.event_type as string
-      if (t.startsWith('budget_ok')) {
-        startPosition++
-      } else {
-        break
-      }
-    }
-  }
+  const historyStreakPositions = await getHistoryStreakPositions(userId)
 
   return {
-    events: (rows ?? []).map((r) => mapRowToEvent(r as unknown as ViewRow, historyBonusInfoMaps, historyTaskClosedAtMap)),
+    events: (rows ?? []).map((r) => mapRowToEvent(r as unknown as ViewRow, historyBonusInfoMaps, historyTaskClosedAtMap, historyStreakPositions)),
     totalCount: count ?? 0,
-    startPosition,
   }
 }

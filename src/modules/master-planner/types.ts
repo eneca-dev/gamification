@@ -26,6 +26,7 @@ export interface MasterPlannerEvent {
   // Deadline-специфичные поля (null для budget событий)
   plannedEnd: string | null
   dateClosed: string | null
+  streakPosition: string | null
 }
 
 // ─── Pending-задача (бюджет или срок) ──────────────────────────────────────
@@ -56,5 +57,4 @@ export interface MasterPlannerPanelData {
 export interface MasterPlannerHistoryData {
   events: MasterPlannerEvent[]
   totalCount: number
-  startPosition: number
 }

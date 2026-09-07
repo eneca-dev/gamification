@@ -238,8 +238,12 @@ function PendingTasks({ tasks }: { tasks: PendingBudgetTask[] }) {
                 {task.closedOnTime ? "✓" : "✗"}
               </span>
             ) : (
-              <span className="text-[10px] shrink-0" style={{ color: "var(--apex-text-muted)" }}>
-                {task.daysRemaining}д ост.
+              <span
+                className="text-[10px] shrink-0"
+                style={{ color: "var(--apex-text-muted)" }}
+                title={task.daysRemaining < 0 ? '30 дней ожидания завершились в выходной. Проверка и начисление пройдут в ближайший рабочий запуск.' : undefined}
+              >
+                {task.daysRemaining < 0 ? 'ожидает запуска' : `${task.daysRemaining}д ост.`}
               </span>
             )}
           </div>
