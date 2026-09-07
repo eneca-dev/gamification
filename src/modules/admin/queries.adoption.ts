@@ -514,7 +514,7 @@ export async function getAdoptionSideEffects(
 
   type CrystalStatsRow = { earners: string; spent_total: string; balance_total: string }
 
-  const [gratitudesRes, crystalsRes, ordersRes, chatRes, cohortIdsRes, cohortEmailsRes, profilesRes, productsRes, wsStreaksRes, revitStreaksRes] =
+  const [gratitudesRes, crystalsRes, ordersRes, chatRes, shieldsRes, cohortIdsRes, cohortEmailsRes, profilesRes, productsRes, wsStreaksRes, revitStreaksRes] =
     await Promise.all([
       supabase
         .from('gratitudes')
@@ -533,6 +533,11 @@ export async function getAdoptionSideEffects(
         .select('user_id')
         .gte('created_at', launchDate)
         .eq('role', 'user'),
+      // Журнал отражает фактическое применение «Второй жизни», включая бесплатные квоты.
+      supabase
+        .from('streak_shield_log')
+        .select('user_id')
+        .gte('created_at', launchDate),
       supabase.rpc('adoption_designer_ids') as unknown as Promise<{
         data: string[] | null
         error: RpcError
@@ -565,13 +570,18 @@ export async function getAdoptionSideEffects(
   const gratitudes = (gratitudesRes.data ?? []).filter((g) => cohortWsIds.has(g.sender_id))
   const chats = (chatRes.data ?? []).filter((c) => cohortProfileIds.has(c.user_id))
 
-  // Товары с effect (streak_shield_*) — это «Вторая жизнь», а не реальная покупка
+  // Товары с effect (streak_shield_*) — это «Вторая жизнь», а не реальная покупка.
   const shieldProductIds = new Set(
     (productsRes.data ?? []).filter((p) => p.effect).map((p) => p.id),
   )
   const cohortOrders = (ordersRes.data ?? []).filter((o) => cohortWsIds.has(o.user_id))
   const realOrders = cohortOrders.filter((o) => !shieldProductIds.has(o.product_id))
-  const secondLifeOrders = cohortOrders.filter((o) => shieldProductIds.has(o.product_id))
+  const secondLifeUses = (shieldsRes.data ?? []).filter((s) => cohortWsIds.has(s.user_id))
+  const gratitudeSenders = new Set(gratitudes.map((g) => g.sender_id)).size
+  const shopBuyers = new Set(realOrders.map((o) => o.user_id)).size
+  const secondLifeUsers = new Set(secondLifeUses.map((s) => s.user_id)).size
+  const cohortSize = cohortWsIds.size
+  const pctOfCohort = (users: number) => cohortSize > 0 ? Math.round((users / cohortSize) * 100) : 0
 
   // Стрики: серии рабочих дней подряд без нарушений (привычка)
   const countStreak = (rows: { current_streak: number | null }[], min: number) =>
@@ -590,12 +600,15 @@ export async function getAdoptionSideEffects(
     balance_total: balanceTotal,
     balance_avg: earners > 0 ? Math.round(balanceTotal / earners) : 0,
     gratitude_total: gratitudes.length,
-    gratitude_senders: new Set(gratitudes.map((g) => g.sender_id)).size,
+    gratitude_senders: gratitudeSenders,
+    gratitude_senders_pct: pctOfCohort(gratitudeSenders),
     gratitude_recipients: new Set(gratitudes.map((g) => g.recipient_id)).size,
     shop_orders_total: realOrders.length,
-    shop_orders_unique_users: new Set(realOrders.map((o) => o.user_id)).size,
-    second_life_total: secondLifeOrders.length,
-    second_life_users: new Set(secondLifeOrders.map((o) => o.user_id)).size,
+    shop_orders_unique_users: shopBuyers,
+    shop_orders_unique_users_pct: pctOfCohort(shopBuyers),
+    second_life_total: secondLifeUses.length,
+    second_life_users: secondLifeUsers,
+    second_life_users_pct: pctOfCohort(secondLifeUsers),
     chatbot_messages_total: chats.length,
     chatbot_unique_users: new Set(chats.map((c) => c.user_id)).size,
     ws_streak_holders: countStreak(wsStreaks, 1),

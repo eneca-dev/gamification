@@ -140,11 +140,14 @@ export interface AdoptionSideEffectsData {
   balance_avg: number             // средний баланс на зарабатывающего
   gratitude_total: number
   gratitude_senders: number
+  gratitude_senders_pct: number
   gratitude_recipients: number
   shop_orders_total: number       // только реальные покупки (без «Второй жизни»)
   shop_orders_unique_users: number
-  second_life_total: number       // куплено «Вторых жизней» (защита стрика)
+  shop_orders_unique_users_pct: number
+  second_life_total: number       // использовано «Вторых жизней» (защита стрика)
   second_life_users: number
+  second_life_users_pct: number
   chatbot_messages_total: number
   chatbot_unique_users: number
   ws_streak_holders: number       // держат WS-стрик (серия ≥ 1 без нарушений)
