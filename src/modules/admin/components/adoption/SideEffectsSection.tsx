@@ -85,34 +85,34 @@ export function SideEffectsSection({ data }: Props) {
         />
         <StatCard
           label="Благодарности"
-          value={data.gratitude_total.toLocaleString('ru-RU')}
-          hint={`отправляли ${data.gratitude_senders} чел. · получали ${data.gratitude_recipients} чел.`}
+          value={`${data.gratitude_senders_pct}%`}
+          hint={`${data.gratitude_senders} из выборки отправили ${data.gratitude_total.toLocaleString('ru-RU')} благодарностей · получили ${data.gratitude_recipients} чел.`}
           tooltip={
             <InfoTooltip
-              desc="Сколько благодарностей отправили сотрудники выборки (получатель может быть вне выборки)."
-              formula="число благодарностей, отправленных выборкой"
+              desc="Доля сотрудников выборки, отправивших хотя бы одну благодарность. Получатель может быть вне выборки."
+              formula="уникальные отправители благодарностей / активные сотрудники выборки × 100"
             />
           }
         />
         <StatCard
           label="Покупки в магазине"
-          value={data.shop_orders_total.toLocaleString('ru-RU')}
-          hint={`${data.shop_orders_unique_users} покупателей · реальные награды (мерч, еда, техника)`}
+          value={`${data.shop_orders_unique_users_pct}%`}
+          hint={`${data.shop_orders_unique_users} из выборки купили ${data.shop_orders_total.toLocaleString('ru-RU')} реальных наград`}
           tooltip={
             <InfoTooltip
-              desc="Только реальные награды. «Вторая жизнь» (защита стрика) сюда не входит — она вынесена в отдельную карточку."
-              formula="число заказов реальных товаров (без «Второй жизни» и отменённых)"
+              desc="Доля сотрудников выборки, купивших хотя бы одну реальную награду. «Вторая жизнь» и отменённые заказы не учитываются."
+              formula="уникальные покупатели реальных товаров / активные сотрудники выборки × 100"
             />
           }
         />
         <StatCard
           label="«Вторая жизнь»"
-          value={data.second_life_total.toLocaleString('ru-RU')}
-          hint={`${data.second_life_users} чел. потратили кристаллы, чтобы спасти стрик`}
+          value={`${data.second_life_users_pct}%`}
+          hint={`${data.second_life_users} из выборки использовали «Вторую жизнь» ${data.second_life_total.toLocaleString('ru-RU')} раз`}
           tooltip={
             <InfoTooltip
-              desc="Артефакт «Вторая жизнь» восстанавливает сгоревший стрик за кристаллы. Сильный сигнал вовлечённости: люди дорожат серией и готовы за неё платить."
-              formula="сколько раз выборка купила «Вторую жизнь»"
+              desc="Доля сотрудников выборки, применивших хотя бы одну «Вторую жизнь» для защиты стрика. Учитываются и бесплатные квоты."
+              formula="уникальные пользователи «Второй жизни» / активные сотрудники выборки × 100"
             />
           }
         />
