@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Trophy, Clock, ExternalLink, CalendarCheck } from "lucide-react";
+import { ArrowLeft, Trophy, Clock, ExternalLink, CalendarCheck, Info } from "lucide-react";
 
 import { getCurrentUser } from "@/modules/auth/queries";
 import { getMasterPlannerPanel, getMasterPlannerHistory, getAllPendingTasks, getAllDeadlinePendingTasks } from "@/modules/master-planner";
@@ -43,7 +43,7 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
   const [panelData, historyData, pendingTasks] = await Promise.all([
     getMasterPlannerPanel(wsUserId),
     isPending
-      ? Promise.resolve({ events: [], totalCount: 0, startPosition: 0 })
+      ? Promise.resolve({ events: [], totalCount: 0 })
       : getMasterPlannerHistory(wsUserId, currentPage, levelFilter, historyStatus, categoryFilter),
     isPending || isAllEvents
       ? (async (): Promise<PendingBudgetTask[]> => {
@@ -275,7 +275,6 @@ export default async function MasterPlannerPage({ searchParams }: MasterPlannerP
                   )}
                   <MasterPlannerHistory
                     events={historyData.events}
-                    startPosition={historyData.startPosition}
                   />
                 </>
               ) : (!isAllEvents || pendingTasks.length === 0) && (
@@ -336,29 +335,33 @@ interface PendingRowsProps {
 }
 
 function PendingRows({ tasks, showPlannedDate, lastColLabel }: PendingRowsProps) {
+  const gridTemplateColumns = showPlannedDate
+    ? "2rem 1rem 1.5rem minmax(0, 1fr) 3.5rem 4rem 4rem"
+    : "2rem 1rem 1.5rem minmax(0, 1fr) 4rem";
+
   return (
     <div className="space-y-0.5">
       <div
-        className="flex items-center gap-3 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider"
-        style={{ color: "var(--apex-text-muted)", borderBottom: "1px solid var(--apex-border)" }}
+        className="grid items-center gap-3 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider"
+        style={{ gridTemplateColumns, color: "var(--apex-text-muted)", borderBottom: "1px solid var(--apex-border)" }}
       >
-        <div className="w-8 shrink-0" />
-        <span className="shrink-0 w-4" />
-        <span className="shrink-0 w-6" />
-        <div className="flex-1 min-w-0">Задача</div>
-        {showPlannedDate && <span className="shrink-0 w-24 text-center">Дата закрытия</span>}
-        {showPlannedDate && <span className="shrink-0 w-24 text-center">Статус</span>}
-        <span className="shrink-0 w-24 text-right">{lastColLabel}</span>
+        <div />
+        <span />
+        <span />
+        <div className="min-w-0">Задача</div>
+        {showPlannedDate && <span className="text-center">Дата</span>}
+        {showPlannedDate && <span className="text-center">Статус</span>}
+        <span className="text-right">{lastColLabel}</span>
       </div>
 
       {tasks.map((task, i) => (
         <div
           key={i}
-          className="flex items-center gap-3 px-3 py-2 rounded-xl"
-          style={{ background: "var(--apex-bg)" }}
+          className="grid items-center gap-3 px-3 py-2 rounded-xl"
+          style={{ gridTemplateColumns, background: "var(--apex-bg)" }}
         >
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
             style={{ background: "var(--apex-surface)", border: "1px solid var(--apex-border)" }}
           >
             {task.category === "budget"
@@ -368,13 +371,13 @@ function PendingRows({ tasks, showPlannedDate, lastColLabel }: PendingRowsProps)
           </div>
 
           <span
-            className="text-[11px] shrink-0 w-4 text-center"
+            className="text-[11px] text-center"
             title={task.category === "budget" ? "По бюджету" : "По сроку"}
           >
             {task.category === "budget" ? "💲" : "⏳"}
           </span>
 
-          <div className="shrink-0 w-6 flex justify-center">
+          <div className="flex justify-center">
             <span
               className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
               style={{
@@ -386,16 +389,16 @@ function PendingRows({ tasks, showPlannedDate, lastColLabel }: PendingRowsProps)
             </span>
           </div>
 
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0">
             {task.taskUrl ? (
               <a
                 href={task.taskUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[12px] font-medium hover:underline inline-flex items-center gap-1 min-w-0"
+                className="text-[12px] font-medium hover:underline flex w-full items-center gap-1 min-w-0"
                 style={{ color: "var(--apex-text)" }}
               >
-                <span className="truncate">{task.taskName}</span>
+                <span className="min-w-0 flex-1 truncate">{task.taskName}</span>
                 <ExternalLink size={10} className="shrink-0" />
               </a>
             ) : (
@@ -406,7 +409,7 @@ function PendingRows({ tasks, showPlannedDate, lastColLabel }: PendingRowsProps)
           </div>
 
           {showPlannedDate && (
-            <span className="text-[11px] shrink-0 w-24 text-center" style={{ color: "var(--apex-text-muted)" }}>
+            <span className="text-[11px] text-center" style={{ color: "var(--apex-text-muted)" }}>
               {task.category === "deadline" && task.closedAt
                 ? new Date(task.closedAt).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })
                 : "—"
@@ -416,7 +419,7 @@ function PendingRows({ tasks, showPlannedDate, lastColLabel }: PendingRowsProps)
 
           {showPlannedDate && (
             <span
-              className="text-[11px] font-semibold shrink-0 w-24 text-center"
+              className="text-[11px] font-semibold text-center"
               style={{
                 color: task.category === "deadline"
                   ? (task.closedOnTime ? "var(--apex-primary)" : "var(--apex-danger)")
@@ -432,14 +435,27 @@ function PendingRows({ tasks, showPlannedDate, lastColLabel }: PendingRowsProps)
 
           {lastColLabel === "Вовремя?" ? (
             <span
-              className="text-[11px] font-semibold shrink-0 w-24 text-right"
+              className="text-[11px] font-semibold text-right"
               style={{ color: task.closedOnTime ? "var(--apex-primary)" : "var(--apex-danger)" }}
             >
               {task.closedOnTime ? "✓ вовремя" : "✗ просрочено"}
             </span>
           ) : (
-            <span className="text-[11px] font-semibold shrink-0 w-24 text-right" style={{ color: "var(--apex-text-muted)" }}>
-              {task.daysRemaining}д
+            <span className="text-[11px] font-semibold text-right" style={{ color: "var(--apex-text-muted)" }}>
+              {task.daysRemaining < 0 ? (
+                <span className="inline-flex items-center justify-end gap-1">
+                  0д
+                  <span className="relative inline-flex group cursor-help" aria-label="Срок проверки прошёл в выходной, ожидает ближайший рабочий запуск">
+                    <Info size={12} style={{ color: "var(--apex-text-muted)" }} />
+                    <span
+                      className="pointer-events-none absolute bottom-full right-0 mb-2 hidden w-56 rounded-xl px-3 py-2 text-left text-[10px] font-medium leading-relaxed group-hover:block"
+                      style={{ zIndex: 20, background: "var(--apex-surface)", color: "var(--apex-text-secondary)", border: "1px solid var(--apex-border)", boxShadow: "0 8px 24px rgba(0,0,0,0.12)" }}
+                    >
+                      Срок проверки прошёл в выходной, ожидает ближайший рабочий запуск.
+                    </span>
+                  </span>
+                </span>
+              ) : `${task.daysRemaining}д`}
             </span>
           )}
         </div>

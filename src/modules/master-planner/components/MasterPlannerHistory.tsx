@@ -66,34 +66,6 @@ function getEventStyle(type: string): EventStyle {
   return { bg: "transparent", icon: null, label: type };
 }
 
-// ─── Streak position computing (только для budget событий) ─────────────────
-
-function computePositions(events: MasterPlannerEvent[], startPosition: number): (string | null)[] {
-  const positions: (string | null)[] = new Array(events.length).fill(null);
-  let pos = startPosition;
-
-  for (let i = events.length - 1; i >= 0; i--) {
-    const type = events[i].type;
-
-    if (type.startsWith("budget_ok")) {
-      pos++;
-      positions[i] = String(pos);
-    } else if (type.startsWith("budget_exceeded")) {
-      pos = 0;
-      positions[i] = "Сброс";
-    } else if (type.startsWith("budget_revoked")) {
-      positions[i] = "Отозвано";
-    } else if (type === "master_planner" || type === "master_planner_l2") {
-      positions[i] = "Бонус";
-    } else if (type.includes("revoked")) {
-      positions[i] = "Отозвано";
-    }
-    // deadline события — позиция остаётся null (покажем "—")
-  }
-
-  return positions;
-}
-
 // ─── Level badge с тултипом ─────────────────────────────────────────────────
 
 function LevelBadge({ level }: { level: "L3" | "L2" }) {
@@ -126,11 +98,9 @@ function LevelBadge({ level }: { level: "L3" | "L2" }) {
 
 interface MasterPlannerHistoryProps {
   events: MasterPlannerEvent[];
-  startPosition: number;
 }
 
-export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHistoryProps) {
-  const positions = computePositions(events, startPosition);
+export function MasterPlannerHistory({ events }: MasterPlannerHistoryProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   function toggleExpanded(id: string) {
@@ -252,7 +222,7 @@ export function MasterPlannerHistory({ events, startPosition }: MasterPlannerHis
               className="text-[11px] font-semibold shrink-0 w-14 text-center"
               style={{ color: "var(--apex-text-muted)" }}
             >
-              {positions[i] ?? "—"}
+              {evt.streakPosition ?? "—"}
             </span>
 
             {/* 💎 */}
