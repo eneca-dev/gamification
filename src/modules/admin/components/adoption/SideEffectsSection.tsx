@@ -2,12 +2,13 @@ import type { ReactNode } from 'react'
 
 import { CoinStatic } from '@/components/CoinBalance'
 
-import type { AdoptionSideEffectsData } from '@/modules/admin'
+import type { AdoptionDateRange, AdoptionSideEffectsData } from '@/modules/admin'
 
 import { InfoTooltip } from './InfoTooltip'
 
 interface Props {
   data: AdoptionSideEffectsData
+  range: AdoptionDateRange
 }
 
 interface StatCardProps {
@@ -37,12 +38,12 @@ function StatCard({ label, value, hint, tooltip }: StatCardProps) {
   )
 }
 
-export function SideEffectsSection({ data }: Props) {
+export function SideEffectsSection({ data, range }: Props) {
   return (
     <section className="space-y-4">
       <div className="space-y-1">
         <h2 className="text-[14px] font-bold" style={{ color: 'var(--apex-text)' }}>
-          Активность выборки в системе (с 1 июля 2026)
+          Активность выборки в системе ({range.from ? `${range.from.split('-').reverse().join('.')}–${range.to.split('-').reverse().join('.')}` : 'за всё время'})
         </h2>
         <p className="text-[12px]" style={{ color: 'var(--apex-text-secondary)' }}>
           Кристаллы, благодарности, магазин и чат-бот — насколько активно выборка пользуется самой системой геймификации.
@@ -62,13 +63,13 @@ export function SideEffectsSection({ data }: Props) {
           }
         />
         <StatCard
-          label="Кристаллов на балансах"
+          label="Баланс на конец периода"
           value={<CoinStatic amount={data.balance_total} size="xl" />}
           hint={`в среднем ${data.balance_avg.toLocaleString('ru-RU')} на зарабатывающего`}
           tooltip={
             <InfoTooltip
-              desc="Текущая сумма балансов выборки — накоплено и ещё не потрачено. Включает 18 000 кристаллов, выданных пилотной группе в апреле (12 чел. × 1500) вне обычных начислений."
-              formula="сумма балансов всех сотрудников выборки"
+              desc="Баланс восстановлен на дату окончания фильтра из текущих остатков и последующих транзакций. Включает 18 000 кристаллов, выданных бета-тестировщикам за помощь с приложением."
+              formula="текущий баланс − транзакции после конца периода"
             />
           }
         />
@@ -78,8 +79,8 @@ export function SideEffectsSection({ data }: Props) {
           hint="заказы в магазине и другие траты"
           tooltip={
             <InfoTooltip
-              desc="Сумма всех списаний кристаллов выборкой с 1 июля — показывает, тратятся кристаллы или накапливаются."
-              formula="сумма всех списаний кристаллов с 1 июля"
+              desc="Сумма всех списаний кристаллов выборкой внутри выбранного диапазона."
+              formula="сумма всех списаний за выбранный период"
             />
           }
         />
@@ -128,24 +129,24 @@ export function SideEffectsSection({ data }: Props) {
           }
         />
         <StatCard
-          label="Держат стрик по Worksection"
+          label="Стрик Worksection на конец периода"
           value={`${data.ws_streak_holders} чел.`}
           hint={`из них ${data.ws_streak_7plus} — серия 7+ дней подряд`}
           tooltip={
             <InfoTooltip
               desc="Стрик — серия рабочих дней подряд без нарушений правил WS. Ключевая метрика привычки: чем больше людей держат серию, тем прочнее дисциплина вошла в рутину."
-              formula="у скольких серия без нарушений сейчас не прервана"
+              formula="у скольких серия не прервана на дату окончания фильтра"
             />
           }
         />
         <StatCard
-          label="Держат стрик по Revit"
+          label="Стрик Revit на конец периода"
           value={`${data.revit_streak_holders} чел.`}
           hint={`из них ${data.revit_streak_7plus} — серия 7+ дней подряд`}
           tooltip={
             <InfoTooltip
               desc="Серия рабочих дней подряд с запуском плагинов. Показывает, у скольких работа в плагинах стала ежедневной привычкой."
-              formula="у скольких серия с плагинами сейчас не прервана"
+              formula="у скольких серия с плагинами не прервана на дату окончания фильтра"
             />
           }
         />

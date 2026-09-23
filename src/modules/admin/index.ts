@@ -30,8 +30,7 @@ export {
   addCalendarDateSchema, deleteCalendarDateSchema, formatTransactionReason,
 } from './types'
 export {
-  getAdoptionCoverage, getAdoptionOverview, getAdoptionWorksection,
-  getAdoptionPlugins, getAdoptionSideEffects,
+  getAdoptionPeriodDashboard, getAdoptionMonthlyReport,
 } from './queries.adoption'
 export type {
   AdoptionCoverageData,
@@ -39,5 +38,8 @@ export type {
   AdoptionLoginDepartment, AdoptionLoginTeam, AdoptionLoginUser,
   AdoptionWorksectionData, AdoptionWsDay, AdoptionLoginEffectGroup, AdoptionRedUser,
   AdoptionPluginsData, AdoptionPluginsDay, AdoptionRevitEffectGroup,
-  AdoptionSideEffectsData,
+  AdoptionSideEffectsData, AdoptionCohortScope, AdoptionMonthlyFilters,
+  AdoptionMonthlySummary, AdoptionMonthlyRanking, AdoptionMonthlyReport,
+  AdoptionRankingArea, AdoptionRankingLevel,
+  AdoptionDateRange,
 } from './adoption-types'

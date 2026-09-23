@@ -88,6 +88,10 @@ function CompareCard({ label, before, after, unit = '%', hint, higherIsBetter = 
   )
 }
 
+function PeriodCard({ label, value, hint, tooltip }: { label: string; value: number; hint: string; tooltip?: React.ReactNode }) {
+  return <div className="rounded-2xl p-5 flex flex-col gap-2" style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}><span className="flex items-center gap-1 text-[12px] font-medium" style={{ color: 'var(--apex-text-secondary)' }}>{label}{tooltip}</span><span className="text-[22px] font-bold tabular-nums" style={{ color: 'var(--apex-text)' }}>{value}%</span><span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>{hint}</span></div>
+}
+
 // Скрытый список нарушителей по одной причине: скролл внутри, сортировка по дням
 function RedUsersList({ title, users }: { title: string; users: AdoptionRedUser[] }) {
   return (
@@ -139,16 +143,21 @@ export function WorksectionSection({ data }: Props) {
     <section className="space-y-4">
       <div className="space-y-1">
         <h2 className="text-[14px] font-bold" style={{ color: 'var(--apex-text)' }}>
-          Дисциплина Worksection: ДО и ПОСЛЕ
+          {data.comparison_mode === 'launch' ? 'Дисциплина Worksection: ДО и ПОСЛЕ' : 'Дисциплина Worksection за выбранный период'}
         </h2>
         <p className="text-[12px]" style={{ color: 'var(--apex-text-secondary)' }}>
           Итоговый вердикт («зелёный» день) и два главных нарушения на одних и тех же рабочих днях.
           Нарушения показаны долей от отслеживаемых — чем меньше, тем лучше.
-          ДО = 29–30 июня, ПОСЛЕ = с 1 июля.
+          {data.comparison_mode === 'launch' ? ' ДО = дни до 1 июля, ПОСЛЕ = дни после запуска.' : ''}
         </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {data.comparison_mode === 'period' ? <>
+          <PeriodCard label="«Зелёные» дни" value={data.green_period} hint="доля рабочих дней без нарушений за выбранный период" />
+          <PeriodCard label="Отчёт в задачу в статусе не «В работе»" value={data.wrong_task_period} hint={`в среднем ${data.wrong_task_day_period} случаев за рабочий день`} />
+          <PeriodCard label="Нет отчёта" value={data.no_report_period} hint={`в среднем ${data.no_report_day_period} случаев за рабочий день`} />
+        </> : <>
         <CompareCard
           label="«Зелёные» дни"
           before={data.green_before}
@@ -187,6 +196,7 @@ export function WorksectionSection({ data }: Props) {
             />
           }
         />
+        </>}
       </div>
 
       <div className="space-y-3">
@@ -199,12 +209,12 @@ export function WorksectionSection({ data }: Props) {
             size={14}
             className={`transition-transform ${showLists ? 'rotate-180' : ''}`}
           />
-          {showLists ? 'Скрыть списки нарушителей' : 'Показать списки нарушителей (с 1 июля)'}
+          {showLists ? 'Скрыть списки нарушителей' : 'Показать списки нарушителей за период'}
         </button>
         {showLists && (
           <div className="space-y-2">
             <p className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
-              Справа у каждого — сколько рабочих дней с 1 июля закончились этим нарушением.
+              Справа у каждого — сколько рабочих дней выбранного периода закончились этим нарушением.
               Без сотрудников в декрете: Worksection почти никогда не фиксирует для них
               отпуск по уходу, поэтому их не за что включать в нарушителей.
             </p>
@@ -239,7 +249,8 @@ export function WorksectionSection({ data }: Props) {
                 tick={{ fontSize: 11, fill: 'var(--apex-text-muted)' }}
                 tickLine={false}
                 axisLine={false}
-                interval={0}
+                interval="preserveStartEnd"
+                minTickGap={28}
               />
               <YAxis
                 domain={[
@@ -305,41 +316,20 @@ export function WorksectionSection({ data }: Props) {
 
       <div className="space-y-2">
         <h3 className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>
-          Эффект вовлечения: геймификация работает на тех, кто в неё вошёл
+          Дисциплина вошедших и не вошедших в геймификацию
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <EffectCard
-            title="Вошли в приложение"
-            before={data.logged.green_before}
-            after={data.logged.green_after}
-            hint={`доля «зелёных» дней до и после запуска · ${data.logged.users} чел.`}
-            accent
-            tooltip={
-              <InfoTooltip
-                desc="Дисциплина этой группы заметно выросла после запуска. Группа определяется по факту входа в приложение (наличие профиля)."
-                formula={<Fraction num="Σ зелёных в группе" den="Σ отслеживаемых" />}
-              />
-            }
-          />
-          <EffectCard
-            title="Не вошли (контрольная группа)"
-            before={data.not_logged.green_before}
-            after={data.not_logged.green_after}
-            hint={`доля «зелёных» дней до и после запуска · ${data.not_logged.users} чел.`}
-            accent={false}
-            tooltip={
-              <InfoTooltip
-                desc="Контрольная группа: правила WS для них те же, но роста нет. Значит рост у вошедших связан именно с запуском геймификации, а не с сезонностью."
-                formula={<Fraction num="Σ зелёных в группе" den="Σ отслеживаемых" />}
-              />
-            }
-          />
+          {data.comparison_mode === 'launch' ? <>
+            <EffectCard title="Вошли в приложение" before={data.logged.green_before} after={data.logged.green_after} hint={`доля «зелёных» дней до и после запуска · ${data.logged.users} чел.`} accent tooltip={<InfoTooltip desc="Группа определяется по наличию профиля к концу выбранного периода." formula={<Fraction num="Σ зелёных в группе" den="Σ отслеживаемых" />} />} />
+            <EffectCard title="Не вошли (контрольная группа)" before={data.not_logged.green_before} after={data.not_logged.green_after} hint={`доля «зелёных» дней до и после запуска · ${data.not_logged.users} чел.`} accent={false} tooltip={<InfoTooltip desc="Контрольная группа на конец выбранного периода; правила Worksection для неё те же." formula={<Fraction num="Σ зелёных в группе" den="Σ отслеживаемых" />} />} />
+          </> : <>
+            <PeriodCard label="Вошли в приложение" value={data.logged.green_period} hint={`доля «зелёных» дней за выбранный период · ${data.logged.users} чел.`} tooltip={<InfoTooltip desc="Авторизовались к концу выбранного периода." formula={<Fraction num="Σ зелёных в группе" den="Σ отслеживаемых" />} />} />
+            <PeriodCard label="Не вошли в приложение" value={data.not_logged.green_period} hint={`доля «зелёных» дней за выбранный период · ${data.not_logged.users} чел.`} tooltip={<InfoTooltip desc="Не имели профиля на конец выбранного периода." formula={<Fraction num="Σ зелёных в группе" den="Σ отслеживаемых" />} />} />
+          </>}
         </div>
         <p className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
-          Правила Worksection одинаковы для всех сотрудников, но дисциплина выросла только у вошедших
-          в приложение — у остальных осталась на прежнем уровне. Не вошедшие служат контрольной группой:
-          если бы рост объяснялся сезонностью или другими общими причинами, он проявился бы в обеих
-          группах. Это указывает на вклад именно геймификации.
+          Группы определяются по факту авторизации на дату окончания фильтра. Все проценты и состав
+          участников рассчитаны только по выбранному диапазону.
         </p>
       </div>
     </section>

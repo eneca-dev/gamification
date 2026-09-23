@@ -51,10 +51,10 @@ function GrowthCard({ label, before, after, unit = '', hint, tooltip }: GrowthCa
       </span>
       <div className="flex items-baseline gap-2 flex-wrap">
         <span className="text-[22px] font-bold tabular-nums" style={{ color: 'var(--apex-text)' }}>
-          <span className="text-[11px] font-medium mr-1" style={{ color: 'var(--apex-text-muted)' }}>ИЮНЬ</span>
+          <span className="text-[11px] font-medium mr-1" style={{ color: 'var(--apex-text-muted)' }}>БАЗА</span>
           {before}{unit}
           {' → '}
-          <span className="text-[11px] font-medium mr-1" style={{ color: 'var(--apex-text-muted)' }}>ИЮЛЬ</span>
+          <span className="text-[11px] font-medium mr-1" style={{ color: 'var(--apex-text-muted)' }}>ПЕРИОД</span>
           {after}{unit}
         </span>
         <span className="text-[14px] font-bold tabular-nums" style={{ color }}>
@@ -104,10 +104,10 @@ export function PluginsSection({ data }: Props) {
     <section className="space-y-4">
       <div className="space-y-1">
         <h2 className="text-[14px] font-bold" style={{ color: 'var(--apex-text)' }}>
-          Revit-плагины: интенсивность использования выросла
+          Revit-плагины: активность за выбранный период
         </h2>
         <p className="text-[12px]" style={{ color: 'var(--apex-text-secondary)' }}>
-          Сравнение с июнем — стабильной месячной базой до запуска (историческая выгрузка с 4 мая).
+          Сравнение выбранного периода с июнем — стабильной месячной базой до запуска.
           Только рабочие дни, только выборка проектировщиков. Первые две метрики нормированы
           на рабочий день, поэтому окна разной длины сопоставимы; третья — приток новых
           пользователей относительно июня.
@@ -122,7 +122,7 @@ export function PluginsSection({ data }: Props) {
           hint="уникальных пользователей плагинов за рабочий день"
           tooltip={
             <InfoTooltip
-              desc="Ключевой показатель блока: сколько сотрудников в среднем пользуются плагинами в течение рабочего дня. Июнь — база до запуска, с 1 июля — после."
+              desc="Ключевой показатель блока: сколько сотрудников в среднем пользуются плагинами в течение рабочего дня. Июнь — база до запуска, второе значение — выбранный период."
               formula="среднее уникальных за рабочий день"
             />
           }
@@ -142,11 +142,11 @@ export function PluginsSection({ data }: Props) {
         <StatCard
           label="Новых пользователей плагинов"
           value={`${data.new_users_after} чел.`}
-          hint="не пользовались плагинами в июне, начали с 1 июля"
+          hint="не пользовались плагинами в июне, но работали в выбранном периоде"
           tooltip={
             <InfoTooltip
-              desc="Приток новых пользователей: проектировщики, которые в июне плагинами не пользовались, а с 1 июля начали. Сравнение с целым месяцем, а не с двумя днями до запуска, чтобы не завышать."
-              formula="уникальные с 01.07, кроме активных в июне"
+              desc="Приток новых пользователей: проектировщики, которые в июне плагинами не пользовались, но запускали их в выбранном диапазоне."
+              formula="уникальные за период, кроме активных в июне"
             />
           }
         />
@@ -169,7 +169,8 @@ export function PluginsSection({ data }: Props) {
                 tick={{ fontSize: 11, fill: 'var(--apex-text-muted)' }}
                 tickLine={false}
                 axisLine={false}
-                interval={1}
+                interval="preserveStartEnd"
+                minTickGap={28}
               />
               <YAxis
                 yAxisId="users"
@@ -230,28 +231,26 @@ export function PluginsSection({ data }: Props) {
           </ResponsiveContainer>
         </div>
         <p className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
-          По рабочим дням с 29 июня (3 июля — праздник, поэтому дня нет). Левая ось —
-          активные пользователи, правая — запуски. За 29–30 июня — историческая выгрузка,
-          с 1 июля — живой поток. Недельная аудитория плагинов при этом стабильна
-          (~{data.weekly_audience} человек): рост создают те же люди, которые стали
-          пользоваться плагинами заметно чаще.
+          Только рабочие дни выбранного диапазона. Левая ось — активные пользователи,
+          правая — запуски. Средняя недельная аудитория внутри фильтра — около
+          {` ${data.weekly_audience}`} человек.
         </p>
       </div>
 
       <div className="space-y-2">
         <h3 className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>
-          Эффект вовлечения: плагинами активнее пользуются те, кто вошёл в геймификацию
+          Использование плагинов вошедшими и не вошедшими в геймификацию
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <EffectCard
             title="Вошли в приложение"
             before={data.effect_logged.active_before}
             after={data.effect_logged.active_after}
-            hint={`доля группы, пользующейся плагинами, до и после запуска · ${data.effect_logged.users} чел.`}
+            hint={`июнь → выбранный период · ${data.effect_logged.users} чел.`}
             accent
             tooltip={
               <InfoTooltip
-                desc="Активность вошедших в плагинах выросла — тот же эффект вовлечения, что и в дисциплине Worksection. Нормировка на число рабочих дней делает периоды сопоставимыми."
+                desc="Группа авторизовавшихся определяется на конец выбранного периода. Нормировка на число рабочих дней делает периоды сопоставимыми."
                 formula={<><Fraction num="Σ активных за день" den="дней × размер группы" /> × 100</>}
               />
             }
@@ -260,21 +259,19 @@ export function PluginsSection({ data }: Props) {
             title="Не вошли (контрольная группа)"
             before={data.effect_not_logged.active_before}
             after={data.effect_not_logged.active_after}
-            hint={`доля группы, пользующейся плагинами, до и после запуска · ${data.effect_not_logged.users} чел.`}
+            hint={`июнь → выбранный период · ${data.effect_not_logged.users} чел.`}
             accent={false}
             tooltip={
               <InfoTooltip
-                desc="Контрольная группа: плагины доступны им так же, но их активность не выросла. Это подтверждает, что рост связан с запуском геймификации."
+                desc="Не имели профиля на конец выбранного периода; плагины при этом доступны им на тех же условиях."
                 formula={<><Fraction num="Σ активных за день" den="дней × размер группы" /> × 100</>}
               />
             }
           />
         </div>
         <p className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
-          Плагины доступны всем сотрудникам одинаково, но ежедневная аудитория выросла только
-          у вошедших в приложение — у не вошедших она даже снизилась. Как и в дисциплине
-          Worksection, не вошедшие служат контрольной группой: рост только в одной из групп
-          указывает на вклад именно геймификации, а не общих причин.
+          Состав групп определяется на дату окончания фильтра. Базой остаётся июнь,
+          а второе значение полностью пересчитывается по выбранному диапазону.
         </p>
       </div>
     </section>

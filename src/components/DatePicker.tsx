@@ -14,6 +14,12 @@ interface DatePickerProps {
   minDate?: string
   disabledDates?: Record<string, string>
   placeholder?: string
+  /** Не меняет механику выбора; позволяет контексту показать дату короче. */
+  formatValue?: (date: string) => string
+  /** Цвет триггера; success используется для компактных фильтров отчётов. */
+  tone?: 'default' | 'success'
+  /** Компактный триггер-«пилюля» для строк фильтров. */
+  triggerVariant?: 'default' | 'pill'
 }
 
 // ── Утилиты ───────────────────────────────────────────────────────────────────
@@ -66,6 +72,9 @@ export function DatePicker({
   minDate,
   disabledDates = {},
   placeholder = 'Выберите дату',
+  formatValue,
+  tone = 'default',
+  triggerVariant = 'default',
 }: DatePickerProps) {
   const isMulti = values !== undefined
   const selected = isMulti ? null : parseDate(value)
@@ -92,11 +101,6 @@ export function DatePicker({
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
-
-  // Синхронизируем месяц при внешнем изменении value (только single mode)
-  useEffect(() => {
-    if (!isMulti && selected) setCurrentMonth(new Date(selected.getFullYear(), selected.getMonth(), 1))
-  }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -129,6 +133,13 @@ export function DatePicker({
     }
   }
 
+  function handleToggle() {
+    if (!open && !isMulti && selected) {
+      setCurrentMonth(new Date(selected.getFullYear(), selected.getMonth(), 1))
+    }
+    setOpen((value) => !value)
+  }
+
   function handleClear(e: React.MouseEvent) {
     e.stopPropagation()
     if (isMulti) onChangeMulti?.([])
@@ -136,6 +147,8 @@ export function DatePicker({
   }
 
   const hasSelection = isMulti ? (values?.length ?? 0) > 0 : !!selected
+  const successTone = tone === 'success'
+  const pillTrigger = triggerVariant === 'pill'
 
   // Текст триггера в multi-режиме
   function multiTriggerLabel(): string | null {
@@ -154,20 +167,22 @@ export function DatePicker({
       {/* Триггер */}
       <button
         type="button"
-        onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-2 text-[13px] transition-colors text-left"
+        onClick={handleToggle}
+        className={`${pillTrigger ? 'w-auto text-[12px] font-semibold' : 'w-full text-[13px]'} flex items-center gap-2 transition-colors text-left`}
         style={{
-          background: (isMulti && hasSelection) ? 'var(--apex-success-bg)' : 'var(--apex-bg)',
+          background: (successTone || (isMulti && hasSelection)) ? 'var(--apex-success-bg)' : 'var(--apex-bg)',
           border: `1px solid ${
-            (isMulti && hasSelection)
+            pillTrigger
+              ? 'var(--apex-primary)'
+              : (successTone || (isMulti && hasSelection))
               ? 'rgba(var(--apex-primary-rgb), 0.3)'
               : open
               ? 'var(--apex-primary)'
               : 'var(--apex-border)'
           }`,
-          borderRadius: '10px',
-          padding: '8px 12px',
-          color: (isMulti && hasSelection)
+          borderRadius: pillTrigger ? '9999px' : '10px',
+          padding: pillTrigger ? '4px 12px' : '8px 12px',
+          color: (successTone || (isMulti && hasSelection))
             ? 'var(--apex-primary)'
             : (selected ? 'var(--apex-text)' : 'var(--apex-text-muted)'),
           outline: 'none',
@@ -176,17 +191,17 @@ export function DatePicker({
         <Calendar
           size={14}
           style={{
-            color: (isMulti && hasSelection) ? 'var(--apex-primary)' : 'var(--apex-text-muted)',
+            color: (successTone || (isMulti && hasSelection)) ? 'var(--apex-primary)' : 'var(--apex-text-muted)',
             flexShrink: 0,
           }}
         />
         <span className="flex-1">
           {isMulti
             ? (multiTriggerLabel() ?? placeholder)
-            : (selected ? formatFull(selected) : placeholder)
+            : (selected ? (formatValue?.(value) ?? formatFull(selected)) : placeholder)
           }
         </span>
-        {hasSelection && (
+        {hasSelection && !pillTrigger && (
           <span
             onClick={handleClear}
             className="flex items-center justify-center w-4 h-4 rounded-full flex-shrink-0"

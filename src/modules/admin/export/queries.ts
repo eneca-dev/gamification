@@ -28,6 +28,20 @@ const dmy = (d: string | null): string => {
 const pct = (a: number, b: number): number => (b > 0 ? Math.round((a / b) * 1000) / 10 : 0)
 const round1 = (x: number): number => Math.round(x * 10) / 10
 
+function minskDayStart(day: string): string {
+  return `${day}T00:00:00+03:00`
+}
+
+function nextDay(day: string): string {
+  const value = new Date(`${day}T00:00:00Z`)
+  value.setUTCDate(value.getUTCDate() + 1)
+  return value.toISOString().slice(0, 10)
+}
+
+function minskDayEndExclusive(day: string): string {
+  return minskDayStart(nextDay(day))
+}
+
 const REASON: Record<string, string> = {
   red_day: 'нет отчёта',
   wrong_status_report: 'отчёт в статусе не «В работе»',
@@ -60,6 +74,17 @@ async function fetchLaunches(from: string, to: string): Promise<LaunchRow[]> {
   return [...base, ...live]
 }
 
+async function fetchStatuses(from: string, to: string, userId?: string): Promise<StatusRow[]> {
+  const supabase = createSupabaseAdminClient()
+  const load = (table: 'ws_daily_statuses' | 'ws_daily_statuses_baseline') => fetchAll<StatusRow>(() => {
+    let query = supabase.from(table).select('user_id, date, status, red_reasons').gte('date', from).lte('date', to)
+    if (userId) query = query.eq('user_id', userId)
+    return query.order('date').order('user_id')
+  })
+  const [baseline, live] = await Promise.all([load('ws_daily_statuses_baseline'), load('ws_daily_statuses')])
+  return [...baseline, ...live].sort((a, b) => a.date.localeCompare(b.date) || a.user_id.localeCompare(b.user_id))
+}
+
 // ═══════════════════════ ОТЧЁТ ПО СОТРУДНИКУ ═══════════════════════
 export async function getEmployeeReport(userId: string, from: string, to: string): Promise<ExportReport> {
   const supabase = createSupabaseAdminClient()
@@ -68,15 +93,15 @@ export async function getEmployeeReport(userId: string, from: string, to: string
   const email = user.email.toLowerCase()
 
   const [profile, balance, wsStreak, revitStreak, statuses, reports, reportTasks, txns, grats, allLaunches] = await Promise.all([
-    supabase.from('profiles').select('email').ilike('email', email).maybeSingle(),
+    supabase.from('profiles').select('email').ilike('email', email).lt('created_at', minskDayEndExclusive(to)).maybeSingle(),
     supabase.from('gamification_balances').select('total_coins').eq('user_id', userId).maybeSingle(),
     supabase.from('ws_user_streaks_effective').select('current_streak, longest_streak').eq('user_id', userId).maybeSingle(),
     supabase.from('revit_user_streaks_effective').select('current_streak, longest_streak').eq('user_id', userId).maybeSingle(),
-    fetchAll<StatusRow>(() => supabase.from('ws_daily_statuses').select('user_id, date, status, red_reasons').eq('user_id', userId).gte('date', from).lte('date', to).order('date')),
+    fetchStatuses(from, to, userId),
     fetchAll<ReportRow>(() => supabase.from('ws_daily_reports').select('user_id, report_date, total_hours').eq('user_id', userId).gte('report_date', from).lte('report_date', to).order('report_date')),
     fetchAll<{ cost_date: string; ws_task_id: string; hours: number }>(() => supabase.from('ws_daily_report_tasks').select('cost_date, ws_task_id, hours').eq('user_id', userId).gte('cost_date', from).lte('cost_date', to).order('cost_date')),
-    fetchAll<TxnRow>(() => supabase.from('gamification_transactions').select('user_id, coins, created_at, event_id').eq('user_id', userId).gte('created_at', from).lte('created_at', `${to}T23:59:59`).order('created_at')),
-    fetchAll<GratRow>(() => supabase.from('gratitudes').select('sender_id, recipient_id, category, message, coins_amount, created_at').or(`sender_id.eq.${userId},recipient_id.eq.${userId}`).order('created_at')),
+    fetchAll<TxnRow>(() => supabase.from('gamification_transactions').select('user_id, coins, created_at, event_id').eq('user_id', userId).gte('created_at', minskDayStart(from)).lt('created_at', minskDayEndExclusive(to)).order('created_at').order('id')),
+    fetchAll<GratRow>(() => supabase.from('gratitudes').select('sender_id, recipient_id, category, message, coins_amount, created_at').or(`sender_id.eq.${userId},recipient_id.eq.${userId}`).gte('created_at', minskDayStart(from)).lt('created_at', minskDayEndExclusive(to)).order('created_at').order('id')),
     fetchLaunches(from, to),
   ])
   const launches = allLaunches.filter((e) => e.user_email.toLowerCase() === email)
@@ -192,14 +217,14 @@ async function loadOrgData(from: string, to: string, people: UserRow[]) {
   const emailToId = new Map(people.map((p) => [p.email.toLowerCase(), p.id]))
 
   const [profiles, balances, wsStreaks, revitStreaks, statuses, reports, txns, grats, launches] = await Promise.all([
-    fetchAll<{ email: string }>(() => createSupabaseAdminClient().from('profiles').select('email')),
+    fetchAll<{ email: string }>(() => createSupabaseAdminClient().from('profiles').select('email').lt('created_at', minskDayEndExclusive(to)).order('created_at').order('user_id')),
     fetchAll<{ user_id: string; total_coins: number }>(() => supabase.from('gamification_balances').select('user_id, total_coins')),
     fetchAll<StreakRow>(() => supabase.from('ws_user_streaks_effective').select('user_id, current_streak')),
     fetchAll<StreakRow>(() => supabase.from('revit_user_streaks_effective').select('user_id, current_streak')),
-    fetchAll<StatusRow>(() => supabase.from('ws_daily_statuses').select('user_id, date, status, red_reasons').gte('date', from).lte('date', to).order('date')),
-    fetchAll<ReportRow>(() => supabase.from('ws_daily_reports').select('user_id, report_date, total_hours').gte('report_date', from).lte('report_date', to)),
-    fetchAll<TxnRow>(() => supabase.from('gamification_transactions').select('user_id, coins, created_at, event_id').gte('created_at', from).lte('created_at', `${to}T23:59:59`)),
-    fetchAll<GratRow>(() => supabase.from('gratitudes').select('sender_id, recipient_id, category, message, coins_amount, created_at')),
+    fetchStatuses(from, to),
+    fetchAll<ReportRow>(() => supabase.from('ws_daily_reports').select('user_id, report_date, total_hours').gte('report_date', from).lte('report_date', to).order('report_date').order('user_id')),
+    fetchAll<TxnRow>(() => supabase.from('gamification_transactions').select('user_id, coins, created_at, event_id').gte('created_at', minskDayStart(from)).lt('created_at', minskDayEndExclusive(to)).order('created_at').order('id')),
+    fetchAll<GratRow>(() => supabase.from('gratitudes').select('sender_id, recipient_id, category, message, coins_amount, created_at').gte('created_at', minskDayStart(from)).lt('created_at', minskDayEndExclusive(to)).order('created_at').order('id')),
     fetchLaunches(from, to),
   ])
 

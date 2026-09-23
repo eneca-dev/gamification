@@ -302,7 +302,7 @@ export function OverviewSection({ data, coverage, wsDaily }: Props) {
         <CoverageCard
           label="Авторизовались в геймификации"
           value={`${coverage.profiles_count} (${coverage.profiles_pct}%)`}
-          sub="из выборки зашли на платформу хотя бы раз"
+          sub="из выборки зашли на платформу к концу выбранного периода"
           tooltip={
             <InfoTooltip
               desc="Деление на «вошли / не вошли» — основа сравнения в отчёте: разница между этими группами отражает вклад геймификации."
@@ -311,13 +311,13 @@ export function OverviewSection({ data, coverage, wsDaily }: Props) {
           }
         />
         <CoverageCard
-          label="Заработано кристаллов с 1 июля"
+          label="Заработано кристаллов за период"
           value={<CoinStatic amount={coverage.earned_total} size="xl" />}
           sub={`${coverage.earned_logged_pct}% — заработано вошедшими в приложение`}
           tooltip={
             <InfoTooltip
-              desc="Сколько кристаллов выборка заработала с момента запуска. Сплит показывает, какая доля пришлась на вошедших в приложение."
-              formula="Σ начислений > 0, с 01.07"
+              desc="Сколько кристаллов выборка заработала в выбранном диапазоне. Сплит показывает, какая доля пришлась на пользователей, авторизовавшихся к концу периода."
+              formula="Σ начислений > 0 за выбранный период"
             />
           }
         />
@@ -369,7 +369,7 @@ export function OverviewSection({ data, coverage, wsDaily }: Props) {
         title="Вход в систему и личные улучшения"
         note={improvedTab === 'all'
           ? '«Вошли в систему» — авторизовались хотя бы раз к этому дню. «Улучшили дисциплину WS» — доля зелёных дней с 1 июля выше собственного уровня 29–30 июня. «Стали активнее в Revit» — запусков плагинов на рабочий день больше, чем до запуска (включая тех, кто раньше не пользовался). Точки 29–30 июня показывают уровень улучшений до запуска для сравнения: то же измерение относительно 25–26 июня.'
-          : 'Те же улучшения раздельно по группам: сплошные линии — сотрудники, вошедшие в приложение, пунктирные — не вошедшие (контрольная группа). Группа определяется по факту входа на текущую дату. Точки 29–30 июня — уровень до запуска (сравнение с 25–26 июня).'}
+          : 'Те же улучшения раздельно по группам: сплошные линии — сотрудники, вошедшие в приложение, пунктирные — не вошедшие (контрольная группа). Группа определяется по факту входа к концу выбранного периода. Точки 29–30 июня — уровень до запуска (сравнение с 25–26 июня).'}
         action={
           <div className="flex gap-1">
             <TabChip active={improvedTab === 'all'} onClick={() => setImprovedTab('all')}>
@@ -390,7 +390,8 @@ export function OverviewSection({ data, coverage, wsDaily }: Props) {
               tick={{ fontSize: 11, fill: 'var(--apex-text-muted)' }}
               tickLine={false}
               axisLine={false}
-              interval={1}
+              interval="preserveStartEnd"
+              minTickGap={28}
             />
             <YAxis
               domain={[0, Math.ceil(yMax / 50) * 50]}
@@ -453,7 +454,8 @@ export function OverviewSection({ data, coverage, wsDaily }: Props) {
                 tick={{ fontSize: 11, fill: 'var(--apex-text-muted)' }}
                 tickLine={false}
                 axisLine={false}
-                interval={1}
+                interval="preserveStartEnd"
+                minTickGap={28}
               />
               <YAxis
                 domain={[25, 75]}
@@ -496,7 +498,8 @@ export function OverviewSection({ data, coverage, wsDaily }: Props) {
                 tick={{ fontSize: 11, fill: 'var(--apex-text-muted)' }}
                 tickLine={false}
                 axisLine={false}
-                interval={1}
+                interval="preserveStartEnd"
+                minTickGap={28}
               />
               <YAxis
                 domain={[35, 125]}
