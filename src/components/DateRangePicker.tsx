@@ -8,6 +8,7 @@ interface DateRangePickerProps {
   to: string     // YYYY-MM-DD или ''
   onChange: (from: string, to: string) => void
   months?: number // сколько месяцев показывать рядом (по умолчанию 1)
+  emptyLabel?: string
 }
 
 // ── Утилиты ───────────────────────────────────────────────────────────────────
@@ -39,7 +40,7 @@ const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
 // ── Компонент ─────────────────────────────────────────────────────────────────
 
-export function DateRangePicker({ from, to, onChange, months = 1 }: DateRangePickerProps) {
+export function DateRangePicker({ from, to, onChange, months = 1, emptyLabel = 'Период' }: DateRangePickerProps) {
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState<Date | null>(null)
   const [hover, setHover] = useState<Date | null>(null)
@@ -48,14 +49,6 @@ export function DateRangePicker({ from, to, onChange, months = 1 }: DateRangePic
     return new Date(d.getFullYear(), d.getMonth(), 1)
   })
   const ref = useRef<HTMLDivElement>(null)
-
-  // Когда диапазон сброшен — возвращаемся к текущему месяцу
-  useEffect(() => {
-    if (!from && !to) {
-      const now = new Date()
-      setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1))
-    }
-  }, [from, to])
 
   useEffect(() => {
     if (!open) return
@@ -113,6 +106,8 @@ export function DateRangePicker({ from, to, onChange, months = 1 }: DateRangePic
     e.stopPropagation()
     onChange('', '')
     setPending(null)
+    const now = new Date()
+    setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1))
   }
 
   // Отображаемый диапазон (с учётом hover-предпросмотра при новом выборе)
@@ -222,7 +217,7 @@ export function DateRangePicker({ from, to, onChange, months = 1 }: DateRangePic
         }}
       >
         <Calendar size={11} />
-        <span>{triggerLabel ?? 'Период'}</span>
+        <span>{triggerLabel ?? emptyLabel}</span>
         {hasRange && (
           <span
             onClick={handleClear}

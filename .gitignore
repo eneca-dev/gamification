@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+**/node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -35,6 +36,7 @@ yarn-error.log*
 
 # локальные выгрузки отчётов внедрения (персональные данные — не коммитим)
 exports/
+/reports/
 
 # vercel
 .vercel

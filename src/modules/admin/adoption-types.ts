@@ -9,7 +9,7 @@ export interface AdoptionCoverageData {
   total_employees: number     // активные проектировщики (когорта)
   profiles_count: number      // из когорты авторизовались в веб-приложении
   profiles_pct: number        // profiles_count / total_employees * 100
-  earned_total: number        // кристаллов заработано когортой с 01.07
+  earned_total: number        // кристаллов заработано когортой за выбранный период
   earned_logged_pct: number   // из них заработано вошедшими в приложение, %
 }
 
@@ -78,6 +78,7 @@ export interface AdoptionRedUser {
 // Эффект вовлечения: дисциплина WS до/после для одной группы когорты
 export interface AdoptionLoginEffectGroup {
   users: number               // человек в группе (с вердиктами за период)
+  green_period: number        // % зелёных вердиктов за выбранный период
   green_before: number        // % зелёных 29–30.06
   green_after: number         // % зелёных с 01.07
 }
@@ -85,6 +86,14 @@ export interface AdoptionLoginEffectGroup {
 // Объединённый блок «Дисциплина Worksection»: зелёные дни + два нарушения
 // (доли от отслеживаемых, чем меньше — тем лучше; абсолюты — для подсказок)
 export interface AdoptionWorksectionData {
+  comparison_mode: 'launch' | 'period'
+  period_from: string | null
+  period_to: string
+  green_period: number
+  wrong_task_period: number
+  no_report_period: number
+  wrong_task_day_period: number
+  no_report_day_period: number
   green_before: number        // % зелёных вердиктов, 29–30.06
   green_after: number         // % зелёных вердиктов, с 01.07
   wrong_task_before: number   // % отслеживаемых с нарушением «часы не в ту задачу»
@@ -129,15 +138,17 @@ export interface AdoptionPluginsData {
   total_cohort: number           // размер выборки (для контекста)
   effect_logged: AdoptionRevitEffectGroup      // вошли в приложение
   effect_not_logged: AdoptionRevitEffectGroup  // не вошли (квази-контрольная группа)
+  period_from: string | null
+  period_to: string
 }
 
 // Активность когорты в системе: кристаллы, благодарности, магазин, чат-бот
 export interface AdoptionSideEffectsData {
-  earners_count: number           // получили хотя бы одно начисление с 01.07
+  earners_count: number           // получили хотя бы одно начисление за период
   earners_pct: number             // % от когорты
   spent_total: number             // потрачено кристаллов с 01.07
-  balance_total: number           // кристаллов на балансах когорты сейчас
-  balance_avg: number             // средний баланс на зарабатывающего
+  balance_total: number           // восстановленный баланс когорты на конец периода
+  balance_avg: number             // средний баланс на зарабатывающего за период
   gratitude_total: number
   gratitude_senders: number
   gratitude_senders_pct: number
@@ -154,4 +165,60 @@ export interface AdoptionSideEffectsData {
   ws_streak_7plus: number         // из них серия 7+ дней
   revit_streak_holders: number    // держат Revit-стрик
   revit_streak_7plus: number
+}
+
+export type AdoptionCohortScope = 'designer' | 'all' | 'selected'
+
+export interface AdoptionDateRange {
+  from: string | null
+  to: string
+}
+
+export interface AdoptionMonthlyFilters {
+  from: string
+  to: string
+  month: string
+  scope: AdoptionCohortScope
+  departments: string[]
+}
+
+export interface AdoptionMonthlySummary {
+  cohort_count: number
+  registered_count: number
+  gamification_active_count: number
+  gratitude_senders: number
+  shop_buyers: number
+  shield_users: number
+  shield_response_users: number
+  shield_opportunity_users: number
+  shield_saved_opportunities: number
+  shield_total_opportunities: number
+  earned_coins: number
+  spent_coins: number
+  green_pct: number
+  wrong_status_pct: number
+  no_report_pct: number
+}
+
+export type AdoptionRankingArea = 'revit' | 'ws'
+export type AdoptionRankingLevel = 'personal' | 'team' | 'department'
+
+export interface AdoptionMonthlyRanking {
+  area: AdoptionRankingArea
+  level: AdoptionRankingLevel
+  rank: number
+  entity_id: string
+  display_name: string
+  department: string | null
+  team: string | null
+  total_coins: number
+  users_earning: number
+  total_employees: number
+  contest_score: number
+  is_winner: boolean
+}
+
+export interface AdoptionMonthlyReport {
+  summary: AdoptionMonthlySummary
+  rankings: AdoptionMonthlyRanking[]
 }
