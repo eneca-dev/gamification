@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react'
 
-import { Download, Search, X } from 'lucide-react'
+import { ChevronDown, Download, Search, X } from 'lucide-react'
 
 import { DateRangePicker } from '@/components/DateRangePicker'
 
@@ -90,6 +90,7 @@ function EmployeeSelect({ options, value, onChange }: { options: ExportOptions['
 }
 
 export function ExportPanel({ options }: Props) {
+  const [open, setOpen] = useState(false)
   const [type, setType] = useState<ReportType>('company')
   const [employeeId, setEmployeeId] = useState('')
   const [department, setDepartment] = useState('')
@@ -131,46 +132,61 @@ export function ExportPanel({ options }: Props) {
   }
 
   return (
-    <div className="rounded-2xl p-4 space-y-3" style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}>
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h3 className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>Выгрузка отчёта в Excel</h3>
-        <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>один файл, листы по разделам</span>
-      </div>
+    <div className="space-y-3">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="flex items-center gap-1.5 text-[12px] font-medium transition-colors"
+        style={{ color: 'var(--apex-text-secondary)' }}
+      >
+        <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        {open ? 'Скрыть выгрузку отчёта в Excel' : 'Выгрузить отчёт в Excel'}
+      </button>
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex gap-1">
-          {TYPE_LABELS.map((t) => (
-            <TypeChip key={t.value} active={type === t.value} onClick={() => { setType(t.value); setError(null) }}>{t.label}</TypeChip>
-          ))}
+      {open && (
+        <div className="rounded-2xl p-4 space-y-3" style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h3 className="text-[13px] font-semibold" style={{ color: 'var(--apex-text)' }}>Выгрузка отчёта в Excel</h3>
+            <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>один файл, листы по разделам</span>
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex gap-1">
+              {TYPE_LABELS.map((t) => (
+                <TypeChip key={t.value} active={type === t.value} onClick={() => { setType(t.value); setError(null) }}>{t.label}</TypeChip>
+              ))}
+            </div>
+
+            {type === 'employee' && <EmployeeSelect options={options.employees} value={employeeId} onChange={setEmployeeId} />}
+            {type === 'department' && (
+              <select
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                className="px-3 py-1.5 rounded-xl text-[12px] outline-none w-[280px]"
+                style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)', color: 'var(--apex-text)' }}
+              >
+                <option value="">Выберите отдел…</option>
+                {options.departments.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            )}
+
+            <DateRangePicker from={from} to={to} months={2} onChange={(f, t) => { setFrom(f); setTo(t) }} />
+
+            <button
+              onClick={handleDownload}
+              disabled={!ready || isPending}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-[12px] font-semibold transition-all disabled:opacity-50"
+              style={{ background: 'var(--apex-primary)', color: '#fff' }}
+            >
+              <Download size={14} />
+              {isPending ? 'Формирую…' : 'Скачать .xlsx'}
+            </button>
+          </div>
+
+          {error && <p className="text-[11px]" style={{ color: 'var(--apex-danger)' }}>{error}</p>}
         </div>
-
-        {type === 'employee' && <EmployeeSelect options={options.employees} value={employeeId} onChange={setEmployeeId} />}
-        {type === 'department' && (
-          <select
-            value={department}
-            onChange={(e) => setDepartment(e.target.value)}
-            className="px-3 py-1.5 rounded-xl text-[12px] outline-none w-[280px]"
-            style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)', color: 'var(--apex-text)' }}
-          >
-            <option value="">Выберите отдел…</option>
-            {options.departments.map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
-        )}
-
-        <DateRangePicker from={from} to={to} months={2} onChange={(f, t) => { setFrom(f); setTo(t) }} />
-
-        <button
-          onClick={handleDownload}
-          disabled={!ready || isPending}
-          className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-[12px] font-semibold transition-all disabled:opacity-50"
-          style={{ background: 'var(--apex-primary)', color: '#fff' }}
-        >
-          <Download size={14} />
-          {isPending ? 'Формирую…' : 'Скачать .xlsx'}
-        </button>
-      </div>
-
-      {error && <p className="text-[11px]" style={{ color: 'var(--apex-danger)' }}>{error}</p>}
+      )}
     </div>
   )
 }
