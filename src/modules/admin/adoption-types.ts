@@ -89,9 +89,14 @@ export interface AdoptionWorksectionData {
   comparison_mode: 'launch' | 'period'
   period_from: string | null
   period_to: string
+  previous_from: string | null
+  previous_to: string | null
   green_period: number
+  green_previous: number | null
   wrong_task_period: number
+  wrong_task_previous: number | null
   no_report_period: number
+  no_report_previous: number | null
   wrong_task_day_period: number
   no_report_day_period: number
   green_before: number        // % зелёных вердиктов, 29–30.06

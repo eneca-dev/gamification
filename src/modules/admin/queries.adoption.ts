@@ -101,7 +101,7 @@ export async function getAdoptionPeriodDashboard(range: AdoptionDateRange): Prom
   const params = { p_from: range.from, p_to: range.to }
   const responses = await Promise.all([
     supabase.rpc('get_adoption_period_core_v2', params),
-    supabase.rpc('get_adoption_period_worksection_v2', params),
+    supabase.rpc('get_adoption_period_worksection_v3', params),
     supabase.rpc('get_adoption_period_plugins_v2', params),
     supabase.rpc('get_adoption_period_engagement_v2', params),
   ])

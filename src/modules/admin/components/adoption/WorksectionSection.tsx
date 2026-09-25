@@ -30,9 +30,14 @@ function formatDayLabel(day: string): string {
   return `${d}.${m}`
 }
 
-function formatDelta(delta: number, unit = ' пп'): string {
+function formatDelta(delta: number, unit = ' п.п.'): string {
   const sign = delta > 0 ? '+' : ''
   return `${sign}${Math.round(delta * 10) / 10}${unit}`
+}
+
+function formatPeriodDay(day: string): string {
+  const [year, month, date] = day.split('-')
+  return `${date}.${month}.${year}`
 }
 
 const tooltipStyle = {
@@ -78,7 +83,7 @@ function CompareCard({ label, before, after, unit = '%', hint, higherIsBetter = 
           {after}{unit}
         </span>
         <span className="text-[14px] font-bold tabular-nums" style={{ color: deltaColor }}>
-          {formatDelta(delta, unit === '%' ? ' пп' : '')}
+          {formatDelta(delta, unit === '%' ? ' п.п.' : '')}
         </span>
       </div>
       <span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
@@ -88,8 +93,14 @@ function CompareCard({ label, before, after, unit = '%', hint, higherIsBetter = 
   )
 }
 
-function PeriodCard({ label, value, hint, tooltip }: { label: string; value: number; hint: string; tooltip?: React.ReactNode }) {
-  return <div className="rounded-2xl p-5 flex flex-col gap-2" style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}><span className="flex items-center gap-1 text-[12px] font-medium" style={{ color: 'var(--apex-text-secondary)' }}>{label}{tooltip}</span><span className="text-[22px] font-bold tabular-nums" style={{ color: 'var(--apex-text)' }}>{value}%</span><span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>{hint}</span></div>
+function PeriodCard({ label, value, previous = null, hint, higherIsBetter = true, tooltip }: { label: string; value: number; previous?: number | null; hint: string; higherIsBetter?: boolean; tooltip?: React.ReactNode }) {
+  const delta = previous === null ? null : Math.round((value - previous) * 10) / 10
+  const good = delta !== null && (higherIsBetter ? delta > 0 : delta < 0)
+  const deltaColor = delta === null || delta === 0
+    ? 'var(--apex-text-muted)'
+    : good ? 'var(--apex-primary)' : 'var(--apex-danger)'
+
+  return <div className="rounded-2xl p-5 flex flex-col gap-2" style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}><span className="flex items-center gap-1 text-[12px] font-medium" style={{ color: 'var(--apex-text-secondary)' }}>{label}{tooltip}</span><div className="flex items-baseline gap-2 flex-wrap"><span className="text-[22px] font-bold tabular-nums" style={{ color: 'var(--apex-text)' }}>{value}%</span>{delta !== null && <span className="text-[13px] font-bold tabular-nums" style={{ color: deltaColor }}>{formatDelta(delta)} к предыдущему периоду</span>}</div><span className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>{hint}</span></div>
 }
 
 // Скрытый список нарушителей по одной причине: скролл внутри, сортировка по дням
@@ -138,6 +149,10 @@ function RedUsersList({ title, users }: { title: string; users: AdoptionRedUser[
 
 export function WorksectionSection({ data }: Props) {
   const [showLists, setShowLists] = useState(false)
+  const previousPeriod = data.previous_from && data.previous_to
+    ? `${formatPeriodDay(data.previous_from)}–${formatPeriodDay(data.previous_to)}`
+    : 'не определён'
+  const previousPeriodNote = `Предыдущий период — непосредственно предшествующий диапазон той же календарной длины (${previousPeriod}).`
 
   return (
     <section className="space-y-4">
@@ -154,9 +169,9 @@ export function WorksectionSection({ data }: Props) {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {data.comparison_mode === 'period' ? <>
-          <PeriodCard label="«Зелёные» дни" value={data.green_period} hint="доля рабочих дней без нарушений за выбранный период" />
-          <PeriodCard label="Отчёт в задачу в статусе не «В работе»" value={data.wrong_task_period} hint={`в среднем ${data.wrong_task_day_period} случаев за рабочий день`} />
-          <PeriodCard label="Нет отчёта" value={data.no_report_period} hint={`в среднем ${data.no_report_day_period} случаев за рабочий день`} />
+          <PeriodCard label="«Зелёные» дни" value={data.green_period} previous={data.green_previous} hint="доля рабочих дней без нарушений за выбранный период" tooltip={<InfoTooltip desc={`Главный показатель дисциплины. Знаменатель — только рабочие дни с вердиктом; отсутствия не считаются. ${previousPeriodNote}`} formula={<Fraction num="Σ зелёных" den="Σ отслеживаемых" />} />} />
+          <PeriodCard label="Отчёт в задачу в статусе не «В работе»" value={data.wrong_task_period} previous={data.wrong_task_previous} higherIsBetter={false} hint={`в среднем ${data.wrong_task_day_period} случаев за рабочий день`} tooltip={<InfoTooltip desc={`Доля сотрудников, списавших часы в задачу, которая на дату списания не была в статусе «В работе». ${previousPeriodNote}`} formula={<Fraction num="Σ с этим нарушением" den="Σ отслеживаемых" />} />} />
+          <PeriodCard label="Нет отчёта" value={data.no_report_period} previous={data.no_report_previous} higherIsBetter={false} hint={`в среднем ${data.no_report_day_period} случаев за рабочий день`} tooltip={<InfoTooltip desc={`Доля сотрудников без списания часов в тот же рабочий день. ${previousPeriodNote}`} formula={<Fraction num="Σ не сдавших отчёт" den="Σ отслеживаемых" />} />} />
         </> : <>
         <CompareCard
           label="«Зелёные» дни"
