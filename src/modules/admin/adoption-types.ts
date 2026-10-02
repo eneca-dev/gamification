@@ -79,6 +79,7 @@ export interface AdoptionRedUser {
 export interface AdoptionLoginEffectGroup {
   users: number               // человек в группе (с вердиктами за период)
   green_period: number        // % зелёных вердиктов за выбранный период
+  green_previous: number | null // % за предшествующий период для той же группы; null без вердиктов
   green_before: number        // % зелёных 29–30.06
   green_after: number         // % зелёных с 01.07
 }

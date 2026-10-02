@@ -338,13 +338,13 @@ export function WorksectionSection({ data }: Props) {
             <EffectCard title="Вошли в приложение" before={data.logged.green_before} after={data.logged.green_after} hint={`доля «зелёных» дней до и после запуска · ${data.logged.users} чел.`} accent tooltip={<InfoTooltip desc="Группа определяется по наличию профиля к концу выбранного периода." formula={<Fraction num="Σ зелёных в группе" den="Σ отслеживаемых" />} />} />
             <EffectCard title="Не вошли (контрольная группа)" before={data.not_logged.green_before} after={data.not_logged.green_after} hint={`доля «зелёных» дней до и после запуска · ${data.not_logged.users} чел.`} accent={false} tooltip={<InfoTooltip desc="Контрольная группа на конец выбранного периода; правила Worksection для неё те же." formula={<Fraction num="Σ зелёных в группе" den="Σ отслеживаемых" />} />} />
           </> : <>
-            <PeriodCard label="Вошли в приложение" value={data.logged.green_period} hint={`доля «зелёных» дней за выбранный период · ${data.logged.users} чел.`} tooltip={<InfoTooltip desc="Авторизовались к концу выбранного периода." formula={<Fraction num="Σ зелёных в группе" den="Σ отслеживаемых" />} />} />
-            <PeriodCard label="Не вошли в приложение" value={data.not_logged.green_period} hint={`доля «зелёных» дней за выбранный период · ${data.not_logged.users} чел.`} tooltip={<InfoTooltip desc="Не имели профиля на конец выбранного периода." formula={<Fraction num="Σ зелёных в группе" den="Σ отслеживаемых" />} />} />
+            <PeriodCard label="Вошли в приложение" value={data.logged.green_period} previous={data.logged.green_previous} hint={`доля «зелёных» дней за выбранный период · ${data.logged.users} чел.`} tooltip={<InfoTooltip desc={`Авторизовались к концу выбранного периода. Для сравнения с прошлым периодом состав группы определяется на ту же дату. ${previousPeriodNote}`} formula={<Fraction num="Σ зелёных в группе" den="Σ отслеживаемых" />} />} />
+            <PeriodCard label="Не вошли в приложение" value={data.not_logged.green_period} previous={data.not_logged.green_previous} hint={`доля «зелёных» дней за выбранный период · ${data.not_logged.users} чел.`} tooltip={<InfoTooltip desc={`Не имели профиля на конец выбранного периода. Для сравнения с прошлым периодом состав группы определяется на ту же дату. ${previousPeriodNote}`} formula={<Fraction num="Σ зелёных в группе" den="Σ отслеживаемых" />} />} />
           </>}
         </div>
         <p className="text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
-          Группы определяются по факту авторизации на дату окончания фильтра. Все проценты и состав
-          участников рассчитаны только по выбранному диапазону.
+          Группы определяются по факту авторизации на дату окончания фильтра. Проценты за предыдущий
+          период считаются для тех же групп; число участников относится к выбранному диапазону.
         </p>
       </div>
     </section>
