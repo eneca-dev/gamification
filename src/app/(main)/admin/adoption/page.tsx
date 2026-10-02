@@ -72,13 +72,13 @@ export default async function AdoptionPage({ searchParams }: { searchParams: Pro
     departments,
   }
 
-  const [periodData, exportOptions, monthly, previousMonthly, allDepartments] = await Promise.all([
+  const [periodData, exportOptions, allDepartments] = await Promise.all([
     getAdoptionPeriodDashboard(range),
     getExportOptions(),
-    getAdoptionMonthlyReport(filters),
-    getAdoptionMonthlyReport(previousFilters),
     getAllDepartments(),
   ])
+  const monthly = await getAdoptionMonthlyReport(filters)
+  const previousMonthly = await getAdoptionMonthlyReport(previousFilters)
 
   return (
     <AdoptionDashboard
