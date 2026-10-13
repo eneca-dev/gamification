@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Users, Package, ShoppingBag, Zap, CalendarDays, Trophy, Shield, /*[LOTTERY HIDDEN] Ticket,*/ FileText, Coins, MessageCircle, Calendar, Bot, TrendingUp } from 'lucide-react'
+import { Users, Package, ShoppingBag, Zap, CalendarDays, Trophy, Shield, /*[LOTTERY HIDDEN] Ticket,*/ FileText, Coins, MessageCircle, Calendar, Bot, TrendingUp, SlidersHorizontal } from 'lucide-react'
 
 const navItems = [
   { href: '/admin/events', label: 'События', icon: Zap, exact: false },
@@ -15,6 +15,7 @@ const navItems = [
   // [LOTTERY HIDDEN] { href: '/admin/lottery', label: 'eneca-game', icon: Ticket, exact: false },
   { href: '/admin/economy', label: 'Экономика', icon: Coins, exact: false },
   { href: '/admin/adoption', label: 'Внедрение', icon: TrendingUp, exact: false },
+  { href: '/admin/corrections', label: 'Корректировки', icon: SlidersHorizontal, exact: false },
   { href: '/admin/help', label: 'Справка', icon: FileText, exact: false },
   { href: '/admin/chatbot', label: 'Чат-бот', icon: Bot, exact: false },
   { href: '/admin/feedback', label: 'Обратная связь', icon: MessageCircle, exact: false },

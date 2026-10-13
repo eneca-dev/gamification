@@ -57,3 +57,6 @@ certificates
 
 # graphify generated output
 /graphify-out/
+
+# временные дампы данных вью при разработке модуля corrections
+/.corrections-backup/

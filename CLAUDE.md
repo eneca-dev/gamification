@@ -322,6 +322,7 @@ src/modules/<module-name>/
 ### Текущие модули
 _(обновлять по мере создания)_
 - **cache** — централизованный кэш на TanStack Query: ActionResult, query/mutation factories, realtime sync. Документация: `src/modules/cache/README.md`
+- **corrections** — админ-инструмент HR для исправления ошибочных данных задним числом: красный день, Revit-день, ошибочная транзакция. Preview и apply через SQL-функции `fn_correction_*`. Документация: `src/docs/corrections.md`
 
 ## Документация для AI (`src/docs/`)
 
