@@ -6,6 +6,7 @@ export {
   updateCategory,
   createProduct,
   updateProduct,
+  bulkUpdateProducts,
   deleteProduct,
   uploadProductImage,
   deleteProductImage,

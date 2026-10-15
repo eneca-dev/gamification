@@ -21,6 +21,7 @@ import {
 } from "@/modules/achievements";
 import {
   getStreakDayStatuses,
+  getGridAbsences,
   getAutomationDays,
   getHolidays,
   getWorkdays,
@@ -70,7 +71,7 @@ export default async function DashboardPage() {
     wsTeam = wsUser?.team ?? null;
   }
 
-  // Грид: 4 месяца (1 назад + текущий + 2 вперёд) — синхронный, вычисляем сразу
+  // Грид: текущий и пять предыдущих календарных месяцев
   const { rangeStart, rangeEnd } = getGridRange();
 
   // Все запросы параллельно в одном Promise.all (PERF-01)
@@ -83,7 +84,7 @@ export default async function DashboardPage() {
     recentTransactions,
     activeAlarms,
     senderQuota, gratitudeRecipients, userBalance, myGratitudesNew, userOrders,
-    dayStatuses, automationDates, holidays, workdays, pendingResets,
+    dayStatuses, gridAbsences, automationDates, holidays, workdays, pendingResets,
     shieldDates,
     masterPlannerData,
     contestWinners,
@@ -123,6 +124,7 @@ export default async function DashboardPage() {
       wsUserId ? getUserOrders(wsUserId) : Promise.resolve([]),
       // Календарь
       wsUserId ? getStreakDayStatuses(wsUserId, rangeStart, rangeEnd) : Promise.resolve([]),
+      wsUserId ? getGridAbsences(wsUserId, rangeStart, rangeEnd) : Promise.resolve(new Map<string, string>()),
       userEmail ? getAutomationDays(userEmail, rangeStart, rangeEnd) : Promise.resolve(new Set<string>()),
       getHolidays(rangeStart, rangeEnd),
       getWorkdays(rangeStart, rangeEnd),
@@ -138,7 +140,7 @@ export default async function DashboardPage() {
     statusMap.set(row.date, { status: row.status, absence_type: row.absence_type, red_reasons: row.red_reasons });
   }
 
-  const calendarDays = buildCalendarDays(rangeStart, rangeEnd, statusMap, automationDates, holidays, workdays, shieldDates);
+  const calendarDays = buildCalendarDays(rangeStart, rangeEnd, statusMap, automationDates, holidays, workdays, shieldDates, gridAbsences);
 
   const streakPanelData: StreakPanelData = {
     calendarDays,

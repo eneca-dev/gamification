@@ -159,6 +159,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
         )}
         <PurchaseButton
           productId={product.id}
+          productName={product.name}
           price={product.price}
           canAfford={canAfford}
           outOfStock={outOfStock}

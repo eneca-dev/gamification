@@ -4,9 +4,9 @@
 
 ## Логика работы
 
-Грид показывает 4 календарных месяца по двухмесячным блокам (Мар–Апр → Фев–Май, Май–Июн → Апр–Июл). Диапазон сдвигается каждые 2 месяца, одинаковый для всех пользователей.
+Грид загружает текущий и пять предыдущих календарных месяцев. Диапазон сдвигается каждый месяц: в декабре это июль — декабрь, в январе — август — январь. Одновременно видны три последних месяца; стрелки перелистывают их по одному месяцу в пределах загруженного диапазона. Проценты в заголовке по-прежнему считаются по предыдущему и текущему месяцам.
 
-Статусы дней определяются из таблицы `ws_daily_statuses`: green/red/absent → green/red/frozen. Рабочий день без записи → `no_data` (скрипт ещё не обработал). Выходные → `gray`. Будущие → `future`. Звёзды автоматизации — из `elk_plugin_launches`. Звёзды показываются на любых ячейках (включая `no_data`), на `no_data` — со stroke-контуром.
+Статусы дней определяются из `ws_daily_statuses` и сохранённых `ws_user_absences`: отпуск, больничный, SickDay и одобренный выходной → синий `frozen`, включая будущие даты и календарные выходные. Для одобренной командировки подпись берётся из `day_off_requests`. Рабочий день без записи → `no_data` (скрипт ещё не обработал). Обычные выходные → `gray`. Будущие дни без отсутствия → `future`. VPS-синхронизация загружает график до конца следующего месяца; даты более позднего месяца видны, если они уже сохранены в БД. Звёзды автоматизации — из `elk_plugin_launches`.
 
 Дни, где использован щит (`streak_shield_log`), отображаются в форме щита (SVG-путь вместо прямоугольника). Цвет ячейки сохраняется статусным (green/red/etc). Звёздочка автоматизации внутри щита рендерится через SVG `<text>`. Тултип дополняется строкой «Использована вторая жизнь Revit/Worksection». В легенде — отдельный элемент «Вторая жизнь».
 
@@ -25,6 +25,7 @@ WS-стрик считается на чтение через view. Модель
 ## Зависимости
 
 - `ws_daily_statuses` — статусы дней (заполняется VPS-скриптом compute-gamification)
+- `ws_user_absences` и `day_off_requests` — сохранённые отсутствия и тип одобренной командировки
 - `elk_plugin_launches` — даты автоматизации
 - `ws_user_streaks_effective` — view с актуальным `current_streak` на чтение (источник истины для UI)
 - `ws_user_streaks` — таблица-снапшот: `streak_start_date`, `longest_streak`, `completed_cycles`, `pending_reset_date/expires_at`. Колонка `current_streak` в таблице — снапшот на момент vps-прогона (используется vps для milestone-сравнения «было/стало»), не источник для UI
@@ -57,12 +58,13 @@ WS-стрик считается на чтение через view. Модель
 ## Queries
 
 - `getStreakDayStatuses(userId, gridStart, gridEnd)` — строки из ws_daily_statuses за период
+- `getGridAbsences(userId, gridStart, gridEnd)` — Map сохранённых отсутствий за диапазон грида
 - `getAutomationDays(userEmail, gridStart, gridEnd)` — Set дат из elk_plugin_launches
 - `getWsStreakData(userId)` — стрик WS + milestones из gamification_event_types
 - `getHolidays(gridStart, gridEnd)` — Set дат из calendar_holidays
 - `getWorkdays(gridStart, gridEnd)` — Set дат из calendar_workdays
 - `getRevitStreakData(userId)` — стрик Revit + milestones
-- `buildCalendarDays(rangeStart, rangeEnd, statusMap, automationDates, holidays, workdays, shieldDates?)` — сборка CalendarDay[]; shieldDates — Map<date, 'ws'|'revit'> из streak-shield модуля, опциональный
+- `buildCalendarDays(rangeStart, rangeEnd, statusMap, automationDates, holidays, workdays, shieldDates?, absences?)` — сборка CalendarDay[]; сохранённое отсутствие имеет приоритет перед будущим и выходным днём
 
 ## Ограничения
 

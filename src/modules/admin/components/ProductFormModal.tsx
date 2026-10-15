@@ -122,7 +122,7 @@ export function ProductFormModal({ product, categories, rate, onSave, onClose, i
   const coefficientNum = parseFloat(coefficient.replace(',', '.')) || 0
   const userDiscountPercentNum = parseInt(userDiscountPercent, 10)
   const priceCrystals = costBynNum > 0 && coefficientNum > 0
-    ? computePriceCrystals(costBynNum, coefficientNum, rate)
+    ? computePriceCrystals(costBynNum, coefficientNum, rate, product?.price_adjustment_crystals ?? 0)
     : 0
   const priceWithoutDiscountCrystals = priceCrystals > 0 && userDiscountPercent !== '' && !isNaN(userDiscountPercentNum) && userDiscountPercentNum > 0
     ? computePriceWithoutDiscount(priceCrystals, userDiscountPercentNum)

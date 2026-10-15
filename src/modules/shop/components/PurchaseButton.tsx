@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 import { CoinIcon } from '@/components/CoinIcon'
 
 interface PurchaseButtonProps {
   productId: string
+  productName: string
   price: number
   canAfford: boolean
   outOfStock: boolean
@@ -25,6 +27,7 @@ interface PurchaseButtonProps {
 
 export function PurchaseButton({
   productId,
+  productName,
   price,
   canAfford,
   outOfStock,
@@ -43,6 +46,14 @@ export function PurchaseButton({
   const [hovered, setHovered] = useState(false)
   const [showDialog, setShowDialog] = useState(false)
   const [comment, setComment] = useState('')
+  const confirmRef = useRef<HTMLButtonElement>(null)
+  const commentRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (!showDialog) return
+    const target = commentRequired ? commentRef.current : confirmRef.current
+    target?.focus({ preventScroll: true })
+  }, [showDialog, commentRequired])
 
   const disabled = !canAfford || outOfStock || isPurchasing || shieldNoPending || comingSoon
   const showDeficit = !canAfford && !outOfStock && !shieldNoPending && !comingSoon && !isPurchasing
@@ -68,19 +79,15 @@ export function PurchaseButton({
 
   function handleClick() {
     if (disabled) return
-    if (commentRequired) {
-      setComment('')
-      setShowDialog(true)
-    } else {
-      onPurchase(productId, price)
-    }
+    setComment('')
+    setShowDialog(true)
   }
 
   function handleConfirm() {
     const trimmed = comment.trim()
-    if (!trimmed) return
+    if (commentRequired && !trimmed) return
     setShowDialog(false)
-    onPurchase(productId, price, trimmed)
+    onPurchase(productId, price, commentRequired ? trimmed : undefined)
   }
 
   function handleCancel() {
@@ -124,24 +131,29 @@ export function PurchaseButton({
         )}
       </div>
 
-      {/* Диалог ввода комментария */}
-      {showDialog && (
+      {/* Подтверждение заказа в формате чека */}
+      {showDialog && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           onClick={handleCancel}
         >
-          <div className="fixed inset-0 bg-black/40" />
           <div
-            className="relative z-10 w-full max-w-sm rounded-2xl p-5 space-y-4 animate-scale-in"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Подтвердить заказ"
+            onKeyDown={(event) => { if (event.key === 'Escape') handleCancel() }}
+            className="relative z-10 w-full max-w-xs rounded-2xl p-4 space-y-3 shadow-xl animate-scale-in"
             style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <p className="text-[14px] font-bold" style={{ color: 'var(--apex-text)' }}>
-                {commentLabel ?? 'Комментарий к заказу'}
+              <p className="text-[12px] font-bold uppercase tracking-wider" style={{ color: 'var(--apex-text-muted)' }}>
+                Ваш заказ
               </p>
               <button
+                type="button"
                 onClick={handleCancel}
+                aria-label="Закрыть подтверждение"
                 className="w-7 h-7 rounded-full flex items-center justify-center"
                 style={{ color: 'var(--apex-text-muted)' }}
               >
@@ -149,35 +161,54 @@ export function PurchaseButton({
               </button>
             </div>
 
-            <textarea
-              autoFocus
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              rows={3}
-              maxLength={1000}
-              placeholder={commentPlaceholder ?? ''}
-              className="w-full px-3 py-2 rounded-xl text-[13px] outline-none resize-none"
-              style={{
-                background: 'var(--apex-bg)',
-                border: '1px solid var(--apex-border)',
-                color: 'var(--apex-text)',
-              }}
-            />
+            <div className="flex items-start justify-between gap-3 text-[13px]" style={{ color: 'var(--apex-text)' }}>
+              <span className="font-semibold">{productName}</span>
+              <span className="shrink-0">× 1</span>
+            </div>
+
+            {commentRequired && (
+              <div className="space-y-1.5">
+                <label htmlFor={`order-comment-${productId}`} className="text-[12px] font-semibold" style={{ color: 'var(--apex-text)' }}>
+                  {commentLabel ?? 'Комментарий к заказу'}
+                </label>
+                <textarea
+                  ref={commentRef}
+                  id={`order-comment-${productId}`}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  rows={2}
+                  maxLength={1000}
+                  placeholder={commentPlaceholder ?? ''}
+                  className="w-full px-3 py-2 rounded-xl text-[12px] outline-none resize-none focus:border-[var(--apex-primary)]"
+                  style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)', color: 'var(--apex-text)' }}
+                />
+              </div>
+            )}
+
+            <div className="flex items-center justify-between border-t border-dashed pt-3 text-[13px]" style={{ borderColor: 'var(--apex-border)', color: 'var(--apex-text)' }}>
+              <span className="font-semibold">Итого</span>
+              <span className="inline-flex items-center gap-1 font-extrabold" style={{ color: 'var(--apex-primary)' }}>
+                {isFree ? 'Бесплатно' : <>{price.toLocaleString('ru-RU')} <CoinIcon size={14} /></>}
+              </span>
+            </div>
 
             <div className="flex gap-2">
               <button
+                ref={confirmRef}
+                type="button"
                 onClick={handleConfirm}
-                disabled={!comment.trim() || isPurchasing}
+                disabled={(commentRequired && !comment.trim()) || isPurchasing}
                 className="flex-1 py-2 rounded-xl text-[13px] font-bold transition-colors"
                 style={{
-                  background: comment.trim() ? 'var(--apex-primary)' : 'var(--apex-disabled-bg)',
-                  color: comment.trim() ? 'white' : 'var(--text-muted)',
-                  cursor: comment.trim() ? 'pointer' : 'default',
+                  background: !commentRequired || comment.trim() ? 'var(--apex-primary)' : 'var(--apex-disabled-bg)',
+                  color: !commentRequired || comment.trim() ? 'white' : 'var(--text-muted)',
+                  cursor: !commentRequired || comment.trim() ? 'pointer' : 'default',
                 }}
               >
-                Подтвердить
+                Подтвердить заказ
               </button>
               <button
+                type="button"
                 onClick={handleCancel}
                 className="px-4 py-2 rounded-xl text-[13px] font-semibold transition-colors"
                 style={{
@@ -191,7 +222,7 @@ export function PurchaseButton({
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   )
 }

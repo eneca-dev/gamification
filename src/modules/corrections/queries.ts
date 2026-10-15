@@ -71,7 +71,6 @@ export async function getCorrectionUsers(): Promise<CorrectionUserRow[]> {
   const { data, error } = await supabase
     .from('view_correction_users')
     .select('*')
-    .not('team', 'eq', 'Декретный')
     .order('last_name', { ascending: true, nullsFirst: false })
     .range(0, 4999)
 

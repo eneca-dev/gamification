@@ -45,6 +45,7 @@ export interface ShopProduct {
   description: string | null
   cost_byn: number
   coefficient: number
+  price_adjustment_crystals: number
   price: number
   category_id: string
   image_url: string | null
@@ -108,8 +109,8 @@ export const setCrystalRateSchema = z.object({
 
 export type SetCrystalRateInput = z.infer<typeof setCrystalRateSchema>
 
-export function computePriceCrystals(costByn: number, coefficient: number, rate: number): number {
-  return Math.round(costByn * coefficient * rate)
+export function computePriceCrystals(costByn: number, coefficient: number, rate: number, adjustment = 0): number {
+  return Math.max(1, Math.round(costByn * coefficient * rate) + adjustment)
 }
 
 /** Зачёркнутая цена в кристаллах = реальная цена / (1 − скидка / 100). */

@@ -275,6 +275,99 @@ export async function updateProduct(
   return { success: true }
 }
 
+const bulkProductSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(1000),
+  change: z.discriminatedUnion('type', [
+    z.object({ type: z.literal('price'), crystals: z.number().int().min(-1_000_000).max(1_000_000).refine((value) => value !== 0) }),
+    z.object({ type: z.literal('discount'), percent: z.number().int().min(1).max(99).nullable() }),
+    z.object({ type: z.literal('status'), status: z.enum(['active', 'inactive', 'coming_soon']) }),
+  ]),
+})
+
+interface BulkProductUpdate {
+  id: string
+  price_adjustment_crystals?: number
+  discount_percent?: number | null
+  is_active?: boolean
+  is_coming_soon?: boolean
+}
+
+export async function bulkUpdateProducts(input: unknown): Promise<
+  { success: true; updated: BulkProductUpdate[]; errors: string[] } | { success: false; error: string }
+> {
+  if (!await checkIsAdmin()) return { success: false, error: 'Доступ запрещён' }
+  const parsed = bulkProductSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: 'Невалидные данные массового изменения' }
+
+  const ids = [...new Set(parsed.data.ids)]
+  const supabase = createSupabaseAdminClient()
+  const rows = []
+  for (let offset = 0; offset < ids.length; offset += 200) {
+    const { data, error } = await supabase
+      .from('shop_products')
+      .select('id, name, cost_byn, coefficient, price_adjustment_crystals, stock, category:shop_categories!category_id(is_countable, is_active)')
+      .in('id', ids.slice(offset, offset + 200))
+    if (error) return { success: false, error: error.message }
+    rows.push(...(data ?? []))
+  }
+
+  const byId = new Map(rows.map((row) => [row.id, row]))
+  let rate = 0
+  if (parsed.data.change.type === 'price') {
+    const { data, error } = await supabase.rpc('current_crystal_rate')
+    rate = Number(data)
+    if (error || !Number.isFinite(rate) || rate <= 0) return { success: false, error: 'Не удалось получить текущий курс кристаллов' }
+  }
+  const updated: BulkProductUpdate[] = []
+  const errors: string[] = []
+  for (const id of ids) {
+    const row = byId.get(id)
+    if (!row) { errors.push(`Товар ${id} не найден`); continue }
+
+    const fields: Omit<BulkProductUpdate, 'id'> = {}
+    const change = parsed.data.change
+    if (change.type === 'price') {
+      const base = Math.round(Number(row.cost_byn) * Number(row.coefficient) * rate)
+      const currentPrice = Math.max(1, base + Number(row.price_adjustment_crystals))
+      const targetPrice = currentPrice + change.crystals
+      const adjustment = targetPrice - base
+      if (targetPrice < 1 || targetPrice > 2_147_483_647 || !Number.isSafeInteger(adjustment) || Math.abs(adjustment) > 1_000_000_000) {
+        errors.push(`${row.name}: итоговая цена должна быть положительной и помещаться в допустимый диапазон`)
+        continue
+      }
+      fields.price_adjustment_crystals = adjustment
+    } else if (change.type === 'discount') {
+      fields.discount_percent = change.percent
+    } else {
+      const category = Array.isArray(row.category) ? row.category[0] : row.category
+      if (change.status === 'active' && (!category?.is_active || (category.is_countable && (row.stock ?? 0) === 0))) {
+        errors.push(`${row.name}: нельзя активировать товар в неактивной категории или с нулевым остатком`)
+        continue
+      }
+      fields.is_active = change.status === 'active'
+      fields.is_coming_soon = change.status === 'coming_soon'
+    }
+
+    let updateQuery = supabase.from('shop_products')
+      .update({ ...fields, updated_at: new Date().toISOString() })
+      .eq('id', id)
+    if (change.type === 'price') updateQuery = updateQuery.eq('price_adjustment_crystals', row.price_adjustment_crystals)
+    const { data: saved, error } = await updateQuery
+      .select('id')
+      .maybeSingle()
+    if (error) { errors.push(`${row.name}: ${error.message}`); continue }
+    if (!saved) { errors.push(`${row.name}: товар изменился или больше не найден, повторите действие`); continue }
+    updated.push({ id, ...fields })
+  }
+
+  if (updated.length > 0) {
+    revalidateTag('shop-products', 'max')
+    revalidatePath('/admin/products')
+    revalidatePath('/store')
+  }
+  return { success: true, updated, errors }
+}
+
 // --- Удаление товара (только админ) ---
 
 export async function deleteProduct(

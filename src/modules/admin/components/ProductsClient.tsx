@@ -10,6 +10,7 @@ import {
   updateCategory,
   createProduct,
   updateProduct,
+  bulkUpdateProducts,
   deleteProduct,
   deleteProductImage,
   computePriceCrystals,
@@ -33,6 +34,89 @@ interface ProductsClientProps {
 type InlineProductField = 'category_id' | 'cost_byn' | 'coefficient' | 'discount_percent' | 'stock'
 
 type ProductStatus = 'active' | 'coming_soon' | 'inactive'
+const BULK_MODE_OPTIONS: ReadonlyArray<{ value: 'price' | 'discount' | 'status'; label: string }> = [
+  { value: 'price', label: 'Изменить цену, 💎' },
+  { value: 'discount', label: 'Установить скидку' },
+  { value: 'status', label: 'Изменить статус' },
+]
+const BULK_STATUS_OPTIONS: ReadonlyArray<{ value: ProductStatus; label: string }> = [
+  { value: 'active', label: 'Активно' },
+  { value: 'inactive', label: 'Не активно' },
+  { value: 'coming_soon', label: 'Скоро в продаже' },
+]
+
+function BulkSelect<T extends string>({
+  value,
+  options,
+  onChange,
+  label,
+}: {
+  value: T
+  options: ReadonlyArray<{ value: T; label: string }>
+  onChange: (value: T) => void
+  label: string
+}) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function closeOnOutside(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', closeOnOutside)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutside)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [open])
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        aria-label={label}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((previous) => !previous)}
+        className="inline-flex min-w-36 items-center justify-between gap-3 rounded-lg px-3 py-1.5 text-[12px] font-semibold"
+        style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)', color: 'var(--apex-text)' }}
+      >
+        {options.find((option) => option.value === value)?.label}
+        <ChevronDown size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`} style={{ color: 'var(--apex-primary)' }} />
+      </button>
+      {open && (
+        <div
+          role="listbox"
+          aria-label={label}
+          className="absolute left-0 top-full z-50 mt-1 min-w-full rounded-xl py-1 shadow-lg"
+          style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
+        >
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="option"
+              aria-selected={option.value === value}
+              onClick={() => { onChange(option.value); setOpen(false) }}
+              className="block w-full whitespace-nowrap px-3 py-2 text-left text-[12px] font-medium"
+              style={{
+                background: option.value === value ? 'var(--apex-success-bg)' : 'transparent',
+                color: option.value === value ? 'var(--apex-primary)' : 'var(--apex-text)',
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 type NumericOp = '>=' | '<=' | '!=' | '>' | '<' | '='
 
@@ -188,7 +272,7 @@ function applyParsedFilter(
     if (!filter.categories.some(c => catName.includes(c))) return false
   }
   if (filter.coefficient && !compareNum(p.coefficient, filter.coefficient.op, filter.coefficient.value)) return false
-  if (filter.price && !compareNum(computePriceCrystals(p.cost_byn, p.coefficient, effectiveRate), filter.price.op, filter.price.value)) return false
+  if (filter.price && !compareNum(computePriceCrystals(p.cost_byn, p.coefficient, effectiveRate, p.price_adjustment_crystals), filter.price.op, filter.price.value)) return false
   if (filter.costByn && !compareNum(p.cost_byn, filter.costByn.op, filter.costByn.value)) return false
   if (filter.stock && !compareNum(p.stock ?? 0, filter.stock.op, filter.stock.value)) return false
   if (filter.stockNull === true && p.stock !== null) return false
@@ -222,6 +306,11 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   const [expandedDescriptionId, setExpandedDescriptionId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('list')
   const [filterQuery, setFilterQuery] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkMode, setBulkMode] = useState<'price' | 'discount' | 'status'>('price')
+  const [bulkPrice, setBulkPrice] = useState('+')
+  const [bulkPercent, setBulkPercent] = useState('')
+  const [bulkStatus, setBulkStatus] = useState<ProductStatus>('active')
 
   // Inline-редактирование товаров
   const [inlineEdit, setInlineEdit] = useState<{
@@ -258,7 +347,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
       else inactive++
       if (p.discount_percent != null) withDiscount++
       if (p.category?.is_countable && (p.stock ?? 0) === 0) outOfStock++
-      const price = computePriceCrystals(p.cost_byn, p.coefficient, effectiveRate)
+      const price = computePriceCrystals(p.cost_byn, p.coefficient, effectiveRate, p.price_adjustment_crystals)
       priceSum += price
       if (price > maxPrice) maxPrice = price
     }
@@ -288,6 +377,67 @@ export function ProductsClient({ products: initialProducts, categories: initialC
       )
     })
     .filter((p) => applyParsedFilter(p, parsedFilter, effectiveRate))
+
+  const visibleIds = filteredProducts.map((product) => product.id)
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id))
+
+  function toggleSelected(id: string) {
+    setSelectedIds((previous) => {
+      const next = new Set(previous)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleAllVisible() {
+    setSelectedIds((previous) => {
+      const next = new Set(previous)
+      if (allVisibleSelected) visibleIds.forEach((id) => next.delete(id))
+      else visibleIds.forEach((id) => next.add(id))
+      return next
+    })
+  }
+
+  function applyBulkChange() {
+    const crystalDelta = Number(bulkPrice)
+    const rawPercent = Number(bulkPercent.replace(',', '.'))
+    if (bulkMode === 'price' && (!Number.isInteger(crystalDelta) || crystalDelta === 0 || Math.abs(crystalDelta) > 1_000_000)) {
+      setError('Укажите изменение цены от 1 до 1 000 000 кристаллов со знаком + или −')
+      return
+    }
+    if (bulkMode === 'discount' && bulkPercent.trim() && (!Number.isInteger(rawPercent) || rawPercent < 1 || rawPercent > 99)) {
+      setError('Укажите скидку от 1 до 99% или оставьте поле пустым, чтобы снять её')
+      return
+    }
+    const change = bulkMode === 'price'
+      ? { type: 'price' as const, crystals: crystalDelta }
+      : bulkMode === 'discount'
+        ? { type: 'discount' as const, percent: bulkPercent.trim() ? rawPercent : null }
+        : { type: 'status' as const, status: bulkStatus }
+    setError(null)
+    startProductTransition(async () => {
+      const result = await bulkUpdateProducts({ ids: [...selectedIds], change })
+      if (!result.success) { setError(result.error); return }
+      const changed = new Map(result.updated.map((item) => [item.id, item]))
+      setProducts((items) => items.map((item) => {
+        const update = changed.get(item.id)
+        if (!update) return item
+        const next = { ...item, ...update }
+        if (update.price_adjustment_crystals !== undefined) next.price = computePriceCrystals(next.cost_byn, next.coefficient, currentRate, next.price_adjustment_crystals)
+        return next
+      }))
+      setSelectedIds((previous) => new Set([...previous].filter((id) => !changed.has(id))))
+      if (result.errors.length) setError(result.errors.join('; '))
+      if (result.updated.length) {
+        setBulkPrice('+')
+        setBulkPercent('')
+        setBulkMode('price')
+        setBulkStatus('active')
+        showNotification(`Изменено товаров: ${result.updated.length}`)
+      }
+    })
+  }
 
   function showNotification(msg: string) {
     setNotification(msg)
@@ -564,7 +714,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           updated.category_id = cat.id
         }
         if (field === 'cost_byn' || field === 'coefficient') {
-          updated.price = computePriceCrystals(updated.cost_byn, updated.coefficient, effectiveRate)
+          updated.price = computePriceCrystals(updated.cost_byn, updated.coefficient, effectiveRate, updated.price_adjustment_crystals)
         }
         return updated
       })
@@ -610,7 +760,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
       const categoryData = cat
         ? { name: cat.name, slug: cat.slug, is_physical: cat.is_physical, is_countable: cat.is_countable, is_active: cat.is_active }
         : { name: '', slug: '', is_physical: false, is_countable: false, is_active: true }
-      const computedPrice = computePriceCrystals(payload.cost_byn, payload.coefficient, effectiveRate)
+      const computedPrice = computePriceCrystals(payload.cost_byn, payload.coefficient, effectiveRate, editingProduct?.price_adjustment_crystals ?? 0)
       // Stock = 0 (исчисляемая категория) → товар автоматически неактивен (синхронно с сервером)
       const forceInactive = !!cat?.is_countable && payload.stock === 0
 
@@ -631,6 +781,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           {
             id: tempId,
             ...payload,
+            price_adjustment_crystals: 0,
             price: computedPrice,
             is_active: !forceInactive,
             is_coming_soon: false,
@@ -1094,6 +1245,58 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           <FilterInput value={filterQuery} onChange={setFilterQuery} categories={categories} />
         </div>
 
+        {selectedIds.size > 0 && (
+          <div className="relative z-20 flex flex-wrap items-center gap-2 px-5 py-3 text-[12px]" style={{ background: 'var(--apex-success-bg)', borderBottom: '1px solid var(--apex-border)' }}>
+            <span className="font-bold" style={{ color: 'var(--apex-text)' }}>Выбрано: {selectedIds.size}</span>
+            <BulkSelect value={bulkMode} onChange={setBulkMode} options={BULK_MODE_OPTIONS} label="Массовое действие" />
+            {bulkMode === 'price' ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={bulkPrice}
+                  onChange={(event) => {
+                    const typed = event.target.value
+                    setBulkPrice(`${typed.includes('-') ? '-' : '+'}${typed.replace(/\D/g, '')}`)
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === '-' || event.key === '+') {
+                      event.preventDefault()
+                      setBulkPrice(`${event.key}${bulkPrice.replace(/\D/g, '')}`)
+                    }
+                  }}
+                  aria-label="Изменение цены в кристаллах"
+                  className="w-28 rounded-lg px-2 py-1.5 outline-none"
+                  style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)', color: 'var(--apex-text)' }}
+                />
+                <span className="group relative">
+                  <button type="button" aria-label="Как изменить цену в кристаллах" className="flex items-center justify-center" style={{ color: 'var(--apex-primary)' }}>
+                    <HelpCircle size={15} />
+                  </button>
+                  <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 hidden w-56 -translate-x-1/2 rounded-xl px-3 py-2 text-[11px] leading-relaxed shadow-lg group-hover:block group-focus-within:block" style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)', color: 'var(--apex-text-secondary)' }}>
+                    Введите число кристаллов. Знак + уже стоит и увеличит цену. Чтобы уменьшить её, нажмите − и введите число.
+                  </span>
+                </span>
+              </div>
+            ) : bulkMode === 'discount' ? (
+              <input
+                type="text"
+                inputMode="numeric"
+                value={bulkPercent}
+                onChange={(event) => setBulkPercent(event.target.value)}
+                aria-label="Процент скидки"
+                placeholder="1–99; пусто — снять"
+                className="w-44 rounded-lg px-2 py-1.5 outline-none focus:border-[var(--apex-primary)]"
+                style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
+              />
+            ) : (
+              <BulkSelect value={bulkStatus} onChange={setBulkStatus} options={BULK_STATUS_OPTIONS} label="Новый статус" />
+            )}
+            <button type="button" onClick={applyBulkChange} disabled={isProductPending} className="rounded-full px-4 py-1.5 font-semibold disabled:opacity-50" style={{ background: 'var(--apex-primary)', color: 'white' }}>Применить</button>
+            <button type="button" onClick={() => setSelectedIds(new Set())} className="rounded-full px-3 py-1.5 font-semibold" style={{ color: 'var(--apex-text-secondary)', border: '1px solid var(--apex-border)' }}>Снять выделение</button>
+          </div>
+        )}
+
         {/* Вид: карточки */}
         {viewMode === 'cards' && (
           <div>
@@ -1119,6 +1322,13 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                         className="h-36 flex items-center justify-center relative overflow-hidden"
                         style={{ background: product.image_url ? 'transparent' : 'var(--apex-emoji-bg)' }}
                       >
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(product.id)}
+                          onChange={() => toggleSelected(product.id)}
+                          aria-label={`Выбрать товар ${product.name}`}
+                          className="absolute bottom-3 left-3 z-10 w-4 h-4 accent-[var(--apex-primary)]"
+                        />
                         {product.image_url ? (
                           <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
                         ) : (
@@ -1230,7 +1440,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                             <div className="flex items-center justify-end gap-2">
                               <CoinStatic
                                 amount={computePriceWithoutDiscount(
-                                  computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate),
+                                  computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate, product.price_adjustment_crystals),
                                   product.discount_percent
                                 )}
                                 size="sm"
@@ -1243,14 +1453,14 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                                 −{product.discount_percent}%
                               </span>
                               <CoinStatic
-                                amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
+                                amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate, product.price_adjustment_crystals)}
                                 size="sm"
                               />
                             </div>
                           ) : (
                             <div className="flex justify-end">
                               <CoinStatic
-                                amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
+                                amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate, product.price_adjustment_crystals)}
                                 size="sm"
                               />
                             </div>
@@ -1318,8 +1528,9 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
         {/* Таблица товаров */}
         {viewMode === 'list' && <div className="overflow-x-auto">
-        <table className="w-full min-w-[700px]" style={{ tableLayout: 'fixed' }}>
+        <table className="w-full min-w-[760px]" style={{ tableLayout: 'fixed' }}>
           <colgroup>
+            <col style={{ width: '40px' }} />
             <col style={{ width: '60px' }} />
             <col />
             <col style={{ width: '130px' }} />
@@ -1333,6 +1544,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           </colgroup>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--apex-border)' }}>
+              <th className="pl-4"><input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} aria-label="Выбрать все видимые товары" className="accent-[var(--apex-primary)]" /></th>
               {['', 'Название', 'Категория', 'BYN', 'Коэф.', 'Цена', 'Скидка', 'Остаток', 'Комм.', 'Статус'].map((h, i) => (
                 <th
                   key={i}
@@ -1347,7 +1559,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           <tbody>
             {filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center py-12">
+                <td colSpan={11} className="text-center py-12">
                   <p className="text-[13px] font-medium" style={{ color: 'var(--apex-text-muted)' }}>
                     {searchQuery.trim() ? 'Ничего не найдено' : 'Нет товаров'}
                   </p>
@@ -1360,6 +1572,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
                 return (
                   <tr key={product.id} className="group" style={{ borderBottom: '1px solid var(--apex-border)' }}>
+                    <td className="pl-4"><input type="checkbox" checked={selectedIds.has(product.id)} onChange={() => toggleSelected(product.id)} aria-label={`Выбрать товар ${product.name}`} className="accent-[var(--apex-primary)]" /></td>
                     {/* Изображение */}
                     <td className="px-5 py-2.5 w-12">
                       <div
@@ -1466,7 +1679,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                     {/* Цена в кристаллах — вычисляется, read-only */}
                     <td className="px-5 py-2.5">
                       <CoinStatic
-                        amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
+                        amount={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate, product.price_adjustment_crystals)}
                         size="sm"
                       />
                     </td>
@@ -1476,7 +1689,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                       {isInlineEditing && inlineEdit.field === 'discount_percent' ? (
                         <InlineDiscountInput
                           userDiscount={inlineEdit.value}
-                          priceCrystals={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate)}
+                          priceCrystals={computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate, product.price_adjustment_crystals)}
                           onChange={(v: string) => setInlineEdit({ ...inlineEdit, value: v })}
                           onSave={saveInlineEdit}
                           onCancel={cancelInlineEdit}
@@ -1493,7 +1706,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                               </span>
                               <span className="line-through text-[11px]" style={{ color: 'var(--apex-text-muted)' }}>
                                 {computePriceWithoutDiscount(
-                                  computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate),
+                                  computePriceCrystals(product.cost_byn, product.coefficient, effectiveRate, product.price_adjustment_crystals),
                                   product.discount_percent
                                 ).toLocaleString('ru-RU')}
                               </span>

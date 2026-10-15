@@ -1,5 +1,6 @@
 export {
   getStreakDayStatuses,
+  getGridAbsences,
   getAutomationDays,
   getHolidays,
   getWorkdays,

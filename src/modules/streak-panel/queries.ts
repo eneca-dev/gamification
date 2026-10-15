@@ -8,10 +8,9 @@ function toIsoDate(d: Date): string {
 }
 
 export function getGridRange(): { rangeStart: string; rangeEnd: string } {
-  const now = new Date()
-  const startMonth = Math.floor(now.getMonth() / 2) * 2
-  const rangeStart = new Date(now.getFullYear(), startMonth - 1, 1)
-  const rangeEnd = new Date(now.getFullYear(), startMonth + 3, 0)
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Minsk' }))
+  const rangeStart = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+  const rangeEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
   return { rangeStart: toIsoDate(rangeStart), rangeEnd: toIsoDate(rangeEnd) }
 }
 
@@ -23,8 +22,9 @@ export function buildCalendarDays(
   holidays: Set<string>,
   workdays: Set<string>,
   shieldDates?: Map<string, 'ws' | 'revit'>,
+  absences: Map<string, string> = new Map(),
 ): CalendarDay[] {
-  const today = new Date()
+  const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Minsk' }))
   today.setHours(0, 0, 0, 0)
 
   const days: CalendarDay[] = []
@@ -35,6 +35,12 @@ export function buildCalendarDays(
     const dateStr = toIsoDate(d)
     const dow = d.getDay()
     const isWeekend = dow === 0 || dow === 6
+
+    const savedAbsence = absences.get(dateStr)
+    if (savedAbsence) {
+      days.push({ date: dateStr, status: 'frozen', automation: false, absenceType: savedAbsence })
+      continue
+    }
 
     const isDayOff = (isWeekend && !workdays.has(dateStr)) || (!isWeekend && holidays.has(dateStr))
     if (isDayOff) {
@@ -83,6 +89,38 @@ export function buildCalendarDays(
   }
 
   return days
+}
+
+export async function getGridAbsences(userId: string, gridStart: string, gridEnd: string): Promise<Map<string, string>> {
+  const supabase = createSupabaseAdminClient()
+  const [absencesResult, requestsResult] = await Promise.all([
+    supabase.from('ws_user_absences')
+      .select('absence_date, absence_type')
+      .eq('user_id', userId)
+      .gte('absence_date', gridStart)
+      .lte('absence_date', gridEnd),
+    supabase.from('day_off_requests')
+      .select('requested_date, request_type')
+      .eq('ws_user_id', userId)
+      .eq('status', 'approved')
+      .gte('requested_date', gridStart)
+      .lte('requested_date', gridEnd),
+  ])
+  if (absencesResult.error) throw new Error(`getGridAbsences: ${absencesResult.error.message}`)
+  if (requestsResult.error) throw new Error(`getGridAbsences requests: ${requestsResult.error.message}`)
+
+  const requestTypes = new Map((requestsResult.data ?? []).map((row) => [row.requested_date, row.request_type]))
+  const result = new Map<string, string>()
+  for (const row of absencesResult.data ?? []) {
+    const type = row.absence_type === 'day_off' && requestTypes.get(row.absence_date) === 'business_trip'
+      ? 'business_trip'
+      : row.absence_type
+    result.set(row.absence_date, type)
+  }
+  for (const [date, type] of requestTypes) {
+    if (!result.has(date)) result.set(date, type)
+  }
+  return result
 }
 
 // --- Внутренние функции (без кэша) ---

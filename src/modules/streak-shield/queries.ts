@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
+import { computePriceCrystals } from '@/modules/shop/types'
 
 import { FREE_SHIELDS_PER_MONTH } from './types'
 import type { PendingReset, ShieldLogEntry, ShieldQuota, ShieldType } from './types'
@@ -39,7 +40,7 @@ export async function getPendingResets(userId: string): Promise<PendingReset[]> 
 
     supabase
       .from('shop_products')
-      .select('id, cost_byn, coefficient, effect')
+      .select('id, cost_byn, coefficient, price_adjustment_crystals, effect')
       .in('effect', ['streak_shield_ws', 'streak_shield_revit'])
       .eq('is_active', true),
 
@@ -55,7 +56,7 @@ export async function getPendingResets(userId: string): Promise<PendingReset[]> 
   const rate = Number(crystalRate.data ?? 0)
   const productMap = new Map<string, { id: string; price: number }>()
   for (const p of shieldProducts.data ?? []) {
-    const price = Math.round(Number(p.cost_byn) * Number(p.coefficient) * rate)
+    const price = computePriceCrystals(Number(p.cost_byn), Number(p.coefficient), rate, Number(p.price_adjustment_crystals ?? 0))
     productMap.set(p.effect as string, { id: p.id, price })
   }
 

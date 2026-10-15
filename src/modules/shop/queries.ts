@@ -69,17 +69,19 @@ export async function getAllCategories(): Promise<ShopCategory[]> {
   return data ?? []
 }
 
-function attachComputedPrice<T extends { cost_byn: number | string; coefficient: number | string }>(
+function attachComputedPrice<T extends { cost_byn: number | string; coefficient: number | string; price_adjustment_crystals?: number | null }>(
   product: T,
   rate: number,
 ): T & { cost_byn: number; coefficient: number; price: number } {
   const costByn = Number(product.cost_byn)
   const coefficient = Number(product.coefficient)
+  const adjustment = Number(product.price_adjustment_crystals ?? 0)
   return {
     ...product,
     cost_byn: costByn,
     coefficient,
-    price: computePriceCrystals(costByn, coefficient, rate),
+    price_adjustment_crystals: adjustment,
+    price: computePriceCrystals(costByn, coefficient, rate, adjustment),
   }
 }
 

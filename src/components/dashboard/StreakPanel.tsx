@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Trophy, CheckCircle2, Info, Shield } from "lucide-react";
+import { Trophy, CheckCircle2, Info, Shield, ChevronLeft, ChevronRight } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { PLUGIN_NAMES } from "@/config/plugins";
 import { sourceColors } from "@/lib/data";
@@ -41,6 +41,7 @@ const absenceLabels: Record<string, string> = {
   sick_leave: "Больничный",
   sick_day:   "SickDay",
   day_off:    "Выходной",
+  business_trip: "Командировка",
 };
 
 interface MonthGrid {
@@ -431,6 +432,17 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
   const { calendarDays, completedCycles, ws, revit } = streakData;
   const [showCriteriaTooltip, setShowCriteriaTooltip] = useState(false);
   const [showAutomationTooltip, setShowAutomationTooltip] = useState(false);
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Minsk" });
+  const todayDate = new Date(today + "T00:00:00");
+  const monthGridsAll = buildMonthGrids(calendarDays);
+  const currentMonthKey = today.slice(0, 7);
+  const lastFirstMonthIndex = Math.max(0, monthGridsAll.length - 3);
+  const [firstMonthIndex, setFirstMonthIndex] = useState(() => {
+    const currentIndex = monthGridsAll.findIndex((month) => month.key === currentMonthKey);
+    return Math.min(Math.max(0, currentIndex - 1), lastFirstMonthIndex);
+  });
+  const visibleFirstMonthIndex = Math.min(firstMonthIndex, lastFirstMonthIndex);
+  const monthGrids = monthGridsAll.slice(visibleFirstMonthIndex, visibleFirstMonthIndex + 3);
 
   const greenCriteria = [
     "Внесён дневной отчёт в Worksection",
@@ -444,7 +456,9 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
   ];
   const automationPlugins = PLUGIN_NAMES;
 
-  const workingDays = calendarDays.filter((d) => d.status === "green" || d.status === "red");
+  const metricStartDate = new Date(todayDate.getFullYear(), todayDate.getMonth() - 1, 1);
+  const metricStart = `${metricStartDate.getFullYear()}-${String(metricStartDate.getMonth() + 1).padStart(2, "0")}-01`;
+  const workingDays = calendarDays.filter((d) => d.date >= metricStart && (d.status === "green" || d.status === "red"));
   const greenPct = workingDays.length > 0
     ? Math.round((workingDays.filter((d) => d.status === "green").length / workingDays.length) * 100)
     : 0;
@@ -452,13 +466,6 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
     ? Math.round((workingDays.filter((d) => d.automation).length / workingDays.length) * 100)
     : 0;
 
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Minsk" });
-  const todayDate = new Date(today + "T00:00:00");
-  const visibleMonthKeys = [-1, 0, 1].map((delta) => {
-    const d = new Date(todayDate.getFullYear(), todayDate.getMonth() + delta, 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  });
-  const monthGrids = buildMonthGrids(calendarDays).filter((m) => visibleMonthKeys.includes(m.key));
   const DAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
   return (
@@ -498,6 +505,30 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
           )}
         </div>
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="Показать предыдущий месяц"
+              title="Предыдущий месяц"
+              disabled={visibleFirstMonthIndex === 0}
+              onClick={() => setFirstMonthIndex((index) => Math.max(0, index - 1))}
+              className="w-6 h-6 rounded-lg flex items-center justify-center disabled:opacity-30"
+              style={{ color: "var(--apex-primary)", background: "var(--apex-success-bg)" }}
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <button
+              type="button"
+              aria-label="Показать следующий месяц"
+              title="Следующий месяц"
+              disabled={visibleFirstMonthIndex >= lastFirstMonthIndex}
+              onClick={() => setFirstMonthIndex((index) => Math.min(lastFirstMonthIndex, index + 1))}
+              className="w-6 h-6 rounded-lg flex items-center justify-center disabled:opacity-30"
+              style={{ color: "var(--apex-primary)", background: "var(--apex-success-bg)" }}
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
           <span
             className="text-lg font-bold leading-none cursor-default"
             style={{ color: "var(--apex-primary)" }}
