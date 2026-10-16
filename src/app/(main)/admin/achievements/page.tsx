@@ -12,10 +12,17 @@ import { checkIsAdmin, getUsersLight } from '@/modules/admin'
 import { AchievementProgressAdmin } from '@/modules/admin/components/AchievementProgressAdmin'
 import { ContestStandingsAdmin } from '@/modules/admin/components/ContestStandingsAdmin'
 import { getContestWinners } from '@/modules/contests'
+import { AdminNormControlSection } from '@/modules/ai-norm/components/AdminNormControlSection'
+import { getMinskMonth } from '@/modules/ai-norm/queries'
 
-export default async function AdminAchievementsPage() {
+export default async function AdminAchievementsPage({ searchParams }: {
+  searchParams: Promise<{ normMonth?: string | string[] }>
+}) {
   const isAdmin = await checkIsAdmin()
   if (!isAdmin) redirect('/')
+  const rawMonth = (await searchParams).normMonth
+  const selected = Array.isArray(rawMonth) ? rawMonth[0] : rawMonth
+  const normMonth = selected && /^\d{4}-(0[1-9]|1[0-2])$/.test(selected) ? selected : getMinskMonth()
 
   const [
     rankingProgress, gratitudeProgress, users,
@@ -46,6 +53,7 @@ export default async function AdminAchievementsPage() {
         wsTeamStandings={wsTeamStandings}
         winners={winners}
       />
+      <AdminNormControlSection month={normMonth} />
     </div>
   )
 }

@@ -5,6 +5,8 @@ import { getAchievementProgress, getGratitudeAchievementProgress } from '@/modul
 import { RankingBlock, GratitudeBlock } from '@/modules/achievements/components/AchievementBlock'
 import { GratitudeBlockLive } from '@/modules/achievements/components/GratitudeBlockLive'
 import { TrophyShelf } from '@/modules/achievements/components/TrophyShelf'
+import { getMinskMonth, getNormPersonalActivity } from '@/modules/ai-norm/queries'
+import { PersonalNormActivity } from '@/modules/ai-norm/components/PersonalNormActivity'
 
 function getMonthName(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
@@ -14,9 +16,14 @@ export default async function AchievementsPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const [progress, gratitudeProgress] = await Promise.all([
+  const normMonth = getMinskMonth()
+  const [progress, gratitudeProgress, normActivity] = await Promise.all([
     user.wsUserId ? getAchievementProgress(user.wsUserId) : null,
     user.wsUserId ? getGratitudeAchievementProgress(user.wsUserId) : [],
+    getNormPersonalActivity(user.email, normMonth).catch((error: unknown) => {
+      console.error('Failed to load personal norm activity', error)
+      return null
+    }),
   ])
 
   const periodStart = progress?.period_start ?? ''
@@ -77,6 +84,10 @@ export default async function AchievementsPage() {
             ? <GratitudeBlockLive userId={user.wsUserId} initialItems={gratitudeProgress} />
             : <GratitudeBlock items={gratitudeProgress} />}
         </div>
+      </div>
+
+      <div className="animate-fade-in-up stagger-2">
+        <PersonalNormActivity month={normMonth} activity={normActivity} />
       </div>
 
       {/* Стенд кубков */}
