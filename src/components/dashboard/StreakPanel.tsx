@@ -425,10 +425,9 @@ interface StreakPanelProps {
   streakData: StreakPanelData;
   tasks?: DailyTask[];
   pendingResets?: PendingReset[];
-  userBalance?: number;
 }
 
-export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBalance = 0 }: StreakPanelProps) {
+export function StreakPanel({ streakData, tasks = [], pendingResets = [] }: StreakPanelProps) {
   const { calendarDays, completedCycles, ws, revit } = streakData;
   const [showCriteriaTooltip, setShowCriteriaTooltip] = useState(false);
   const [showAutomationTooltip, setShowAutomationTooltip] = useState(false);
@@ -550,7 +549,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
       {pendingResets.length > 0 && (
         <div className="flex flex-col gap-2 mb-4">
           {pendingResets.map((p) => (
-            <StreakShieldAlert key={p.type} pending={p} userBalance={userBalance} />
+            <StreakShieldAlert key={p.type} pending={p} />
           ))}
         </div>
       )}

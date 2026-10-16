@@ -5,7 +5,7 @@ import { FREE_SHIELDS_PER_MONTH } from './types'
 import type { PendingReset, ShieldLogEntry, ShieldQuota, ShieldType } from './types'
 
 function currentMonthStart(): string {
-  const d = new Date()
+  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Minsk' }))
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
 }
 
@@ -20,7 +20,7 @@ export async function getPendingResets(userId: string): Promise<PendingReset[]> 
   const now = new Date().toISOString()
   const month = currentMonthStart()
 
-  const [wsStreak, revitStreak, shieldProducts, crystalRate, quotaRows] = await Promise.all([
+  const [wsStreak, revitStreak, shieldProducts, crystalRate, quotaRows, credits] = await Promise.all([
     supabase
       .from('ws_user_streaks')
       .select('pending_reset_date, pending_reset_expires_at, current_streak')
@@ -51,6 +51,7 @@ export async function getPendingResets(userId: string): Promise<PendingReset[]> 
       .select('shield_type, free_used')
       .eq('user_id', userId)
       .eq('month', month),
+    getShieldCredits(userId),
   ])
 
   const rate = Number(crystalRate.data ?? 0)
@@ -77,6 +78,7 @@ export async function getPendingResets(userId: string): Promise<PendingReset[]> 
         price: product.price,
         productId: product.id,
         freeUsesLeft: Math.max(0, FREE_SHIELDS_PER_MONTH - freeUsed),
+        purchasedLeft: credits.ws,
       })
     }
   }
@@ -93,6 +95,7 @@ export async function getPendingResets(userId: string): Promise<PendingReset[]> 
         price: product.price,
         productId: product.id,
         freeUsesLeft: Math.max(0, FREE_SHIELDS_PER_MONTH - freeUsed),
+        purchasedLeft: credits.revit,
       })
     }
   }
@@ -124,6 +127,21 @@ export async function getShieldQuota(userId: string): Promise<ShieldQuota> {
   }
 
   return quota
+}
+
+export async function getShieldCredits(userId: string): Promise<Record<ShieldType, number>> {
+  const { data, error } = await createSupabaseAdminClient().from('streak_shield_credits')
+    .select('shield_type').eq('user_id', userId).is('consumed_at', null)
+  if (error) throw new Error(error.message)
+  return { ws: data?.filter(row => row.shield_type === 'ws').length ?? 0,
+    revit: data?.filter(row => row.shield_type === 'revit').length ?? 0 }
+}
+
+export async function getStreakShieldAutoEnabled(): Promise<boolean> {
+  const { data, error } = await createSupabaseAdminClient().from('streak_shield_settings')
+    .select('auto_enabled').eq('id', true).single()
+  if (error) throw new Error(error.message)
+  return data.auto_enabled
 }
 
 // Даты, где был использован щит (для календаря)

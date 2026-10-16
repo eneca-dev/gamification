@@ -40,6 +40,8 @@ import { MasterPlannerPanel } from "@/modules/master-planner/components/MasterPl
 import { TrackedProjectsInfo } from "@/modules/master-planner/components/TrackedProjectsInfo";
 import { getContestWinners } from "@/modules/contests";
 import { GratitudeWidget } from "@/modules/gratitudes/components/GratitudeWidget";
+import { getNewsForDashboard } from "@/modules/news/queries";
+import { NewsPanel } from "@/modules/news/components/NewsPanel";
 import type { RedReason, StreakPanelData } from "@/modules/streak-panel";
 
 const DEPT_COLORS = [
@@ -88,6 +90,7 @@ export default async function DashboardPage() {
     shieldDates,
     masterPlannerData,
     contestWinners,
+    news,
   ] = await Promise.all([
       wsUserId ? getWsStreakData(wsUserId) : Promise.resolve({
         currentStreak: 0, longestStreak: 0, streakStartDate: null, completedCycles: 0,
@@ -132,6 +135,7 @@ export default async function DashboardPage() {
       wsUserId ? getShieldDatesInRange(wsUserId, rangeStart, rangeEnd) : Promise.resolve(new Map<string, 'ws' | 'revit'>()),
       wsUserId ? getMasterPlannerPanel(wsUserId) : Promise.resolve(null),
       getContestWinners(1),
+      getNewsForDashboard(wsDeptCode),
     ]);
 
   // Собираем Map статусов для быстрого доступа
@@ -192,13 +196,13 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="animate-fade-in-up">
-        <TrackedProjectsInfo />
-      </div>
+      {news.length > 0 ? <NewsPanel items={news} /> : (
+        <div className="animate-fade-in-up"><TrackedProjectsInfo /></div>
+      )}
 
       <div className="flex flex-col xl:flex-row gap-5 animate-fade-in-up">
         <div className="xl:shrink-0 overflow-x-auto">
-          <StreakPanel streakData={streakPanelData} pendingResets={pendingResets} userBalance={userBalance} />
+          <StreakPanel streakData={streakPanelData} pendingResets={pendingResets} />
         </div>
         {masterPlannerData && (
           <div className="flex-1 min-w-0 grid grid-cols-1 3xl:grid-cols-5 gap-5">

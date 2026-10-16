@@ -6,7 +6,7 @@ import { CoinIcon } from '@/components/CoinIcon'
 import { PurchaseButton } from './PurchaseButton'
 import { computeDisplayDiscount, computePriceWithoutDiscount } from '../types'
 import type { ShopProductWithCategory } from '../types'
-import type { PendingReset, ShieldQuota } from '@/modules/streak-shield/index.client'
+import type { ShieldQuota, ShieldType } from '@/modules/streak-shield/index.client'
 
 interface ProductCardProps {
   product: ShopProductWithCategory
@@ -15,23 +15,21 @@ interface ProductCardProps {
   onPurchase: (productId: string, price: number, userComment?: string) => void
   isPurchasing: boolean
   categoryDescription?: string | null
-  pendingResets?: PendingReset[]
   shieldQuota?: ShieldQuota | null
+  shieldCredits: Record<ShieldType, number>
 }
 
-export function ProductCard({ product, balance, index, onPurchase, isPurchasing, categoryDescription, pendingResets = [], shieldQuota = null }: ProductCardProps) {
+export function ProductCard({ product, balance, index, onPurchase, isPurchasing, categoryDescription, shieldQuota = null, shieldCredits }: ProductCardProps) {
   const outOfStock = !product.is_coming_soon && product.category.is_countable && product.stock !== null && product.stock === 0
 
-  // Для щитов: кнопка активна только при наличии соответствующего pending
+  // Щит покупается заранее по обычной цене; бесплатные применения расходуются при угрозе.
   const shieldEffect = product.effect
   const isShield = shieldEffect === 'streak_shield_ws' || shieldEffect === 'streak_shield_revit'
   const shieldType = shieldEffect === 'streak_shield_ws' ? 'ws' : 'revit'
-  const hasActivePending = isShield && pendingResets.some((p) => p.type === shieldType)
   const freeLeft = isShield && shieldQuota ? shieldQuota[shieldType].freeLeft : null
-  const isFreeShield = isShield && freeLeft !== null && freeLeft > 0 && hasActivePending
 
-  const canAfford = isFreeShield || balance >= product.price
-  const deficit = isFreeShield ? 0 : product.price - balance
+  const canAfford = balance >= product.price
+  const deficit = product.price - balance
 
   // Раскрытие описания по клику. isTruncated нужен только для курсора
   const descRef = useRef<HTMLParagraphElement>(null)
@@ -147,6 +145,11 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
 
 
         <div className="mt-auto pt-2">
+        {isShield && (
+          <p className="text-center text-[11px] mb-2" style={{ color: 'var(--apex-text-secondary)' }}>
+            Куплено: {shieldCredits[shieldType]} · Бесплатно в этом месяце: {freeLeft ?? 0}
+          </p>
+        )}
         {!product.is_coming_soon && product.discount_percent !== null && (
           <div className="flex items-center justify-center gap-1 mb-1.5">
             <span
@@ -166,9 +169,7 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
           deficit={deficit}
           onPurchase={onPurchase}
           isPurchasing={isPurchasing}
-          shieldNoPending={isShield && !hasActivePending}
-          isFree={isFreeShield}
-          freeLeft={freeLeft}
+          isFree={false}
           comingSoon={product.is_coming_soon}
           hasDiscount={product.discount_percent !== null}
           commentRequired={product.comment_required}

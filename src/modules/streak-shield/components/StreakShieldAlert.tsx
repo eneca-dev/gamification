@@ -3,7 +3,6 @@
 import { useState, useEffect, useTransition, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Shield, AlertTriangle } from 'lucide-react'
-import { CoinIcon } from '@/components/CoinIcon'
 
 import { buyStreakShield } from '@/modules/streak-shield/index.client'
 import { queryKeys } from '@/modules/cache/keys/query-keys'
@@ -12,7 +11,6 @@ import type { PendingReset } from '../types'
 
 interface StreakShieldAlertProps {
   pending: PendingReset
-  userBalance: number
 }
 
 function formatTimeLeft(expiresAt: string): string {
@@ -26,7 +24,7 @@ function formatTimeLeft(expiresAt: string): string {
   return `${minutes}м`
 }
 
-export function StreakShieldAlert({ pending, userBalance }: StreakShieldAlertProps) {
+export function StreakShieldAlert({ pending }: StreakShieldAlertProps) {
   const [timeLeft, setTimeLeft] = useState(() => formatTimeLeft(pending.expiresAt))
   const [isExpired, setIsExpired] = useState(() => new Date(pending.expiresAt).getTime() <= Date.now())
   const [isPending, startTransition] = useTransition()
@@ -36,7 +34,7 @@ export function StreakShieldAlert({ pending, userBalance }: StreakShieldAlertPro
   const isSubmitting = useRef(false)
 
   const isFree = pending.freeUsesLeft > 0
-  const canAfford = isFree || userBalance >= pending.price
+  const canAfford = isFree || pending.purchasedLeft > 0
   const label = pending.type === 'ws' ? 'Worksection' : 'Автоматизации'
 
   useEffect(() => {
@@ -108,7 +106,7 @@ export function StreakShieldAlert({ pending, userBalance }: StreakShieldAlertPro
         <div className="text-[11px] mt-0.5" style={{ color: isFree ? 'var(--apex-primary)' : 'var(--apex-text-muted)' }}>
           {isFree
             ? `Доступны ${pending.freeUsesLeft} из 2 бесплатных жизней на ${label} в этом месяце`
-            : 'Бесплатные жизни на этот месяц использованы'}
+            : `Бесплатные жизни использованы · Куплено защит: ${pending.purchasedLeft}`}
         </div>
         {error && (
           <div className="text-[11px] mt-0.5" style={{ color: 'var(--apex-danger)' }}>{error}</div>
@@ -128,7 +126,7 @@ export function StreakShieldAlert({ pending, userBalance }: StreakShieldAlertPro
           ? 'Сохраняем...'
           : isFree
             ? 'Спасти бесплатно'
-            : <span className="inline-flex items-center gap-1">Спасти за {pending.price} <CoinIcon size={12} /></span>
+            : 'Применить купленную защиту'
         }
       </button>
     </div>

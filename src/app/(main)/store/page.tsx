@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 
 import { getCurrentUser } from '@/modules/auth'
 import { getProducts, getCategories, getUserBalance } from '@/modules/shop'
-import { getPendingResets, getShieldQuota } from '@/modules/streak-shield'
+import { getShieldQuota, getShieldCredits } from '@/modules/streak-shield'
 // [LOTTERY HIDDEN] import { getActiveLottery, getLotteryHistory, getUserTicketInfo } from '@/modules/lottery'
 import { StoreClient } from '@/modules/shop/components/StoreClient'
 // [LOTTERY HIDDEN] import { LotteryReveal } from '@/modules/lottery/components/LotteryReveal'
@@ -11,12 +11,12 @@ export default async function StorePage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const [products, categories, balance, pendingResets, shieldQuota] = await Promise.all([
+  const [products, categories, balance, shieldQuota, shieldCredits] = await Promise.all([
     getProducts(),
     getCategories(),
     user.wsUserId ? getUserBalance(user.wsUserId) : Promise.resolve(0),
-    user.wsUserId ? getPendingResets(user.wsUserId) : Promise.resolve([]),
     user.wsUserId ? getShieldQuota(user.wsUserId) : Promise.resolve(null),
+    user.wsUserId ? getShieldCredits(user.wsUserId) : Promise.resolve({ ws: 0, revit: 0 }),
     // [LOTTERY HIDDEN] getActiveLottery(),
     // [LOTTERY HIDDEN] getLotteryHistory(),
   ])
@@ -40,8 +40,8 @@ export default async function StorePage() {
         products={products}
         categories={categories}
         balance={balance}
-        pendingResets={pendingResets}
         shieldQuota={shieldQuota}
+        shieldCredits={shieldCredits}
         // [LOTTERY HIDDEN] activeLottery={activeLottery}
         // [LOTTERY HIDDEN] ticketInfo={ticketInfo}
         // [LOTTERY HIDDEN] lotteryHistory={lotteryHistory}

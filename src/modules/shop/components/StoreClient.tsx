@@ -7,20 +7,20 @@ import { ArrowRight } from 'lucide-react'
 
 import { purchaseProduct } from '../actions'
 import { queryKeys } from '@/modules/cache/keys/query-keys'
-import { buyStreakShield } from '@/modules/streak-shield/index.client'
+import { purchaseStreakShieldCredit } from '@/modules/streak-shield/index.client'
 import { ProductCard } from './ProductCard'
 // [LOTTERY HIDDEN] import { LotteryBanner } from '@/modules/lottery/components/LotteryBanner'
 // [LOTTERY HIDDEN] import { LotteryWinners } from '@/modules/lottery/components/LotteryWinners'
 import type { ShopProductWithCategory, ShopCategory } from '../types'
-import type { PendingReset, ShieldQuota } from '@/modules/streak-shield/index.client'
+import type { ShieldQuota, ShieldType } from '@/modules/streak-shield/index.client'
 // [LOTTERY HIDDEN] import type { LotteryWithStats, UserTicketInfo } from '@/modules/lottery/index.client'
 
 interface StoreClientProps {
   products: ShopProductWithCategory[]
   categories: ShopCategory[]
   balance: number
-  pendingResets: PendingReset[]
   shieldQuota?: ShieldQuota | null
+  shieldCredits: Record<ShieldType, number>
   // [LOTTERY HIDDEN] activeLottery?: LotteryWithStats | null
   // [LOTTERY HIDDEN] ticketInfo?: UserTicketInfo | null
   // [LOTTERY HIDDEN] lotteryHistory?: LotteryWithStats[]
@@ -31,8 +31,8 @@ export function StoreClient({
   products,
   categories,
   balance,
-  pendingResets,
   shieldQuota = null,
+  shieldCredits,
   // [LOTTERY HIDDEN] activeLottery = null,
   // [LOTTERY HIDDEN] ticketInfo = null,
   // [LOTTERY HIDDEN] lotteryHistory = [],
@@ -58,19 +58,20 @@ export function StoreClient({
     const product = products.find((p) => p.id === productId)
     const effect = product?.effect
 
-    // Щиты покупаются только через buyStreakShield — он очищает pending
+    // Предоплаченная защита сохраняется до появления угрозы стрику.
     if (effect === 'streak_shield_ws' || effect === 'streak_shield_revit') {
       const shieldType = effect === 'streak_shield_ws' ? 'ws' : 'revit'
       setPurchasingId(productId)
       setNotification(null)
       startTransition(async () => {
-        const result = await buyStreakShield(shieldType)
+        const result = await purchaseStreakShieldCredit(shieldType)
         setPurchasingId(null)
         if (!result.success) {
           setNotification({ type: 'error', message: result.error })
         } else {
-          setNotification({ type: 'success', message: 'Стрик спасён!' })
+          setNotification({ type: 'success', message: 'Защита куплена и доступна для применения' })
           queryClient.invalidateQueries({ queryKey: queryKeys.balance.all })
+          window.location.reload()
         }
         setTimeout(() => setNotification(null), 3000)
       })
@@ -216,8 +217,8 @@ export function StoreClient({
               onPurchase={handlePurchase}
               isPurchasing={isPending && purchasingId === product.id}
               categoryDescription={activeFilter === 'all' ? categories.find((c) => c.slug === product.category.slug)?.description : null}
-              pendingResets={pendingResets}
               shieldQuota={shieldQuota}
+              shieldCredits={shieldCredits}
             />
           ))}
         </div>

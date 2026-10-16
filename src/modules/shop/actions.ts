@@ -52,6 +52,12 @@ export async function purchaseProduct(
 
   const supabase = createSupabaseAdminClient()
 
+  // Щиты продаются отдельной атомарной операцией с учётом предоплаченного остатка.
+  const { data: product } = await supabase.from('shop_products').select('effect').eq('id', parsed.data.product_id).single()
+  if (product?.effect === 'streak_shield_ws' || product?.effect === 'streak_shield_revit') {
+    return { success: false, error: 'Купите защиту через карточку «Вторая жизнь»' }
+  }
+
   const { data, error } = await supabase.rpc('purchase_product', {
     p_product_id: parsed.data.product_id,
     p_user_id: user.wsUserId,

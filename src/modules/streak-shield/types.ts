@@ -11,6 +11,7 @@ export interface PendingReset {
   price: number
   productId: string
   freeUsesLeft: number
+  purchasedLeft: number
 }
 
 // Квота бесплатных жизней на текущий месяц

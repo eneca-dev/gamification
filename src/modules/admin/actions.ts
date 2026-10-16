@@ -202,6 +202,7 @@ export async function cancelOrder(
     if (msg.includes('не найден')) return { success: false, error: 'Заказ не найден' }
     if (msg.includes('уже отменён')) return { success: false, error: 'Заказ уже отменён' }
     if (msg.includes('уже выполнен')) return { success: false, error: 'Возврат уже выполнен' }
+    if (msg.includes('Применённую защиту нельзя вернуть')) return { success: false, error: 'Применённую защиту нельзя вернуть' }
     return { success: false, error: 'Ошибка при отмене заказа' }
   }
 
