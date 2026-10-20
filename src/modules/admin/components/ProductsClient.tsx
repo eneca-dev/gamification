@@ -12,17 +12,20 @@ import {
   updateProduct,
   bulkUpdateProducts,
   deleteProduct,
-  deleteProductImage,
+  cleanupFailedProductUploads,
   computePriceCrystals,
   computePriceWithoutDiscount,
+  coverImageUrl,
+  uploadWithProgress,
+  MediaStackPreview,
 
 } from '@/modules/shop/index.client'
 
 import { CrystalRateHistory } from './economy/CrystalRateHistory'
 import { CrystalRateStats } from './CrystalRateStats'
 import { ProductFormModal } from './ProductFormModal'
-import type { ProductFormData, CrystalRateRow } from '../types'
-import type { ShopProductWithCategory, ShopCategory } from '@/modules/shop/index.client'
+import type { ProductFormData, MediaDraftItem, CrystalRateRow } from '../types'
+import type { ShopProductWithCategory, ShopCategory, ProductMediaItem } from '@/modules/shop/index.client'
 
 interface ProductsClientProps {
   products: ShopProductWithCategory[]
@@ -514,6 +517,14 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         setCategories(prev)
         setProducts(prevProducts)
         setError(result.error)
+      } else {
+        if (result.warning) {
+          setProducts(prevProducts)
+          setError(result.warning)
+        } else if (result.affectedProducts.length) {
+          const versions = new Map(result.affectedProducts.map((p) => [p.id, p.updated_at]))
+          setProducts((items) => items.map((p) => versions.has(p.id) ? { ...p, updated_at: versions.get(p.id)! } : p))
+        }
       }
     })
   }
@@ -560,27 +571,6 @@ export function ProductsClient({ products: initialProducts, categories: initialC
 
   // --- Товары ---
 
-  function toggleProductActive(product: ShopProductWithCategory) {
-    const next = !product.is_active
-
-    // Запрет активации товара с нулевым остатком (для исчисляемых)
-    if (next && product.category?.is_countable && (product.stock ?? 0) === 0) {
-      setError('Нельзя активировать товар с нулевым остатком. Сначала укажите количество.')
-      return
-    }
-
-    const prev = products
-    setProducts((items) => items.map((p) => (p.id === product.id ? { ...p, is_active: next } : p)))
-
-    startProductTransition(async () => {
-      const result = await updateProduct({ id: product.id, is_active: next })
-      if (!result.success) {
-        setProducts(prev)
-        setError(result.error)
-      }
-    })
-  }
-
   function toggleCommentRequired(product: ShopProductWithCategory) {
     const next = !product.comment_required
     const prev = products
@@ -590,6 +580,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
       if (!result.success) {
         setProducts(prev)
         setError(result.error)
+      } else {
+        setProducts((items) => items.map((p) => p.id === product.id ? { ...p, updated_at: result.updated_at } : p))
       }
     })
   }
@@ -615,6 +607,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
       if (!result.success) {
         setProducts(prev)
         setError(result.error)
+      } else {
+        setProducts((items) => items.map((p) => p.id === product.id ? { ...p, updated_at: result.updated_at } : p))
       }
     })
   }
@@ -631,6 +625,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         setError(result.error)
       } else {
         showNotification('Товар удалён')
+        if (result.warning) setError(result.warning)
       }
     })
   }
@@ -638,11 +633,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   // --- Inline edit ---
 
   function startInlineEdit(productId: string, field: InlineProductField, currentValue: string) {
-    if (field === 'discount_percent') {
-      setInlineEdit({ productId, field, value: currentValue })
-    } else {
-      setInlineEdit({ productId, field, value: currentValue })
-    }
+    setInlineEdit({ productId, field, value: currentValue })
   }
 
   function cancelInlineEdit() {
@@ -726,36 +717,83 @@ export function ProductsClient({ products: initialProducts, categories: initialC
       if (!result.success) {
         setProducts(prev)
         setError(result.error)
+      } else {
+        setProducts((items) => items.map((p) => p.id === productId ? { ...p, updated_at: result.updated_at } : p))
       }
     })
   }
 
-  function handleProductSave(data: ProductFormData, imageFile: File | null) {
+  function handleProductSave(
+    data: ProductFormData,
+    mediaDraft: MediaDraftItem[],
+    setProgress: (index: number, percent: number) => void,
+  ) {
     startProductTransition(async () => {
-      let imageUrl = data.image_url
-
-      // Загружаем новое изображение (должно завершиться до optimistic update)
-      if (imageFile) {
-        const fd = new FormData()
-        fd.append('file', imageFile)
-        const res = await fetch('/api/admin/upload-product-image', { method: 'POST', body: fd })
-        const uploadResult = await res.json() as { success: true; url: string } | { success: false; error: string }
-        if (!uploadResult.success) {
-          setError(uploadResult.error)
-          return
+      const uploadedUrls: string[] = []
+      const previousProducts = products
+      let optimisticApplied = false
+      let tempId: string | null = null
+      try {
+        const media: ProductMediaItem[] = []
+        for (let idx = 0; idx < mediaDraft.length; idx++) {
+          const item = mediaDraft[idx]
+          if (item.kind === 'youtube') {
+            media.push({ kind: 'youtube', video_id: item.video_id })
+            continue
+          }
+          if (item.kind === 'image') {
+            if (item.source === 'existing') {
+              media.push({ kind: 'image', url: item.url })
+              continue
+            }
+            const fd = new FormData()
+            fd.append('file', item.file)
+            const res = await fetch('/api/admin/upload-product-image', { method: 'POST', body: fd })
+            const uploadResult = await res.json() as { success: true; url: string } | { success: false; error: string }
+            if (!uploadResult.success) throw new Error(uploadResult.error)
+            uploadedUrls.push(uploadResult.url)
+            media.push({ kind: 'image', url: uploadResult.url })
+            continue
+          }
+          if (item.source === 'existing') {
+            media.push({ kind: 'video', url: item.url, poster_url: item.poster_url })
+            continue
+          }
+          const signedRes = await fetch('/api/admin/product-video/signed-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ext: item.file.name.toLowerCase().endsWith('.webm') ? 'webm' : 'mp4',
+              size: item.file.size,
+            }),
+          })
+          const signedResult = await signedRes.json() as
+            | { success: true; signedUrl: string; publicUrl: string }
+            | { success: false; error: string }
+          if (!signedResult.success) throw new Error(signedResult.error)
+          uploadedUrls.push(signedResult.publicUrl)
+          await uploadWithProgress({
+            url: signedResult.signedUrl,
+            file: item.file,
+            contentType: item.file.type,
+            onProgress: (pct) => setProgress(idx, pct),
+          })
+          let posterUrl: string | null = null
+          if (item.posterBlob) {
+            const posterFd = new FormData()
+            posterFd.append('file', new File([item.posterBlob], 'poster.jpg', { type: 'image/jpeg' }))
+            const posterRes = await fetch('/api/admin/upload-product-image?kind=poster', { method: 'POST', body: posterFd })
+            const posterResult = await posterRes.json() as { success: true; url: string } | { success: false; error: string }
+            if (posterResult.success) {
+              posterUrl = posterResult.url
+              uploadedUrls.push(posterUrl)
+            }
+          }
+          media.push({ kind: 'video', url: signedResult.publicUrl, poster_url: posterUrl })
         }
-        imageUrl = uploadResult.url
 
-        if (editingProduct?.image_url) {
-          await deleteProductImage(editingProduct.image_url)
-        }
-      }
-
-      if (!imageFile && !imageUrl && editingProduct?.image_url) {
-        await deleteProductImage(editingProduct.image_url)
-      }
-
-      const payload = { ...data, image_url: imageUrl }
+      const imageUrl = coverImageUrl(media)
+      const payload = { ...data, media }
       const cat = categories.find((c) => c.id === data.category_id)
       const categoryData = cat
         ? { name: cat.name, slug: cat.slug, is_physical: cat.is_physical, is_countable: cat.is_countable, is_active: cat.is_active }
@@ -765,22 +803,23 @@ export function ProductsClient({ products: initialProducts, categories: initialC
       const forceInactive = !!cat?.is_countable && payload.stock === 0
 
       // Optimistic update
-      const prev = products
       if (editingProduct) {
         setProducts((list) =>
           list.map((p) => {
             if (p.id !== editingProduct.id) return p
-            const updated = { ...p, ...payload, price: computedPrice, category: categoryData }
+            const updated = { ...p, ...payload, image_url: imageUrl, price: computedPrice, category: categoryData }
             if (forceInactive) updated.is_active = false
             return updated
           })
         )
       } else {
-        const tempId = `temp-${Date.now()}`
+        const createdTempId = `temp-${crypto.randomUUID()}`
+        tempId = createdTempId
         setProducts((list) => [
           {
-            id: tempId,
+            id: createdTempId,
             ...payload,
+            image_url: imageUrl,
             price_adjustment_crystals: 0,
             price: computedPrice,
             is_active: !forceInactive,
@@ -795,31 +834,45 @@ export function ProductsClient({ products: initialProducts, categories: initialC
           ...list,
         ])
       }
-
-      setEditingProduct(null)
-      setIsCreatingProduct(false)
+      optimisticApplied = true
 
       // Серверный вызов
       if (editingProduct) {
-        const result = await updateProduct({ id: editingProduct.id, ...payload })
-        if (!result.success) {
-          setProducts(prev)
-          setError(result.error)
-          return
-        }
+        const result = await updateProduct({ id: editingProduct.id, expected_updated_at: editingProduct.updated_at, ...payload })
+        if (!result.success) throw new Error(result.error)
+        setProducts((list) => list.map((p) => p.id === editingProduct.id ? { ...p, updated_at: result.updated_at } : p))
+        if (result.warning) setError(result.warning)
         showNotification('Товар обновлён')
       } else {
         const result = await createProduct(payload)
-        if (!result.success) {
-          setProducts(prev)
-          setError(result.error)
-          return
-        }
-        // Заменяем temp ID на реальный
+        if (!result.success) throw new Error(result.error)
         setProducts((list) =>
-          list.map((p) => (p.id.startsWith('temp-') ? { ...p, id: result.id } : p))
+          list.map((p) => (p.id === tempId ? { ...p, id: result.id, updated_at: result.updated_at } : p))
         )
         showNotification('Товар создан')
+      }
+      setEditingProduct(null)
+      setIsCreatingProduct(false)
+      } catch (cause) {
+        if (optimisticApplied) {
+          if (editingProduct) {
+            const previous = previousProducts.find((p) => p.id === editingProduct.id)
+            if (previous) setProducts((list) => list.map((p) => p.id === editingProduct.id ? previous : p))
+          } else {
+            setProducts((list) => list.filter((p) => p.id !== tempId))
+          }
+        }
+        const message = cause instanceof Error ? cause.message : 'Не удалось сохранить товар'
+        if (uploadedUrls.length === 0) {
+          setError(message)
+        } else {
+          try {
+            const cleanup = await cleanupFailedProductUploads(uploadedUrls)
+            setError(cleanup.success ? message : `${message}. ${cleanup.error}`)
+          } catch {
+            setError(`${message}. Не удалось очистить загруженные файлы`)
+          }
+        }
       }
     })
   }
@@ -1113,7 +1166,6 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                       {/* Тип */}
                       <td className="px-5 py-2.5">
                         <CatTypeDropdown
-                          catId={cat.id}
                           isPhysical={cat.is_physical}
                           isOpen={editingCatId === cat.id && editCatField === 'is_physical'}
                           onToggle={() => {
@@ -1329,11 +1381,13 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                           aria-label={`Выбрать товар ${product.name}`}
                           className="absolute bottom-3 left-3 z-10 w-4 h-4 accent-[var(--apex-primary)]"
                         />
-                        {product.image_url ? (
-                          <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
-                        ) : (
-                          <span className="text-5xl">{product.emoji || <span style={{ color: '#ccc' }}>?</span>}</span>
-                        )}
+                        <MediaStackPreview
+                          media={product.media ?? []}
+                          imageUrl={product.image_url}
+                          emoji={product.emoji}
+                          name={product.name}
+                          size="lg"
+                        />
                         {product.is_coming_soon && (
                           <span
                             className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
@@ -1576,19 +1630,20 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                     {/* Изображение */}
                     <td className="px-5 py-2.5 w-12">
                       <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center text-xl overflow-hidden"
+                        className="w-10 h-10 rounded-lg relative"
                         style={{
                           background: product.image_url ? 'var(--apex-bg)' : 'var(--apex-emoji-bg)',
                           border: '1px solid var(--apex-border)',
+                          borderRadius: '0.5rem',
                         }}
                       >
-                        {product.image_url ? (
-                          <img src={product.image_url} alt="" className="w-full h-full object-cover" />
-                        ) : product.emoji ? (
-                          product.emoji
-                        ) : (
-                          <span className="text-[16px]" style={{ color: '#ccc' }}>?</span>
-                        )}
+                        <MediaStackPreview
+                          media={product.media ?? []}
+                          imageUrl={product.image_url}
+                          emoji={product.emoji}
+                          name={product.name}
+                          size="sm"
+                        />
                       </div>
                     </td>
 
@@ -2226,24 +2281,17 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
   const containerRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const onChangeRef = useRef(onChange)
-  onChangeRef.current = onChange
-  const isFocusedRef = useRef(false)
+  useEffect(() => { onChangeRef.current = onChange }, [onChange])
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Protects cursorPos from being overwritten by onSelect before RAF sets DOM cursor
   const pendingCursorRef = useRef<number | null>(null)
   // Порядок навигации стрелками (в 2-колоночном режиме — сначала левая, потом правая)
-  const navOrderRef = useRef<number[]>([])
 
   const [localValue, setLocalValue] = useState(value)
   const [cursorPos, setCursorPos] = useState(0)
   const [showDropdown, setShowDropdown] = useState(false)
   const [highlightIdx, setHighlightIdx] = useState(0)
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 })
-
-  // Sync from parent when changed externally (skip while focused to avoid debounce loop)
-  useEffect(() => {
-    if (!isFocusedRef.current && value !== localValue) setLocalValue(value)
-  }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debounced parent update — 200ms
   useEffect(() => {
@@ -2432,8 +2480,6 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
     return []
   }, [context, fieldDefs])
 
-  useEffect(() => { setHighlightIdx(0) }, [suggestions.length, context.type])
-
   const activeFieldDef = context.type === 'value'
     ? fieldDefs.find(f => f.fieldKey === FILTER_KEY_MAP[context.fieldKey])
     : null
@@ -2444,6 +2490,7 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
     : null
 
   function applySuggestion(s: Suggestion) {
+    setHighlightIdx(0)
     if (s.type === 'key') {
       const negated = context.type === 'key' && context.negated
       const keyText = `${negated ? '-' : ''}${s.field.displayKey}:`
@@ -2508,13 +2555,13 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
     }
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      const order = navOrderRef.current
+      const order = navOrder
       const pos = order.indexOf(highlightIdx)
       setHighlightIdx(order[(pos + 1) % order.length])
     }
     else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      const order = navOrderRef.current
+      const order = navOrder
       const pos = order.indexOf(highlightIdx)
       setHighlightIdx(order[(pos - 1 + order.length) % order.length])
     }
@@ -2585,7 +2632,6 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
       window.removeEventListener('scroll', updateDropdownPos, true)
       window.removeEventListener('resize', updateDropdownPos)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showDropdown, suggestions.length])
 
   // Token highlighting overlay
@@ -2609,7 +2655,6 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
       const colonIdx = token.raw.indexOf(':')
       const rawKey = token.raw.slice(0, colonIdx + 1)
       const rawVal = token.raw.slice(colonIdx + 1)
-      const keyColor = token.negated ? 'var(--apex-danger)' : (field?.overlayKeyColor ?? 'var(--apex-primary)')
       const valColor = token.negated ? 'var(--apex-danger)' : 'var(--apex-text-muted)'
 
       parts.push(
@@ -2646,7 +2691,7 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
   })()
 
   // Порядок навигации: в 2-колонках — сначала вся левая колонка, потом правая
-  navOrderRef.current = (() => {
+  const navOrder = (() => {
     const N = suggestions.length
     if (!useTwoCols) return Array.from({ length: N }, (_, i) => i)
     const rowCount = Math.ceil(N / 2)
@@ -2699,15 +2744,16 @@ function FilterInput({ value, onChange, categories }: { value: string; onChange:
             onSelect={() => {
               // Skip if applySuggestion RAF hasn't fired yet — it will set the correct position
               if (pendingCursorRef.current !== null) return
-              if (inputRef.current) setCursorPos(inputRef.current.selectionStart ?? localValue.length)
+              if (inputRef.current) {
+                setCursorPos(inputRef.current.selectionStart ?? localValue.length)
+                setHighlightIdx(0)
+              }
             }}
             onFocus={() => {
-              isFocusedRef.current = true
               if (blurTimerRef.current !== null) { clearTimeout(blurTimerRef.current); blurTimerRef.current = null }
               setShowDropdown(true)
             }}
             onBlur={() => {
-              isFocusedRef.current = false
               blurTimerRef.current = setTimeout(() => { blurTimerRef.current = null; setShowDropdown(false) }, 150)
             }}
             onKeyDown={handleKeyDown}
@@ -3222,13 +3268,11 @@ const TYPE_OPTIONS = [
 ]
 
 function CatTypeDropdown({
-  catId,
   isPhysical,
   isOpen,
   onToggle,
   onSelect,
 }: {
-  catId: string
   isPhysical: boolean
   isOpen: boolean
   onToggle: () => void

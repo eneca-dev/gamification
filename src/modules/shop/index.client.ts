@@ -8,11 +8,15 @@ export {
   updateProduct,
   bulkUpdateProducts,
   deleteProduct,
+  cleanupFailedProductUploads,
   uploadProductImage,
-  deleteProductImage,
   setCrystalRate,
 } from './actions'
-export { computePriceCrystals, computePriceWithoutDiscount, computeDisplayDiscount, coinsToByn, formatByn } from './types'
+export { computePriceCrystals, computePriceWithoutDiscount, computeDisplayDiscount, coinsToByn, formatByn, MAX_PRODUCT_PHOTOS, MAX_PRODUCT_VIDEOS } from './types'
+export { parseYouTubeId, youTubePoster, youTubeEmbedSrc, mediaPoster, coverImageUrl, hasVideo } from './media'
+export { captureVideoPoster } from './videoPoster'
+export { uploadWithProgress } from './uploadWithProgress'
+export { MediaStackPreview } from './components/MediaStackPreview'
 export type {
   ShopCategory,
   ShopProduct,
@@ -24,6 +28,7 @@ export type {
   UpdateCategoryInput,
   CreateProductInput,
   UpdateProductInput,
+  ProductMediaItem,
   PurchaseResult,
   CancelResult,
   CrystalRate,

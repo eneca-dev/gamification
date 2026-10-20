@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { checkIsAdmin } from '@/modules/admin/checkIsAdmin'
+import { assertCanUpload } from '@/lib/storage-quota'
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'] as const
@@ -25,11 +26,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Максимум 2 МБ' })
   }
 
+  try {
+    await assertCanUpload(file.size)
+  } catch (e) {
+    return NextResponse.json({ success: false, error: e instanceof Error ? e.message : 'Хранилище переполнено' })
+  }
+
   const rawExt = (file.name.split('.').pop() ?? '').toLowerCase()
   const ext = ALLOWED_EXTENSIONS.includes(rawExt as typeof ALLOWED_EXTENSIONS[number]) ? rawExt : 'jpg'
 
+  // Постеры видео хранятся в отдельной папке — проще чистить при обновлении
+  const folder = request.nextUrl.searchParams.get('kind') === 'poster' ? 'posters' : 'products'
   const supabase = createSupabaseAdminClient()
-  const path = `products/${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`
+  const path = `${folder}/${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`
 
   const { error } = await supabase.storage
     .from('product-images')

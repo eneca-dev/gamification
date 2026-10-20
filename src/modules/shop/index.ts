@@ -17,7 +17,8 @@ export {
   updateProduct,
   setCrystalRate,
 } from './actions'
-export { computePriceCrystals, coinsToByn, formatByn } from './types'
+export { computePriceCrystals, coinsToByn, formatByn, MAX_PRODUCT_PHOTOS, MAX_PRODUCT_VIDEOS } from './types'
+export { parseYouTubeId, youTubePoster, youTubeEmbedSrc, mediaPoster, coverImageUrl, hasVideo } from './media'
 export type {
   ShopCategory,
   ShopProduct,
@@ -29,6 +30,7 @@ export type {
   UpdateCategoryInput,
   CreateProductInput,
   UpdateProductInput,
+  ProductMediaItem,
   PurchaseResult,
   CancelResult,
   CrystalRate,

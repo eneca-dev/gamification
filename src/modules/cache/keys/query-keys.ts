@@ -15,7 +15,7 @@
 export const queryKeys = {
   balance: {
     all: ['balance'] as const,
-    current: () => [...queryKeys.balance.all, 'current'] as const,
+    current: (userId: string) => [...queryKeys.balance.all, 'current', userId] as const,
   },
   gratitudes: {
     all: ['gratitudes'] as const,

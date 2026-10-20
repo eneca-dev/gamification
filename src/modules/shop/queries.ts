@@ -2,7 +2,7 @@ import { createSupabaseAdminClient } from '@/config/supabase'
 import { cached, CACHE_1H, CACHE_5M } from '@/lib/server-cache'
 
 import { computePriceCrystals } from './types'
-import type { ShopCategory, ShopProductWithCategory, ShopOrderWithDetails } from './types'
+import type { ShopCategory, ShopProductWithCategory, ShopOrderWithDetails, ProductMediaItem } from './types'
 
 export const balanceTag = (userId: string) => `balance:${userId}`
 
@@ -69,18 +69,20 @@ export async function getAllCategories(): Promise<ShopCategory[]> {
   return data ?? []
 }
 
-function attachComputedPrice<T extends { cost_byn: number | string; coefficient: number | string; price_adjustment_crystals?: number | null }>(
+function attachComputedPrice<T extends { cost_byn: number | string; coefficient: number | string; price_adjustment_crystals?: number | null; media?: unknown }>(
   product: T,
   rate: number,
-): T & { cost_byn: number; coefficient: number; price: number } {
+): T & { cost_byn: number; coefficient: number; price: number; media: ProductMediaItem[] } {
   const costByn = Number(product.cost_byn)
   const coefficient = Number(product.coefficient)
   const adjustment = Number(product.price_adjustment_crystals ?? 0)
+  const media = Array.isArray(product.media) ? (product.media as ProductMediaItem[]) : []
   return {
     ...product,
     cost_byn: costByn,
     coefficient,
     price_adjustment_crystals: adjustment,
+    media,
     price: computePriceCrystals(costByn, coefficient, rate, adjustment),
   }
 }

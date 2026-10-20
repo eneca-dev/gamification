@@ -19,7 +19,7 @@ export type {
   AdminUserRow, UserDetail, UserTransaction,
   AdminOrderRow, UpdateOrderStatusInput, CancelOrderInput,
   CalendarHolidayRow, CalendarWorkdayRow, AddCalendarDateInput, DeleteCalendarDateInput,
-  ProductFormData,
+  ProductFormData, MediaDraftItem,
   EconomyPeriodPreset, EconomyFilters, EconomyOverview, EconomyChannel, EconomyChannels,
   TopSource, TopLevel, TopRow, CategoryProduct, CategoryRow,
   DesignerFilter, DepartmentGroupRow, LowBalanceUser, CrystalRateRow,

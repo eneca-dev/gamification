@@ -39,6 +39,32 @@ export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>
 
 // --- Товары ---
 
+export const MAX_PRODUCT_PHOTOS = 3
+export const MAX_PRODUCT_VIDEOS = 1
+
+export const productMediaItemSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('image'), url: z.string().url() }),
+  z.object({ kind: z.literal('youtube'), video_id: z.string().regex(/^[A-Za-z0-9_-]{11}$/) }),
+  z.object({
+    kind: z.literal('video'),
+    url: z.string().url().refine((u) => u.includes('/product-videos/videos/'), 'Невалидный URL видео'),
+    poster_url: z.string().url().refine((u) => u.includes('/product-images/'), 'Невалидный URL постера').nullable(),
+  }),
+])
+
+export const productMediaSchema = z.array(productMediaItemSchema).superRefine((media, ctx) => {
+  const photos = media.filter((m) => m.kind === 'image').length
+  const videos = media.filter((m) => m.kind === 'youtube' || m.kind === 'video').length
+  if (photos > MAX_PRODUCT_PHOTOS) {
+    ctx.addIssue({ code: 'custom', message: `Максимум ${MAX_PRODUCT_PHOTOS} фото на товар` })
+  }
+  if (videos > MAX_PRODUCT_VIDEOS) {
+    ctx.addIssue({ code: 'custom', message: `Максимум ${MAX_PRODUCT_VIDEOS} видео на товар` })
+  }
+})
+
+export type ProductMediaItem = z.infer<typeof productMediaItemSchema>
+
 export interface ShopProduct {
   id: string
   name: string
@@ -49,6 +75,7 @@ export interface ShopProduct {
   price: number
   category_id: string
   image_url: string | null
+  media: ProductMediaItem[]
   emoji: string | null
   effect: string | null
   is_active: boolean
@@ -74,7 +101,7 @@ export const createProductSchema = z.object({
   cost_byn: z.number().positive('Себестоимость должна быть больше 0'),
   coefficient: z.number().positive('Коэффициент должен быть больше 0').default(1),
   category_id: z.string().uuid(),
-  image_url: z.string().url().nullable().optional(),
+  media: productMediaSchema.default([]),
   emoji: z.string().max(10).nullable().optional(),
   effect: z.string().max(100).nullable().optional(),
   discount_percent: z.number().int().min(1).max(99).nullable().optional(),
@@ -87,6 +114,7 @@ export const createProductSchema = z.object({
 
 export const updateProductSchema = createProductSchema.partial().extend({
   id: z.string().uuid(),
+  expected_updated_at: z.string().datetime().optional(),
   is_active: z.boolean().optional(),
   is_coming_soon: z.boolean().optional(),
 })

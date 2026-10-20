@@ -212,7 +212,7 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, 
       {/* Coin balance */}
       {collapsed ? (
         <div className="px-2 pb-3 flex justify-center" data-onboarding="sidebar-balance">
-          <CoinBalanceLive initialAmount={balance} size="sm" />
+          <CoinBalanceLive initialAmount={balance} userId={user?.wsUserId ?? null} size="sm" />
         </div>
       ) : (
         <div className="pl-3 pr-5 pb-3">
@@ -227,7 +227,7 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, 
             <div className="text-[11px] font-medium mb-1.5" style={{ color: 'var(--apex-text-muted)' }}>
               На вашем счету
             </div>
-            <CoinBalanceLive initialAmount={balance} size="md" />
+            <CoinBalanceLive initialAmount={balance} userId={user?.wsUserId ?? null} size="md" />
           </div>
         </div>
       )}

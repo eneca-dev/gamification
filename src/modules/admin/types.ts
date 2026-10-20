@@ -212,6 +212,13 @@ export type UpdateGratitudeSettingInput = z.infer<typeof updateGratitudeSettingS
 
 // --- Форма товара (используется в ProductFormModal → ProductsClient) ---
 
+export type MediaDraftItem =
+  | { kind: 'image'; source: 'existing'; url: string }
+  | { kind: 'image'; source: 'new'; file: File; previewUrl: string }
+  | { kind: 'youtube'; video_id: string }
+  | { kind: 'video'; source: 'existing'; url: string; poster_url: string | null }
+  | { kind: 'video'; source: 'new'; file: File; posterBlob: Blob | null; previewUrl: string; posterPreviewUrl: string | null; progress: number }
+
 export interface ProductFormData {
   name: string
   description: string | null
@@ -219,7 +226,6 @@ export interface ProductFormData {
   coefficient: number
   discount_percent: number | null
   category_id: string
-  image_url: string | null
   emoji: string | null
   stock: number | null
   sort_order: number

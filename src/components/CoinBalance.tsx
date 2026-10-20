@@ -39,11 +39,12 @@ export function CoinStatic({ amount, size = "md", className = "" }: CoinBalanceP
 
 interface CoinBalanceLiveProps {
   initialAmount: number;
+  userId: string | null;
   size?: "sm" | "md" | "lg";
 }
 
-export function CoinBalanceLive({ initialAmount, size = "md" }: CoinBalanceLiveProps) {
-  const { data } = useBalance({ refetchInterval: BALANCE_POLL_INTERVAL })
+export function CoinBalanceLive({ initialAmount, userId, size = "md" }: CoinBalanceLiveProps) {
+  const { data } = useBalance(userId ?? '', { enabled: Boolean(userId), refetchInterval: BALANCE_POLL_INTERVAL })
   const amount = data ?? initialAmount
   const formatted = amount.toLocaleString("ru-RU");
 
