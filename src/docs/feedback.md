@@ -4,7 +4,7 @@
 
 ## Логика работы
 
-Пользователь открывает модал через плавающую кнопку (видна на всех страницах). Выбирает тип (bug / suggestion), заполняет форму, опционально прикрепляет несколько скриншотов. При отправке: клиент загружает изображения в Supabase Storage bucket `feedback-images` и получает публичные URL. Затем вызывается Server Action `submitFeedback`, который создаёт запись в Airtable (с вложениями) и зеркалирует в Supabase таблицу `feedback`. Данные пользователя (имя, email, отдел, команда) берутся из сессии автоматически. Ошибка Airtable не блокирует сохранение в Supabase.
+Пользователь открывает модал через плавающую кнопку (видна на всех страницах). Выбирает тип (bug / suggestion), заполняет форму, опционально прикрепляет несколько скриншотов. При отправке: клиент загружает изображения в Supabase Storage bucket `feedback-images` и получает публичные URL. Затем вызывается Server Action `submitFeedback`, который создаёт запись в Airtable (с вложениями) и зеркалирует в Supabase таблицу `feedback`. После сохранения отправляется уведомление в Teams, если настроен webhook. Данные пользователя (имя, email, отдел, команда) берутся из сессии автоматически. Ошибка Airtable не блокирует сохранение в Supabase.
 
 Администраторы видят все записи на странице `/admin/feedback`. Данные читаются из Supabase через `createSupabaseAdminClient` (обходит RLS). Страница поддерживает мультиселект и удаление строк. Картинки отображаются превьюшками с лайтбоксом. Имя автора — ссылка на `/admin/users/[user_id]`.
 
@@ -14,6 +14,7 @@
 - Airtable база `appKHrxgAJFFZeeQO`, таблица `tblchPw2DdhHkD0FD`
 - `AIRTABLE_FEEDBACK_TOKEN` в `.env.local`
 - `src/config/airtable.ts` — HTTP-клиент Airtable
+- `TEAMS_FEEDBACK_WEBHOOK_URL` — серверная переменная окружения с адресом Teams Workflow для личного чата получателя
 - `src/modules/auth/queries.ts` — `getCurrentUser()`
 
 ## Типы
@@ -24,7 +25,7 @@
 
 ## Actions
 
-- `submitFeedback(input)` — создаёт запись в Airtable + зеркало в Supabase, revalidate `/admin/feedback`. Возвращает `ActionResult<{ id: string }>`.
+- `submitFeedback(input)` — создаёт запись в Airtable + зеркало в Supabase, revalidate `/admin/feedback`, затем отправляет уведомление в Teams. Отсутствие `TEAMS_FEEDBACK_WEBHOOK_URL` и ошибка Teams записываются в серверный лог и не меняют успешный результат сохранения. Возвращает `ActionResult<{ id: string }>`.
 - `deleteFeedbackItems(ids)` — удаляет записи по массиву id, только для `is_admin`, revalidate `/admin/feedback`.
 
 ## Queries
@@ -37,5 +38,6 @@
 - `expected_behavior` заполняется только для `type = 'bug'`.
 - Максимум 5 изображений, не более 10 МБ каждое.
 - Поля `user_name/user_department/user_team` в Airtable — Single Select с `typecast: true`, новые варианты создаются автоматически.
-- `user_email` хранится только в Supabase, в Airtable не передаётся.
+- `user_email` передаётся и в Airtable, и в Supabase.
+- Уведомление Teams включает тип, заголовок, автора, описание, ожидаемое поведение для бага и до пяти кнопок со ссылками на скриншоты. ID обращения в карточке не показывается. URL webhook не должен попадать в клиентский код или репозиторий.
 - `user_name` берётся из `user.fullName` → `raw_user_meta_data.full_name` в auth.users. Если поле пустое, имя в записи будет пустой строкой.

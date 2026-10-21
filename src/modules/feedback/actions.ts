@@ -9,6 +9,7 @@ import type { ActionResult } from '@/modules/cache'
 
 import { FeedbackSchema } from './types'
 import type { FeedbackInput } from './types'
+import { sendFeedbackToTeams } from './teams'
 
 const AIRTABLE_TABLE_ID = 'tblchPw2DdhHkD0FD'
 
@@ -78,6 +79,17 @@ export async function submitFeedback(
   }
 
   revalidatePath('/admin/feedback')
+
+  try {
+    await sendFeedbackToTeams({
+      ...data,
+      id: row.id,
+      user_name: user.fullName,
+      user_email: user.email,
+    })
+  } catch (err) {
+    console.error('Teams feedback notification failed:', err instanceof Error ? err.message : 'unknown error')
+  }
 
   return { success: true, data: { id: row.id } }
 }

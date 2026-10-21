@@ -22,6 +22,7 @@ import type { ProductMediaItem, PurchaseResult } from './types'
 import { coverImageUrl } from './media'
 import { removeUnreferencedProductMedia } from './storageMedia'
 import { balanceTag } from './queries'
+import { sendOrderToTeams } from './teams'
 
 const productIdSchema = z.string().uuid()
 
@@ -55,7 +56,11 @@ export async function purchaseProduct(
   const supabase = createSupabaseAdminClient()
 
   // Щиты продаются отдельной атомарной операцией с учётом предоплаченного остатка.
-  const { data: product } = await supabase.from('shop_products').select('effect').eq('id', parsed.data.product_id).single()
+  const { data: product } = await supabase
+    .from('shop_products')
+    .select('name, effect, category:shop_categories!category_id(slug)')
+    .eq('id', parsed.data.product_id)
+    .single()
   if (product?.effect === 'streak_shield_ws' || product?.effect === 'streak_shield_revit') {
     return { success: false, error: 'Купите защиту через карточку «Вторая жизнь»' }
   }
@@ -78,6 +83,23 @@ export async function purchaseProduct(
   revalidateTag(balanceTag(user.wsUserId), 'max')
   revalidatePath('/store')
   revalidatePath('/profile')
+
+  const category = Array.isArray(product?.category) ? product.category[0] : product?.category
+  if (product && product.effect === null && category?.slug && category.slug !== 'draw') {
+    try {
+      const purchase = data as PurchaseResult
+      await sendOrderToTeams({
+        productName: product.name,
+        buyerName: user.fullName,
+        buyerEmail: user.email,
+        coinsSpent: purchase.coins_spent,
+        userComment: parsed.data.user_comment?.trim() || null,
+      })
+    } catch (err) {
+      console.error('Teams order notification failed:', err instanceof Error ? err.message : 'unknown error')
+    }
+  }
+
   return { success: true, data: data as PurchaseResult }
 }
 
