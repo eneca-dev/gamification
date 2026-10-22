@@ -25,6 +25,19 @@ export async function updateEventType(
 
   const { key, ...fields } = parsed.data
 
+  // The variable daily streak reward has its own atomic toggle, which records
+  // the dates on which the rule applies. Generic edits must not bypass it.
+  if (key === 'streak_daily_bonus') {
+    if (fields.is_active === undefined || fields.coins !== undefined || fields.name !== undefined || fields.description !== undefined) {
+      return { success: false, error: 'Для этой награды доступно только включение и выключение' }
+    }
+    const supabase = createSupabaseAdminClient()
+    const { error } = await supabase.rpc('fn_set_streak_daily_bonus_enabled', { p_enabled: fields.is_active })
+    if (error) return { success: false, error: error.message }
+    revalidatePath('/admin/events')
+    return { success: true }
+  }
+
   const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (fields.name !== undefined) updateData.name = fields.name
   if (fields.coins !== undefined) updateData.coins = fields.coins

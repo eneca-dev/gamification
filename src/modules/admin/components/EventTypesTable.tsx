@@ -128,7 +128,9 @@ export function EventTypesTable({ eventTypes }: EventTypesTableProps) {
               >
                 {/* Название */}
                 <td className="px-5 py-3">
-                  {editing === 'name' ? (
+                  {row.key === 'streak_daily_bonus' ? (
+                    <span className="text-[13px] font-semibold">{row.name}</span>
+                  ) : editing === 'name' ? (
                     <InlineEdit
                       value={editValue}
                       onChange={setEditValue}
@@ -166,7 +168,9 @@ export function EventTypesTable({ eventTypes }: EventTypesTableProps) {
 
                 {/* Описание */}
                 <td className="px-5 py-3 max-w-[280px]">
-                  {editing === 'description' ? (
+                  {row.key === 'streak_daily_bonus' ? (
+                    <span className="text-[12px]" style={{ color: 'var(--apex-text-secondary)' }}>{row.description}</span>
+                  ) : editing === 'description' ? (
                     <InlineEdit
                       value={editValue}
                       onChange={setEditValue}
@@ -196,7 +200,9 @@ export function EventTypesTable({ eventTypes }: EventTypesTableProps) {
 
                 {/* 💎 */}
                 <td className="px-5 py-3">
-                  {editing === 'coins' ? (
+                  {row.key === 'streak_daily_bonus' ? (
+                    <span className="text-[12px] font-medium" title="Доплата зависит от длины серии">По формуле</span>
+                  ) : editing === 'coins' ? (
                     <InlineEdit
                       value={editValue}
                       onChange={setEditValue}
@@ -207,9 +213,7 @@ export function EventTypesTable({ eventTypes }: EventTypesTableProps) {
                       width="w-20"
                     />
                   ) : (
-                    <EditableCell
-                      onClick={() => startEdit(row, 'coins')}
-                    >
+                    <EditableCell onClick={() => startEdit(row, 'coins')}>
                       <span
                         className="text-[14px] font-bold"
                         style={{

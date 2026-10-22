@@ -228,7 +228,7 @@ export async function getCorrectionUserDetail(userId: string): Promise<Correctio
   // в календаре вычитаем 1 день (ranking_date во view_user_transactions нет).
   const greenDayCoinsByDate = new Map<string, number>()
   for (const tx of txsRes.data ?? []) {
-    if (tx.event_type !== 'green_day' || tx.source !== 'ws') continue
+    if (!['green_day', 'streak_daily_bonus'].includes(tx.event_type) || tx.source !== 'ws') continue
     const eventDate = tx.event_date as string | null
     if (!eventDate) continue
     const workDay = addDaysIso(eventDate, -1)

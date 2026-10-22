@@ -51,6 +51,7 @@ export interface UserTransaction {
 // Маппинг event_type → иконка
 export const EVENT_ICONS: Record<string, string> = {
   green_day: '🟢',
+  streak_daily_bonus: '🔥',
   red_day: '🔴',
   revit_using_plugins: '⚡',
   revit_streak_7_bonus: '🔥',

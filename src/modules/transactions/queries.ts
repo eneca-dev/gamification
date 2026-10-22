@@ -725,6 +725,13 @@ function enrichTransaction(
       const count = (details?.launch_count as number | undefined) ?? 1
       return { description: name ? `${name}: ${count} ${pluralizeRu(count, ['запуск', 'запуска', 'запусков'])}` : defaultDesc }
     }
+    case 'streak_daily_bonus': {
+      const day = Number(details?.streak_day)
+      const area = (details?.source as string | undefined) ?? null
+      return { description: Number.isInteger(day) && day >= 8
+        ? `Доплата за ${day}-й день серии${area === 'revit' ? ' Revit' : ''}`
+        : defaultDesc }
+    }
     case 'gratitude_recipient_points': {
       return { description: senderName ? `Благодарность от ${senderName}` : defaultDesc }
     }
