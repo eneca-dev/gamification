@@ -13,6 +13,7 @@ import { AchievementProgressAdmin } from '@/modules/admin/components/Achievement
 import { ContestStandingsAdmin } from '@/modules/admin/components/ContestStandingsAdmin'
 import { getContestWinners } from '@/modules/contests'
 import { AdminNormControlSection } from '@/modules/ai-norm/components/AdminNormControlSection'
+import { AdminTenderUsageSection } from '@/modules/ai-norm/components/AdminTenderUsageSection'
 import { getMinskMonth } from '@/modules/ai-norm/queries'
 
 export default async function AdminAchievementsPage({ searchParams }: {
@@ -54,6 +55,7 @@ export default async function AdminAchievementsPage({ searchParams }: {
         winners={winners}
       />
       <AdminNormControlSection month={normMonth} />
+      <AdminTenderUsageSection month={normMonth} />
     </div>
   )
 }

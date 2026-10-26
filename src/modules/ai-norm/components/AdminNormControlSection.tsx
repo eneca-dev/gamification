@@ -49,7 +49,6 @@ export async function AdminNormControlSection({ month }: { month: string }) {
         <div className="flex items-center gap-2">
           <FileCheck2 size={20} className="text-[var(--apex-primary)]" />
           <h2 className="text-lg font-semibold text-[var(--apex-text)]">ИИ-нормоконтроль</h2>
-          <span className="rounded-full bg-[var(--apex-bg)] px-2 py-1 text-xs text-[var(--apex-text-muted)]">Демо</span>
         </div>
         <div className="flex items-center gap-3 text-sm">
           <Link href={`/admin/achievements?normMonth=${adjacentMonth(month, -1)}#norm-control`} aria-label="Предыдущий месяц" className="text-[var(--apex-primary)]">←</Link>
@@ -59,7 +58,7 @@ export async function AdminNormControlSection({ month }: { month: string }) {
       </div>
 
       <p className="text-sm text-[var(--apex-text-secondary)]">
-        Показаны проверки по видам: один документ может проверяться несколькими способами. Кристаллы и достижения за нормоконтроль пока не начисляются.
+        Показаны проверки по видам: один документ может проверяться несколькими способами. Одна проверка за месяц выполняет условие достижения; начисления пока выключены.
       </p>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

@@ -355,7 +355,9 @@ idempotency_key: deadline_ok_l3_{ws_task_id}_{user_id}
 
 ## Полный справочник event_type
 
-Все типы зарегистрированы в `gamification_event_types` (38 строк).
+Все типы зарегистрированы в `gamification_event_types`. Подробности по трём выключенным ИИ-наградам — в [Нормоконтроле](ai-norm.md) и [тендерных проектах](ai-tender-usage.md).
+
+`ai_norm_check_monthly`, `ai_tender_advisor_monthly` и `ai_tender_digest_monthly` имеют настроенную стоимость 200 💎, но `is_active=false` и `create_transaction=false`: загрузка исходных событий сейчас не создаёт транзакций.
 
 **С начислением/списанием 💎:**
 
