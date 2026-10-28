@@ -10,7 +10,7 @@ function toIsoDate(d: Date): string {
 export function getGridRange(): { rangeStart: string; rangeEnd: string } {
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Minsk' }))
   const rangeStart = new Date(now.getFullYear(), now.getMonth() - 5, 1)
-  const rangeEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  const rangeEnd = new Date(now.getFullYear(), now.getMonth() + 3, 0)
   return { rangeStart: toIsoDate(rangeStart), rangeEnd: toIsoDate(rangeEnd) }
 }
 

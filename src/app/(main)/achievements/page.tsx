@@ -31,11 +31,11 @@ export default async function AchievementsPage() {
       console.error('Failed to load personal norm activity', error)
       return null
     }),
-    getTenderAdvisorPersonalActivity(user.email, normMonth).catch((error: unknown) => {
+    getTenderAdvisorPersonalActivity(user.wsUserId ?? null, normMonth).catch((error: unknown) => {
       console.error('Failed to load Tender Adviser activity', error)
       return null
     }),
-    getTenderDigestPersonalActivity(user.email, normMonth).catch((error: unknown) => {
+    getTenderDigestPersonalActivity(user.wsUserId ?? null, normMonth).catch((error: unknown) => {
       console.error('Failed to load Tender Digest activity', error)
       return null
     }),

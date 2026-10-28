@@ -17,11 +17,10 @@ function ProjectPanel({ title, activity }: { title: string; activity: TenderMont
   return (
     <section className="rounded-2xl border border-[var(--apex-border)] bg-[var(--apex-surface)] p-5">
       <h3 className="text-base font-semibold text-[var(--apex-text)]">{title}</h3>
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-3 gap-3">
         {[
           ['Событий', activity.events],
-          ['Сотрудников', activity.users],
-          ['Условие выполнено', activity.qualifyingUsers],
+          ['Сотрудников (условие выполнено)', activity.users],
           ['Без сопоставления', activity.unmatchedEvents],
         ].map(([label, value]) => (
           <div key={label} className="rounded-xl border border-[var(--apex-border)] p-3">
@@ -61,10 +60,10 @@ function ProjectPanel({ title, activity }: { title: string; activity: TenderMont
       </div>
       {activity.unresolved.length > 0 && (
         <div className="mt-5">
-          <h4 className="text-sm font-semibold text-[var(--apex-text)]">Пользователи без email</h4>
+          <h4 className="text-sm font-semibold text-[var(--apex-text)]">Не сопоставлены с сотрудником</h4>
           <ul className="mt-2 space-y-1 text-xs text-[var(--apex-text-secondary)]">
             {activity.unresolved.map((item) => (
-              <li key={item.sourceId}>ID {item.sourceId} · {item.name || 'Без имени'} · {item.status} · событий: {item.events}</li>
+              <li key={item.sourceId}>{item.sourceId} · {item.name || 'Без имени'} · действий: {item.events}</li>
             ))}
           </ul>
         </div>
@@ -75,11 +74,11 @@ function ProjectPanel({ title, activity }: { title: string; activity: TenderMont
 
 export async function AdminTenderUsageSection({ month }: { month: string }) {
   const [advisor, digest] = await Promise.all([
-    getTenderMonthActivity('ai_tender_advisor_events', month).catch((error: unknown) => {
+    getTenderMonthActivity('advisor', month).catch((error: unknown) => {
       console.error('Failed to load Tender Adviser admin activity', error)
       return null
     }),
-    getTenderMonthActivity('ai_tender_digest_events', month).catch((error: unknown) => {
+    getTenderMonthActivity('digest', month).catch((error: unknown) => {
       console.error('Failed to load Tender Digest admin activity', error)
       return null
     }),

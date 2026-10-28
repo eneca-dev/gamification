@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { Search, Zap, CheckCircle, Heart, Trophy, Users, Building2, X, Loader2 } from 'lucide-react'
 import { CoinIcon } from '@/components/CoinIcon'
+import { CollapsibleSection } from '@/components/CollapsibleSection'
 
 import { getUserFullProgress } from '@/modules/achievements/actions'
 import { ACHIEVEMENT_BONUSES } from '@/modules/achievements/types'
@@ -66,20 +67,33 @@ function CompactRow({ entry, unit }: { entry: CompanyProgressEntry; unit: string
 function SubBlock({ emoji, title, entries, unit }: { emoji: string; title: string; entries: CompanyProgressEntry[]; unit: string }) {
   if (entries.length === 0) return null
   const sorted = [...entries].sort((a, b) => a.remaining - b.remaining)
+  const earnedCount = entries.filter((e) => e.earned).length
+  const nearest = sorted.find((e) => !e.earned)
+  const summary = [
+    `${entries.length}`,
+    earnedCount > 0 ? `✓${earnedCount}` : null,
+    nearest ? `ближайшее −${nearest.remaining}` : null,
+  ].filter(Boolean).join(' · ')
 
   return (
-    <div className="mb-3 last:mb-0">
-      <div className="flex items-center gap-1.5 mb-1">
-        <span className="text-sm">{emoji}</span>
-        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-          {title}
-        </span>
-      </div>
-      <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
-        {sorted.map((e) => (
-          <CompactRow key={`${e.entity_id}:${e.area}`} entry={e} unit={unit} />
-        ))}
-      </div>
+    <div className="mb-2 last:mb-0">
+      <CollapsibleSection
+        summary={summary}
+        header={
+          <>
+            <span className="text-sm">{emoji}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              {title}
+            </span>
+          </>
+        }
+      >
+        <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+          {sorted.map((e) => (
+            <CompactRow key={`${e.entity_id}:${e.area}`} entry={e} unit={unit} />
+          ))}
+        </div>
+      </CollapsibleSection>
     </div>
   )
 }

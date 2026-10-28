@@ -382,7 +382,7 @@ UNIQUE(user_email, ws_task_id, cost_date).
 
 Справочник типов событий и их стоимость в 💎. Колонка `name` — человекочитаемое название для отображения в UI. Редактируется админами через `/admin/events`.
 
-ИИ-проекты: `ai_norm_check_monthly`, `ai_tender_advisor_monthly`, `ai_tender_digest_monthly` настроены на 200 💎, но остаются выключенными (`is_active=false`, `create_transaction=false`). Сырые логи хранятся в `ai_norm_checks`, `ai_tender_advisor_events` и `ai_tender_digest_events`; это не транзакции.
+ИИ-проекты: `ai_norm_check_monthly`, `ai_tender_advisor_monthly`, `ai_tender_digest_monthly` настроены на 200 💎, но остаются выключенными (`is_active=false`, `create_transaction=false`). Данные хранятся в `ai_norm_checks` (проверки) и `ai_tender_usage_daily` (дневные счётчики Tender, соответствия сотрудникам в `tender_email_aliases`); это не транзакции.
 
 **С начислением/списанием 💎:**
 
