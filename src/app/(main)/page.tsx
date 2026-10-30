@@ -35,6 +35,7 @@ import { getMyGratitudesNew, getSenderQuota, getGratitudeRecipients } from "@/mo
 import { getUserBalance } from "@/modules/shop";
 import { getUserOrders } from "@/modules/shop";
 import { getPendingResets, getShieldDatesInRange } from "@/modules/streak-shield";
+import { getUserAppeals } from "@/modules/feedback";
 import { getMasterPlannerPanel } from "@/modules/master-planner";
 import { MasterPlannerPanel } from "@/modules/master-planner/components/MasterPlannerPanel";
 import { TrackedProjectsInfo } from "@/modules/master-planner/components/TrackedProjectsInfo";
@@ -42,7 +43,7 @@ import { getContestWinners } from "@/modules/contests";
 import { GratitudeWidget } from "@/modules/gratitudes/components/GratitudeWidget";
 import { getNewsForDashboard } from "@/modules/news/queries";
 import { NewsPanel } from "@/modules/news/components/NewsPanel";
-import type { RedReason, StreakPanelData } from "@/modules/streak-panel";
+import type { DayAppealInfo, RedReason, StreakPanelData } from "@/modules/streak-panel";
 
 const DEPT_COLORS = [
   "#e91e63", "#2196f3", "#ff9800", "#4caf50", "#9c27b0",
@@ -91,6 +92,7 @@ export default async function DashboardPage() {
     masterPlannerData,
     contestWinners,
     news,
+    userAppeals,
   ] = await Promise.all([
       wsUserId ? getWsStreakData(wsUserId) : Promise.resolve({
         currentStreak: 0, longestStreak: 0, streakStartDate: null, completedCycles: 0,
@@ -136,7 +138,65 @@ export default async function DashboardPage() {
       wsUserId ? getMasterPlannerPanel(wsUserId) : Promise.resolve(null),
       getContestWinners(1),
       getNewsForDashboard(wsDeptCode),
+      wsUserId ? getUserAppeals(wsUserId) : Promise.resolve([]),
     ]);
+
+  // Собираем все уникальные ID транзакций из обжалований пользователя
+  const allAppealTxIds = new Set<string>();
+  for (const appeal of userAppeals) {
+    if (!appeal.appeal_transaction_ids) continue;
+    for (const id of appeal.appeal_transaction_ids) allAppealTxIds.add(id);
+  }
+
+  // Один запрос — получаем event_date по всем ID разом
+  const txDateMap = new Map<string, string>();
+  if (allAppealTxIds.size > 0 && wsUserId) {
+    const { createSupabaseServerClient } = await import("@/config/supabase");
+    const supabase = await createSupabaseServerClient();
+    const { data: txRows } = await supabase
+      .from('gamification_transactions')
+      .select('id, event_date, event_type')
+      .in('id', Array.from(allAppealTxIds));
+    const DATE_MINUS_ONE = new Set(['red_day', 'wrong_status_report']);
+    for (const row of txRows ?? []) {
+      // Для ws-событий event_date сдвинут +1 — отображаем «пользовательский» день
+      const base = row.event_date as string;
+      if (DATE_MINUS_ONE.has(row.event_type as string)) {
+        const d = new Date(base + 'T00:00:00Z');
+        d.setUTCDate(d.getUTCDate() - 1);
+        txDateMap.set(row.id as string, d.toISOString().slice(0, 10));
+      } else {
+        txDateMap.set(row.id as string, base);
+      }
+    }
+  }
+
+  // Собираем Map обжалований по дате: берём самое новое, если на день несколько обжалований
+  const appealsByDate = new Map<string, DayAppealInfo>();
+  function putAppeal(date: string, appeal: typeof userAppeals[number]) {
+    const existing = appealsByDate.get(date);
+    if (!existing || existing.created_at < appeal.created_at) {
+      appealsByDate.set(date, {
+        status: appeal.status,
+        description: appeal.description,
+        review_comment: appeal.review_comment,
+        created_at: appeal.created_at,
+      });
+    }
+  }
+  for (const appeal of userAppeals) {
+    // Из явно выбранных дней
+    if (appeal.appeal_dates) {
+      for (const date of appeal.appeal_dates) putAppeal(date, appeal);
+    }
+    // Из транзакций (их «пользовательская» дата)
+    if (appeal.appeal_transaction_ids) {
+      for (const txId of appeal.appeal_transaction_ids) {
+        const d = txDateMap.get(txId);
+        if (d) putAppeal(d, appeal);
+      }
+    }
+  }
 
   // Собираем Map статусов для быстрого доступа
   const statusMap = new Map<string, { status: string; absence_type: string | null; red_reasons: RedReason[] | null }>();
@@ -202,7 +262,7 @@ export default async function DashboardPage() {
 
       <div className="flex flex-col xl:flex-row gap-5 animate-fade-in-up">
         <div className="xl:shrink-0 overflow-x-auto">
-          <StreakPanel streakData={streakPanelData} pendingResets={pendingResets} />
+          <StreakPanel streakData={streakPanelData} pendingResets={pendingResets} appealsByDate={appealsByDate} />
         </div>
         {masterPlannerData && (
           <div className="flex-1 min-w-0 grid grid-cols-1 3xl:grid-cols-5 gap-5">

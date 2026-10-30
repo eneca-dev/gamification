@@ -7,6 +7,7 @@ import type {
   AvailableEventType,
   CorrectionCalendarDay,
   CorrectionTransaction,
+  CorrectionUserAppeal,
   CorrectionUserDetail,
   CorrectionUserRow,
 } from './types'
@@ -157,6 +158,7 @@ export async function getCorrectionUserDetail(userId: string): Promise<Correctio
     topCountWsRes,
     topCountRevitRes,
     eventTypesRes,
+    appealsRes,
   ] = await Promise.all([
     supabase
       .from('ws_user_streaks_effective')
@@ -212,6 +214,13 @@ export async function getCorrectionUserDetail(userId: string): Promise<Correctio
       .select('key, name, coins, is_active')
       .eq('is_active', true)
       .order('coins', { ascending: false }),
+    supabase
+      .from('feedback')
+      .select('id, created_at, status, description, appeal_task_url, appeal_dates, appeal_transaction_ids, appeal_total_coins, image_urls, review_comment, reviewed_at')
+      .eq('type', 'appeal')
+      .eq('ws_user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50),
   ])
 
   if (wsStreakRes.error) throw new Error(wsStreakRes.error.message)
@@ -262,6 +271,53 @@ export async function getCorrectionUserDetail(userId: string): Promise<Correctio
 
   const corrections: AdminCorrectionRow[] = (correctionsRes.data ?? []).map(mapAdminCorrection)
 
+  // Собираем все уникальные ID транзакций из обжалований и обогащаем одним запросом
+  const allTxIds = new Set<string>()
+  for (const row of appealsRes.data ?? []) {
+    const ids = row.appeal_transaction_ids as string[] | null
+    if (ids) for (const id of ids) allTxIds.add(id)
+  }
+
+  const txDetailsMap = new Map<string, { event_date: string; coins: number; description: string }>()
+  if (allTxIds.size > 0) {
+    const { data: txsData } = await supabase
+      .from('view_user_transactions')
+      .select('transaction_id, event_date, coins, description, event_type')
+      .in('transaction_id', Array.from(allTxIds))
+    for (const t of txsData ?? []) {
+      const rawDesc = (t.description as string | null) ?? null
+      txDetailsMap.set(t.transaction_id as string, {
+        event_date: t.event_date as string,
+        coins: t.coins as number,
+        description: rawDesc && rawDesc.trim().length > 0 ? rawDesc.trim() : (t.event_type as string),
+      })
+    }
+  }
+
+  const appeals: CorrectionUserAppeal[] = (appealsRes.data ?? []).map((row) => {
+    const txIds = (row.appeal_transaction_ids as string[] | null) ?? []
+    const transactions = txIds
+      .map((id) => {
+        const det = txDetailsMap.get(id)
+        if (!det) return null
+        return { id, event_date: det.event_date, coins: det.coins, description: det.description }
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+    return {
+      id: row.id as string,
+      created_at: row.created_at as string,
+      status: row.status as CorrectionUserAppeal['status'],
+      description: (row.description as string | null) ?? null,
+      task_url: (row.appeal_task_url as string | null) ?? null,
+      dates: (row.appeal_dates as string[] | null) ?? null,
+      transactions,
+      total_coins: (row.appeal_total_coins as number | null) ?? null,
+      image_urls: (row.image_urls as string[] | null) ?? [],
+      review_comment: (row.review_comment as string | null) ?? null,
+      reviewed_at: (row.reviewed_at as string | null) ?? null,
+    }
+  })
+
   return {
     user,
     balance: {
@@ -294,6 +350,7 @@ export async function getCorrectionUserDetail(userId: string): Promise<Correctio
       total_in_revit: topCountRevitRes.count ?? 0,
     },
     corrections,
+    appeals,
     availableEventTypes: (eventTypesRes.data ?? [])
       .filter((e) => ADDABLE_EVENT_TYPES.has(e.key as string))
       .map((e): AvailableEventType => ({

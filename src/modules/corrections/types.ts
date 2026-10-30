@@ -172,6 +172,27 @@ export interface AvailableEventType {
   source: 'ws' | 'revit' | 'contest' | 'admin'
 }
 
+export interface CorrectionUserAppealTx {
+  id: string
+  event_date: string
+  coins: number
+  description: string
+}
+
+export interface CorrectionUserAppeal {
+  id: string
+  created_at: string
+  status: 'new' | 'approved' | 'rejected'
+  description: string | null
+  task_url: string | null
+  dates: string[] | null
+  transactions: CorrectionUserAppealTx[]
+  total_coins: number | null
+  image_urls: string[]
+  review_comment: string | null
+  reviewed_at: string | null
+}
+
 export interface CorrectionUserDetail {
   user: CorrectionUserRow
   balance: {
@@ -204,5 +225,6 @@ export interface CorrectionUserDetail {
     total_in_revit: number
   }
   corrections: AdminCorrectionRow[]
+  appeals: CorrectionUserAppeal[]
   availableEventTypes: AvailableEventType[]
 }

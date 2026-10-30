@@ -67,3 +67,11 @@ export interface StreakPanelData {
   ws: WsStreakData
   revit: RevitStreakData
 }
+
+// Информация об обжаловании конкретного дня (для тултипа на главной)
+export interface DayAppealInfo {
+  status: 'new' | 'approved' | 'rejected'
+  description: string | null
+  review_comment: string | null
+  created_at: string
+}

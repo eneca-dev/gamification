@@ -21,6 +21,8 @@ export type {
   CorrectionStepState,
   CorrectionTransaction,
   CorrectionType,
+  CorrectionUserAppeal,
+  CorrectionUserAppealTx,
   CorrectionUserDetail,
   CorrectionUserRow,
 } from './types'

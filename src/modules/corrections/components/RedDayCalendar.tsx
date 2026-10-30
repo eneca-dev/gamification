@@ -83,75 +83,83 @@ export function RedDayCalendar({ days, selected, onToggle }: RedDayCalendarProps
       className="rounded-2xl p-5"
       style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
     >
-      {/* Шапка: стрелка влево — месяцы — стрелка вправо */}
+      {/* Шапка: заголовок слева + стрелки навигации справа */}
       <div className="flex items-center justify-between mb-4 gap-3">
-        <button
-          type="button"
-          onClick={() => canPrev && setStartIdx(safeStart - 1)}
-          disabled={!canPrev}
-          className="w-7 h-7 inline-flex items-center justify-center rounded-lg transition-colors disabled:opacity-30 shrink-0"
-          style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)', color: 'var(--apex-text-secondary)' }}
-          aria-label="На месяц назад"
+        <span
+          className="text-[11px] font-semibold uppercase tracking-wider"
+          style={{ color: 'var(--apex-text-muted)' }}
         >
-          <ChevronLeft size={14} />
-        </button>
-
-        <div className="flex items-start overflow-x-auto" style={{ gap: MONTH_SEP }}>
-          {visible.map((m) => (
-            <div key={m.key} className="flex flex-col">
-              <div
-                className="text-[9px] font-semibold uppercase tracking-wider mb-1.5"
-                style={{ color: 'var(--apex-text-muted)' }}
-              >
-                {m.name} {m.year}
-              </div>
-              <div className="flex mb-1" style={{ gap: CELL_GAP }}>
-                {DAY_LABELS.map((label) => (
-                  <div
-                    key={label}
-                    className="text-[9px] font-medium text-center"
-                    style={{ width: CELL, color: 'var(--apex-text-muted)' }}
-                  >
-                    {label}
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-col" style={{ gap: CELL_GAP }}>
-                {m.weeks.map((week, wIdx) => (
-                  <div key={wIdx} className="flex" style={{ gap: CELL_GAP }}>
-                    {week.map((day, dIdx) =>
-                      day ? (
-                        <DayCell
-                          key={day.date}
-                          day={day}
-                          isToday={day.date === todayIso}
-                          selected={selected.has(day.date)}
-                          onToggle={onToggle}
-                        />
-                      ) : (
-                        <div
-                          key={`empty-${wIdx}-${dIdx}`}
-                          style={{ width: CELL, height: CELL, flexShrink: 0 }}
-                        />
-                      ),
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+          Календарь
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => canPrev && setStartIdx(safeStart - 1)}
+            disabled={!canPrev}
+            className="w-7 h-7 inline-flex items-center justify-center rounded-lg transition-colors disabled:opacity-30"
+            style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)', color: 'var(--apex-text-secondary)' }}
+            aria-label="На месяц назад"
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => canNext && setStartIdx(safeStart + 1)}
+            disabled={!canNext}
+            className="w-7 h-7 inline-flex items-center justify-center rounded-lg transition-colors disabled:opacity-30"
+            style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)', color: 'var(--apex-text-secondary)' }}
+            aria-label="На месяц вперёд"
+          >
+            <ChevronRight size={14} />
+          </button>
         </div>
+      </div>
 
-        <button
-          type="button"
-          onClick={() => canNext && setStartIdx(safeStart + 1)}
-          disabled={!canNext}
-          className="w-7 h-7 inline-flex items-center justify-center rounded-lg transition-colors disabled:opacity-30 shrink-0"
-          style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)', color: 'var(--apex-text-secondary)' }}
-          aria-label="На месяц вперёд"
-        >
-          <ChevronRight size={14} />
-        </button>
+      {/* Месяцы — без горизонтального скролла, стрелки сверху управляют окном */}
+      <div className="flex items-start justify-between flex-wrap" style={{ gap: MONTH_SEP }}>
+        {visible.map((m) => (
+          <div key={m.key} className="flex flex-col">
+            <div
+              className="text-[9px] font-semibold uppercase tracking-wider mb-1.5"
+              style={{ color: 'var(--apex-text-muted)' }}
+            >
+              {m.name} {m.year}
+            </div>
+            <div className="flex mb-1" style={{ gap: CELL_GAP }}>
+              {DAY_LABELS.map((label) => (
+                <div
+                  key={label}
+                  className="text-[9px] font-medium text-center"
+                  style={{ width: CELL, color: 'var(--apex-text-muted)' }}
+                >
+                  {label}
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col" style={{ gap: CELL_GAP }}>
+              {m.weeks.map((week, wIdx) => (
+                <div key={wIdx} className="flex" style={{ gap: CELL_GAP }}>
+                  {week.map((day, dIdx) =>
+                    day ? (
+                      <DayCell
+                        key={day.date}
+                        day={day}
+                        isToday={day.date === todayIso}
+                        selected={selected.has(day.date)}
+                        onToggle={onToggle}
+                      />
+                    ) : (
+                      <div
+                        key={`empty-${wIdx}-${dIdx}`}
+                        style={{ width: CELL, height: CELL, flexShrink: 0 }}
+                      />
+                    ),
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Легенда — как на главной */}

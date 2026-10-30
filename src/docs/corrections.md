@@ -39,7 +39,7 @@
 - `CorrectionStep` — одна строка лога: `{ n, key, state, message, data }`. `state`: `done | skip | warn | error | planned`.
 - `CorrectionLog` — результат функции: `{ status: 'ok' | 'preview' | 'error', scenario, steps[], error? }`.
 - `CorrectionInput` — `z.discriminatedUnion` по `correctionType`; `fixWsDaySchema` требует `absenceType` при `mode='absent'` (проверка в action, т.к. `.refine` ломает discriminator).
-- `CorrectionUserDetail` — полное состояние пользователя: `user`, `balance`, `ws_streak`, `revit_streak`, `calendar` (42 дня), `transactions` (последние 100), `leaderboard` (место и размер топов), `corrections` (журнал).
+- `CorrectionUserDetail` — полное состояние пользователя: `user`, `balance`, `ws_streak`, `revit_streak`, `calendar` (42 дня), `transactions` (последние 100), `leaderboard` (место и размер топов), `corrections` (журнал), `appeals` (обжалования пользователя из таблицы `feedback`, тип `appeal`, последние 50).
 
 ## Actions
 
@@ -50,7 +50,11 @@
 ## Queries
 
 - `getCorrectionUsers()` — список для `/admin/corrections`. Один SELECT из `view_correction_users` (отдел, команда, баланс, сумма транзакций, mismatch-флаг, стрик WS/Revit из effective-вью, место из `view_top_pers_*`). Без фильтров — показывает всех активных пользователей, включая декретных (им бывает нужна корректировка при внеочередных больничных и т.п.). Кэш: нет (admin-страница).
-- `getCorrectionUserDetail(userId)` — деталь для `/admin/corrections/{id}`. Параллельно: `view_correction_users` + effective-вью WS/Revit + `ws_daily_statuses` (42 дня) + `ws_user_absences` + `elk_plugin_launches` + `streak_shield_log` + `view_user_transactions` (100 последних) + `admin_corrections` (30 последних) + size топов. Календарь строится в коде, окно = 42 дня по `fn_minsk_today()`.
+- `getCorrectionUserDetail(userId)` — деталь для `/admin/corrections/{id}`. Параллельно: `view_correction_users` + effective-вью WS/Revit + `ws_daily_statuses` (42 дня) + `ws_user_absences` + `elk_plugin_launches` + `streak_shield_log` + `view_user_transactions` (100 последних) + `admin_corrections` (30 последних) + `feedback` где `type='appeal'` и `ws_user_id = userId` (50 последних) + size топов. Календарь строится в коде, окно = 42 дня по `fn_minsk_today()`.
+
+## Интеграция с обжалованиями
+
+Админ-страница `/admin/appeals` показывает список всех обжалований. Клик по строке переносит на `/admin/corrections/<ws_user_id>?from=appeal&appealId=<id>` — `CorrectionDetailShell` читает query, подсвечивает нужную карточку в `UserAppealsCard` и предзаполняет форму сценарием `fix_ws_day` в режиме `green` с датами из обжалования + полем `reason`, в начале которого стоит `Обжалование #<id-head>: <описание>`. Админ может нажать Preview/Apply как обычно — после применения в `admin_corrections` остаётся запись со ссылкой на обжалование через `reason`. Статус самого обжалования меняется отдельно — через `updateAppealStatus` в карточке.
 
 ## Ограничения
 

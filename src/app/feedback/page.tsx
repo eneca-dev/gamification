@@ -1,22 +1,32 @@
 import { ArrowLeft } from 'lucide-react'
 
 import { FeedbackForm } from '@/modules/feedback/components/FeedbackForm'
+import { getAppealCalendar, getAppealTransactions } from '@/modules/feedback'
+import { getCurrentUser } from '@/modules/auth/queries'
 
 export const metadata = {
   title: 'Обратная связь — Геймификация',
 }
 
-export default function FeedbackPage() {
+export default async function FeedbackPage() {
+  const currentUser = await getCurrentUser()
+  const [appealCalendar, appealTransactions] = currentUser?.wsUserId
+    ? await Promise.all([
+        getAppealCalendar(currentUser.wsUserId),
+        getAppealTransactions(currentUser.wsUserId),
+      ])
+    : [undefined, undefined]
+
   return (
     <div className="min-h-screen" style={{ background: 'var(--apex-bg)' }}>
-      <div className="max-w-2xl mx-auto px-4 py-10">
+      <div className="max-w-3xl mx-auto px-4 py-10">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--apex-text)' }}>
             Обратная связь
           </h1>
           <p className="text-sm" style={{ color: 'var(--apex-text-secondary)' }}>
-            Нашли ошибку или есть идея? Расскажите нам.
+            Нашли ошибку, есть идея или хотите обжаловать списание? Расскажите нам.
           </p>
         </div>
 
@@ -47,7 +57,7 @@ export default function FeedbackPage() {
             border: '1px solid var(--apex-border)',
           }}
         >
-          <FeedbackForm />
+          <FeedbackForm appealCalendar={appealCalendar} appealTransactions={appealTransactions} />
         </div>
       </div>
     </div>

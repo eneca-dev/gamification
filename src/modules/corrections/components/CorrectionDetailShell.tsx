@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { History, ClipboardList, RefreshCw, ArrowLeft } from 'lucide-react'
 
 import {
@@ -17,6 +18,7 @@ import type {
   CorrectionInput,
   CorrectionLog,
   CorrectionTransaction,
+  CorrectionUserAppeal,
   CorrectionUserDetail,
 } from '../types'
 
@@ -27,6 +29,7 @@ import { UserStateCard } from './UserStateCard'
 import { RedDayCalendar } from './RedDayCalendar'
 import { CorrectionForm } from './CorrectionForm'
 import { CorrectionTerminal } from './CorrectionTerminal'
+import { UserAppealsCard } from './UserAppealsCard'
 
 interface CorrectionDetailShellProps {
   initialDetail: CorrectionUserDetail
@@ -166,6 +169,33 @@ export function CorrectionDetailShell({ initialDetail }: CorrectionDetailShellPr
     })
   }
 
+  const searchParams = useSearchParams()
+  const highlightAppealId = searchParams.get('from') === 'appeal'
+    ? searchParams.get('appealId')
+    : null
+
+  // Если пришли из обжалования — предзаполняем сценарий fix_ws_day
+  useEffect(() => {
+    if (!highlightAppealId) return
+    const appeal = detail.appeals.find((a) => a.id === highlightAppealId)
+    if (!appeal || !appeal.dates || appeal.dates.length === 0) return
+    setScenario('fix_ws_day')
+    setSelectedDates(new Set(appeal.dates))
+    setWsMode('green')
+    const descr = appeal.description?.slice(0, 300) ?? ''
+    setReason(`Обжалование #${appeal.id.slice(0, 8)}: ${descr}`.trim())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightAppealId])
+
+  const handlePrefillFromAppeal = (appeal: CorrectionUserAppeal) => {
+    if (!appeal.dates || appeal.dates.length === 0) return
+    setScenario('fix_ws_day')
+    setSelectedDates(new Set(appeal.dates))
+    setWsMode('green')
+    const descr = appeal.description?.slice(0, 300) ?? ''
+    setReason(`Обжалование #${appeal.id.slice(0, 8)}: ${descr}`.trim())
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -194,6 +224,11 @@ export function CorrectionDetailShell({ initialDetail }: CorrectionDetailShellPr
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
         <div className="space-y-3 min-w-0">
           <UserStateCard detail={detail} />
+          <UserAppealsCard
+            appeals={detail.appeals}
+            highlightAppealId={highlightAppealId}
+            onPrefillFromAppeal={handlePrefillFromAppeal}
+          />
         <RedDayCalendar
           days={detail.calendar}
           selected={selectedDates}

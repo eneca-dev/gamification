@@ -19,4 +19,5 @@ export type {
   WsStreakData,
   RevitStreakData,
   StreakPanelData,
+  DayAppealInfo,
 } from './types'
