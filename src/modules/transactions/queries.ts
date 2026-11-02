@@ -1,7 +1,6 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { cached, CACHE_5M } from '@/lib/server-cache'
 import { getCategoryLabel } from '@/lib/gratitude-categories'
-import { pluralizeRu } from '@/lib/pluralize'
 import type { Transaction } from '@/lib/data'
 
 import { getEventIcon, getTransactionDisplayDate, getGratitudeMeta } from './types'
@@ -716,14 +715,11 @@ function enrichTransaction(
       }
     }
     case 'revit_using_plugins': {
-      const plugins = details?.plugins as Array<{ plugin_name: string; launch_count: number }> | undefined
-      if (plugins && plugins.length > 1) {
-        const total = plugins.reduce((sum, p) => sum + p.launch_count, 0)
-        return { description: `Revit-плагины: ${total} ${pluralizeRu(total, ['запуск', 'запуска', 'запусков'])}` }
-      }
-      const name = details?.plugin_name as string | undefined
-      const count = (details?.launch_count as number | undefined) ?? 1
-      return { description: name ? `${name}: ${count} ${pluralizeRu(count, ['запуск', 'запуска', 'запусков'])}` : defaultDesc }
+      // Без числа запусков: названия плагинов выводит PluginUsageLine отдельной строкой.
+      const plugins = details?.plugins as Array<{ plugin_name: string }> | undefined
+      const hasPlugin = (plugins?.length ?? 0) > 0 || !!(details?.plugin_name as string | undefined)
+      if (!hasPlugin) return { description: defaultDesc }
+      return { description: (plugins?.length ?? 1) > 1 ? 'Работа в Revit-плагинах' : 'Работа в Revit-плагине' }
     }
     case 'streak_daily_bonus': {
       const day = Number(details?.streak_day)

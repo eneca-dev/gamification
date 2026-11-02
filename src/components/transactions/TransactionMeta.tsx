@@ -1,16 +1,18 @@
 import { getCategoryEmoji, getCategoryLabel } from '@/lib/gratitude-categories'
 
 interface PluginUsageLineProps {
-  plugins: Array<{ plugin_name: string; launch_count: number }>
+  plugins: Array<{ plugin_name: string }>
 }
 
-// Список использованных Revit-плагинов с числом запусков.
+// Список использованных Revit-плагинов — только названия, без числа запусков:
+// после перехода на plugins-usage-analytics день засчитывается за выполненное действие,
+// и счётчик в launch_count пользователю как «число запусков» уже не объясняется.
 // Показывается на всех транзакциях revit_using_plugins (виджет + страница операций).
 export function PluginUsageLine({ plugins }: PluginUsageLineProps) {
   if (plugins.length === 0) return null
   return (
     <div className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--apex-text-muted)' }}>
-      {plugins.map((p) => `${p.plugin_name} ×${p.launch_count}`).join('  ·  ')}
+      {plugins.map((p) => p.plugin_name).join('  ·  ')}
     </div>
   )
 }

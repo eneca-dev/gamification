@@ -4,7 +4,7 @@
 
 ## Логика работы
 
-Данные поступают из Elasticsearch через VPS-скрипт `sync-plugin-launches` (`gamification-vps-scripts/src/scripts/sync-plugin-launches.ts`) → записываются в `elk_plugin_launches` (сырые запуски по плагинам).
+Данные поступают из Elasticsearch (старые логи запуска; для 19 плагинов с даты переключения — операции из plugins-usage-analytics, см. src/docs-features/revit/plugin-analytics-cutover.md) через VPS-скрипт `sync-plugin-launches` (`gamification-vps-scripts/src/scripts/sync-plugin-launches.ts`) → записываются в `elk_plugin_launches` (сырые запуски по плагинам).
 
 Триггер `trg_award_revit_points` (на INSERT в `elk_plugin_launches`) делает только два дела: идемпотентный лог в `gamification_event_logs` (с накоплением `details.plugins[]`) и начисление 5 💎 за первый плагин дня. **Стрики триггер не трогает.**
 
