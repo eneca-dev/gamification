@@ -1,10 +1,10 @@
 'use client'
 
-import { Trophy, Users, Building2 } from 'lucide-react'
 import { CoinIcon } from '@/components/CoinIcon'
 
 import type { AchievementAward } from '../types'
 import { ACHIEVEMENT_BONUSES } from '../types'
+import { achievementImageUrl, awardImageName } from '../images'
 
 const AREA_LABELS = {
   revit: 'Revit',
@@ -13,9 +13,9 @@ const AREA_LABELS = {
 } as const
 
 const ENTITY_CONFIG = {
-  user: { icon: Trophy, label: 'Личное' },
-  team: { icon: Users, label: 'Команда' },
-  department: { icon: Building2, label: 'Отдел' },
+  user: { label: 'Личное' },
+  team: { label: 'Команда' },
+  department: { label: 'Отдел' },
 } as const
 
 function formatPeriod(periodStart: string): string {
@@ -45,7 +45,6 @@ export function AwardHistory({ awards }: AwardHistoryProps) {
       <div className="space-y-2">
         {awards.map((award) => {
           const entityCfg = ENTITY_CONFIG[award.entity_type]
-          const Icon = entityCfg.icon
           const bonus = ACHIEVEMENT_BONUSES[award.entity_type]
 
           return (
@@ -54,7 +53,8 @@ export function AwardHistory({ awards }: AwardHistoryProps) {
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
               style={{ background: 'var(--apex-success-bg)', border: '1px solid var(--teal-100)' }}
             >
-              <Icon size={16} style={{ color: 'var(--apex-success-text)' }} />
+              <img src={achievementImageUrl(awardImageName(award.area, award.entity_type))}
+                alt="" className="w-16 h-16 sm:w-24 sm:h-24 shrink-0 object-contain rounded-lg ring-2 ring-amber-400" />
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>
                   {AREA_LABELS[award.area]} — {entityCfg.label}

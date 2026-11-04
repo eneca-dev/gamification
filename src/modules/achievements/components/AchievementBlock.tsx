@@ -36,8 +36,8 @@ const RANKING_ACHIEVEMENT_NAMES: Record<string, Record<AchievementEntityType, st
 }
 
 const RANKING_EMOJIS: Record<string, Record<AchievementEntityType, string>> = {
-  revit: { user: '⚡', team: '🛡️', department: '👑' },
-  ws: { user: '📋', team: '🛡️', department: '👑' },
+  revit: { user: '⚡', team: '🧩', department: '🚀' },
+  ws: { user: '🛡️', team: '🧭', department: '👑' },
 }
 
 const RANKING_RULES: Record<string, Record<AchievementEntityType, string>> = {
@@ -128,7 +128,7 @@ function RankingRow({
   daysElapsed,
   periodDays,
 }: {
-  area: string
+  area: 'revit' | 'ws'
   name: string
   emoji: string
   entityType: AchievementEntityType
@@ -152,16 +152,16 @@ function RankingRow({
 
   return (
     <div className="py-2.5">
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm">{emoji}</span>
+      <div className="mb-1 flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="shrink-0 text-sm">{emoji}</span>
           <span
-            className="text-[12px] font-bold cursor-help relative"
+            className="relative shrink-0 cursor-help whitespace-nowrap text-[11px] font-bold sm:text-[12px]"
             style={{ color: earned ? 'var(--apex-success-text)' : 'var(--text-primary)' }}
             onMouseEnter={() => setShowTip(true)}
             onMouseLeave={() => setShowTip(false)}
           >
-            {name}
+            <span title={name}>{name}</span>
             {showTip && (
               <div
                 className="absolute bottom-full left-0 mb-1.5 px-3 py-2 rounded-xl text-[11px] font-medium w-60 pointer-events-none"
@@ -178,27 +178,14 @@ function RankingRow({
             )}
           </span>
           <span
-            className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+            className="min-w-0 shrink truncate rounded-md px-1.5 py-0.5 text-[10px] font-bold"
             style={{ color: ENTITY_TAG_STYLES[entityType].color, background: ENTITY_TAG_STYLES[entityType].bg }}
+            title={groupName ?? entityLabel}
           >
             {groupName ?? entityLabel}
           </span>
-          {currentRank !== null && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: 'var(--surface)', color: 'var(--text-muted)' }} title={`Текущая позиция в рейтинге: ${currentRank}`}>
-              #{currentRank}
-            </span>
-          )}
-          {currentRankLaunches != null && (
-            <span
-              className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md truncate min-w-0"
-              style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
-              title={`Позиция по количеству запусков плагинов: ${currentRankLaunches}`}
-            >
-              #{currentRankLaunches} по запускам
-            </span>
-          )}
         </div>
-        <span className="text-[12px] font-bold" style={{ color: earned ? 'var(--apex-success-text)' : 'var(--text-secondary)' }} title={`Дней в топе: ${progress} из ${threshold} необходимых`}>
+        <span className="shrink-0 text-[12px] font-bold" style={{ color: earned ? 'var(--apex-success-text)' : 'var(--text-secondary)' }} title={`Дней в топе: ${progress} из ${threshold} необходимых`}>
           {progress}/{threshold}
         </span>
       </div>
@@ -207,11 +194,27 @@ function RankingRow({
         <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: earned ? 'var(--apex-primary)' : color, minWidth: progress > 0 ? '3px' : '0' }} />
       </div>
 
-      <div className="flex items-center justify-between mt-0.5">
-        <span className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>
-          {earned ? <span className="inline-flex items-center gap-0.5">Получено! +{bonus} <CoinIcon size={9} /></span> : remaining > 0 ? `ещё ${remaining} дней` : ''}
-        </span>
-        <span className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }} title={`Прошло ${daysElapsed} дней из ${periodDays} в этом месяце`}>
+      <div className="mt-0.5 flex min-w-0 items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="shrink-0 text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>
+            {earned ? <span className="inline-flex items-center gap-0.5">Получено! +{bonus} <CoinIcon size={9} /></span> : remaining > 0 ? `ещё ${remaining} дней` : ''}
+          </span>
+          {currentRank !== null && (
+            <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: 'var(--surface)', color: 'var(--text-muted)' }} title={`Текущая позиция в рейтинге: ${currentRank}`}>
+              #{currentRank}
+            </span>
+          )}
+          {currentRankLaunches != null && (
+            <span
+              className="min-w-0 truncate rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
+              style={{ background: 'var(--surface)', color: 'var(--text-muted)' }}
+              title={`Позиция по количеству запусков плагинов: ${currentRankLaunches}`}
+            >
+              #{currentRankLaunches} по запускам
+            </span>
+          )}
+        </div>
+        <span className="shrink-0 text-[9px] font-medium" style={{ color: 'var(--text-muted)' }} title={`Прошло ${daysElapsed} дней из ${periodDays} в этом месяце`}>
           {daysElapsed}/{periodDays}
         </span>
       </div>
@@ -229,16 +232,16 @@ function GratitudeRow({ item, isFirst }: { item: GratitudeAchProgress; isFirst?:
 
   return (
     <div className="py-2.5">
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
-          <span className="text-sm">{emoji}</span>
+      <div className="mb-1 flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="shrink-0 text-sm">{emoji}</span>
           <span
-            className="text-[12px] font-bold cursor-help relative"
+            className="relative min-w-0 flex-1 cursor-help whitespace-nowrap text-[11px] font-bold sm:text-[12px]"
             style={{ color: item.earned ? 'var(--apex-success-text)' : 'var(--text-primary)' }}
             onMouseEnter={() => setShowTip(true)}
             onMouseLeave={() => setShowTip(false)}
           >
-            {item.achievement_name}
+            <span title={item.achievement_name}>{item.achievement_name}</span>
             {showTip && (
               <div
                 className={`absolute left-0 px-3 py-2 rounded-xl text-[11px] font-medium w-72 pointer-events-none ${isFirst ? 'top-full mt-1.5' : 'bottom-full mb-1.5'}`}
@@ -261,7 +264,7 @@ function GratitudeRow({ item, isFirst }: { item: GratitudeAchProgress; isFirst?:
             )}
           </span>
         </div>
-        <span className="text-[12px] font-bold" style={{ color: item.earned ? 'var(--apex-success-text)' : 'var(--text-secondary)' }}>
+        <span className="shrink-0 text-[12px] font-bold" style={{ color: item.earned ? 'var(--apex-success-text)' : 'var(--text-secondary)' }}>
           {item.current_count}/{item.threshold}
         </span>
       </div>

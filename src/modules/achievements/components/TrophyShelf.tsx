@@ -7,6 +7,7 @@ import { CoinIcon } from '@/components/CoinIcon'
 
 import type { AchievementAward, AchievementEntityType, AchievementArea } from '../types'
 import { ACHIEVEMENT_BONUSES } from '../types'
+import { achievementImageUrl, awardImageName, type AchievementImageName } from '../images'
 
 const AREA_CONFIG = {
   revit: { label: 'Revit', icon: Zap, color: 'var(--tag-orange-text)', bg: 'var(--tag-orange-bg)', emoji: '⚡' },
@@ -47,6 +48,7 @@ function TrophyCell({
   label,
   area,
   entityType,
+  imageName,
   award,
   isCurrent,
   isFuture,
@@ -56,6 +58,7 @@ function TrophyCell({
   label: string
   area: AchievementArea
   entityType: AchievementEntityType
+  imageName: AchievementImageName
   award: AchievementAward | null
   isCurrent: boolean
   isFuture: boolean
@@ -73,7 +76,7 @@ function TrophyCell({
       onMouseLeave={() => setShowTooltip(false)}
     >
       <div
-        className="w-full rounded-xl flex flex-col items-center justify-center gap-1 py-4 2xl:py-8 transition-all cursor-default"
+        className="w-full rounded-xl flex flex-col items-center justify-center gap-1 py-2 2xl:py-3 transition-all cursor-default"
         style={{
           background: earned
             ? entityCfg.bg
@@ -85,12 +88,10 @@ function TrophyCell({
             : isCurrent
               ? '2px dashed var(--border)'
               : '1px solid var(--border)',
-          opacity: isFuture ? 0.4 : earned ? 1 : 0.5,
         }}
       >
-        <span className="text-3xl 2xl:text-5xl" style={{ filter: earned ? 'none' : 'grayscale(1) opacity(0.4)' }}>
-          {entityCfg.emoji}
-        </span>
+        <img src={achievementImageUrl(imageName)} alt=""
+          className={`w-24 h-24 max-w-full 2xl:w-28 2xl:h-28 object-contain rounded-lg ${earned ? 'ring-2 ring-amber-400' : ''}`} />
         <span
           className="text-[10px] font-bold"
           style={{ color: earned ? entityCfg.color : 'var(--text-muted)' }}
@@ -183,7 +184,7 @@ export function TrophyShelf({ awards }: TrophyShelfProps) {
                   <Icon size={12} style={{ color: areaCfg.color }} />
                   <span className="text-[11px] font-bold" style={{ color: areaCfg.color }}>{areaCfg.label}</span>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 2xl:grid-cols-3 gap-4">
                   {entityTypes.map((et) => {
                     const entityCfg = ENTITY_CONFIG[et]
                     const now = new Date()
@@ -212,6 +213,7 @@ export function TrophyShelf({ awards }: TrophyShelfProps) {
                                 label={qm.label}
                                 area={area}
                                 entityType={et}
+                                imageName={awardImageName(area, et)}
                                 award={award}
                                 isCurrent={isCurrent}
                                 isFuture={isFuture}
@@ -232,7 +234,7 @@ export function TrophyShelf({ awards }: TrophyShelfProps) {
               <Heart size={12} style={{ color: 'var(--tag-purple-text)' }} />
               <span className="text-[11px] font-bold" style={{ color: 'var(--tag-purple-text)' }}>Благодарности</span>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 2xl:grid-cols-3 gap-4">
               {gratitudeCategories.map((gc) => {
                 const now = new Date()
                 const currentMonth = now.getMonth()
@@ -260,6 +262,7 @@ export function TrophyShelf({ awards }: TrophyShelfProps) {
                             label={qm.label}
                             area={'gratitude' as AchievementArea}
                             entityType="user"
+                            imageName={awardImageName(gc.area, 'user')}
                             award={award}
                             isCurrent={isCurrent}
                             isFuture={isFuture}
