@@ -65,6 +65,13 @@ export async function purchaseProduct(
     return { success: false, error: 'Купите защиту через карточку «Вторая жизнь»' }
   }
 
+  const { data: bimoItem, error: bimoError } = await supabase
+    .from('bimo_catalog').select('product_id').eq('product_id', parsed.data.product_id).maybeSingle()
+  if (bimoError) return { success: false, error: 'Не удалось проверить товар' }
+  if (bimoItem || product?.effect?.startsWith('bimo:')) {
+    return { success: false, error: 'Покупайте вещи Бимо в разделе «Бимо-енот»' }
+  }
+
   const { data, error } = await supabase.rpc('purchase_product', {
     p_product_id: parsed.data.product_id,
     p_user_id: user.wsUserId,
@@ -82,7 +89,6 @@ export async function purchaseProduct(
 
   revalidateTag(balanceTag(user.wsUserId), 'max')
   revalidatePath('/store')
-  revalidatePath('/profile')
 
   const category = Array.isArray(product?.category) ? product.category[0] : product?.category
   if (product && product.effect === null && category?.slug && category.slug !== 'draw') {

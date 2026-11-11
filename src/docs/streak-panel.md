@@ -58,7 +58,7 @@ WS-стрик считается на чтение через view. Модель
 ## Queries
 
 - `getStreakDayStatuses(userId, gridStart, gridEnd)` — строки из ws_daily_statuses за период
-- `getGridAbsences(userId, gridStart, gridEnd)` — Map сохранённых отсутствий за диапазон грида
+- `getGridAbsences(userId, gridStart, gridEnd)` — Map сохранённых отсутствий за диапазон грида. Кэш 5 минут, тег `day-statuses:<userId>`; кэшируются пары «дата → тип», Map собирается после чтения кэша
 - `getAutomationDays(userEmail, gridStart, gridEnd)` — Set дат из elk_plugin_launches
 - `getWsStreakData(userId)` — стрик WS + milestones из gamification_event_types
 - `getHolidays(gridStart, gridEnd)` — Set дат из calendar_holidays

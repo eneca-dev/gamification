@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, ShoppingBag, Trophy, Users, Settings, LogOut, HelpCircle, Calendar } from 'lucide-react'
+import { Home, ShoppingBag, Trophy, Users, Settings, LogOut, HelpCircle, Calendar, PawPrint } from 'lucide-react'
 
 import { signOut } from '@/modules/auth/index.client'
 import type { AuthUser } from '@/modules/auth/index.client'
 import { DevUserSwitcher } from '@/modules/dev-tools/components/DevUserSwitcher'
 import { CoinBalanceLive } from '@/components/CoinBalance'
+import { BimoCompanion } from '@/modules/profile-appearance/components/BimoCompanion'
 
 const LS_KEY = 'day_off_last_seen_at'
 
@@ -20,13 +21,15 @@ interface SidebarProps {
   dayOffResolved?: string[]
   isCollapsed?: boolean
   onToggleCollapse?: () => void
+  showBimoGallery?: boolean
 }
 
-const navItems = [
+const navItems: { href: string; label: string; icon: typeof Home; bimoOnly?: boolean }[] = [
   { href: '/',            label: 'Главная',       icon: Home },
   { href: '/store',       label: 'Магазин',       icon: ShoppingBag },
   { href: '/achievements',label: 'Достижения',    icon: Trophy },
   { href: '/activity',    label: 'Лента компании', icon: Users },
+  { href: '/bimo',        label: 'Бимо',          icon: PawPrint, bimoOnly: true },
 ]
 
 const bottomNavItems: { href: string; label: string; icon: typeof HelpCircle; adminOnly?: boolean }[] = [
@@ -50,7 +53,7 @@ function getInitials(fullName: string, email?: string): string {
   return '?'
 }
 
-export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, dayOffResolved = [], isCollapsed = false, onToggleCollapse }: SidebarProps) {
+export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, dayOffResolved = [], isCollapsed = false, onToggleCollapse, showBimoGallery = false }: SidebarProps) {
   const pathname = usePathname()
   const [dayOffBadge, setDayOffBadge] = useState(0)
 
@@ -123,7 +126,7 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, 
       {/* Navigation */}
       <nav className={`flex-1 py-4 overflow-y-auto ${collapsed ? 'px-2' : 'px-3'}`}>
         <div className="space-y-0.5">
-          {navItems.map((item) => {
+          {navItems.filter((item) => !item.bimoOnly || showBimoGallery).map((item) => {
             const isActive = pathname === item.href
             const Icon = item.icon
             return (
@@ -208,6 +211,13 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, 
           )}
         </div>
       </nav>
+
+      {/* Бимо */}
+      {!collapsed && user?.wsUserId && (
+        <div className="pl-3 pr-5 pb-2">
+          <BimoCompanion key={user.wsUserId} userId={user.wsUserId} />
+        </div>
+      )}
 
       {/* Coin balance */}
       {collapsed ? (

@@ -13,6 +13,10 @@
  */
 
 export const queryKeys = {
+  bimo: {
+    all: ['bimo'] as const,
+    user: (userId: string) => [...queryKeys.bimo.all, userId] as const,
+  },
   balance: {
     all: ['balance'] as const,
     current: (userId: string) => [...queryKeys.balance.all, 'current', userId] as const,

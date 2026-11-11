@@ -3,6 +3,7 @@ import { LayoutShell } from '@/components/LayoutShell'
 import { getCurrentUser } from '@/modules/auth'
 import { getUserBalance } from '@/modules/shop'
 import { getUserDayOffResolvedTimestamps } from '@/modules/day-off'
+import { bimoEnabled } from '@/modules/profile-appearance/queries'
 import { OnboardingProvider } from '@/modules/onboarding/index.client'
 
 const DEV_TOOLS_ENABLED =
@@ -21,7 +22,7 @@ export default async function MainLayout({
   const sidebarCollapsed = (await cookies()).get('sidebar_collapsed')?.value === 'true'
 
   const layout = (
-    <LayoutShell user={user} balance={balance} showDevSwitcher={DEV_TOOLS_ENABLED} dayOffResolved={dayOffResolved} sidebarCollapsed={sidebarCollapsed}>
+    <LayoutShell user={user} balance={balance} showDevSwitcher={DEV_TOOLS_ENABLED} dayOffResolved={dayOffResolved} sidebarCollapsed={sidebarCollapsed} showBimoGallery={bimoEnabled() && Boolean(user?.wsUserId)}>
       {children}
     </LayoutShell>
   )

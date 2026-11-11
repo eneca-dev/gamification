@@ -91,7 +91,10 @@ export function buildCalendarDays(
   return days
 }
 
-export async function getGridAbsences(userId: string, gridStart: string, gridEnd: string): Promise<Map<string, string>> {
+// Кэшируем пары «дата → тип», а Map собираем снаружи: unstable_cache хранит
+// значение сериализованным, и Map вернулся бы пустым объектом (так же сделано
+// в getHolidays/getWorkdays).
+async function _getGridAbsenceEntries(userId: string, gridStart: string, gridEnd: string): Promise<[string, string][]> {
   const supabase = createSupabaseAdminClient()
   const [absencesResult, requestsResult] = await Promise.all([
     supabase.from('ws_user_absences')
@@ -120,7 +123,14 @@ export async function getGridAbsences(userId: string, gridStart: string, gridEnd
   for (const [date, type] of requestTypes) {
     if (!result.has(date)) result.set(date, type)
   }
-  return result
+  return [...result.entries()]
+}
+
+export const getGridAbsences = async (userId: string, gridStart: string, gridEnd: string): Promise<Map<string, string>> => {
+  const entries = await cached(_getGridAbsenceEntries, ['grid-absences', userId, gridStart, gridEnd], {
+    tags: [`day-statuses:${userId}`], revalidate: CACHE_5M,
+  })(userId, gridStart, gridEnd)
+  return new Map(entries)
 }
 
 // --- Внутренние функции (без кэша) ---

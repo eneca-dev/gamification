@@ -60,3 +60,6 @@ certificates
 
 # временные дампы данных вью при разработке модуля corrections
 /.corrections-backup/
+
+# Local character art sources, previews and backups (not served by the app)
+/.local-assets/

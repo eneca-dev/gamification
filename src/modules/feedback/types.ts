@@ -57,6 +57,16 @@ export const FeedbackSchema = z.discriminatedUnion('type', [
 export type FeedbackInput = z.infer<typeof FeedbackSchema>
 export type AppealInput = z.infer<typeof appealSchema>
 
+/** Обжалование в том объёме, который нужен календарю стрика на главной. */
+export interface UserAppealSummary {
+  status: AppealStatus
+  description: string | null
+  review_comment: string | null
+  created_at: string
+  appeal_dates: string[] | null
+  appeal_transaction_ids: string[] | null
+}
+
 export interface FeedbackRecord {
   id: string
   created_at: string

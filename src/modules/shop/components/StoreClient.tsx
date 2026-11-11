@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, type ReactNode } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { ArrowRight } from 'lucide-react'
 
@@ -16,6 +17,10 @@ import type { ShieldQuota, ShieldType } from '@/modules/streak-shield/index.clie
 // [LOTTERY HIDDEN] import type { LotteryWithStats, UserTicketInfo } from '@/modules/lottery/index.client'
 
 interface StoreClientProps {
+  showBimo?: boolean
+  bimoActive?: boolean
+  bimoContent?: ReactNode
+  initialCategory?: string
   products: ShopProductWithCategory[]
   categories: ShopCategory[]
   balance: number
@@ -28,6 +33,10 @@ interface StoreClientProps {
 }
 
 export function StoreClient({
+  showBimo = false,
+  bimoActive = false,
+  bimoContent,
+  initialCategory,
   products,
   categories,
   balance,
@@ -38,7 +47,8 @@ export function StoreClient({
   // [LOTTERY HIDDEN] lotteryHistory = [],
   // [LOTTERY HIDDEN] serverTime = Date.now(),
 }: StoreClientProps) {
-  const [activeFilter, setActiveFilter] = useState('all')
+  const router = useRouter()
+  const [activeFilter, setActiveFilter] = useState(bimoActive ? 'bimo' : initialCategory ?? 'all')
   const [purchasingId, setPurchasingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -53,6 +63,14 @@ export function StoreClient({
     .sort((a, b) => Number(a.is_coming_soon) - Number(b.is_coming_soon))
 
   const activeCategory = categories.find((c) => c.slug === activeFilter)
+
+  function selectFilter(filter: string) {
+    if (bimoActive) {
+      router.push(filter === 'all' ? '/store' : `/store?category=${encodeURIComponent(filter)}`)
+    } else {
+      setActiveFilter(filter)
+    }
+  }
 
   function handlePurchase(productId: string, _price: number, userComment?: string) {
     const product = products.find((p) => p.id === productId)
@@ -142,7 +160,7 @@ export function StoreClient({
       {/* Фильтры категорий */}
       <div className="animate-fade-in-up stagger-2 flex gap-2 flex-wrap" data-onboarding="store-category-filters">
         <button
-          onClick={() => setActiveFilter('all')}
+          onClick={() => selectFilter('all')}
           className="px-4 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"
           style={{
             background: activeFilter === 'all' ? 'var(--apex-primary)' : 'var(--surface-elevated)',
@@ -158,7 +176,7 @@ export function StoreClient({
           return (
             <button
               key={cat.id}
-              onClick={() => setActiveFilter(cat.slug)}
+              onClick={() => selectFilter(cat.slug)}
               data-onboarding-category={cat.slug}
               className={`py-2 rounded-xl text-[13px] font-semibold transition-all duration-200${isDraw ? ' relative overflow-hidden' : ' px-4'}`}
               style={isDraw ? {
@@ -188,6 +206,17 @@ export function StoreClient({
             </button>
           )
         })}
+        {showBimo && <button
+          type="button"
+          onClick={() => router.push('/store?tab=bimo')}
+          aria-pressed={activeFilter === 'bimo'}
+          className="px-4 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"
+          style={{
+            background: activeFilter === 'bimo' ? 'var(--apex-primary)' : 'var(--surface-elevated)',
+            color: activeFilter === 'bimo' ? 'white' : 'var(--text-secondary)',
+            border: activeFilter === 'bimo' ? '1px solid transparent' : '1px solid var(--border)',
+          }}
+        >Енот-Бимо</button>}
       </div>
 
       {/* Описание категории */}
@@ -206,7 +235,7 @@ export function StoreClient({
 
       {/* Контент категории */}
       {/* [LOTTERY HIDDEN] activeFilter === 'draw' branch (LotteryBanner, LotteryWinners) removed */}
-      {filtered.length > 0 ? (
+      {activeFilter === 'bimo' ? bimoContent : filtered.length > 0 ? (
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 animate-fade-in-up stagger-3">
           {filtered.map((product, i) => (
             <ProductCard

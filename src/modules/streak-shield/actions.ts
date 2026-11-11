@@ -23,7 +23,6 @@ export async function buyStreakShield(shieldType: ShieldType): Promise<{ success
   revalidateTag(balanceTag(user.wsUserId), 'max')
   revalidatePath('/')
   revalidatePath('/store')
-  revalidatePath('/profile')
   return { success: true }
 }
 
@@ -37,7 +36,6 @@ export async function purchaseStreakShieldCredit(shieldType: ShieldType): Promis
   if (error) return { success: false, error: error.message.includes('Недостаточно') ? 'Недостаточно 💎' : error.message }
   revalidateTag(balanceTag(user.wsUserId), 'max')
   revalidatePath('/store')
-  revalidatePath('/profile')
   return { success: true }
 }
 

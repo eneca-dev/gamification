@@ -1,7 +1,8 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
+import { cached, CACHE_5M } from '@/lib/server-cache'
 import type { NewsItem } from './types'
 
-export async function getNewsForDashboard(departmentCode: string | null): Promise<NewsItem[]> {
+async function _getNewsForDashboard(departmentCode: string | null): Promise<NewsItem[]> {
   const supabase = createSupabaseAdminClient()
   const now = new Date().toISOString()
   const base = () => supabase.from('company_news').select('id,title,body,category,department_code,published_at,expires_at,created_at')
@@ -15,6 +16,14 @@ export async function getNewsForDashboard(departmentCode: string | null): Promis
   return [...(global.data ?? []), ...(department.data ?? [])]
     .sort((a, b) => (b.published_at ?? '').localeCompare(a.published_at ?? '')).slice(0, 30) as NewsItem[]
 }
+
+// Новости общие для отдела и меняются редко: кэш на 5 минут снимает два запроса
+// с каждого захода на главную. Публикация и правка сбрасывают тег `news`,
+// поэтому задержка возможна только у истечения срока показа — до 5 минут.
+export const getNewsForDashboard = (departmentCode: string | null) =>
+  cached(() => _getNewsForDashboard(departmentCode), ['news-dashboard', departmentCode ?? 'all'], {
+    tags: ['news'], revalidate: CACHE_5M,
+  })()
 
 export async function getAllNews(): Promise<{ items: NewsItem[]; now: number }> {
   const now = Date.now()

@@ -1,6 +1,7 @@
 'use server'
 
 import { createSupabaseAdminClient, createSupabaseServerClient } from '@/config/supabase'
+import { getCurrentUser } from '@/modules/auth'
 
 /**
  * Возвращает список slug-ов туров, которые пользователь уже видел.
@@ -19,11 +20,16 @@ export async function getOnboardingSeenSlugs(userId: string): Promise<string[]> 
 }
 
 /**
- * Добавляет slug тура в onboarding_seen для пользователя.
+ * Добавляет slug тура в onboarding_seen текущему пользователю.
  * Вызывается параллельно с записью в localStorage — не блокирует UI.
- * Использует admin client, т.к. RLS на profiles не разрешает UPDATE обычному пользователю.
+ * Использует admin client, т.к. RLS на profiles не разрешает UPDATE обычному
+ * пользователю; поэтому пользователь берётся из серверной сессии, а не из
+ * аргумента — иначе можно было бы отметить тур за кого-то другого.
  */
-export async function markTourSeenInDb(userId: string, pageSlug: string): Promise<void> {
+export async function markTourSeenInDb(pageSlug: string): Promise<void> {
+  const user = await getCurrentUser()
+  if (!user) return
+  const userId = user.id
   const supabase = createSupabaseAdminClient()
 
   // Читаем текущий массив, добавляем slug если его ещё нет

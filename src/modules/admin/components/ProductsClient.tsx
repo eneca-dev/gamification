@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect, useMemo, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import dynamic from 'next/dynamic'
 import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Check, X, HelpCircle, List, LayoutGrid, MessageSquare, Eye } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
@@ -23,7 +24,21 @@ import {
 
 import { CrystalRateHistory } from './economy/CrystalRateHistory'
 import { CrystalRateStats } from './CrystalRateStats'
-import { ProductFormModal } from './ProductFormModal'
+// Форма товара с загрузкой фото и видео — отдельный чанк: при просмотре списка
+// она не нужна и подгружается только при создании или редактировании.
+const ProductFormModal = dynamic(() => import('./ProductFormModal').then((m) => m.ProductFormModal), {
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--apex-overlay)' }}>
+      <div
+        className="rounded-2xl px-6 py-4 text-[13px] font-semibold"
+        style={{ background: 'var(--apex-surface)', color: 'var(--apex-text-secondary)', border: '1px solid var(--apex-border)' }}
+      >
+        Загрузка формы…
+      </div>
+    </div>
+  ),
+})
 import type { ProductFormData, MediaDraftItem, CrystalRateRow } from '../types'
 import type { ShopProductWithCategory, ShopCategory, ProductMediaItem } from '@/modules/shop/index.client'
 

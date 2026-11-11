@@ -1,4 +1,3 @@
-import { CoinIcon } from "@/components/CoinIcon";
 import { AlarmsBanner } from "@/modules/alarms/components/AlarmsBanner";
 import { StreakPanel } from "@/components/dashboard/StreakPanel";
 import { LiveTransactionFeed } from "@/modules/transactions/components/LiveTransactionFeed";
@@ -6,10 +5,6 @@ import { Leaderboard } from "@/components/dashboard/Leaderboard";
 import { DepartmentContest } from "@/components/dashboard/DepartmentContest";
 import type { DepartmentEntry } from "@/lib/data";
 import { getCurrentUser } from "@/modules/auth/queries";
-import {
-  getRevitWidgetData,
-  getRevitTransactions,
-} from "@/modules/revit";
 import { getDashboardTransactions } from "@/modules/transactions";
 import {
   getRevitPersonalRanking,
@@ -33,7 +28,6 @@ import {
 import { getActiveAlarms } from "@/modules/alarms";
 import { getMyGratitudesNew, getSenderQuota, getGratitudeRecipients } from "@/modules/gratitudes";
 import { getUserBalance } from "@/modules/shop";
-import { getUserOrders } from "@/modules/shop";
 import { getPendingResets, getShieldDatesInRange } from "@/modules/streak-shield";
 import { getUserAppeals } from "@/modules/feedback";
 import { getMasterPlannerPanel } from "@/modules/master-planner";
@@ -54,7 +48,6 @@ const DEPT_COLORS = [
 export default async function DashboardPage() {
   const currentUser = await getCurrentUser();
   const userEmail = currentUser?.email ?? "";
-  const userId = currentUser?.id ?? "";
 
   // Получаем ws_user данные (id, department_code, team) для сопоставления с рейтингами
   let wsUserId: string | null = null;
@@ -79,14 +72,13 @@ export default async function DashboardPage() {
 
   // Все запросы параллельно в одном Promise.all (PERF-01)
   const [
-    wsStreak, revitStreak, revitData,
+    wsStreak, revitStreak,
     revitPersonalRanking, wsPersonalRanking,
     revitTeamRanking, wsTeamRanking,
     revitDeptRanking, wsDeptRanking,
-    revitTransactions,
     recentTransactions,
     activeAlarms,
-    senderQuota, gratitudeRecipients, userBalance, myGratitudesNew, userOrders,
+    senderQuota, gratitudeRecipients, userBalance, myGratitudesNew,
     dayStatuses, gridAbsences, automationDates, holidays, workdays, pendingResets,
     shieldDates,
     masterPlannerData,
@@ -109,16 +101,12 @@ export default async function DashboardPage() {
           { days: 30, reward: 100, reached: false },
         ],
       }),
-      userEmail
-        ? getRevitWidgetData(userEmail)
-        : Promise.resolve({ streak: null, activeDates: [], yesterdaySummary: { pluginCount: 0, coinsEarned: 0 } }),
       getRevitPersonalRanking(500),
       getWsPersonalRanking(500),
       getRevitTeamRanking(100),
       getWsTeamRanking(100),
       getRevitDepartmentRanking(50),
       getWsDepartmentRanking(50),
-      userEmail ? getRevitTransactions(userEmail, 10) : Promise.resolve([]),
       userEmail ? getDashboardTransactions(userEmail, 5) : Promise.resolve([]),
       wsUserId ? getActiveAlarms(wsUserId) : Promise.resolve([]),
       // Благодарности
@@ -126,7 +114,6 @@ export default async function DashboardPage() {
       wsUserId ? getGratitudeRecipients(wsUserId) : Promise.resolve([]),
       wsUserId ? getUserBalance(wsUserId) : Promise.resolve(0),
       userEmail ? getMyGratitudesNew(userEmail, 30) : Promise.resolve([]),
-      wsUserId ? getUserOrders(wsUserId) : Promise.resolve([]),
       // Календарь
       wsUserId ? getStreakDayStatuses(wsUserId, rangeStart, rangeEnd) : Promise.resolve([]),
       wsUserId ? getGridAbsences(wsUserId, rangeStart, rangeEnd) : Promise.resolve(new Map<string, string>()),

@@ -15,10 +15,11 @@ interface LayoutShellProps {
   showDevSwitcher: boolean
   dayOffResolved: string[]
   sidebarCollapsed: boolean
+  showBimoGallery?: boolean
   children: React.ReactNode
 }
 
-export function LayoutShell({ user, balance, showDevSwitcher, dayOffResolved, sidebarCollapsed, children }: LayoutShellProps) {
+export function LayoutShell({ user, balance, showDevSwitcher, dayOffResolved, sidebarCollapsed, showBimoGallery = false, children }: LayoutShellProps) {
   const [isSidebarOpen, setSidebarOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(sidebarCollapsed)
   const pathname = usePathname()
@@ -52,6 +53,7 @@ export function LayoutShell({ user, balance, showDevSwitcher, dayOffResolved, si
         dayOffResolved={dayOffResolved}
         isCollapsed={isCollapsed}
         onToggleCollapse={toggleCollapse}
+        showBimoGallery={showBimoGallery}
       />
 
       <div className={`flex-1 min-w-0 ml-0 transition-[margin] duration-300 ease-in-out ${isCollapsed ? 'md:ml-[68px]' : 'md:ml-[260px]'}`}>

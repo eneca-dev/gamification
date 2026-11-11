@@ -2,11 +2,15 @@ import { cache } from 'react'
 
 import { createSupabaseAdminClient } from '@/config/supabase'
 
-import type { AppealCalendarDay, AppealTransaction, FeedbackRecord } from './types'
+import type { AppealCalendarDay, AppealTransaction, FeedbackRecord, UserAppealSummary } from './types'
 
 const APPEAL_WINDOW_DAYS = 90
 const APPEAL_TX_WINDOW_DAYS = 30
 const APPEAL_TX_LIMIT = 100
+/** PostgREST отдаёт максимум 1000 строк за запрос — списки админки читаем страницами. */
+const ADMIN_PAGE_SIZE = 500
+/** Больше обжалований календарь стрика за полгода всё равно не покажет. */
+const USER_APPEALS_LIMIT = 100
 
 const EVENT_ICONS: Record<string, string> = {
   // Положительные
@@ -106,32 +110,39 @@ function describeTx(eventType: string, source: string, raw: string | null): stri
   return labels[eventType] ?? eventType
 }
 
-export const getFeedbackList = cache(async function getFeedbackList(): Promise<
-  FeedbackRecord[]
-> {
+/**
+ * Читает список обращений страницами: без этого PostgREST молча обрезал бы выдачу
+ * на 1000 строк, и админка начала бы недопоказывать записи без всякой ошибки.
+ * Колонки берутся все — `FeedbackRecord` использует их целиком.
+ */
+async function fetchFeedbackPages(onlyAppeals: boolean): Promise<FeedbackRecord[]> {
   const supabase = createSupabaseAdminClient()
-  const { data, error } = await supabase
-    .from('feedback')
-    .select('*')
-    .order('created_at', { ascending: false })
+  const items: FeedbackRecord[] = []
 
-  if (error || !data) return []
-  return data as FeedbackRecord[]
-})
+  for (let offset = 0; ; offset += ADMIN_PAGE_SIZE) {
+    let query = supabase
+      .from('feedback')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(offset, offset + ADMIN_PAGE_SIZE - 1)
+    if (onlyAppeals) query = query.eq('type', 'appeal')
 
-export const getAppealsList = cache(async function getAppealsList(): Promise<
-  FeedbackRecord[]
-> {
-  const supabase = createSupabaseAdminClient()
-  const { data, error } = await supabase
-    .from('feedback')
-    .select('*')
-    .eq('type', 'appeal')
-    .order('created_at', { ascending: false })
+    const { data, error } = await query
+    if (error) {
+      console.error('[feedback] fetchFeedbackPages:', error.message)
+      break
+    }
+    items.push(...((data ?? []) as FeedbackRecord[]))
+    if (!data || data.length < ADMIN_PAGE_SIZE) break
+  }
 
-  if (error || !data) return []
-  return data as FeedbackRecord[]
-})
+  return items
+}
+
+export const getFeedbackList = cache(() => fetchFeedbackPages(false))
+
+export const getAppealsList = cache(() => fetchFeedbackPages(true))
 
 function addDaysIso(iso: string, delta: number): string {
   const d = new Date(iso + 'T00:00:00Z')
@@ -248,17 +259,19 @@ export const getAppealTransactions = cache(async function getAppealTransactions(
   })
 })
 
+// Главной нужны только эти шесть полей из 23 — остальное не тянем.
 export const getUserAppeals = cache(async function getUserAppeals(
   wsUserId: string
-): Promise<FeedbackRecord[]> {
+): Promise<UserAppealSummary[]> {
   const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase
     .from('feedback')
-    .select('*')
+    .select('status, description, review_comment, created_at, appeal_dates, appeal_transaction_ids')
     .eq('type', 'appeal')
     .eq('ws_user_id', wsUserId)
     .order('created_at', { ascending: false })
+    .limit(USER_APPEALS_LIMIT)
 
   if (error || !data) return []
-  return data as FeedbackRecord[]
+  return data as UserAppealSummary[]
 })

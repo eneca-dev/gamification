@@ -90,6 +90,9 @@ function attachComputedPrice<T extends { cost_byn: number | string; coefficient:
 async function _getProducts(categorySlug?: string): Promise<ShopProductWithCategory[]> {
   const supabase = createSupabaseAdminClient()
   const rate = await getCurrentRate()
+  const { data: bimoItems, error: bimoError } = await supabase.from('bimo_catalog').select('product_id')
+  if (bimoError) throw new Error(bimoError.message)
+  const bimoProductIds = new Set((bimoItems ?? []).map(item => item.product_id))
 
   let query = supabase
     .from('shop_products')
@@ -109,7 +112,7 @@ async function _getProducts(categorySlug?: string): Promise<ShopProductWithCateg
   if (error) throw new Error(error.message)
 
   return (data ?? [])
-    .filter((p) => p.category?.is_active)
+    .filter((p) => p.category?.is_active && !bimoProductIds.has(p.id) && !p.effect?.startsWith('bimo:'))
     .map((p) => attachComputedPrice(
       { ...p, category: Array.isArray(p.category) ? p.category[0] : p.category },
       rate,

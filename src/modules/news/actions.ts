@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { checkIsAdmin } from '@/modules/admin/checkIsAdmin'
 import { getNewsDepartments } from './queries'
@@ -38,6 +38,7 @@ export async function saveNews(input: unknown): Promise<{ success: true } | { su
     })
     if (error) return { success: false, error: error.message }
   }
+  revalidateTag('news', 'max')
   revalidatePath('/')
   revalidatePath('/admin/news')
   return { success: true }

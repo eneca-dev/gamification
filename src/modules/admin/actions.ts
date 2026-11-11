@@ -222,7 +222,6 @@ export async function cancelOrder(
   revalidatePath('/admin/orders')
   revalidatePath('/store/orders')
   revalidatePath('/store')
-  revalidatePath('/profile')
   return { success: true, data: data as CancelResult }
 }
 

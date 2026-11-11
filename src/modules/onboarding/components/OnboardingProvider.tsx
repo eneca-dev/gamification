@@ -80,7 +80,7 @@ function AutoStartWatcher({ userId, isSynced, onStart }: AutoStartWatcherProps) 
       const timer = setTimeout(() => {
         if (isTourSeen(userId, slug!)) return
         markTourSeen(userId, slug!)
-        markTourSeenInDb(userId, slug!)
+        markTourSeenInDb(slug!)
         onStart(tour)
       }, START_DELAY)
 
@@ -184,7 +184,7 @@ export function OnboardingProvider({ userId, children }: OnboardingProviderProps
     if (!tour) return
     const index = Math.min(Math.max(0, startStepIndex), tour.steps.length - 1)
     markTourSeen(userId, pageSlug)
-    markTourSeenInDb(userId, pageSlug)
+    markTourSeenInDb(pageSlug)
     setActiveTour(tour)
     setCurrentStepIndex(index)
   }, [userId])
