@@ -59,7 +59,7 @@ export function RoulettePanel({ userId, isImpersonating }: RoulettePanelProps) {
       <div className="mt-5 grid gap-6 lg:grid-cols-2">
         <RouletteWheel result={result} />
         <div className="space-y-4">
-          <p>Текущий баланс: {balanceReady ? <CoinStatic amount={balance.data!} /> : <span role="status">{balance.isError ? 'Не удалось обновить' : 'Обновляем…'}</span>}</p>
+          <p className="flex min-h-7 flex-wrap items-center gap-x-1">Текущий баланс: {balanceReady ? <CoinStatic amount={balance.data!} /> : <span role="status">{balance.isError ? 'Не удалось обновить' : 'Обновляем…'}</span>}</p>
           {balance.isError && <button type="button" onClick={() => void balance.refetch()} className={button}>Обновить баланс</button>}
           <ul className="grid grid-cols-2 gap-2 text-sm" aria-label="Исходы и вероятности">
             {SECTORS.map(sector => <li key={sector} className="flex items-center gap-1 rounded-lg border border-[var(--apex-border)] p-2">
@@ -67,35 +67,38 @@ export function RoulettePanel({ userId, isImpersonating }: RoulettePanelProps) {
             </li>)}
           </ul>
           <p className="rounded-xl bg-[var(--apex-error-bg)] p-3 text-sm text-[var(--apex-error-text)]">Вероятность обнуления — 2/7 (28,57%). Вы рискуете всем балансом.</p>
-          {isImpersonating && <p role="alert">Ходы при подмене пользователя запрещены.</p>}
-          {state.isError && <div role="alert">Не удалось проверить доступность рулетки. <button type="button" onClick={() => void state.refetch()} className="underline">Повторить проверку</button></div>}
-          {state.isPending && <p role="status">Проверяем доступность…</p>}
-          {state.data && !state.data.enabled && <p>Рулетка временно выключена. Сохранённый результат можно восстановить.</p>}
-          {pending && <div className="space-y-3 rounded-xl bg-[var(--apex-warning-bg)] p-3" role="status">
-            <p>Ход за {pending.period} отправлен. Его результат ещё нужно подтвердить; новый ход не запускается.</p>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" disabled={busy} className={button} onClick={() => recovery.mutate({ period: pending.period }, {
-                onSuccess: data => {
-                  if (data) { clearPendingSpin(userId, pending); setNotice('Результат восстановлен') }
-                  else setNotice('Результат пока не найден. Запрос мог ещё выполняться. Повторять можно только этот же ход.')
-                },
-                onError: error => setNotice(error.message),
-              })}>Восстановить результат</button>
-              <button type="button" disabled={busy || isImpersonating} className={button} onClick={() => send(pending)}>Повторить прежний запрос</button>
-            </div>
-          </div>}
-          {result && <div role="status" className="rounded-xl bg-[var(--apex-success-bg)] p-3">
-            <p className="font-bold">Результат за {result.period}: {SECTOR_LABELS[result.sector]}</p>
-            <p>Баланс сразу после того хода: <CoinStatic amount={result.balanceAfter} />.</p>
-            <p className="text-sm">Актуальный баланс показан выше и может отличаться после покупок или начислений.</p>
-            {currentUsed && <p>Ход использован. Следующий — с 1-го числа следующего месяца.</p>}
-          </div>}
-          {!pending && !currentUsed && <button type="button" className={button} disabled={!mayStart} onClick={() => {
-            setNotice('')
-            prepare.mutate(undefined, { onSuccess: setConfirmation, onError: error => { setNotice(error.message); void state.refetch() } })
-          }}>{prepare.isPending ? 'Готовим подтверждение…' : 'Поставить весь баланс'}</button>}
-          {busy && <p role="status">Проверяем операцию…</p>}
-          {notice && <p role="status">{notice}</p>}
+          <div className="min-h-64 space-y-4 xl:min-h-48">
+            {isImpersonating && <p role="alert">Ходы при подмене пользователя запрещены.</p>}
+            {state.isError && <div role="alert">Не удалось проверить доступность рулетки. <button type="button" onClick={() => void state.refetch()} className="underline">Повторить проверку</button></div>}
+            {state.isPending && <p role="status" className="min-h-24 sm:min-h-12">Проверяем доступность…</p>}
+            {state.data?.pilotAllowed === false && <p className="min-h-24 sm:min-h-12">Рулетка пока недоступна для этого аккаунта. Сохранённый результат можно восстановить.</p>}
+            {state.data && state.data.pilotAllowed !== false && !state.data.enabled && <p className="min-h-24 sm:min-h-12">Рулетка временно выключена. Сохранённый результат можно восстановить.</p>}
+            {pending && <div className="space-y-3 rounded-xl bg-[var(--apex-warning-bg)] p-3" role="status">
+              <p>Ход за {pending.period} отправлен. Его результат ещё нужно подтвердить; новый ход не запускается.</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={busy} className={button} onClick={() => recovery.mutate({ period: pending.period }, {
+                  onSuccess: data => {
+                    if (data) { clearPendingSpin(userId, pending); setNotice('Результат восстановлен') }
+                    else setNotice('Результат пока не найден. Запрос мог ещё выполняться. Повторять можно только этот же ход.')
+                  },
+                  onError: error => setNotice(error.message),
+                })}>Восстановить результат</button>
+                <button type="button" disabled={busy || isImpersonating} className={button} onClick={() => send(pending)}>Повторить прежний запрос</button>
+              </div>
+            </div>}
+            {result && <div role="status" className="rounded-xl bg-[var(--apex-success-bg)] p-3">
+              <p className="font-bold">Результат за {result.period}: {SECTOR_LABELS[result.sector]}</p>
+              <p>Баланс сразу после того хода: <CoinStatic amount={result.balanceAfter} />.</p>
+              <p className="text-sm">Актуальный баланс показан выше и может отличаться после покупок или начислений.</p>
+              {currentUsed && <p>Ход использован. Следующий — с 1-го числа следующего месяца.</p>}
+            </div>}
+            {!pending && !currentUsed && <button type="button" className={button} disabled={!mayStart} onClick={() => {
+              setNotice('')
+              prepare.mutate(undefined, { onSuccess: setConfirmation, onError: error => { setNotice(error.message); void state.refetch() } })
+            }}>{prepare.isPending ? 'Готовим подтверждение…' : 'Поставить весь баланс'}</button>}
+            {busy && <p role="status">Проверяем операцию…</p>}
+            {notice && <p role="status">{notice}</p>}
+          </div>
         </div>
       </div>
       {confirmation && <RouletteConfirmation confirmation={confirmation} onCancel={() => setConfirmation(null)} onConfirm={() => send(confirmation)} />}

@@ -1,5 +1,5 @@
 {
-  "status": "SQL01 applied successfully as 20261118120600. SQL02 not submitted: stopped on settings service_role default ACL difference. See working-db-current-results.json.",
+  "status": "SQL01 and SQL02 confirmed installed; SQL06 applied and postflight passed. See working-db-final-results.json. SQL02 was already installed and was not resubmitted.",
   "transformation": "Remove only UTF-8 BOM EF BB BF at byte zero; preserve all remaining bytes.",
   "files": [
     {

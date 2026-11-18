@@ -38,6 +38,6 @@ export const confirmationSchema = z.object({
 })
 export type SpinResult = z.infer<typeof spinResultSchema>
 export type SpinResponse = z.infer<typeof spinResponseSchema>
-export type RouletteState = z.infer<typeof rouletteStateSchema>
+export type RouletteState = z.infer<typeof rouletteStateSchema> & { pilotAllowed: boolean }
 export type Confirmation = z.infer<typeof confirmationSchema>
 export type ConfirmationPayload = z.infer<typeof confirmationPayloadSchema>

@@ -41,7 +41,7 @@ export async function getBalanceAction(): Promise<ActionResult<number>> {
 }
 export async function getRouletteStateAction(): Promise<ActionResult<RouletteState>> {
   if (scenario === 'state-error') return { success: false, error: 'Synthetic state read failed' }
-  return ok({ enabled: scenario !== 'disabled', period, result: record?.result ?? null })
+  return ok({ enabled: scenario !== 'disabled', pilotAllowed: true, period, result: record?.result ?? null })
 }
 export async function prepareRouletteAction(): Promise<ActionResult<Confirmation>> {
   return ok({ token: 'synthetic-only-token', operationId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', period, balance: 1000 })

@@ -21,7 +21,6 @@ interface StoreClientProps {
   showBimo?: boolean
   activeTab: StoreTab
   userId: string | null
-  showRoulette: boolean
   rouletteContent?: ReactNode
   bimoContent?: ReactNode
   initialCategory?: string
@@ -40,7 +39,6 @@ export function StoreClient({
   showBimo = false,
   activeTab,
   userId,
-  showRoulette,
   rouletteContent,
   bimoContent,
   initialCategory,
@@ -226,9 +224,9 @@ export function StoreClient({
             border: activeFilter === 'bimo' ? '1px solid transparent' : '1px solid var(--border)',
           }}
         >Енот-Бимо</button>}
-        {showRoulette && <button type="button" onClick={() => router.push('/store?tab=roulette')}
+        <button type="button" onClick={() => router.push('/store?tab=roulette')}
           aria-pressed={activeTab === 'roulette'}
-          className="rounded-xl border border-[var(--apex-border)] bg-[var(--apex-surface)] px-4 py-2 text-[13px] font-semibold text-[var(--apex-primary)] aria-pressed:bg-[var(--apex-primary)] aria-pressed:text-[var(--apex-surface)]">Рулетка</button>}
+          className="rounded-xl border border-[var(--apex-border)] bg-[var(--apex-surface)] px-4 py-2 text-[13px] font-semibold text-[var(--apex-primary)] aria-pressed:bg-[var(--apex-primary)] aria-pressed:text-[var(--apex-surface)]">Рулетка</button>
       </div>
 
       {/* Описание категории */}

@@ -1,3 +1,5 @@
+> Current state supersedes the historical attempt below: SQL01/SQL02/SQL06 installed and verified, roulette disabled. See working-db-final-results.json and implementation-status.md.
+
 # SQL: пакет для отдельного согласования применения
 
 Актуальный результат 18.11.2026: SQL01 применён, SQL02 приостановлен на расхождении ACL; см. working-db-application-status.md. Ниже сохранена история предыдущих попыток. Применение SQL 01/02 разрешено с условиями остановки при ошибке. Первая попытка остановлена на BOM до выполнения SQL. Повтор без BOM остановлен до отправки миграций: проверочный SELECT ошибочно использовал code вместо key. Исправленное чтение подтвердило отсутствие объектов рулетки и неизменность четырёх отчётов. См. working-db-retry-results.json. Побайтно подтверждено удаление только трёх байтов BOM; SQL 05 содержит текущие определения отчётов.

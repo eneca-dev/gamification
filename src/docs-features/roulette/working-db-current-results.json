@@ -254,5 +254,6 @@
   "realSpinsPerformed": false,
   "testBalancesChanged": false,
   "rouletteDefinitionsMatchLocal": true,
-  "rouletteFunctionPermissionsMatch": true
+  "rouletteFunctionPermissionsMatch": true,
+  "supersededBy": "working-db-final-results.json"
 }

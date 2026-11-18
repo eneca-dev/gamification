@@ -1,4 +1,4 @@
-﻿'use server'
+'use server'
 
 import { randomUUID } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
@@ -38,7 +38,9 @@ export async function getRouletteStateAction(): Promise<ActionResult<RouletteSta
   try {
     const { data, error } = await createSupabaseAdminClient().rpc('get_roulette_state', { p_user_id: user.wsUserId })
     const parsed = rouletteStateSchema.safeParse(data)
-    return error || !parsed.success ? unavailable : { success: true, data: { ...parsed.data, enabled: parsed.data.enabled && canUseRoulettePilot(user) } }
+    if (error || !parsed.success) return unavailable
+    const pilotAllowed = canUseRoulettePilot(user)
+    return { success: true, data: { ...parsed.data, enabled: parsed.data.enabled && pilotAllowed, pilotAllowed } }
   } catch { return unavailable }
 }
 

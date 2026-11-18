@@ -1,4 +1,6 @@
-﻿# Рабочая БД: SQL01 установлен, SQL02 приостановлен
+> Current state supersedes the historical attempt below: SQL01/SQL02/SQL06 installed and verified, roulette disabled. See working-db-final-results.json and implementation-status.md.
+
+# Рабочая БД: SQL01 установлен, SQL02 приостановлен
 
 18.11.2026. Актуальные машинные результаты: working-db-current-results.json.
 

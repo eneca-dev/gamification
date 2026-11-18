@@ -1,0 +1,35 @@
+{
+  "status": "blocked_windows_source_compatibility",
+  "recordedAt": "2026-11-18T13:43:28.142Z",
+  "attempt": {
+    "status": "failed",
+    "startedAt": "2026-11-18T12:54:46.413Z",
+    "versions": {
+      "go": "1.27.4",
+      "auth": "2.198.0"
+    },
+    "directory": "D:\\EnecaProjects\\Gamification\\test-results\\auth-native-spike-20261118\\run-2026-11-18T12-54-46-403Z",
+    "databaseConnected": false,
+    "healthVerified": false,
+    "loginVerified": false,
+    "goSha256": "178ab98950ac69ab25069307dc6ade79f3816e414cce95b4da166a115cde1e7e",
+    "authArchiveSha256": "44864b95510681e26406c71b2b464141f5a6e65e4db8061eb93d0b023562ef6d",
+    "binary": "D:\\EnecaProjects\\Gamification\\test-results\\auth-native-spike-20261118\\run-2026-11-18T12-54-46-403Z\\auth.exe",
+    "error": "build-auth: exit 1; see build-auth.stderr.log",
+    "finishedAt": "2026-11-18T12:59:23.197Z"
+  },
+  "elapsedSeconds": 276.784,
+  "buildAttempted": true,
+  "binaryCreated": false,
+  "healthVerified": false,
+  "loginVerified": false,
+  "modulesVerified": true,
+  "compilerError": "# github.com/supabase/auth/cmd\ncmd\\serve_cmd.go:190:17: undefined: unix.SetsockoptInt\ncmd\\serve_cmd.go:190:45: undefined: unix.SOL_SOCKET\ncmd\\serve_cmd.go:190:62: undefined: unix.SO_REUSEPORT",
+  "sourceFile": "auth-2.198.0/cmd/serve_cmd.go:190",
+  "sourceFileMatchesOfficialArchive": true,
+  "sourcePatched": false,
+  "workingDatabaseTouched": false,
+  "stoppedPerUserInstruction": true,
+  "personalAcceptance": "Still required after a real isolated environment is ready",
+  "previousAgentAttempt": "Downloads blocked in agent shell; user executed prepared script in normal terminal successfully through dependency verification"
+}

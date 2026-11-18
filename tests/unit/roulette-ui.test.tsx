@@ -1,7 +1,7 @@
 ﻿import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, afterEach, expect, it, vi } from 'vitest'
-import { type ReactNode } from 'react'
+import { StrictMode, type ReactNode } from 'react'
 const actions = vi.hoisted(() => ({
   state: vi.fn(), prepare: vi.fn(), spin: vi.fn(), recover: vi.fn(),
   balance: vi.fn(), settings: vi.fn(), toggle: vi.fn(), refresh: vi.fn(),
@@ -152,3 +152,57 @@ it('uses authoritative settings after toggle and keeps control available when st
   expect(actions.toggle).toHaveBeenCalledExactlyOnceWith({ enabled: false })
 })
 
+it.each([false, true])('never writes settings on admin mount, refresh, polling or focus (enabled=%s)', async enabled => {
+  vi.useFakeTimers()
+  actions.settings.mockResolvedValue(success(enabled))
+  const panel = <StrictMode><RouletteAdmin enabled={enabled} stats={null} /></StrictMode>
+  const settle = async (milliseconds = 20) => {
+    await act(async () => { await vi.advanceTimersByTimeAsync(milliseconds) })
+    expect((screen.getByRole('switch') as HTMLButtonElement).disabled).toBe(false)
+    expect(screen.getByRole('switch').getAttribute('aria-checked')).toBe(String(enabled))
+    expect(actions.toggle).not.toHaveBeenCalled()
+  }
+  let current: ReturnType<typeof mount> | undefined
+  try {
+    current = mount(panel)
+    await settle()
+    expect(actions.settings).toHaveBeenCalled()
+    current.rerender(<QueryClientProvider client={current.client}><StrictMode><RouletteAdmin enabled={enabled} stats={null} /></StrictMode></QueryClientProvider>)
+    await settle()
+    const beforePolling = actions.settings.mock.calls.length
+    await settle(15020)
+    expect(actions.settings.mock.calls.length).toBeGreaterThan(beforePolling)
+    const beforeFocus = actions.settings.mock.calls.length
+    act(() => { focusManager.setFocused(false); focusManager.setFocused(true) })
+    await settle()
+    expect(actions.settings.mock.calls.length).toBeGreaterThan(beforeFocus)
+    current.unmount()
+    current.client.clear()
+    const beforeRemount = actions.settings.mock.calls.length
+    current = mount(panel)
+    await settle()
+    expect(actions.settings.mock.calls.length).toBeGreaterThan(beforeRemount)
+    expect(actions.refresh).not.toHaveBeenCalled()
+  } finally {
+    current?.unmount()
+    current?.client.clear()
+    focusManager.setFocused(undefined)
+    vi.useRealTimers()
+  }
+})
+
+
+it.each([
+  { pilotAllowed: false, expected: 'Рулетка пока недоступна для этого аккаунта.', absent: 'Рулетка временно выключена.' },
+  { pilotAllowed: true, expected: 'Рулетка временно выключена.', absent: 'Рулетка пока недоступна для этого аккаунта.' },
+])('explains unavailable roulette without confusing pilot access and the switch: $pilotAllowed', async ({ pilotAllowed, expected, absent }) => {
+  actions.state.mockResolvedValue(success({ enabled: false, pilotAllowed, period: '2026-11', result: null }))
+  mount(<RoulettePanel userId={userId} isImpersonating={false} />)
+  await screen.findByText(text => text.startsWith(expected))
+  expect(screen.queryByText(text => text.startsWith(absent))).toBeNull()
+  const button = screen.getByRole('button', { name: 'Поставить весь баланс' }) as HTMLButtonElement
+  expect(button.disabled).toBe(true)
+  fireEvent.click(button)
+  expect(actions.prepare).not.toHaveBeenCalled()
+  expect(actions.spin).not.toHaveBeenCalled()
+})
