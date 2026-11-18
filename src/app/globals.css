@@ -419,22 +419,59 @@ button, a[role="button"] { border-radius: 9999px; }
    Игровая палитра: классические цвета колеса — красный, жёлтый, зелёный
    и золото. Нигде больше не используются, поэтому вынесены отдельно. */
 :root {
-  --roulette-gold:        #F7C53A;
-  --roulette-gold-light:  #FFF0B4;
-  --roulette-gold-dark:   #B07D14;
-  --roulette-outline:     #8A5E0E;
+  --roulette-gold:        #E2B94E;
+  --roulette-gold-light:  #F5E6BC;
+  --roulette-gold-dark:   #A1761F;
+  --roulette-outline:     #7E590F;
 
-  --roulette-prize:       #157A3C;
-  --roulette-green:       #2FB457;
-  --roulette-green-mid:   #3FC46A;
-  --roulette-yellow:      #FFD23F;
-  --roulette-amber:       #FFA51F;
-  --roulette-red:         #E8402A;
-  --roulette-red-deep:    #C02113;
+  --roulette-prize:       #1B6B3B;
+  --roulette-green:       #3FA35F;
+  --roulette-green-mid:   #4FB06E;
+  /* Указатель и разделители секторов: голубые, светлее синих секторов. */
+  --roulette-rim-light:   #CFE7F6;
+  --roulette-rim:         #74B4DC;
+  --roulette-rim-dark:    #2C6A92;
+
+  --roulette-blue:        #3E7FA8;
+  --roulette-blue-light:  #5392B8;
+  --roulette-jackpot:     #E8B33C;
+  --roulette-red:         #D45745;
+  --roulette-red-deep:    #B03D2E;
 }
 
 /* Conceal updated sidebar balances only while the visible roulette reveals a result.
    Query data stays fresh; leaving the panel removes the presentation mask. */
 .live-balance-revealing { display: none; }
+/* Подложка колеса. Холодный градиент собран из токенов --apex-info-rgb и
+   --apex-primary-rgb, поэтому следует теме и не содержит отдельных цветов.
+   Кристаллы покачиваются тем же движением, что декор витрины Бимо, —
+   переиспользуем keyframes bimoFloat, а не заводим вторые. */
+.roulette-stage {
+  background:
+    radial-gradient(120% 150% at 10% 0%, rgba(var(--apex-info-rgb), 0.20) 0%, transparent 62%),
+    radial-gradient(110% 130% at 92% 8%, rgba(var(--apex-primary-rgb), 0.13) 0%, transparent 64%),
+    linear-gradient(180deg, var(--apex-info-bg) 0%, var(--apex-surface) 100%);
+}
+.roulette-crystal { animation: bimoFloat 5.5s ease-in-out infinite both; }
+@media (prefers-reduced-motion: reduce) {
+  .roulette-crystal { animation: none; }
+}
+
+/* Итог хода под колесом. Золотая заливка текста собрана из той же палитры,
+   что и обод, поэтому надпись читается как часть колеса. На нуле золота нет:
+   проигрыш не должен выглядеть наградой. */
+.roulette-outcome {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+.roulette-outcome-win {
+  background: linear-gradient(180deg, var(--roulette-gold-light) 0%, var(--roulette-gold) 45%, var(--roulette-gold-dark) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.roulette-outcome-zero { color: var(--apex-text-muted); }
+
 body:has([data-roulette-revealing="true"]) .live-balance-value { display: none; }
 body:has([data-roulette-revealing="true"]) .live-balance-revealing { display: inline; }
