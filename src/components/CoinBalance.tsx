@@ -50,7 +50,8 @@ export function CoinBalanceLive({ initialAmount, userId, size = "md" }: CoinBala
 
   return (
     <span className={`inline-flex items-center gap-1.5 font-bold ${sizeClasses[size]}`}>
-      <span style={{ color: "var(--apex-text)" }}>{formatted}</span>
+      <span className="live-balance-value" style={{ color: "var(--apex-text)" }}>{formatted}</span>
+      <span className="live-balance-revealing" role="status">Ожидаем результат…</span>
       <CoinIcon size={coinSizes[size]} className="flex-shrink-0" />
     </span>
   );

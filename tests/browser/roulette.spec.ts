@@ -145,3 +145,26 @@ test('animated result and sandbox deny external connections and private files', 
   expect((await request.get('/src/modules/roulette/actions.ts')).status()).toBe(404)
   expect(errors).toEqual([])
 })
+
+for (const reduced of [false, true]) {
+  test('reveals balances after wheel completion; reduced=' + reduced, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' })
+    await page.goto('/?sector=plus500')
+    await confirm(page)
+    const sidebarValue = page.locator('.live-balance-value')
+    if (!reduced) {
+      // The fresh query result already exists, but cannot spoil the spinning wheel.
+      await expect(sidebarValue).toHaveText('1 500')
+      await expect(sidebarValue).toBeHidden()
+      await expect(currentBalance(page)).toHaveText('Текущий баланс: Ожидаем результат…')
+      await expect(page.getByText('Результат за 2026-11: +500', { exact: true })).toHaveCount(0)
+    }
+    await expect(page.getByText('Результат за 2026-11: +500', { exact: true })).toBeVisible()
+    await expect(currentBalance(page)).toHaveText('Текущий баланс: 1 500')
+    await expect(sidebarValue).toBeVisible()
+    expect(await page.evaluate(() => window.rouletteQa.fixture.spins.length)).toBe(1)
+    await page.reload()
+    await expect(currentBalance(page)).toHaveText('Текущий баланс: 1 500')
+    expect(await page.evaluate(() => window.rouletteQa.fixture.spins.length)).toBe(0)
+  })
+}

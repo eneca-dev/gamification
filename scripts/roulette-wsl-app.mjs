@@ -97,6 +97,7 @@ async function prepare(runtime) {
     ); alter table public.bimo_catalog enable row level security;
     revoke all on public.bimo_catalog from public, anon, authenticated;
     grant select on public.bimo_catalog to service_role;`)
+    await db.query(fs.readFileSync(path.join(repo, 'tests/integration/fixtures/wsl-dashboard.sql'), 'utf8'))
     const toursDirectory = path.join(repo, 'src/modules/onboarding/tours')
     const tours = fs.readdirSync(toursDirectory).filter(name => /\.tsx?$/.test(name)).map(name => fs.readFileSync(path.join(toursDirectory, name), 'utf8')).join('\n')
     const slugs = [...tours.matchAll(/pageSlug:\s*'([^']+)'/g)].map(match => match[1])

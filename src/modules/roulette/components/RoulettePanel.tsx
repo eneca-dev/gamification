@@ -22,11 +22,13 @@ export function RoulettePanel({ userId, isImpersonating }: RoulettePanelProps) {
   const pending = usePendingSpin(userId)
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const [notice, setNotice] = useState('')
+  const [revealedOperation, setRevealedOperation] = useState<string | null>(null)
   const sending = useRef(false)
   const requestedResult = recovery.submittedAt > spin.submittedAt
     ? recovery.data ?? spin.data?.result
     : spin.data?.result ?? recovery.data
   const result = requestedResult ?? state.data?.result ?? null
+  const revealing = spin.isPending || Boolean(result && result.operationId !== revealedOperation)
   const currentUsed = Boolean(state.data?.result || (result && result.period === state.data?.period))
   const busy = prepare.isPending || spin.isPending || recovery.isPending
   const balanceReady = balance.data !== undefined && !balance.isError && !balance.isFetching
@@ -53,13 +55,13 @@ export function RoulettePanel({ userId, isImpersonating }: RoulettePanelProps) {
   }
 
   return (
-    <section className="rounded-2xl border border-[var(--apex-border)] bg-[var(--apex-surface)] p-4 text-[var(--apex-text)] sm:p-6" aria-labelledby="roulette-title">
+    <section className="rounded-2xl border border-[var(--apex-border)] bg-[var(--apex-surface)] p-4 text-[var(--apex-text)] sm:p-6" aria-labelledby="roulette-title" data-roulette-revealing={revealing ? 'true' : undefined}>
       <h2 id="roulette-title" className="text-xl font-bold">Рулетка</h2>
       <p className="mt-2 text-sm">Один ход в календарный месяц по времени Минска. Ставка — весь положительный баланс.</p>
       <div className="mt-5 grid gap-6 lg:grid-cols-2">
-        <RouletteWheel result={result} />
+        <RouletteWheel result={result} onReveal={setRevealedOperation} />
         <div className="space-y-4">
-          <p className="flex min-h-7 flex-wrap items-center gap-x-1">Текущий баланс: {balanceReady ? <CoinStatic amount={balance.data!} /> : <span role="status">{balance.isError ? 'Не удалось обновить' : 'Обновляем…'}</span>}</p>
+          <p className="flex min-h-7 flex-wrap items-center gap-x-1">Текущий баланс: {revealing ? <span role="status">Ожидаем результат…</span> : balanceReady ? <CoinStatic amount={balance.data!} /> : <span role="status">{balance.isError ? 'Не удалось обновить' : 'Обновляем…'}</span>}</p>
           {balance.isError && <button type="button" onClick={() => void balance.refetch()} className={button}>Обновить баланс</button>}
           <ul className="grid grid-cols-2 gap-2 text-sm" aria-label="Исходы и вероятности">
             {SECTORS.map(sector => <li key={sector} className="flex items-center gap-1 rounded-lg border border-[var(--apex-border)] p-2">
@@ -86,7 +88,7 @@ export function RoulettePanel({ userId, isImpersonating }: RoulettePanelProps) {
                 <button type="button" disabled={busy || isImpersonating} className={button} onClick={() => send(pending)}>Повторить прежний запрос</button>
               </div>
             </div>}
-            {result && <div role="status" className="rounded-xl bg-[var(--apex-success-bg)] p-3">
+            {result && !revealing && <div role="status" className="rounded-xl bg-[var(--apex-success-bg)] p-3">
               <p className="font-bold">Результат за {result.period}: {SECTOR_LABELS[result.sector]}</p>
               <p>Баланс сразу после того хода: <CoinStatic amount={result.balanceAfter} />.</p>
               <p className="text-sm">Актуальный баланс показан выше и может отличаться после покупок или начислений.</p>
