@@ -37,6 +37,7 @@ export function RoulettePanel({ userId, isImpersonating }: RoulettePanelProps) {
   const pending = usePendingSpin(userId)
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const [notice, setNotice] = useState('')
+  const [revealedOperation, setRevealedOperation] = useState<string | null>(null)
   const sending = useRef(false)
   const cancelButton = useRef<HTMLButtonElement>(null)
 
@@ -44,6 +45,7 @@ export function RoulettePanel({ userId, isImpersonating }: RoulettePanelProps) {
     ? recovery.data ?? spin.data?.result
     : spin.data?.result ?? recovery.data
   const result = requestedResult ?? state.data?.result ?? null
+  const revealing = spin.isPending || Boolean(result && result.operationId !== revealedOperation)
   const currentUsed = Boolean(state.data?.result || (result && result.period === state.data?.period))
   const busy = prepare.isPending || spin.isPending || recovery.isPending
   const balanceReady = balance.data !== undefined && !balance.isError && !balance.isFetching
@@ -74,7 +76,7 @@ export function RoulettePanel({ userId, isImpersonating }: RoulettePanelProps) {
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[var(--apex-border)] bg-[var(--apex-surface)] text-[var(--apex-text)]" aria-labelledby="roulette-title">
+    <section className="overflow-hidden rounded-2xl border border-[var(--apex-border)] bg-[var(--apex-surface)] text-[var(--apex-text)]" aria-labelledby="roulette-title" data-roulette-revealing={revealing ? 'true' : undefined}>
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--apex-border)] p-4 sm:p-6">
         <div>
           <span className="inline-block rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider" style={{ background: 'var(--tag-teal-bg)', color: 'var(--tag-teal-text)' }}>
@@ -94,9 +96,11 @@ export function RoulettePanel({ userId, isImpersonating }: RoulettePanelProps) {
         <div className="order-2 space-y-4 lg:order-1">
           <div className={CARD}>
             <p className={STEP}>Шаг 1 · Ставка</p>
-            <p className="mt-1 text-sm">Текущий баланс: {balanceReady
-              ? <span className="text-[20px]"><CoinStatic amount={balance.data!} size="md" /></span>
-              : <span role="status">{balance.isError ? 'Не удалось обновить' : 'Обновляем…'}</span>}</p>
+            <p className="mt-1 min-h-7 text-sm">Текущий баланс: {revealing
+              ? <span role="status">Ожидаем результат…</span>
+              : balanceReady
+                ? <span className="text-[20px]"><CoinStatic amount={balance.data!} size="md" /></span>
+                : <span role="status">{balance.isError ? 'Не удалось обновить' : 'Обновляем…'}</span>}</p>
             <p className="mt-1 text-[12px] text-[var(--apex-text-muted)]">На кон идёт весь баланс целиком, выбрать сумму нельзя.</p>
             {balance.isError && <Button className="mt-2" onClick={() => void balance.refetch()}>Обновить баланс</Button>}
           </div>
@@ -140,7 +144,7 @@ export function RoulettePanel({ userId, isImpersonating }: RoulettePanelProps) {
             </div>
           </div>}
 
-          {result && <div role="status" className="rounded-xl bg-[var(--apex-success-bg)] p-3 text-sm">
+          {result && !revealing && <div role="status" className="rounded-xl bg-[var(--apex-success-bg)] p-3 text-sm">
             <p className="text-[15px] font-bold">Результат за {result.period}: {SECTOR_LABELS[result.sector]}</p>
             <p className="mt-1">Баланс сразу после того хода: <CoinStatic amount={result.balanceAfter} size="sm" />.</p>
             <p className="mt-1 text-[12px] text-[var(--apex-text-secondary)]">Актуальный баланс показан выше и может отличаться после покупок или начислений.</p>
@@ -184,13 +188,16 @@ export function RoulettePanel({ userId, isImpersonating }: RoulettePanelProps) {
             armed={Boolean(confirmation)}
             busy={spin.isPending}
             onSpin={confirmation ? () => send(confirmation) : undefined}
+            onReveal={setRevealedOperation}
           />
           <p className="mt-3 text-center text-[13px] text-[var(--apex-text-secondary)]">
             {confirmation
               ? 'Колесо готово. Нажмите «Крутить» в центре.'
-              : result
-                ? `Выпало: ${SECTOR_LABELS[result.sector]}.`
-                : 'Семь равных секторов. Колесо оживёт после подтверждения ставки.'}
+              : revealing
+                ? 'Колесо крутится…'
+                : result
+                  ? `Выпало: ${SECTOR_LABELS[result.sector]}.`
+                  : 'Семь равных секторов. Колесо оживёт после подтверждения ставки.'}
           </p>
         </div>
       </div>

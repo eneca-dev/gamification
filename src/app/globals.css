@@ -432,3 +432,9 @@ button, a[role="button"] { border-radius: 9999px; }
   --roulette-red:         #E8402A;
   --roulette-red-deep:    #C02113;
 }
+
+/* Conceal updated sidebar balances only while the visible roulette reveals a result.
+   Query data stays fresh; leaving the panel removes the presentation mask. */
+.live-balance-revealing { display: none; }
+body:has([data-roulette-revealing="true"]) .live-balance-value { display: none; }
+body:has([data-roulette-revealing="true"]) .live-balance-revealing { display: inline; }

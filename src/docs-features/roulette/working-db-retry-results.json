@@ -1,0 +1,39 @@
+{
+  "status": "stopped_before_application_after_preflight_query_error",
+  "date": "2026-11-18",
+  "project": "yqezhfughtublpaitmij",
+  "sql01Sent": false,
+  "sql02Sent": false,
+  "sql05Sent": false,
+  "bomComparison": {
+    "sql01": "exact except first 3 BOM bytes",
+    "sql02": "exact except first 3 BOM bytes",
+    "sql05": "identical"
+  },
+  "restoreMatchesAllFourLiveDefinitions": true,
+  "error": "Read-only preflight referenced gamification_event_types.code; actual column is key. SQLSTATE 42703. No migration was submitted.",
+  "after": {
+    "private_schema": null,
+    "settings": null,
+    "event_type": false,
+    "roulette_events": 0,
+    "reports": [
+      {
+        "md5": "644753347eb6cf1d93b9c7eb1a697723",
+        "signature": "get_adoption_monthly_summary_v3(date,date,text,text[])"
+      },
+      {
+        "md5": "5891d760b26adc7498b5ee764b73b5a1",
+        "signature": "get_adoption_period_core_v2(date,date)"
+      },
+      {
+        "md5": "492b34929142b3b10b1789438250b807",
+        "signature": "get_economy_overview(timestamp with time zone,timestamp with time zone)"
+      },
+      {
+        "md5": "484fb4850424641a6da41a03a388ae76",
+        "signature": "get_economy_top(timestamp with time zone,timestamp with time zone,text,text)"
+      }
+    ]
+  }
+}

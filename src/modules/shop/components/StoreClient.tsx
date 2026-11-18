@@ -19,9 +19,10 @@ import type { ShieldQuota, ShieldType } from '@/modules/streak-shield/index.clie
 
 interface StoreClientProps {
   showBimo?: boolean
+  /** Вкладка рулетки показывается только при включённом переключателе в админке. */
+  showRoulette?: boolean
   activeTab: StoreTab
   userId: string | null
-  showRoulette: boolean
   rouletteContent?: ReactNode
   bimoContent?: ReactNode
   /** Мини-Бимо для плашки категории. Готовый узел: модуль магазина не рендерит Бимо сам. */
@@ -42,9 +43,9 @@ interface StoreClientProps {
 
 export function StoreClient({
   showBimo = false,
+  showRoulette = false,
   activeTab,
   userId,
-  showRoulette,
   rouletteContent,
   bimoContent,
   bimoTabIcon = null,

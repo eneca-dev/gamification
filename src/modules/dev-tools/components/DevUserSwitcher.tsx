@@ -21,7 +21,6 @@ export function DevUserSwitcher({ isImpersonating = false, impersonatedName = nu
   const [isPending, startTransition] = useTransition()
   const [isClearing, startClearTransition] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
   function handleClear() {
     startClearTransition(async () => {
@@ -29,52 +28,53 @@ export function DevUserSwitcher({ isImpersonating = false, impersonatedName = nu
     })
   }
 
-  // Загрузить начальный список при открытии
-  useEffect(() => {
-    if (isOpen) {
-      setIsLoading(true)
-      searchUsers('').then((data) => {
-        setUsers(data)
-        setIsLoading(false)
-      })
-      // Фокус на поле поиска
-      setTimeout(() => inputRef.current?.focus(), 100)
-    } else {
-      setSearch('')
-      setUsers([])
-    }
-  }, [isOpen])
+  function openModal() {
+    setSearch('')
+    setUsers([])
+    setIsLoading(true)
+    setIsOpen(true)
+  }
 
-  // Debounced поиск
+  function closeModal() {
+    setIsOpen(false)
+    setSearch('')
+    setUsers([])
+  }
+
+  function changeSearch(value: string) {
+    setSearch(value)
+    setIsLoading(true)
+  }
+
   useEffect(() => {
     if (!isOpen) return
+    const focusTimer = setTimeout(() => inputRef.current?.focus(), 100)
+    return () => clearTimeout(focusTimer)
+  }, [isOpen])
 
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-
-    debounceRef.current = setTimeout(() => {
-      setIsLoading(true)
-      searchUsers(search).then((data) => {
-        setUsers(data)
-        setIsLoading(false)
-      })
-    }, 300)
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
+  useEffect(() => {
+    if (!isOpen) return
+    let active = true
+    const timer = setTimeout(() => {
+      searchUsers(search)
+        .then(data => { if (active) setUsers(data) })
+        .catch(() => { if (active) setUsers([]) })
+        .finally(() => { if (active) setIsLoading(false) })
+    }, search ? 300 : 0)
+    return () => { active = false; clearTimeout(timer) }
   }, [search, isOpen])
 
   function handleSelect(email: string) {
     startTransition(async () => {
       await setImpersonation(email)
-      setIsOpen(false)
+      closeModal()
     })
   }
 
   const modal = isOpen ? (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40"
-      onClick={() => setIsOpen(false)}
+      onClick={closeModal}
     >
       <div
         className="w-[480px] max-h-[70vh] rounded-2xl shadow-xl flex flex-col"
@@ -93,7 +93,7 @@ export function DevUserSwitcher({ isImpersonating = false, impersonatedName = nu
             Сменить пользователя (DEV)
           </h2>
           <button
-            onClick={() => setIsOpen(false)}
+            onClick={closeModal}
             className="p-1 rounded-full hover:bg-black/5 transition-colors"
             style={{ color: 'var(--apex-text-muted)' }}
           >
@@ -116,13 +116,13 @@ export function DevUserSwitcher({ isImpersonating = false, impersonatedName = nu
               type="text"
               placeholder="Поиск по имени или email..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => changeSearch(e.target.value)}
               className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-[var(--apex-text-muted)]"
               style={{ color: 'var(--apex-text)' }}
             />
             {search && (
               <button
-                onClick={() => setSearch('')}
+                onClick={() => changeSearch('')}
                 className="p-0.5 rounded hover:bg-black/5"
                 style={{ color: 'var(--apex-text-muted)' }}
               >
@@ -189,7 +189,7 @@ export function DevUserSwitcher({ isImpersonating = false, impersonatedName = nu
     <>
       {/* Кнопка открытия */}
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={openModal}
         className="flex items-center gap-2 w-full px-4 py-2.5 rounded-full text-[13px] font-semibold transition-colors duration-150"
         style={{
           background: 'transparent',

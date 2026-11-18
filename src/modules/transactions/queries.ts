@@ -574,6 +574,8 @@ function enrichTransaction(
   recipientName?: string,
 ): EnrichedResult {
   switch (eventType) {
+    case 'roulette_spin':
+      return { description: 'Рулетка — результат хода' }
     case 'shop_purchase': {
       const name = (details?.product_name as string | undefined) ?? productName
       return { description: name ? `Покупка: ${name}` : defaultDesc }

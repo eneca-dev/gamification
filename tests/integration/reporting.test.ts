@@ -68,6 +68,10 @@ it.each([false, true])('preserves all reporting metrics except roulette earnings
     const metrics = tx.rows.map(row => transactionMetrics(row.coins, row.source))
     expect(metrics.reduce((sum, row) => sum + row.earned, 0)).toBe(400)
     expect(metrics.reduce((sum, row) => sum + row.spent, 0)).toBe(235)
+    const restore = readFileSync('src/docs-features/roulette/sql/05-restore-reporting.review.sql', 'utf8')
+      .replace(/^begin;\r?$/im, '').replace(/^commit;\r?$/im, '')
+    await db.query(restore)
+    expect(await read()).toEqual(before)
   } finally { await db.query('rollback'); await db.end() }
 })
 

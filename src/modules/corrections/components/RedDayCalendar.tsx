@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Shield } from 'lucide-react'
 
 import type { CorrectionCalendarDay } from '../types'
@@ -54,10 +54,7 @@ export function RedDayCalendar({ days, selected, onToggle }: RedDayCalendarProps
   const defaultStart = Math.max(0, months.length - VISIBLE_MONTHS)
   const [startIdx, setStartIdx] = useState(defaultStart)
 
-  useEffect(() => {
-    const maxStart = Math.max(0, months.length - VISIBLE_MONTHS)
-    if (startIdx > maxStart) setStartIdx(maxStart)
-  }, [months.length, startIdx])
+  if (startIdx > defaultStart) setStartIdx(defaultStart)
 
   if (months.length === 0) {
     return (

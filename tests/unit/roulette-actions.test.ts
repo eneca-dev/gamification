@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   rpc: vi.fn(), user: vi.fn(), updateTag: vi.fn(), readBalance: vi.fn(),
 }))
@@ -134,8 +134,14 @@ it('masks the enabled flag while impersonating but retains recovery of an own pa
   mocks.user.mockResolvedValue({ email: 'pilot@example.invalid', wsUserId: userId, isImpersonating: true })
   const { getRouletteStateAction } = await import('@/modules/roulette/actions')
   mocks.rpc.mockResolvedValue({ data: { enabled: true, period: '2026-11', result }, error: null })
-  expect(await getRouletteStateAction()).toMatchObject({ success: true, data: { enabled: false, result } })
+  expect(await getRouletteStateAction()).toMatchObject({ success: true, data: { enabled: false, pilotAllowed: false, result } })
   mocks.rpc.mockResolvedValue({ data: result, error: null })
   expect(await recoverRouletteAction({ period: '2026-11' })).toEqual({ success: true, data: result })
 })
 
+
+it.each([true, false])('keeps pilot access separate from the global switch: %s', async enabled => {
+  const { getRouletteStateAction } = await import('@/modules/roulette/actions')
+  mocks.rpc.mockResolvedValue({ data: { enabled, period: '2026-11', result: null }, error: null })
+  expect(await getRouletteStateAction()).toEqual({ success: true, data: { enabled, pilotAllowed: true, period: '2026-11', result: null } })
+})

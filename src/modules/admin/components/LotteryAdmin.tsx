@@ -35,6 +35,20 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  function processFile(file: File) {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Формат: JPEG, PNG или WebP')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Максимум 2 МБ')
+      return
+    }
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+    setError(null)
+  }
+
   useEffect(() => {
     if (!showForm && !editingLottery) return
     function handlePaste(e: ClipboardEvent) {
@@ -57,20 +71,6 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
   function showNotif(msg: string) {
     setNotification(msg)
     setTimeout(() => setNotification(null), 3000)
-  }
-
-  function processFile(file: File) {
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setError('Формат: JPEG, PNG или WebP')
-      return
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setError('Максимум 2 МБ')
-      return
-    }
-    setImageFile(file)
-    setImagePreview(URL.createObjectURL(file))
-    setError(null)
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {

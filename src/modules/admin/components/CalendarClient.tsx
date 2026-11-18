@@ -148,6 +148,7 @@ export function CalendarClient({ initialHolidays, initialWorkdays }: CalendarCli
     if (state === 'workday') {
       // Будний → делаем выходным
       const optimistic: CalendarHolidayRow = {
+        // eslint-disable-next-line react-hooks/purity -- Event handler: timestamp is created only when sending.
         id: -Date.now(),
         date: dateStr,
         name: 'Выходной',
@@ -172,6 +173,7 @@ export function CalendarClient({ initialHolidays, initialWorkdays }: CalendarCli
     if (state === 'weekend') {
       // Выходной → делаем рабочим
       const optimistic: CalendarWorkdayRow = {
+        // eslint-disable-next-line react-hooks/purity -- Event handler: timestamp is created only when sending.
         id: -Date.now(),
         date: dateStr,
         name: 'Рабочий перенос',

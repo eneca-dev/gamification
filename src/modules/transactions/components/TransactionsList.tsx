@@ -51,6 +51,7 @@ interface SourceConfig {
 }
 
 const SOURCE_CONFIG: Record<string, SourceConfig> = {
+  roulette: { icon: Tag, label: 'Рулетка', bg: 'var(--tag-teal-bg)', color: 'var(--tag-teal-text)' },
   ws: { icon: Briefcase, label: 'Worksection', bg: 'var(--tag-blue-bg)', color: 'var(--tag-blue-text)' },
   revit: { icon: Building2, label: 'Revit', bg: 'var(--tag-orange-bg)', color: 'var(--tag-orange-text)' },
   gratitudes: { icon: Heart, label: 'Благодарности', bg: 'var(--tag-purple-bg)', color: 'var(--tag-purple-text)' },

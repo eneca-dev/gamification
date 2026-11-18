@@ -65,13 +65,19 @@ export function UserAppealsCard({ appeals, highlightAppealId, onPrefillFromAppea
   const [isPending, startTransition] = useTransition()
   const highlightRef = useRef<HTMLDivElement | null>(null)
 
+  const [previousHighlight, setPreviousHighlight] = useState(highlightAppealId)
+  if (previousHighlight !== highlightAppealId) {
+    setPreviousHighlight(highlightAppealId)
+    if (highlightAppealId) setExpanded(true)
+  }
+
   useEffect(() => {
     if (highlightAppealId) {
-      setExpanded(true)
       // скролл отложенный, чтобы DOM успел раскрыться
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }, 100)
+      return () => clearTimeout(timer)
     }
   }, [highlightAppealId])
 

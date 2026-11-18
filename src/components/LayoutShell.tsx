@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Menu } from 'lucide-react'
 
@@ -23,9 +23,11 @@ export function LayoutShell({ user, balance, showDevSwitcher, dayOffResolved, si
   const [isCollapsed, setIsCollapsed] = useState(sidebarCollapsed)
   const pathname = usePathname()
 
-  useEffect(() => {
+  const [previousPathname, setPreviousPathname] = useState(pathname)
+  if (previousPathname !== pathname) {
+    setPreviousPathname(pathname)
     setSidebarOpen(false)
-  }, [pathname])
+  }
 
   // Ширина полосы прокрутки нужна блокам во всю ширину: 100vw её включает,
   // иначе такие блоки вылезают за экран и появляется горизонтальный скролл.

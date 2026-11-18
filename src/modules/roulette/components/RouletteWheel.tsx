@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { SECTORS, SECTOR_LABELS } from '../types'
 import type { SpinResult } from '../types'
@@ -12,6 +13,8 @@ interface RouletteWheelProps {
   armed?: boolean
   busy?: boolean
   onSpin?: () => void
+  /** Колесо остановилось: сайдбар снимает маску с баланса. */
+  onReveal?: (operationId: string) => void
 }
 
 /**
@@ -57,8 +60,15 @@ function Sparkle({ x, y, size }: { x: number; y: number; size: number }) {
   )
 }
 
-export function RouletteWheel({ result, stake = null, armed = false, busy = false, onSpin }: RouletteWheelProps) {
+export function RouletteWheel({ result, stake = null, armed = false, busy = false, onSpin, onReveal }: RouletteWheelProps) {
   const reduced = useReducedMotion()
+  const operationId = result?.operationId
+  useEffect(() => {
+    if (!operationId) return
+    // Release presentation even when animation completion is unavailable.
+    const timer = setTimeout(() => onReveal?.(operationId), reduced ? 0 : 4000)
+    return () => clearTimeout(timer)
+  }, [operationId, onReveal, reduced])
   const index = result ? SECTORS.indexOf(result.sector) : -1
   const angle = 360 / SECTORS.length
   const live = armed || index >= 0
@@ -72,6 +82,7 @@ export function RouletteWheel({ result, stake = null, armed = false, busy = fals
         initial={false}
         animate={{ rotate: index < 0 ? 0 : 1440 - (index + 0.5) * angle }}
         transition={{ duration: reduced ? 0 : 3, ease: 'easeOut' }}
+        onAnimationComplete={() => { if (operationId) onReveal?.(operationId) }}
       >
         <defs>
           <linearGradient id="roulette-rim" x1="0" y1="0" x2="0.3" y2="1">
