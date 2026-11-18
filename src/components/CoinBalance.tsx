@@ -44,9 +44,9 @@ interface CoinBalanceLiveProps {
 }
 
 export function CoinBalanceLive({ initialAmount, userId, size = "md" }: CoinBalanceLiveProps) {
-  const { data } = useBalance(userId ?? '', { enabled: Boolean(userId), refetchInterval: BALANCE_POLL_INTERVAL })
+  const { data, isError, isFetching } = useBalance(userId ?? '', { enabled: Boolean(userId), refetchInterval: BALANCE_POLL_INTERVAL })
   const amount = data ?? initialAmount
-  const formatted = amount.toLocaleString("ru-RU");
+  const formatted = isError ? "Не обновлён" : isFetching ? "Обновляем…" : amount.toLocaleString("ru-RU");
 
   return (
     <span className={`inline-flex items-center gap-1.5 font-bold ${sizeClasses[size]}`}>

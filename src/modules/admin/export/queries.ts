@@ -1,5 +1,7 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
 
+import { eventSource, transactionMetrics } from './transaction-metrics'
+
 import type { ExportReport, ExportSheet } from './types'
 
 // ─────────────────────────── общие хелперы ───────────────────────────
@@ -223,7 +225,7 @@ async function loadOrgData(from: string, to: string, people: UserRow[]) {
     fetchAll<StreakRow>(() => supabase.from('revit_user_streaks_effective').select('user_id, current_streak')),
     fetchStatuses(from, to),
     fetchAll<ReportRow>(() => supabase.from('ws_daily_reports').select('user_id, report_date, total_hours').gte('report_date', from).lte('report_date', to).order('report_date').order('user_id')),
-    fetchAll<TxnRow>(() => supabase.from('gamification_transactions').select('user_id, coins, created_at, event_id').gte('created_at', minskDayStart(from)).lt('created_at', minskDayEndExclusive(to)).order('created_at').order('id')),
+    fetchAll<TxnRow & { event: { source: string | null } | { source: string | null }[] | null }>(() => supabase.from('gamification_transactions').select('user_id, coins, created_at, event_id, event:gamification_event_logs!event_id(source)').gte('created_at', minskDayStart(from)).lt('created_at', minskDayEndExclusive(to)).order('created_at').order('id')),
     fetchAll<GratRow>(() => supabase.from('gratitudes').select('sender_id, recipient_id, category, message, coins_amount, created_at').gte('created_at', minskDayStart(from)).lt('created_at', minskDayEndExclusive(to)).order('created_at').order('id')),
     fetchLaunches(from, to),
   ])
@@ -241,7 +243,13 @@ async function loadOrgData(from: string, to: string, people: UserRow[]) {
   }
   for (const r of reports) { const a = P.get(r.user_id); if (a) a.hours += Number(r.total_hours) || 0 }
   for (const e of launches) { const id = emailToId.get(e.user_email.toLowerCase()); const a = id ? P.get(id) : undefined; if (!a) continue; a.plugDays.add(e.work_date); a.launches += e.launch_count; a.plugins.add(e.plugin_name) }
-  for (const t of txns) { const a = P.get(t.user_id); if (!a) continue; if (t.coins > 0) a.earned += t.coins; else a.spent += -t.coins }
+  for (const t of txns) {
+    const a = P.get(t.user_id)
+    if (!a) continue
+    const metrics = transactionMetrics(t.coins, eventSource(t.event))
+    a.earned += metrics.earned
+    a.spent += metrics.spent
+  }
   for (const g of grats) { const s = P.get(g.sender_id); if (s) s.sent++; const r = P.get(g.recipient_id); if (r) r.received++ }
 
   const activeByDay = new Map<string, Set<string>>(); const launchByDay = new Map<string, number>()

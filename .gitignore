@@ -51,6 +51,9 @@ certificates
 # claude code local settings
 .claude/settings.local.json
 
+# local agent instructions
+/AGENTS.md
+
 # mcp config
 .mcp.json
 .playwright-mcp
@@ -63,3 +66,9 @@ certificates
 
 # Local character art sources, previews and backups (not served by the app)
 /.local-assets/
+
+# Local QA artifacts and authenticated browser sessions
+/test-results/
+/playwright-report/
+/coverage/
+/.playwright/

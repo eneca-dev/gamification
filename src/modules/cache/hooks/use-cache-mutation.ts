@@ -1,12 +1,14 @@
 'use client'
 
-import { useMutation, useQueryClient, type UseMutationOptions } from '@tanstack/react-query'
+import { useMutation, useQueryClient, type UseMutationOptions, type MutateOptions } from '@tanstack/react-query'
 import type { ActionResult } from '../types'
+import { ActionError } from '../utils/action-helpers'
+import { afterCommit, refreshQueries } from '../utils/refresh-queries'
 
 interface CreateCacheMutationOptions<TInput, TData> {
   mutationFn: (input: TInput) => Promise<ActionResult<TData>>
   invalidateKeys?: readonly (readonly unknown[])[]
-  onSuccess?: (data: TData) => void
+  onSuccess?: (data: TData) => void | Promise<void>
 }
 
 /**
@@ -20,20 +22,44 @@ export function createCacheMutation<TInput, TData>(
   ) {
     const queryClient = useQueryClient()
 
-    return useMutation<TData, Error, TInput>({
+    const mutation = useMutation<TData, Error, TInput>({
+      ...mutationOptions,
       mutationFn: async (input) => {
         const result = await options.mutationFn(input)
-        if (!result.success) throw new Error(result.error)
+        if (!result.success) throw new ActionError(result)
         return result.data
       },
-      onSuccess: (data) => {
-        options.invalidateKeys?.forEach((key) => {
-          queryClient.invalidateQueries({ queryKey: key })
-        })
-        options.onSuccess?.(data)
+      onSuccess: async (data, input, onMutateResult, context) => {
+        await afterCommit([
+          () => refreshQueries(queryClient, options.invalidateKeys ?? []),
+          () => options.onSuccess?.(data),
+          () => mutationOptions?.onSuccess?.(data, input, onMutateResult, context),
+        ])
       },
-      ...mutationOptions,
+      onSettled: async (...args) => {
+        await afterCommit([() => mutationOptions?.onSettled?.(...args)])
+      },
     })
+
+    function protectCallbacks(callbacks?: MutateOptions<TData, Error, TInput>) {
+      if (!callbacks) return undefined
+      return {
+        ...callbacks,
+        onSuccess: (...args: Parameters<NonNullable<typeof callbacks.onSuccess>>) => {
+          void afterCommit([() => callbacks.onSuccess?.(...args)])
+        },
+        onSettled: (...args: Parameters<NonNullable<typeof callbacks.onSettled>>) => {
+          void afterCommit([() => callbacks.onSettled?.(...args)])
+        },
+      }
+    }
+    return {
+      ...mutation,
+      mutate: (input: TInput, callbacks?: MutateOptions<TData, Error, TInput>) =>
+        mutation.mutate(input, protectCallbacks(callbacks)),
+      mutateAsync: (input: TInput, callbacks?: MutateOptions<TData, Error, TInput>) =>
+        mutation.mutateAsync(input, protectCallbacks(callbacks)),
+    }
   }
 }
 
@@ -60,7 +86,7 @@ export function createUpdateMutation<
     return useMutation<TData, Error, TInput, { previous: TData[] | undefined }>({
       mutationFn: async (input) => {
         const result = await options.mutationFn(input)
-        if (!result.success) throw new Error(result.error)
+        if (!result.success) throw new ActionError(result)
         return result.data
       },
       onMutate: async (input) => {
@@ -108,7 +134,7 @@ export function createDeleteMutation<
     return useMutation<TData, Error, TInput, { previous: TData[] | undefined }>({
       mutationFn: async (input) => {
         const result = await options.mutationFn(input)
-        if (!result.success) throw new Error(result.error)
+        if (!result.success) throw new ActionError(result)
         return result.data
       },
       onMutate: async (input) => {

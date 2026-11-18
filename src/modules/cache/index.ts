@@ -23,8 +23,11 @@ export {
 
 // Server Action Utilities
 export { safeAction } from './actions/base'
-export { isSuccess, unwrapResult } from './utils/action-helpers'
+export { ActionError, isSuccess, unwrapResult } from './utils/action-helpers'
 
 // Realtime
 export { realtimeSubscriptions } from './realtime'
 export type { TableSubscription } from './realtime'
+
+export { useQueryClient } from '@tanstack/react-query'
+export { refreshQueries } from './utils/refresh-queries'

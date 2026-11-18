@@ -21,7 +21,8 @@ import {
 import type { ProductMediaItem, PurchaseResult } from './types'
 import { coverImageUrl } from './media'
 import { removeUnreferencedProductMedia } from './storageMedia'
-import { balanceTag } from './queries'
+import { refreshBalanceAfterCommit } from './balance-cache'
+import { readUserBalance } from './balance'
 import { sendOrderToTeams } from './teams'
 
 const productIdSchema = z.string().uuid()
@@ -32,14 +33,11 @@ export async function getBalanceAction(): Promise<ActionResult<number>> {
   const user = await getCurrentUser()
   if (!user?.wsUserId) return { success: false, error: 'Пользователь не найден' }
 
-  const supabase = createSupabaseAdminClient()
-  const { data } = await supabase
-    .from('gamification_balances')
-    .select('total_coins')
-    .eq('user_id', user.wsUserId)
-    .single()
-
-  return { success: true, data: data?.total_coins ?? 0 }
+  try {
+    return { success: true, data: await readUserBalance(user.wsUserId) }
+  } catch {
+    return { success: false, error: 'Не удалось обновить баланс', code: 'BALANCE_UNAVAILABLE' }
+  }
 }
 
 // --- Покупка (доступна всем авторизованным) ---
@@ -87,8 +85,7 @@ export async function purchaseProduct(
     return { success: false, error: 'Ошибка при покупке' }
   }
 
-  revalidateTag(balanceTag(user.wsUserId), 'max')
-  revalidatePath('/store')
+  refreshBalanceAfterCommit(user.wsUserId, ['/store'])
 
   const category = Array.isArray(product?.category) ? product.category[0] : product?.category
   if (product && product.effect === null && category?.slug && category.slug !== 'draw') {

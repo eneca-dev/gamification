@@ -6,7 +6,13 @@
     "dev": "next dev --experimental-https",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "type-check": "tsc --noEmit",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
@@ -23,7 +29,8 @@
     "recharts": "^3.7.0",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
-    "tanstack": "^1.0.3"
+    "tanstack": "^1.0.3",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -33,6 +40,14 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "4.1.12",
+    "@vitest/coverage-v8": "4.1.12",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/dom": "10.4.1",
+    "@playwright/test": "1.60.0",
+    "jsdom": "29.1.1",
+    "pg": "8.16.3",
+    "@types/pg": "8.15.5"
   }
 }
