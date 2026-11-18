@@ -2,10 +2,10 @@
 
 import { Crown, Heart } from 'lucide-react'
 
-import { BimoPortrait, DEFAULT_EQUIPMENT, bimoLook } from '@/modules/profile-appearance/index.client'
+import { BimoStage, BimoStill, DEFAULT_EQUIPMENT, bimoLook } from '@/modules/bimo-rig/index.client'
 
-import { BimoThumb } from './BimoThumb'
 import { monthLabel } from '../month'
+import type { BimoArtMap } from '@/modules/bimo-rig'
 import type { GalleryEntry, GalleryWinner } from '../types'
 
 interface WinnerHeroProps {
@@ -13,13 +13,14 @@ interface WinnerHeroProps {
   /** Образы берём из галереи: у победителя показывается его текущий образ. */
   entries: Map<string, GalleryEntry>
   lookLabels: Record<string, string>
+  catalogArt: BimoArtMap
 }
 
 /**
  * Итог прошлого месяца. Анимированный Canvas здесь один — у главного победителя;
  * зал славы и остальные делящие первое место рисуются статичными превью.
  */
-export function WinnerHero({ winners, entries, lookLabels }: WinnerHeroProps) {
+export function WinnerHero({ winners, entries, lookLabels, catalogArt }: WinnerHeroProps) {
   if (winners.length === 0) return null
 
   const latestMonth = winners[0].contestMonth
@@ -46,7 +47,7 @@ export function WinnerHero({ winners, entries, lookLabels }: WinnerHeroProps) {
 
       <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
         <div className="flex-shrink-0">
-          <BimoPortrait {...bimoLook(mainEquipment)} />
+          <BimoStage {...bimoLook(mainEquipment, catalogArt)} interactive />
         </div>
 
         <div className="min-w-0 flex-1">
@@ -76,8 +77,8 @@ export function WinnerHero({ winners, entries, lookLabels }: WinnerHeroProps) {
           <div className="flex gap-3 overflow-x-auto pb-1">
             {hallOfFame.map((winner) => (
               <div key={`${winner.contestMonth}-${winner.userId}`} className="w-[96px] flex-shrink-0">
-                <BimoThumb
-                  look={bimoLook(entries.get(winner.userId)?.equipment ?? DEFAULT_EQUIPMENT)}
+                <BimoStill
+                  {...bimoLook(entries.get(winner.userId)?.equipment ?? DEFAULT_EQUIPMENT, catalogArt)}
                   alt={`Бимо · ${winner.fullName}`}
                   className="rounded-lg"
                 />

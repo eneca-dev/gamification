@@ -22,7 +22,7 @@ export default async function MainLayout({
   const sidebarCollapsed = (await cookies()).get('sidebar_collapsed')?.value === 'true'
 
   const layout = (
-    <LayoutShell user={user} balance={balance} showDevSwitcher={DEV_TOOLS_ENABLED} dayOffResolved={dayOffResolved} sidebarCollapsed={sidebarCollapsed} showBimoGallery={bimoEnabled() && Boolean(user?.wsUserId)}>
+    <LayoutShell user={user} balance={balance} showDevSwitcher={DEV_TOOLS_ENABLED} dayOffResolved={dayOffResolved} sidebarCollapsed={sidebarCollapsed}>
       {children}
     </LayoutShell>
   )

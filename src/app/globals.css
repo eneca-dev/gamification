@@ -82,12 +82,22 @@
   --rank-bronze:           #A1887F;
 
   /* ── Semantic aliases (keep for compatibility) ──────────── */
-  --surface:               #EEF2F2;
-  --surface-elevated:      #FFFFFF;
-  --border:                #DDE3E3;
-  --text-primary:          #1C2437;
-  --text-secondary:        #6B7280;
-  --text-muted:            #9CA3AF;
+  --surface:               var(--apex-bg);
+  --surface-elevated:      var(--apex-surface);
+  --border:                var(--apex-border);
+  --text-primary:          var(--apex-text);
+  --text-secondary:        var(--apex-text-secondary);
+  --text-muted:            var(--apex-text-muted);
+
+  /* ── Светлые тона под фоны Бимо: подложка витрины гардероба ─ */
+  --bimo-tint-mint:            #E0F3EA;
+  --bimo-tint-peach:           #FCE8D9;
+  --bimo-tint-lavender:        #EAE3FA;
+  --bimo-tint-clouds:          #E0EDFC;
+  --bimo-tint-office:          #F2EADC;
+  --bimo-tint-green-courtyard: #E3F2D9;
+  --bimo-tint-beach:           #FBEDD2;
+  --bimo-tint-starry-evening:  #E2E6F6;
 
   /* ── Green → Teal aliases (backwards compat) ────────────── */
   --green-50:              #E6F4F1;
@@ -349,4 +359,58 @@ button, a[role="button"] { border-radius: 9999px; }
   border: none;
   border-top: 1px solid var(--border);
   margin: 16px 0;
+}
+
+/* ===== Полоса во всю ширину области контента =====
+   Витрина Бимо тянется от края сайдбара до края приложения, хотя лежит глубоко
+   внутри центрированного контейнера. Ширина считается от окна минус отступ
+   сайдбара (--app-inset) и минус полоса прокрутки (--scrollbar-w), которую
+   LayoutShell измеряет один раз. Отрицательный внешний отступ вытягивает блок
+   из паддингов и центрирующих зазоров. Переходы совпадают по длительности со
+   сворачиванием сайдбара, чтобы полоса ехала вместе с ним. */
+.app-content {
+  --app-inset: 0px;
+}
+@media (min-width: 768px) {
+  .app-content {
+    --app-inset: var(--sidebar-w, 260px);
+  }
+}
+.full-bleed {
+  --bleed-width: calc(100vw - var(--scrollbar-w, 0px) - var(--app-inset, 0px));
+  width: var(--bleed-width);
+  max-width: none;
+  margin-left: calc((100% - var(--bleed-width)) / 2);
+  margin-right: calc((100% - var(--bleed-width)) / 2);
+  transition: width 300ms ease-in-out, margin 300ms ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .full-bleed { transition: none; }
+}
+
+/* Вуаль поверх размытого фона Бимо: тон читается, текст остаётся контрастным. */
+.bimo-band-veil {
+  background: color-mix(in srgb, var(--apex-bg) 62%, transparent);
+}
+
+/* Верх и низ витрины Бимо растворяются вместо жёстких линий границы.
+   По горизонтали полоса остаётся сплошной: она тянется до краёв приложения. */
+.bimo-band-fade {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 14%, #000 86%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 14%, #000 86%, transparent 100%);
+}
+
+/* Мягкая тень-подставка под Бимо на витрине. */
+.bimo-band-shadow {
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--apex-text) 22%, transparent) 0%, transparent 70%);
+}
+
+/* Декор витрины Бимо: медленное покачивание. Задержки берутся из .stagger-*. */
+@keyframes bimoFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-9px); }
+}
+.bimo-decor { animation: bimoFloat 5.5s ease-in-out infinite both; }
+@media (prefers-reduced-motion: reduce) {
+  .bimo-decor { animation: none; }
 }

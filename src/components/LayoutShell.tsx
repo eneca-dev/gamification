@@ -15,11 +15,10 @@ interface LayoutShellProps {
   showDevSwitcher: boolean
   dayOffResolved: string[]
   sidebarCollapsed: boolean
-  showBimoGallery?: boolean
   children: React.ReactNode
 }
 
-export function LayoutShell({ user, balance, showDevSwitcher, dayOffResolved, sidebarCollapsed, showBimoGallery = false, children }: LayoutShellProps) {
+export function LayoutShell({ user, balance, showDevSwitcher, dayOffResolved, sidebarCollapsed, children }: LayoutShellProps) {
   const [isSidebarOpen, setSidebarOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(sidebarCollapsed)
   const pathname = usePathname()
@@ -27,6 +26,18 @@ export function LayoutShell({ user, balance, showDevSwitcher, dayOffResolved, si
   useEffect(() => {
     setSidebarOpen(false)
   }, [pathname])
+
+  // Ширина полосы прокрутки нужна блокам во всю ширину: 100vw её включает,
+  // иначе такие блоки вылезают за экран и появляется горизонтальный скролл.
+  useEffect(() => {
+    function measure() {
+      const width = window.innerWidth - document.documentElement.clientWidth
+      document.documentElement.style.setProperty('--scrollbar-w', `${Math.max(0, width)}px`)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
 
   function toggleCollapse() {
     setIsCollapsed(prev => {
@@ -53,10 +64,12 @@ export function LayoutShell({ user, balance, showDevSwitcher, dayOffResolved, si
         dayOffResolved={dayOffResolved}
         isCollapsed={isCollapsed}
         onToggleCollapse={toggleCollapse}
-        showBimoGallery={showBimoGallery}
       />
 
-      <div className={`flex-1 min-w-0 ml-0 transition-[margin] duration-300 ease-in-out ${isCollapsed ? 'md:ml-[68px]' : 'md:ml-[260px]'}`}>
+      <div
+        className={`app-content flex-1 min-w-0 ml-0 transition-[margin] duration-300 ease-in-out ${isCollapsed ? 'md:ml-[68px]' : 'md:ml-[260px]'}`}
+        style={{ '--sidebar-w': isCollapsed ? '68px' : '260px' } as React.CSSProperties}
+      >
         <header
           className="sticky top-0 z-20 flex items-center gap-3 px-4 h-14 md:hidden"
           style={{ background: 'var(--apex-surface)', borderBottom: '1px solid var(--apex-border)' }}

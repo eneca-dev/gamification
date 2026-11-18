@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, ShoppingBag, Trophy, Users, Settings, LogOut, HelpCircle, Calendar, PawPrint } from 'lucide-react'
+import { Home, ShoppingBag, Trophy, Users, Settings, LogOut, HelpCircle, Calendar } from 'lucide-react'
 
 import { signOut } from '@/modules/auth/index.client'
 import type { AuthUser } from '@/modules/auth/index.client'
@@ -21,15 +21,13 @@ interface SidebarProps {
   dayOffResolved?: string[]
   isCollapsed?: boolean
   onToggleCollapse?: () => void
-  showBimoGallery?: boolean
 }
 
-const navItems: { href: string; label: string; icon: typeof Home; bimoOnly?: boolean }[] = [
+const navItems: { href: string; label: string; icon: typeof Home }[] = [
   { href: '/',            label: 'Главная',       icon: Home },
   { href: '/store',       label: 'Магазин',       icon: ShoppingBag },
   { href: '/achievements',label: 'Достижения',    icon: Trophy },
   { href: '/activity',    label: 'Лента компании', icon: Users },
-  { href: '/bimo',        label: 'Бимо',          icon: PawPrint, bimoOnly: true },
 ]
 
 const bottomNavItems: { href: string; label: string; icon: typeof HelpCircle; adminOnly?: boolean }[] = [
@@ -53,7 +51,7 @@ function getInitials(fullName: string, email?: string): string {
   return '?'
 }
 
-export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, dayOffResolved = [], isCollapsed = false, onToggleCollapse, showBimoGallery = false }: SidebarProps) {
+export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, dayOffResolved = [], isCollapsed = false, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname()
   const [dayOffBadge, setDayOffBadge] = useState(0)
 
@@ -126,7 +124,7 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, 
       {/* Navigation */}
       <nav className={`flex-1 py-4 overflow-y-auto ${collapsed ? 'px-2' : 'px-3'}`}>
         <div className="space-y-0.5">
-          {navItems.filter((item) => !item.bimoOnly || showBimoGallery).map((item) => {
+          {navItems.map((item) => {
             const isActive = pathname === item.href
             const Icon = item.icon
             return (
@@ -212,9 +210,10 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, 
         </div>
       </nav>
 
-      {/* Бимо */}
+      {/* Бимо. Отступы симметричные, в отличие от соседних блоков, иначе
+          рисунок смещается относительно центра меню. */}
       {!collapsed && user?.wsUserId && (
-        <div className="pl-3 pr-5 pb-2">
+        <div className="px-4 pb-2">
           <BimoCompanion key={user.wsUserId} userId={user.wsUserId} />
         </div>
       )}

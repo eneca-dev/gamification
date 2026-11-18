@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useOptimistic, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { ChevronDown, ChevronRight, Heart, Search } from 'lucide-react'
@@ -11,7 +11,6 @@ import { DEFAULT_GALLERY_VIEW, type GalleryEntry, type GalleryPage, type Gallery
 import { BimoCard } from './BimoCard'
 import { BimoDetailsModal } from './BimoDetailsModal'
 import { GalleryChips } from './GalleryChips'
-import { WinnerHero } from './WinnerHero'
 
 const GROUP_PAGE_SIZE = 48
 const NO_GROUP = 'Все Бимо'
@@ -28,16 +27,31 @@ const fullName = (entry: GalleryEntry) =>
 export function BimoGalleryClient({ page, viewerId, initialView }: BimoGalleryClientProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const [entries, setEntries] = useState(page.entries)
   const [view, setView] = useState(initialView)
   const [query, setQuery] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [errorAt, setErrorAt] = useState(0)
   const [openId, setOpenId] = useState<string | null>(null)
   const [limits, setLimits] = useState<Record<string, number>>({})
   const [, startTransition] = useTransition()
 
-  const used = entries.filter((entry) => entry.likedByMe).length
+  // Источник правды — данные с сервера. Клик по сердцу показывается мгновенно
+  // через useOptimistic и сам откатывается, если действие не удалось.
+  // Остаток лайков считает база: он учитывает голоса за тех, кто выпал из галереи.
+  const [optimistic, applyLike] = useOptimistic(
+    { entries: page.entries, used: page.usedLikes },
+    (base, patch: { userId: string; liked: boolean }) => ({
+      entries: base.entries.map((item) => (
+        item.userId === patch.userId
+          ? { ...item, likedByMe: patch.liked, likes: Math.max(0, item.likes + (patch.liked ? 1 : -1)) }
+          : item
+      )),
+      used: Math.max(0, base.used + (patch.liked ? 1 : -1)),
+    }),
+  )
+  const entries = optimistic.entries
+  const used = optimistic.used
   const remaining = Math.max(0, page.likeLimit - used)
   const daysLeft = daysLeftInMonth(page.month)
   const pastWinners = useMemo(() => new Set(page.winners.map((winner) => winner.userId)), [page.winners])
@@ -61,6 +75,12 @@ export function BimoGalleryClient({ page, viewerId, initialView }: BimoGalleryCl
     [entries],
   )
   const viewerRank = viewerId ? ranks.get(viewerId) ?? null : null
+
+  useEffect(() => {
+    if (!error) return
+    const timer = setTimeout(() => setError(null), 4000)
+    return () => clearTimeout(timer)
+  }, [error, errorAt])
 
   const groups = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -115,39 +135,49 @@ export function BimoGalleryClient({ page, viewerId, initialView }: BimoGalleryCl
     router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false })
   }
 
+  // Отдельный счётчик нужен, чтобы повторное то же сообщение заново завело таймер.
+  function showError(message: string) {
+    setError(message)
+    setErrorAt((value) => value + 1)
+  }
+
   function toggleLike(entry: GalleryEntry) {
-    if (!viewerId || busyId) return
+    if (busyId) return
+    // Почему лайкнуть нельзя — объясняем подсказкой внизу, а не молчанием.
+    if (!viewerId) {
+      showError('Голосовать может только сотрудник из справочника')
+      return
+    }
+    if (entry.userId === viewerId) {
+      showError('Своего Бимо лайкнуть нельзя')
+      return
+    }
+    if (!entry.hasLook) {
+      showError('Нельзя лайкнуть: у этого Бимо нет купленных вещей')
+      return
+    }
     if (!entry.likedByMe && remaining === 0) {
-      setError('Лайки на этот месяц закончились')
+      showError('Лайки на этот месяц закончились')
       return
     }
 
-    const previous = entries
-    const delta = entry.likedByMe ? -1 : 1
-    setEntries((list) => list.map((item) => (
-      item.userId === entry.userId
-        ? { ...item, likedByMe: !entry.likedByMe, likes: Math.max(0, item.likes + delta) }
-        : item
-    )))
     setBusyId(entry.userId)
     setError(null)
 
     startTransition(async () => {
+      applyLike({ userId: entry.userId, liked: !entry.likedByMe })
       const result = entry.likedByMe
         ? await unlikeBimo({ targetId: entry.userId })
         : await likeBimo({ targetId: entry.userId })
       setBusyId(null)
       if (!result.success) {
-        setEntries(previous)
-        setError(result.error)
+        // Оптимистичное состояние снимется само вместе с переходом.
+        showError(result.error)
         return
       }
-      // Сверяем счётчик с сервером: другие могли голосовать параллельно.
-      setEntries((list) => list.map((item) => (
-        item.userId === entry.userId
-          ? { ...item, likedByMe: result.data.liked, likes: result.data.likes }
-          : item
-      )))
+      // Свежие счётчики приезжают серверным рендером: действие уже
+      // ревалидировало страницу, а переход держит оптимистичный вид до ответа.
+      router.refresh()
     })
   }
 
@@ -184,23 +214,9 @@ export function BimoGalleryClient({ page, viewerId, initialView }: BimoGalleryCl
         </div>
       </section>
 
-      {error && (
-        <div
-          role="status"
-          className="rounded-xl px-4 py-3 text-[13px] font-medium"
-          style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-error-text)' }}
-        >
-          {error}
-        </div>
-      )}
-
-      <WinnerHero winners={page.winners} entries={byId} lookLabels={page.lookLabels} />
 
       {podium.length > 0 && (
-        <section
-          className="rounded-2xl p-5"
-          style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
-        >
+        <section>
           <div className="mb-3 flex items-baseline justify-between">
             <h2 className="text-[13px] font-bold uppercase" style={{ color: 'var(--apex-text-muted)' }}>
               Подиум · {monthLabel(page.month)}
@@ -211,8 +227,11 @@ export function BimoGalleryClient({ page, viewerId, initialView }: BimoGalleryCl
               </span>
             )}
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            {podium.map((entry) => (
+          {/* Порядок как на пьедестале: второе место слева, первое по центру.
+              При одном-двух участниках колонок столько же, сколько карточек,
+              иначе пьедестал съезжает влево и остаются пустые места. */}
+          <div className={`mx-auto grid max-w-[480px] justify-center gap-10 ${podium.length === 1 ? 'max-w-[160px] grid-cols-1' : podium.length === 2 ? 'max-w-[320px] grid-cols-2' : 'grid-cols-3'}`}>
+            {(podium.length === 3 ? [podium[1], podium[0], podium[2]] : podium).map((entry) => (
               <BimoCard
                 key={entry.userId}
                 entry={entry}
@@ -221,6 +240,7 @@ export function BimoGalleryClient({ page, viewerId, initialView }: BimoGalleryCl
                 isPastWinner={pastWinners.has(entry.userId)}
                 canLike={Boolean(viewerId) && entry.userId !== viewerId && entry.hasLook && (entry.likedByMe || remaining > 0)}
                 isBusy={busyId === entry.userId}
+                catalogArt={page.catalogArt}
                 onToggleLike={toggleLike}
                 onOpen={(item) => setOpenId(item.userId)}
               />
@@ -342,6 +362,7 @@ export function BimoGalleryClient({ page, viewerId, initialView }: BimoGalleryCl
                         isPastWinner={pastWinners.has(entry.userId)}
                         canLike={Boolean(viewerId) && entry.userId !== viewerId && entry.hasLook && (entry.likedByMe || remaining > 0)}
                         isBusy={busyId === entry.userId}
+                catalogArt={page.catalogArt}
                         onToggleLike={toggleLike}
                         onOpen={(item) => setOpenId(item.userId)}
                       />
@@ -369,8 +390,20 @@ export function BimoGalleryClient({ page, viewerId, initialView }: BimoGalleryCl
           entry={openEntry}
           rank={ranks.get(openEntry.userId) ?? null}
           lookLabels={page.lookLabels}
+          catalogArt={page.catalogArt}
           onClose={() => setOpenId(null)}
         />
+      )}
+
+      {/* Подсказка внизу экрана: почему лайк не прошёл. Гаснет сама. */}
+      {error && (
+        <div
+          role="alert"
+          className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-xl px-4 py-3 text-[13px] font-medium shadow-lg"
+          style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-error-text)', border: '1px solid var(--apex-danger-light)' }}
+        >
+          {error}
+        </div>
       )}
     </div>
   )

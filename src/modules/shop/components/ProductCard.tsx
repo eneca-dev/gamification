@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Play } from 'lucide-react'
 
 import { CoinIcon } from '@/components/CoinIcon'
-import { PurchaseButton } from './PurchaseButton'
+import { PurchaseButton } from '@/components/PurchaseButton'
 import { ProductMediaGallery } from './ProductMediaGallery'
 import { hasVideo, mediaPoster } from '../media'
 import { computeDisplayDiscount, computePriceWithoutDiscount } from '../types'

@@ -4,19 +4,21 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Heart, X } from 'lucide-react'
 
-import { BimoPortrait, bimoLook } from '@/modules/profile-appearance/index.client'
+import { BimoStage, bimoLook } from '@/modules/bimo-rig/index.client'
 
+import type { BimoArtMap } from '@/modules/bimo-rig'
 import type { GalleryEntry } from '../types'
 
 interface BimoDetailsModalProps {
   entry: GalleryEntry
   rank: number | null
   lookLabels: Record<string, string>
+  catalogArt: BimoArtMap
   onClose: () => void
 }
 
 /** Единственное место, где Бимо оживает: Canvas монтируется только здесь и у победителя. */
-export function BimoDetailsModal({ entry, rank, lookLabels, onClose }: BimoDetailsModalProps) {
+export function BimoDetailsModal({ entry, rank, lookLabels, catalogArt, onClose }: BimoDetailsModalProps) {
   const closeButton = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -65,7 +67,7 @@ export function BimoDetailsModal({ entry, rank, lookLabels, onClose }: BimoDetai
         </div>
 
         <div className="mt-4 flex justify-center">
-          <BimoPortrait {...bimoLook(entry.equipment)} />
+          <BimoStage {...bimoLook(entry.equipment, catalogArt)} interactive />
         </div>
 
         <div className="mt-4 flex items-center justify-between text-[12px]" style={{ color: 'var(--apex-text-secondary)' }}>

@@ -46,7 +46,7 @@ async function vote(rpc: 'fn_bimo_like' | 'fn_bimo_unlike', input: unknown): Pro
   if (error) return { success: false, error: message(error.message) }
 
   const result = (data ?? {}) as LikeRpcResult
-  revalidatePath('/bimo')
+  revalidatePath('/activity')
 
   return {
     success: true,

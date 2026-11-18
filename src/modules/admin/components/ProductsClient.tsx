@@ -3,9 +3,14 @@
 import { useState, useTransition, useRef, useEffect, useMemo, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
-import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Check, X, HelpCircle, List, LayoutGrid, MessageSquare, Eye } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import { Plus, Pencil, Trash2, Search, ChevronDown, ChevronRight, Check, X, HelpCircle, List, LayoutGrid, MessageSquare, Eye, ImageUp } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
+import { BimoStill } from '@/modules/bimo-rig/index.client'
+import { createCacheMutation, queryKeys } from '@/modules/cache'
+import type { BimoLook } from '@/modules/bimo-rig'
 import {
   createCategory,
   updateCategory,
@@ -24,8 +29,25 @@ import {
 
 import { CrystalRateHistory } from './economy/CrystalRateHistory'
 import { CrystalRateStats } from './CrystalRateStats'
+import type { CreatedBimoProduct } from './BimoAccessoryModal'
 // Форма товара с загрузкой фото и видео — отдельный чанк: при просмотре списка
 // она не нужна и подгружается только при создании или редактировании.
+// Генератор вещей Бимо тянет за собой графику и Canvas — отдельный чанк,
+// он нужен только в момент создания аксессуара.
+const BimoAccessoryModal = dynamic(() => import('./BimoAccessoryModal').then((m) => m.BimoAccessoryModal), {
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--apex-overlay)' }}>
+      <div
+        className="rounded-2xl px-6 py-4 text-[13px] font-semibold"
+        style={{ background: 'var(--apex-surface)', color: 'var(--apex-text-secondary)', border: '1px solid var(--apex-border)' }}
+      >
+        Загрузка формы…
+      </div>
+    </div>
+  ),
+})
+
 const ProductFormModal = dynamic(() => import('./ProductFormModal').then((m) => m.ProductFormModal), {
   ssr: false,
   loading: () => (
@@ -47,7 +69,17 @@ interface ProductsClientProps {
   categories: ShopCategory[]
   currentRate: number
   crystalRates: CrystalRateRow[]
+  bimoPreviews?: Record<string, BimoLook>
 }
+
+const BIMO_FILTER = '__bimo'
+
+const useProductDeletion = createCacheMutation({
+  mutationFn: async (id: string) => {
+    const result = await deleteProduct(id)
+    return result.success ? { success: true as const, data: { warning: result.warning } } : result
+  },
+})
 
 type InlineProductField = 'category_id' | 'cost_byn' | 'coefficient' | 'discount_percent' | 'stock'
 
@@ -282,7 +314,8 @@ function buildAdminFilter(tokens: FilterToken[]): ParsedAdminFilter {
 function applyParsedFilter(
   p: ShopProductWithCategory,
   filter: ParsedAdminFilter,
-  effectiveRate: number
+  effectiveRate: number,
+  hasImage = Boolean(p.image_url)
 ): boolean {
   if (filter.status?.length && !filter.status.includes(getProductStatus(p))) return false
   if (filter.categories?.length) {
@@ -295,7 +328,7 @@ function applyParsedFilter(
   if (filter.stock && !compareNum(p.stock ?? 0, filter.stock.op, filter.stock.value)) return false
   if (filter.stockNull === true && p.stock !== null) return false
   if (filter.stockNull === false && p.stock === null) return false
-  if (filter.hasImage !== undefined && !!p.image_url !== filter.hasImage) return false
+  if (filter.hasImage !== undefined && hasImage !== filter.hasImage) return false
   if (filter.hasEmoji !== undefined && !!p.emoji !== filter.hasEmoji) return false
   if (filter.hasDiscount === true && p.discount_percent == null) return false
   if (filter.hasDiscount === false && p.discount_percent != null) return false
@@ -303,13 +336,28 @@ function applyParsedFilter(
   return true
 }
 
-export function ProductsClient({ products: initialProducts, categories: initialCategories, currentRate, crystalRates }: ProductsClientProps) {
+export function ProductsClient({ products: initialProducts, categories: initialCategories, currentRate, crystalRates, bimoPreviews = {} }: ProductsClientProps) {
+  const router = useRouter()
   const [products, setProducts] = useState(initialProducts)
   const [categories, setCategories] = useState(initialCategories)
   const [isCatPending, startCatTransition] = useTransition()
   const [isProductPending, startProductTransition] = useTransition()
+  const productsSnapshot = useRef(initialProducts)
+  const queryClient = useQueryClient()
+  const deletion = useProductDeletion({
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.bimo.all })
+      router.refresh()
+    },
+  })
   const [error, setError] = useState<string | null>(null)
   const [notification, setNotification] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (isProductPending || isCatPending || productsSnapshot.current === initialProducts) return
+    productsSnapshot.current = initialProducts
+    setProducts(initialProducts)
+  }, [initialProducts, isProductPending, isCatPending])
 
   // Курс кристаллов — реальный + preview
   const [previewRate, setPreviewRate] = useState<number | null>(null)
@@ -320,6 +368,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   const [searchQuery, setSearchQuery] = useState('')
   const [editingProduct, setEditingProduct] = useState<ShopProductWithCategory | null>(null)
   const [isCreatingProduct, setIsCreatingProduct] = useState(false)
+  const [isCreatingBimo, setIsCreatingBimo] = useState(false)
+  const [editingBimoArtwork, setEditingBimoArtwork] = useState<ShopProductWithCategory | null>(null)
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null)
   const [expandedDescriptionId, setExpandedDescriptionId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('list')
@@ -384,7 +434,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   }, [products, categories, effectiveRate])
 
   const filteredProducts = products
-    .filter((p) => categoryFilter === 'all' || p.category?.slug === categoryFilter)
+    .filter((p) => categoryFilter === 'all' || (categoryFilter === BIMO_FILTER ? p.effect?.startsWith('bimo:') : p.category?.slug === categoryFilter))
     .filter((p) => {
       if (!searchQuery.trim()) return true
       const q = searchQuery.toLowerCase()
@@ -394,7 +444,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
         (p.category?.name.toLowerCase().includes(q) ?? false)
       )
     })
-    .filter((p) => applyParsedFilter(p, parsedFilter, effectiveRate))
+    .filter((p) => applyParsedFilter(p, parsedFilter, effectiveRate, Boolean(p.image_url || bimoPreviews[p.id])))
 
   const visibleIds = filteredProducts.map((product) => product.id)
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id))
@@ -460,6 +510,37 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   function showNotification(msg: string) {
     setNotification(msg)
     setTimeout(() => setNotification(null), 3000)
+  }
+
+  /** Вещь Бимо создаёт свой роут — здесь остаётся дорисовать строку в таблице. */
+  function handleBimoCreated(created: CreatedBimoProduct) {
+    const category = categories.find((item) => item.id === created.category_id)
+    setProducts((list) => [{
+      ...created,
+      price_adjustment_crystals: 0,
+      price: computePriceCrystals(created.cost_byn, created.coefficient, currentRate, 0),
+      image_url: null,
+      media: [],
+      effect: created.effect,
+      is_active: false,
+      is_coming_soon: false,
+      discount_percent: null,
+      stock: null,
+      comment_required: false,
+      comment_label: null,
+      comment_placeholder: null,
+      created_by: null,
+      category: {
+        name: category?.name ?? 'Артефакт',
+        slug: category?.slug ?? 'artifact',
+        is_physical: category?.is_physical ?? false,
+        is_countable: category?.is_countable ?? false,
+        is_active: category?.is_active ?? true,
+      },
+    }, ...list])
+    setIsCreatingBimo(false)
+    showNotification('Вещь добавлена в Бимо шоп черновиком')
+    router.refresh()
   }
 
   // --- Категории ---
@@ -629,18 +710,19 @@ export function ProductsClient({ products: initialProducts, categories: initialC
   }
 
   function handleDeleteProduct(id: string) {
-    const prev = products
-    setProducts((items) => items.filter((p) => p.id !== id))
+    if (isProductPending || isCatPending) return
     setDeletingProductId(null)
+    setError(null)
 
     startProductTransition(async () => {
-      const result = await deleteProduct(id)
-      if (!result.success) {
-        setProducts(prev)
-        setError(result.error)
-      } else {
+      try {
+        const result = await deletion.mutateAsync(id)
+        setProducts((items) => items.filter((p) => p.id !== id))
+        setSelectedIds((previous) => new Set([...previous].filter(selected => selected !== id)))
         showNotification('Товар удалён')
         if (result.warning) setError(result.warning)
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'Не удалось удалить товар. Обновите список')
       }
     })
   }
@@ -1257,6 +1339,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             >
               <button
                 onClick={() => setViewMode('list')}
+                aria-label="Показать список товаров" aria-pressed={viewMode === 'list'}
                 className="w-8 h-8 flex items-center justify-center transition-colors"
                 style={{
                   background: viewMode === 'list' ? 'var(--apex-primary)' : 'transparent',
@@ -1267,6 +1350,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
               </button>
               <button
                 onClick={() => setViewMode('cards')}
+                aria-label="Показать карточки товаров" aria-pressed={viewMode === 'cards'}
                 className="w-8 h-8 flex items-center justify-center transition-colors"
                 style={{
                   background: viewMode === 'cards' ? 'var(--apex-primary)' : 'transparent',
@@ -1303,6 +1387,14 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             >
               <Plus size={14} className="inline -translate-y-[1px] mr-1" />
               Добавить товар
+            </button>
+            <button
+              onClick={() => setIsCreatingBimo(true)}
+              className="px-3 py-1.5 rounded-lg text-[12px] font-semibold"
+              style={{ background: 'transparent', color: 'var(--apex-primary)', border: '1px solid var(--apex-primary)' }}
+            >
+              <Plus size={14} className="inline -translate-y-[1px] mr-1" />
+              Добавить в Бимо шоп
             </button>
           </div>
         </div>
@@ -1374,6 +1466,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-5">
                 {filteredProducts.map((product) => {
+                  const bimoPreview = bimoPreviews[product.id]
                   const isConfirmingDelete = deletingProductId === product.id
                   const isDescExpanded = expandedDescriptionId === product.id
                   const outOfStock = !product.is_coming_soon && product.category?.is_countable && product.stock !== null && product.stock === 0
@@ -1387,7 +1480,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                       {/* Зона картинки / эмодзи */}
                       <div
                         className="h-36 flex items-center justify-center relative overflow-hidden"
-                        style={{ background: product.image_url ? 'transparent' : 'var(--apex-emoji-bg)' }}
+                        style={{ background: product.image_url || bimoPreview ? 'transparent' : 'var(--apex-emoji-bg)' }}
                       >
                         <input
                           type="checkbox"
@@ -1396,13 +1489,13 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                           aria-label={`Выбрать товар ${product.name}`}
                           className="absolute bottom-3 left-3 z-10 w-4 h-4 accent-[var(--apex-primary)]"
                         />
-                        <MediaStackPreview
+                        {bimoPreview ? <BimoStill {...bimoPreview} alt={product.name} className="h-full w-auto max-w-full" /> : <MediaStackPreview
                           media={product.media ?? []}
                           imageUrl={product.image_url}
                           emoji={product.emoji}
                           name={product.name}
                           size="lg"
-                        />
+                        />}
                         {product.is_coming_soon && (
                           <span
                             className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
@@ -1549,6 +1642,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                                 </span>
                                 <button
                                   onClick={() => handleDeleteProduct(product.id)}
+                                  aria-label={`Подтвердить удаление «${product.name}»`}
+                                  disabled={isProductPending}
                                   className="w-6 h-6 rounded-full flex items-center justify-center"
                                   style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
                                 >
@@ -1556,6 +1651,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                                 </button>
                                 <button
                                   onClick={() => setDeletingProductId(null)}
+                                  aria-label={`Отменить удаление «${product.name}»`}
                                   className="w-6 h-6 rounded-full flex items-center justify-center"
                                   style={{ color: 'var(--apex-text-muted)' }}
                                 >
@@ -1564,6 +1660,12 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                               </>
                             ) : (
                               <>
+                                {(product.effect?.startsWith('bimo:background.') || product.effect?.startsWith('bimo:accessory.') || product.effect?.startsWith('bimo:outfit.')) && <button type="button"
+                                  onClick={() => setEditingBimoArtwork(product)}
+                                  aria-label={`Обновить графику «${product.name}»`} title="Обновить графику Бимо"
+                                  className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--apex-primary)] hover:bg-[var(--apex-success-bg)] focus-visible:outline-2 focus-visible:outline-[var(--apex-focus)]">
+                                  <ImageUp size={14} />
+                                </button>}
                                 <button
                                   onClick={() => setEditingProduct(product)}
                                   className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
@@ -1575,6 +1677,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                                 </button>
                                 <button
                                   onClick={() => setDeletingProductId(product.id)}
+                                  aria-label={`Удалить товар «${product.name}»`}
+                                  disabled={isProductPending}
                                   className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
                                   style={{ color: 'var(--apex-text-muted)' }}
                                   onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--apex-danger)'; e.currentTarget.style.background = 'var(--apex-error-bg)' }}
@@ -1636,6 +1740,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
               </tr>
             ) : (
               filteredProducts.map((product) => {
+                const bimoPreview = bimoPreviews[product.id]
                 const isInlineEditing = inlineEdit?.productId === product.id
                 const isConfirmingDelete = deletingProductId === product.id
 
@@ -1647,18 +1752,18 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                       <div
                         className="w-10 h-10 rounded-lg relative"
                         style={{
-                          background: product.image_url ? 'var(--apex-bg)' : 'var(--apex-emoji-bg)',
+                          background: product.image_url || bimoPreview ? 'var(--apex-bg)' : 'var(--apex-emoji-bg)',
                           border: '1px solid var(--apex-border)',
                           borderRadius: '0.5rem',
                         }}
                       >
-                        <MediaStackPreview
+                        {bimoPreview ? <BimoStill {...bimoPreview} alt={product.name} className="h-full w-full" /> : <MediaStackPreview
                           media={product.media ?? []}
                           imageUrl={product.image_url}
                           emoji={product.emoji}
                           name={product.name}
                           size="sm"
-                        />
+                        />}
                       </div>
                     </td>
 
@@ -1880,6 +1985,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                                 </span>
                                 <button
                                   onClick={() => handleDeleteProduct(product.id)}
+                                  aria-label={`Подтвердить удаление «${product.name}»`}
+                                  disabled={isProductPending}
                                   className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
                                   style={{ background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
                                 >
@@ -1887,6 +1994,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                                 </button>
                                 <button
                                   onClick={() => setDeletingProductId(null)}
+                                  aria-label={`Отменить удаление «${product.name}»`}
                                   className="w-7 h-7 rounded-full flex items-center justify-center transition-colors"
                                   style={{ color: 'var(--apex-text-muted)' }}
                                 >
@@ -1894,7 +2002,13 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                                 </button>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity shrink-0">
+                                {(product.effect?.startsWith('bimo:background.') || product.effect?.startsWith('bimo:accessory.') || product.effect?.startsWith('bimo:outfit.')) && <button type="button"
+                                  onClick={() => setEditingBimoArtwork(product)}
+                                  aria-label={`Обновить графику «${product.name}»`} title="Обновить графику Бимо"
+                                  className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--apex-primary)] hover:bg-[var(--apex-success-bg)] focus-visible:outline-2 focus-visible:outline-[var(--apex-focus)]">
+                                  <ImageUp size={14} />
+                                </button>}
                                 <button
                                   onClick={() => setEditingProduct(product)}
                                   className="w-8 h-8 rounded-full flex items-center justify-center"
@@ -1912,6 +2026,8 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                                 </button>
                                 <button
                                   onClick={() => setDeletingProductId(product.id)}
+                                  aria-label={`Удалить товар «${product.name}»`}
+                                  disabled={isProductPending}
                                   className="w-8 h-8 rounded-full flex items-center justify-center"
                                   style={{ color: 'var(--apex-text-muted)' }}
                                   onMouseEnter={(e) => {
@@ -1956,6 +2072,19 @@ export function ProductsClient({ products: initialProducts, categories: initialC
             setIsCreatingProduct(false)
           }}
           isPending={isProductPending}
+        />,
+        document.body,
+      )}
+
+      {/* Вещь для Бимо шопа: загрузка рисунка и подгонка посадки */}
+      {(isCreatingBimo || editingBimoArtwork) && createPortal(
+        <BimoAccessoryModal
+          key={editingBimoArtwork?.id ?? 'new'}
+          rate={currentRate}
+          onCreated={handleBimoCreated}
+          artworkProduct={editingBimoArtwork ? { id: editingBimoArtwork.id, name: editingBimoArtwork.name, slot: editingBimoArtwork.effect?.startsWith('bimo:outfit.') ? 'outfit' : editingBimoArtwork.effect?.startsWith('bimo:background.') ? 'background' : 'accessory' } : undefined}
+          onUpdated={() => { setEditingBimoArtwork(null); showNotification('Графика Бимо обновлена'); router.refresh() }}
+          onClose={() => { setIsCreatingBimo(false); setEditingBimoArtwork(null) }}
         />,
         document.body,
       )}
@@ -3106,10 +3235,14 @@ function CategoryFilters({
   onFilterChange: (slug: string) => void
 }) {
   const [showAll, setShowAll] = useState(false)
-  const [visibleCount, setVisibleCount] = useState(categories.length)
+  const [visibleCount, setVisibleCount] = useState(categories.length + 1)
   const containerRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const measureRef = useRef<HTMLDivElement>(null)
+  const filters = useMemo(() => [
+    { id: BIMO_FILTER, slug: BIMO_FILTER, name: 'Бимо', count: products.filter(product => product.effect?.startsWith('bimo:')).length },
+    ...categories.map(category => ({ ...category, count: products.filter(product => product.category?.slug === category.slug).length })),
+  ], [categories, products])
 
   useEffect(() => {
     function measure() {
@@ -3142,7 +3275,7 @@ function CategoryFilters({
     const obs = new ResizeObserver(measure)
     if (containerRef.current) obs.observe(containerRef.current)
     return () => obs.disconnect()
-  }, [categories, products])
+  }, [filters])
 
   useEffect(() => {
     if (!showAll) return
@@ -3153,8 +3286,8 @@ function CategoryFilters({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showAll])
 
-  const visible = categories.slice(0, visibleCount)
-  const overflow = categories.slice(visibleCount)
+  const visible = filters.slice(0, visibleCount)
+  const overflow = filters.slice(visibleCount)
   const hasOverflow = overflow.length > 0
   const overflowActive = overflow.some((c) => c.slug === categoryFilter)
 
@@ -3163,10 +3296,9 @@ function CategoryFilters({
       {/* Невидимый измеритель */}
       <div ref={measureRef} className="flex gap-1.5 absolute invisible pointer-events-none whitespace-nowrap top-0 left-0">
         <FilterPill active={false} onClick={() => {}}>Все ({products.length})</FilterPill>
-        {categories.map((cat) => {
-          const count = products.filter((p) => p.category?.slug === cat.slug).length
+        {filters.map((cat) => {
           return (
-            <FilterPill key={cat.id} active={false} onClick={() => {}}>{cat.name} ({count})</FilterPill>
+            <FilterPill key={cat.id} active={false} onClick={() => {}}>{cat.name} ({cat.count})</FilterPill>
           )
         })}
       </div>
@@ -3177,10 +3309,9 @@ function CategoryFilters({
           Все ({products.length})
         </FilterPill>
         {visible.map((cat) => {
-          const count = products.filter((p) => p.category?.slug === cat.slug).length
           return (
             <FilterPill key={cat.id} active={categoryFilter === cat.slug} onClick={() => onFilterChange(cat.slug)}>
-              {cat.name} ({count})
+              {cat.name} ({cat.count})
             </FilterPill>
           )
         })}
@@ -3206,7 +3337,6 @@ function CategoryFilters({
                 }}
               >
                 {overflow.map((cat) => {
-                  const count = products.filter((p) => p.category?.slug === cat.slug).length
                   const isActive = categoryFilter === cat.slug
                   return (
                     <button
@@ -3220,7 +3350,7 @@ function CategoryFilters({
                       onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--apex-bg)' }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = isActive ? 'var(--apex-success-bg)' : 'transparent' }}
                     >
-                      <span>{cat.name} ({count})</span>
+                      <span>{cat.name} ({cat.count})</span>
                       {isActive && <Check size={14} />}
                     </button>
                   )

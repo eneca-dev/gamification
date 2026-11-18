@@ -20,6 +20,10 @@ interface StoreClientProps {
   showBimo?: boolean
   bimoActive?: boolean
   bimoContent?: ReactNode
+  /** Мини-Бимо для плашки категории. Готовый узел: модуль магазина не рендерит Бимо сам. */
+  bimoTabIcon?: ReactNode
+  /** Фон текущего образа: им подкрашивается плашка категории. */
+  bimoTabTint?: string | null
   initialCategory?: string
   products: ShopProductWithCategory[]
   categories: ShopCategory[]
@@ -36,6 +40,8 @@ export function StoreClient({
   showBimo = false,
   bimoActive = false,
   bimoContent,
+  bimoTabIcon = null,
+  bimoTabTint = null,
   initialCategory,
   products,
   categories,
@@ -210,13 +216,24 @@ export function StoreClient({
           type="button"
           onClick={() => router.push('/store?tab=bimo')}
           aria-pressed={activeFilter === 'bimo'}
-          className="px-4 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"
+          // Плашка Бимо отличается от остальных: слева сам енот, а тон плашки —
+          // размытый фон его текущего образа, поэтому она меняется вместе с образом.
+          // Размер совпадает с остальными плашками: иконка вписана в строку,
+          // высоту не увеличивает. Активная отмечается цветом рамки, а не толщиной.
+          className={`relative flex items-center gap-1.5 overflow-hidden rounded-xl py-2 text-[13px] font-semibold transition-all duration-200 ${bimoTabIcon ? 'pl-2 pr-4' : 'px-4'}`}
           style={{
-            background: activeFilter === 'bimo' ? 'var(--apex-primary)' : 'var(--surface-elevated)',
-            color: activeFilter === 'bimo' ? 'white' : 'var(--text-secondary)',
-            border: activeFilter === 'bimo' ? '1px solid transparent' : '1px solid var(--border)',
+            background: bimoTabTint ? 'var(--surface-elevated)' : activeFilter === 'bimo' ? 'var(--apex-primary)' : 'var(--surface-elevated)',
+            color: !bimoTabTint && activeFilter === 'bimo' ? 'white' : 'var(--text-secondary)',
+            border: `1px solid ${activeFilter === 'bimo' ? 'var(--apex-primary)' : 'var(--border)'}`,
           }}
-        >Енот-Бимо</button>}
+        >
+          {bimoTabTint && <>
+            <span aria-hidden="true" className="absolute inset-0 scale-150 bg-cover bg-center blur-md" style={{ backgroundImage: `url(${bimoTabTint})` }} />
+            <span aria-hidden="true" className="bimo-band-veil absolute inset-0" />
+          </>}
+          {bimoTabIcon && <span aria-hidden="true" className="relative -my-1 h-6 w-6 flex-shrink-0">{bimoTabIcon}</span>}
+          <span className="relative">Енот-Бимо</span>
+        </button>}
       </div>
 
       {/* Описание категории */}

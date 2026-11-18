@@ -63,3 +63,6 @@ certificates
 
 # Local character art sources, previews and backups (not served by the app)
 /.local-assets/
+
+# временные рендеры и проверки скриптов bimo-rig
+/tmp/

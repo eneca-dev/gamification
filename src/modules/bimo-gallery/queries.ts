@@ -1,8 +1,9 @@
 import 'server-only'
 
 import { createSupabaseAdminClient } from '@/config/supabase'
-import { DEFAULT_EQUIPMENT } from '@/modules/profile-appearance/index.client'
+import { DEFAULT_EQUIPMENT, parseRigArt } from '@/modules/bimo-rig'
 
+import type { BimoArtMap } from '@/modules/bimo-rig'
 import type { GalleryEntry, GalleryPage, GalleryWinner } from './types'
 
 interface GalleryRow {
@@ -38,6 +39,40 @@ async function getLikeLimit(): Promise<number> {
   const { data, error } = await createSupabaseAdminClient().rpc('fn_bimo_like_limit')
   if (error) throw new Error(error.message)
   return Number(data ?? 3)
+}
+
+/**
+ * Израсходованные лайки считаются по таблице голосов, а не по видимым карточкам:
+ * лайк сотруднику, который выпал из галереи, всё равно занимает место в лимите.
+ */
+async function getUsedLikes(voterId: string | null, month: string): Promise<number> {
+  if (!voterId) return 0
+  const { count, error } = await createSupabaseAdminClient()
+    .from('bimo_likes')
+    .select('target_id', { count: 'exact', head: true })
+    .eq('voter_id', voterId)
+    .eq('contest_month', month)
+  if (error) {
+    console.error('[bimo-gallery] getUsedLikes:', error.message)
+    return 0
+  }
+  return count ?? 0
+}
+
+/**
+ * Остаток лайков для счётчика на вкладке ленты. Лёгкий запрос без самой галереи:
+ * вкладка должна напоминать о голосовании на любой вкладке, а не только своей.
+ */
+export async function getBimoLikesLeft(viewerId: string | null): Promise<number | null> {
+  if (!viewerId) return null
+  try {
+    const month = await getBimoMonth()
+    const [limit, used] = await Promise.all([getLikeLimit(), getUsedLikes(viewerId, month)])
+    return Math.max(0, limit - used)
+  } catch (error) {
+    console.error('[bimo-gallery] getBimoLikesLeft:', error instanceof Error ? error.message : error)
+    return null
+  }
 }
 
 function toEntry(row: GalleryRow): GalleryEntry {
@@ -99,25 +134,28 @@ async function loadWinners(limit: number): Promise<GalleryWinner[]> {
   })
 }
 
-/** Подписи вещей берём из каталога, чтобы названия не дублировались в коде. */
-async function loadLookLabels(): Promise<Record<string, string>> {
+/** Названия и графику вещей берём из каталога, чтобы они не дублировались в коде. */
+async function loadCatalog(): Promise<{ labels: Record<string, string>; art: BimoArtMap }> {
   const { data, error } = await createSupabaseAdminClient()
     .from('bimo_catalog')
-    .select('asset_key, product:shop_products!product_id(name)')
+    .select('asset_key, slot, art, art_version, product:shop_products!product_id(name)')
   if (error) {
-    console.error('[bimo-gallery] loadLookLabels:', error.message)
-    return {}
+    console.error('[bimo-gallery] loadCatalog:', error.message)
+    return { labels: {}, art: {} }
   }
 
   // PostgREST типизирует вложенный товар как массив, по данным приходит объект.
-  type Row = { asset_key: string; product: { name: string | null } | { name: string | null }[] | null }
+  type Row = { asset_key: string; slot: string; art: unknown; art_version: number; product: { name: string | null } | { name: string | null }[] | null }
   const labels: Record<string, string> = {}
+  const art: BimoArtMap = {}
   for (const row of (data ?? []) as unknown as Row[]) {
     const product = Array.isArray(row.product) ? row.product[0] : row.product
     const name = product?.name
     if (name) labels[row.asset_key] = name.replace(/^Бимо\s*·\s*/, '')
+    const layers = parseRigArt(row.art, row.slot, row.art_version)
+    if (layers) art[row.asset_key] = layers
   }
-  return labels
+  return { labels, art }
 }
 
 /**
@@ -129,11 +167,12 @@ export async function getGalleryPage(viewerId: string | null, winnersLimit = 12)
   const month = await getBimoMonth()
   const db = createSupabaseAdminClient()
 
-  const [gallery, likeLimit, winners, lookLabels] = await Promise.all([
+  const [gallery, likeLimit, usedLikes, winners, catalog] = await Promise.all([
     db.rpc('fn_bimo_gallery', { p_month: month, p_voter_id: viewerId }),
     getLikeLimit(),
+    getUsedLikes(viewerId, month),
     loadWinners(winnersLimit),
-    loadLookLabels(),
+    loadCatalog(),
   ])
 
   if (gallery.error) throw new Error(gallery.error.message)
@@ -143,9 +182,10 @@ export async function getGalleryPage(viewerId: string | null, winnersLimit = 12)
   return {
     month,
     likeLimit,
-    usedLikes: entries.filter((entry) => entry.likedByMe).length,
+    usedLikes,
     entries,
     winners,
-    lookLabels,
+    lookLabels: catalog.labels,
+    catalogArt: catalog.art,
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useBalance, BALANCE_POLL_INTERVAL } from '@/modules/shop/hooks/useBalance'
+import { useBalance, BALANCE_POLL_INTERVAL } from '@/hooks/useBalance'
 import { CoinIcon } from '@/components/CoinIcon'
 
 interface CoinBalanceProps {

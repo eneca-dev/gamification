@@ -3,7 +3,7 @@ export {
   getCalendarHolidays, getCalendarWorkdays, getUsersLight,
   getEconomyOverview, getEconomyTop, getEconomyCategoryBreakdown, resolveEconomyPeriod,
   getDepartmentGroups, getAllDepartments, getUsersSortedByBalance,
-  getCrystalRateHistory,
+  getCrystalRateHistory, getBimoProductPreviews,
 } from './queries'
 export {
   updateEventType, updateRankingSetting, updateGratitudeSetting,

@@ -1,12 +1,14 @@
 'use client'
 
-import { createCacheQuery, createCacheMutation, queryKeys } from '@/modules/cache'
+import { createCacheQuery, createCacheMutation, queryKeys, staleTimePresets } from '@/modules/cache'
 import { getBimoStateAction, purchaseBimoItem, equipBimoItem } from './actions'
 
+// Гардероб меняется только действиями самого пользователя, а они инвалидируют
+// ключ. Поэтому полная перезагрузка на каждом монтировании не нужна.
 export const useBimo = createCacheQuery({
   queryKey: (userId: string) => queryKeys.bimo.user(userId),
   queryFn: () => getBimoStateAction(),
-  staleTime: 0,
+  staleTime: staleTimePresets.realtime,
 })
 export const useBimoPurchase = createCacheMutation({
   mutationFn: purchaseBimoItem,

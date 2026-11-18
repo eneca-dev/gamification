@@ -1,0 +1,121 @@
+{
+  "classic-v4": {
+    "source": "../model-v4-classic-source.png",
+    "tool": "built-in image_gen",
+    "offsetY": 0,
+    "outfitClip": "M0 0H512V214H322L312 231L296 270L316 300L330 340L335 350L338 392H0Z",
+    "sleeveClip": "M200 218H244L218 270L198 300L184 340L178 347L174 359H120V300L168 248Z",
+    "registration": {
+      "generatedBounds": {
+        "left": 283,
+        "top": 438,
+        "width": 688,
+        "height": 456
+      },
+      "width": 500,
+      "height": 310,
+      "left": 262,
+      "top": 438
+    },
+    "prompts": [
+      "Use case: precise-object-edit. Image 1 is the exact aligned 1024-square classic blazer EDIT TARGET. Image 2 is the exact Bimo mascot, anatomical fitting and 2D drawing reference. Redraw the blazer as a clean polished clothes-only sprite fitted to this same Bimo. Keep the original square canvas registration and upper-garment position. Retain the charcoal blazer, emerald lapels, white V shirt collar, green lanyard and centered white ID badge with green frame, plus two restrained pockets. Keep the badge position and the recognizable design. Make the cut youthful, softly boxy and relaxed. Important local fitting changes: shorten BOTH sleeves approximately 20 pixels on the 1024 canvas, so the whole cuff edge ends at the WRIST around y=680..690 and the raccoon's full three-finger paws sit entirely below. Cuffs are gently curved flat fabric hems touching the wrists, no hollow dark oval, no inner lining, no tube opening or separate black ring. The arms relax symmetrically downward following Bimo exactly. Smooth continuous shoulder flow, no heavy shoulder seam or socket outline. Shorten the jacket center hem to around y=742..748, and ROUND the two lower side corners gently upward beside the palms around y=715..725 so no pointed strip hangs below a thumb. Keep a comfortable straight body, not a pinched waist. The short central front split must stay very shallow, below the badge. Soft matte 2D painted colors, restrained coherent cel shading, a few useful folds, confident rounded charcoal outlines matching Bimo, very readable at small sidebar size. The neckline stays around x450..570,y445, upper shoulders retain their exact placement and width. Output ONLY the complete blazer including both symmetric sleeves, white shirt insert and ID badge, with true alpha transparency, SAME 1024x1024 canvas and original clothing coordinates. No raccoon, head, neck, fur, paws, hands, feet, tail, background, text, mannequin, hanger, cast shadow, new accessories or hood. Do not rescale or recenter the full garment.",
+      "Use case precise-object-edit. Image1 is the clothes-only blazer EDIT TARGET on exact square registered canvas. Image2 is the anatomical Bimo reference. Image3 is its current assembled fit showing the narrow sleeve problem. Make one localized tailoring correction to image1. Keep all neckline, shoulders, body, lapels, badge, pockets, colors, and canvas registration unchanged. Widen the OUTER edge of BOTH lower sleeves to fully wrap Bimo's forearms, while shortening cuff height to expose every finger. At normalized1024 coordinates, each left cuff should span approximately x260..354 at y674..690 with no sleeve pixels below y696. Left sleeve outer silhouette must follow x315 at y590, x288 at y640, x266 at y680. Mirror for right sleeve. Preserve the inner sleeve edge and natural armpit gap, keep a short rounded flat closed charcoal cuff, no dark oval or lining. In the assembled view no strip of white forearm should show outside either sleeve, only hands below cuffs. Cuffs equal, fully symmetric. Retain refined matte cartoon soft shading and smooth continuous shoulders. Output clothing only, true transparency, same exact square registration and scale, no hands or character pixels. Keep torso bottom corners gently rounded upward beside thumbs, center hem around y746.",
+      "Use case precise-object-edit. This exact transparent blazer is the user's SELECTED design. Make ONLY ONE tiny localized edit. CLOSE the deep triangular transparent front split immediately BELOW the white ID badge, extending the matching charcoal fabric down the center front almost to the hem, leaving only a tiny shallow notch at the bottom edge. Keep the thin central seam. Preserve ALL other pixels and especially the relaxed straight boxy BODY OUTER SILHOUETTE, its width, the straight sides, pockets, collar, lapels, badge, shoulder contours, sleeves and cuff positions exactly. Do not cinch or narrow the waist and do not flare the bottom. Do not resize, move or recenter anything. Keep the exact original square canvas registration. Same clean matte 2D cartoon shading and charcoal outlines. Return only the same complete clothing on true transparency, no Bimo, paws, character pixels, background or shadow. This is a small front-seam closure, not a redesign."
+    ],
+    "title": "Пиджак с пропуском",
+    "selection": "User selected Image #2 on 17.11.2026. Straight boxy silhouette retained. Deep center split closed for the shared clothing format."
+  },
+  "collection-drafts/blue-bomber": {
+    "source": "collection/blue-bomber-source.png",
+    "tool": "built-in image_gen",
+    "registration": {
+      "generatedBounds": {
+        "left": 333,
+        "top": 528,
+        "width": 589,
+        "height": 389
+      },
+      "width": 500,
+      "height": 308,
+      "left": 262,
+      "top": 438
+    },
+    "offsetY": 0,
+    "outfitClip": "M0 0H512V214H322L312 231L296 270L316 300L330 340L335 350L338 392H0Z",
+    "sleeveClip": "M200 218H244L218 270L198 300L184 340L178 347L174 359H120V300L168 248Z",
+    "prompts": [
+      "Use case precise-object-edit. Image1 is the EXACT successful clothes-only fitting template, a short-sleeved-at-wrist blazer for Bimo, on a registered square canvas. Image2 is the existing blue bomber DESIGN reference only. Image3 is the anatomical Bimo reference. Replace the blazer design in image1 with the powder blue bomber design from image2 while keeping image1's exact silhouette, canvas registration, shoulder positions, sleeve widths, SHORT sleeve lengths and compact torso width beside the thumbs. Both cream cuffs end at the same level as the TOP of the pockets, well above the bottom body hem. Cute relaxed powder-blue bomber, low warm ivory ribbed collar, thin ivory zipper, two small welt pockets, ivory cuff bands and ivory bottom band. The body side corners round inward to leave a clear space beside the hands. Unified soft smooth shoulder fabric, no outlined shoulder sockets. Matte 2D cartoon with soft broad restrained shading and clean rounded charcoal contours matching Bimo. Symmetric sleeves. Flat closed front cuff bands, no dark inner ovals, no tubular openings, no lining or shoulder shadows. No badge, lanyard, lapels, fur, body parts, hands or character. Output only the complete bomber including BOTH full sleeves on true alpha transparency, same square registered canvas and same garment size as image1. Do not enlarge or recenter."
+    ],
+    "title": "Голубой бомбер"
+  },
+  "collection-drafts/cream-hoodie": {
+    "source": "collection/cream-hoodie-source.png",
+    "tool": "built-in image_gen",
+    "registration": {
+      "generatedBounds": {
+        "left": 324,
+        "top": 541,
+        "width": 606,
+        "height": 373
+      },
+      "width": 500,
+      "height": 306,
+      "left": 262,
+      "top": 440
+    },
+    "offsetY": 0,
+    "outfitClip": "M0 0H512V214H322L312 231L296 270L316 300L330 340L335 350L338 392H0Z",
+    "sleeveClip": "M200 218H244L218 270L198 300L184 340L178 347L174 359H120V300L168 248Z",
+    "title": "Кремовое худи",
+    "prompts": [
+      "Use case precise-object-edit. Image1 is the EXACT successful clothing fitting template for Bimo, on a registered square transparent canvas. Image2 is the old cream hoodie for DESIGN reference only, its missing right sleeve and busy folds must be corrected. Image3 is the anatomical Bimo reference. Replace the bomber in image1 with a charming warm cream hoodie-style pullover. Keep image1's precise square canvas registration, shoulder positions, short comfortable torso, compact rounded lower corners, sleeve width and SHORT cuff positions. Draw BOTH full symmetric sleeves following the exact relaxed Bimo arms. Cream matte cotton, small low front neckline with quiet cream ribbing, two short ivory drawstrings with emerald tips, a tiny emerald diamond on the chest and one softly outlined kangaroo pocket. The hood remains entirely out of sight behind the body, with no visible back hood silhouette. No dark throat cavity. Smooth continuous shoulder transitions without separate shoulder rings or heavy armhole seams. Short flat closed cream ribbed cuffs exposing full three-finger paws, never dark inner ovals or openings, cuffs at same height as image1. Few tasteful broad fabric folds, restrained soft 2D cel shading and clean dark brown charcoal contours consistent with Bimo and image1. Avoid dense stitches, busy wrinkles, 3D plastic shine or photographic fabric. Keep the bottom band short and softly rounded inward beside the thumbs, no flared side corners. Output only complete clothes, no raccoon, fur, body parts, hands, background or cast shadow, true alpha transparency, same square registration and garment size."
+    ]
+  },
+  "collection-drafts/green-sweatshirt": {
+    "source": "collection/green-sweatshirt-source.png",
+    "tool": "built-in image_gen",
+    "registration": {
+      "generatedBounds": {
+        "left": 321,
+        "top": 546,
+        "width": 610,
+        "height": 367
+      },
+      "width": 500,
+      "height": 306,
+      "left": 262,
+      "top": 440
+    },
+    "offsetY": 0,
+    "outfitClip": "M0 0H512V214H322L312 231L296 270L316 300L330 340L335 350L338 392H0Z",
+    "sleeveClip": "M200 218H244L218 270L198 300L184 340L178 347L174 359H120V300L168 248Z",
+    "title": "Зелёный свитшот",
+    "prompts": [
+      "Use case precise-object-edit. Image1 is the exact successful cream clothing sprite fitting template on a registered square transparent canvas, image2 the exact Bimo anatomical reference. Transform image1 into a simple beautiful muted eucalyptus/sage-green crewneck sweatshirt for the same Bimo. Keep the precise canvas registration, overall silhouette, torso length, short cuff endpoints, sleeve width, smooth shoulders and compact rounded body corners of image1. BOTH sleeves are complete and symmetric. Remove drawstrings, diamond, pouch pocket and all hoodie details. Low close-fitting crewneck collar, narrow soft ivory ribbed collar/cuffs/hem, clean plain sage-green body with only two or three understated soft fabric folds. Green is muted grayish sage, clearly lighter and softer than Bimo's dark emerald markings. Matte 2D hand-painted cartoon finish, broad quiet color planes and restrained gentle shading, consistent rounded charcoal contours. Shoulder fabric flows into the sleeves, no black shoulder rings, socket seams or heavy shadows. Short flat closed cuff bands end at the same height as image1 and expose the whole three-finger hand. No dark inside ovals or lining openings, no visible back hood. Output only the complete sweatshirt, no body, paws, fur, character, typography, logos, scenery or cast shadow, true alpha transparency. Preserve image1's exact square registration and clothing proportions."
+    ]
+  },
+  "collection-drafts/sand-shirt": {
+    "source": "collection/sand-shirt-source.png",
+    "tool": "built-in image_gen",
+    "registration": {
+      "generatedBounds": {
+        "left": 370,
+        "top": 539,
+        "width": 514,
+        "height": 375
+      },
+      "width": 420,
+      "height": 306,
+      "left": 302,
+      "top": 440
+    },
+    "offsetY": 0,
+    "outfitClip": "M0 0H512V214H322L312 231L296 270L316 300L330 340L335 350L338 392H0Z",
+    "sleeveClip": "M200 218H244L218 270L198 300L184 340L178 347L174 359H120V300L168 248Z",
+    "title": "Песочная рубашка",
+    "prompts": [
+      "Use case precise-object-edit. Image1 is the exact Bimo fitting template for torso, shoulders and square canvas registration, image2 is Bimo's anatomy. Create a charming SAND BEIGE SHORT-SLEEVE casual button-up shirt for this same Bimo. Replace the sweatshirt. Keep the same neckline placement, upper shoulders, torso width, short rounded bottom hem and exact square canvas registration of image1. Change both sleeves to true SHORT sleeves ending ABOVE the elbows, roughly halfway down the main torso, about 42% of the distance from neckline to bottom hem. Both white furry forearms and the entire three-finger paws will show underneath, but character pixels must be omitted from the output. Each short sleeve gently follows the angled upper arm, a soft flat closed fabric hem, no hollow inner oval, no lining, no black opening or underside. Small soft rounded camp collar, tiny ivory undershirt insert filling the neckline, three small quiet ivory buttons down the center, one simple little chest pocket. Warm sand beige cotton, soft muted darker beige shadow planes, matte clean 2D cartoon illustration and rounded dark charcoal contours matching image1 and Bimo. Body has a comfortable straight fit, compact rounded side corners with room beside the thumbs, no flared skirt. The center body extends down to the same height as image1. Smooth cohesive shoulders with no black shoulder socket lines, very few gentle fabric folds. No drawstrings, diamond, ribbed sweatshirt cuffs, badges, logos, scenery, fur, hands, arms or raccoon. Output only the COMPLETE shirt and BOTH symmetric SHORT sleeves on true transparency, retain the exact square registered canvas and torso size.",
+      "Use case precise-object-edit. Make ONE small localized edit to this transparent sand shirt sprite. Keep every other pixel and the exact original square canvas registration, neckline, buttons, shoulder and sleeve geometry, hem and colors. The little chest pocket is too far toward the outer arm. Make the pocket 25 percent smaller and move the entire pocket inward toward the central button placket by about HALF its current width. There should be a small clear gap between pocket and button placket, and a generous plain-fabric margin between the pocket's outer edge and the armhole/inner-sleeve fold. Keep this pocket wholly on the central torso fabric, with a complete continuous gently rounded outline, no missing or erased corners. Reconstruct plain matching beige fabric where its former outer section was. Preserve its same understated simple design. Output only the same complete SHORT-SLEEVE sand shirt on true transparency, same registered square canvas, no character, no other changes."
+    ]
+  }
+}

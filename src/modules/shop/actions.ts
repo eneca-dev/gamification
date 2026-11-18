@@ -481,16 +481,6 @@ export async function deleteProduct(
 
   const supabase = createSupabaseAdminClient()
 
-  // Проверяем, нет ли заказов на этот товар
-  const { count } = await supabase
-    .from('shop_orders')
-    .select('id', { count: 'exact', head: true })
-    .eq('product_id', parsed.data)
-
-  if (count && count > 0) {
-    return { success: false, error: 'Нельзя удалить товар с существующими заказами. Деактивируйте его вместо удаления' }
-  }
-
   // Собираем все пути к медиа до удаления строки
   const { data: current, error: readError } = await supabase
     .from('shop_products')
@@ -507,21 +497,33 @@ export async function deleteProduct(
       return []
     })
 
-  const { data: deleted, error } = await supabase
-    .from('shop_products')
-    .delete()
-    .eq('id', parsed.data)
-    .eq('updated_at', current.updated_at)
-    .select('id')
-
-  if (error) return { success: false, error: error.message }
-  if (!deleted?.length) return { success: false, error: 'Товар был изменён другим администратором. Обновите страницу' }
+  try {
+    const { data: deleted, error } = await supabase.rpc('delete_shop_product', {
+      p_product_id: parsed.data,
+      p_expected_updated_at: current.updated_at,
+    })
+    if (error) {
+      const messages: Record<string, string> = {
+        shop_product_has_orders: 'Нельзя удалить товар с существующими заказами. Деактивируйте его вместо удаления',
+        shop_product_equipped: 'Эта вещь надета на Бимо. Деактивируйте товар вместо удаления',
+        shop_product_has_lottery: 'Товар связан с розыгрышем. Деактивируйте его вместо удаления',
+        shop_product_changed: 'Товар был изменён другим администратором. Обновите страницу',
+        shop_product_not_found: 'Товар уже удалён. Обновите страницу',
+      }
+      return { success: false, error: messages[error.message] ?? 'Не удалось подтвердить удаление товара. Обновите список и повторите попытку' }
+    }
+    if (deleted !== parsed.data) return { success: false, error: 'Не удалось подтвердить удаление товара. Обновите список' }
+  } catch {
+    return { success: false, error: 'Не удалось подтвердить удаление товара. Обновите список и повторите попытку' }
+  } finally {
+    revalidateTag('shop-products', 'max')
+    revalidatePath('/admin/products')
+    revalidatePath('/store')
+    revalidatePath('/activity')
+  }
 
   const warning = await removeUnreferencedProductMedia(mediaUrls)
 
-  revalidateTag('shop-products', 'max')
-  revalidatePath('/admin/products')
-  revalidatePath('/store')
   return { success: true, ...(warning ? { warning } : {}) }
 }
 

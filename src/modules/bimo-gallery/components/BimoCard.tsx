@@ -2,9 +2,9 @@
 
 import { Crown, Heart } from 'lucide-react'
 
-import { bimoLook } from '@/modules/profile-appearance/index.client'
+import { BimoStill, bimoLook } from '@/modules/bimo-rig/index.client'
 
-import { BimoThumb } from './BimoThumb'
+import type { BimoArtMap } from '@/modules/bimo-rig'
 import type { GalleryEntry } from '../types'
 
 const RANK_BADGES = ['🥇', '🥈', '🥉'] as const
@@ -17,12 +17,13 @@ interface BimoCardProps {
   isPastWinner: boolean
   canLike: boolean
   isBusy: boolean
+  catalogArt: BimoArtMap
   onToggleLike: (entry: GalleryEntry) => void
   onOpen: (entry: GalleryEntry) => void
 }
 
 export function BimoCard({
-  entry, rank, isViewer, isPastWinner, canLike, isBusy, onToggleLike, onOpen,
+  entry, rank, isViewer, isPastWinner, canLike, isBusy, catalogArt, onToggleLike, onOpen,
 }: BimoCardProps) {
   const name = [entry.lastName, entry.firstName].filter(Boolean).join(' ') || 'Без имени'
   const place = [entry.department, entry.team].filter(Boolean).join(' · ')
@@ -42,7 +43,7 @@ export function BimoCard({
         title="Показать Бимо крупнее"
         className="relative block rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--apex-focus)]"
       >
-        <BimoThumb look={bimoLook(entry.equipment)} alt={`Бимо · ${name}`} className="rounded-xl" />
+        <BimoStill {...bimoLook(entry.equipment, catalogArt)} alt={`Бимо · ${name}`} className="rounded-xl" />
         {badge && (
           <span
             className="absolute left-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[13px] leading-none"
@@ -77,7 +78,10 @@ export function BimoCard({
         <button
           type="button"
           onClick={() => onToggleLike(entry)}
-          disabled={!canLike || isBusy}
+          // Кнопка недоступного лайка остаётся нажимаемой: по нажатию внизу
+          // появляется подсказка, почему лайкнуть нельзя.
+          disabled={isBusy}
+          aria-disabled={!canLike}
           aria-pressed={entry.likedByMe}
           aria-label={entry.likedByMe ? `Снять лайк с Бимо ${name}` : `Лайкнуть Бимо ${name}`}
           title={
@@ -91,7 +95,7 @@ export function BimoCard({
             background: entry.likedByMe ? 'var(--apex-error-bg)' : 'var(--apex-bg)',
             color: entry.likedByMe ? 'var(--apex-danger)' : 'var(--apex-text-secondary)',
             border: '1px solid var(--apex-border)',
-            opacity: isBusy ? 0.6 : 1,
+            opacity: isBusy ? 0.6 : canLike ? 1 : 0.55,
           }}
         >
           <Heart size={13} fill={entry.likedByMe ? 'currentColor' : 'none'} />

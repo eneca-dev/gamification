@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import type { BimoEquipment } from '@/modules/profile-appearance/index.client'
+import type { BimoArtMap, BimoEquipment } from '@/modules/bimo-rig'
 
 /** Строка галереи: сотрудник, его действующий образ и лайки за месяц. */
 export interface GalleryEntry {
@@ -34,6 +34,8 @@ export interface GalleryPage {
   winners: GalleryWinner[]
   /** asset_key → название вещи из каталога: подписи образа без дублирования текстов. */
   lookLabels: Record<string, string>
+  /** asset_key → слои аксессуара: рендерер берёт графику из каталога, не из кода. */
+  catalogArt: BimoArtMap
 }
 
 export interface LikeResult {

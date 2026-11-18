@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { bimoEnabled, getBimoState } from '@/modules/profile-appearance/queries'
 import { BimoShop } from '@/modules/profile-appearance/components/BimoShop'
+import { BimoStill, bimoLook } from '@/modules/bimo-rig'
 
 import { getCurrentUser } from '@/modules/auth'
 import { getProducts, getCategories, getUserBalance } from '@/modules/shop'
@@ -16,16 +17,19 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
   const params = await searchParams
   const bimoTab = showBimo && params.tab === 'bimo'
 
-  const [products, categories, balance, shieldQuota, shieldCredits] = await Promise.all([
+  // Гардероб нужен и для вкладки, и для плашки категории: на ней стоит мини-Бимо
+  // в текущем образе, а тон плашки берётся из надетого фона.
+  const [products, categories, balance, shieldQuota, shieldCredits, bimoState] = await Promise.all([
     getProducts(),
     getCategories(),
     user.wsUserId ? getUserBalance(user.wsUserId) : Promise.resolve(0),
     user.wsUserId ? getShieldQuota(user.wsUserId) : Promise.resolve(null),
     user.wsUserId ? getShieldCredits(user.wsUserId) : Promise.resolve({ ws: 0, revit: 0 }),
+    showBimo && user.wsUserId ? getBimoState(user.wsUserId) : Promise.resolve(null),
     // [LOTTERY HIDDEN] getActiveLottery(),
     // [LOTTERY HIDDEN] getLotteryHistory(),
   ])
-  const bimoState = bimoTab && user.wsUserId ? await getBimoState(user.wsUserId) : null
+  const bimoTabLook = bimoState ? bimoLook(bimoState.equipment, bimoState.catalogArt) : null
   const selectedCategory = categories.some(category => category.slug === params.category) ? params.category : undefined
 
   // [LOTTERY HIDDEN] const ticketInfo = activeLottery && user.wsUserId
@@ -48,7 +52,9 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
         showBimo={showBimo}
         bimoActive={bimoTab}
         initialCategory={selectedCategory}
-        bimoContent={bimoState && user.wsUserId ? <BimoShop userId={user.wsUserId} initialState={bimoState} balance={balance} /> : null}
+        bimoContent={bimoTab && bimoState && user.wsUserId ? <BimoShop userId={user.wsUserId} initialState={bimoState} balance={balance} /> : null}
+        bimoTabIcon={bimoTabLook ? <BimoStill {...bimoTabLook} compact alt="" /> : null}
+        bimoTabTint={bimoTabLook?.backgroundSrc ?? null}
         products={products}
         categories={categories}
         balance={balance}
