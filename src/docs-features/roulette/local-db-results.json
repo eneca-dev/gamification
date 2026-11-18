@@ -1,5 +1,39 @@
 {
   "status": "passed",
+  "verifiedAt": "2026-11-18T10:39:16.527Z",
+  "database": "roulette_qa_exact",
+  "installation": {
+    "database": "roulette_qa_exact",
+    "installedAt": "2026-11-18T10:29:33.953Z",
+    "installationCommand": "QA_LOCAL_DATABASE=roulette_qa_exact node scripts/prepare-roulette-local.mjs (success this session, pristine fixture)",
+    "sql01": "c11a16c4a4c90c8400dc6d73ae7546990fddef12d069767e291bccb11b127aa0",
+    "functions": [
+      {
+        "signature": "get_roulette_result(uuid,text)",
+        "md5": "d5e774af1b1dac8695a36c87111b485a"
+      },
+      {
+        "signature": "get_roulette_state(uuid)",
+        "md5": "ed50d7573819c541d06178c44ed893b9"
+      },
+      {
+        "signature": "get_roulette_stats(timestamp with time zone,timestamp with time zone)",
+        "md5": "7aec4b0f55ececc7e8da9f6aadfa84a6"
+      },
+      {
+        "signature": "roulette_private.roulette_now()",
+        "md5": "b8d2eadbe0d38cb05431127a3fa52747"
+      },
+      {
+        "signature": "roulette_private.roulette_sector()",
+        "md5": "5f3393598c9dc92c1cf928235d0377b5"
+      },
+      {
+        "signature": "spin_roulette(uuid,text,uuid,integer)",
+        "md5": "26bd720b4522a2f80e6f1cfe32ce8899"
+      }
+    ]
+  },
   "environment": "isolated local PostgreSQL only",
   "tests": {
     "passed": 15,
@@ -13,7 +47,39 @@
   },
   "notices": [
     "Seven outcomes, ledger, replay, disable, rollover and historical/current balance assertions passed",
-    "7-sector sample size 70000, chi-square=6.49000000000000000000 (df=6), threshold=50"
+    "7-sector sample size 70000, chi-square=5.110400000000000000000000 (df=6), threshold=50"
+  ],
+  "literalSql02Applied": true,
+  "recoveryVerified": true,
+  "reports": [
+    {
+      "signature": "get_adoption_monthly_summary_v3(date,date,text,text[])",
+      "beforeMd5": "644753347eb6cf1d93b9c7eb1a697723",
+      "afterMd5": "6eb76938047c69cdca647c3dfbbab5b5",
+      "restoredMd5": "644753347eb6cf1d93b9c7eb1a697723",
+      "metadataPreserved": true
+    },
+    {
+      "signature": "get_adoption_period_core_v2(date,date)",
+      "beforeMd5": "5891d760b26adc7498b5ee764b73b5a1",
+      "afterMd5": "2afbba0ecf2704c58523399c000329bc",
+      "restoredMd5": "5891d760b26adc7498b5ee764b73b5a1",
+      "metadataPreserved": true
+    },
+    {
+      "signature": "get_economy_overview(timestamp with time zone,timestamp with time zone)",
+      "beforeMd5": "492b34929142b3b10b1789438250b807",
+      "afterMd5": "2e9616c789709f0805e8f0398a0444bb",
+      "restoredMd5": "492b34929142b3b10b1789438250b807",
+      "metadataPreserved": true
+    },
+    {
+      "signature": "get_economy_top(timestamp with time zone,timestamp with time zone,text,text)",
+      "beforeMd5": "484fb4850424641a6da41a03a388ae76",
+      "afterMd5": "7d1994ab4c899b4fdeccfbcafcdbcf49",
+      "restoredMd5": "484fb4850424641a6da41a03a388ae76",
+      "metadataPreserved": true
+    }
   ],
   "sql": [
     {

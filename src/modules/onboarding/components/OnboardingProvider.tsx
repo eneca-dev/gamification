@@ -199,6 +199,7 @@ export function OnboardingProvider({ userId, children }: OnboardingProviderProps
       </Suspense>
       {activeTour && currentStep && (
         <OnboardingSpotlight
+          key={`${activeTour.pageSlug}:${currentStep.id}`}
           step={currentStep}
           stepIndex={currentStepIndex}
           totalSteps={activeTour.steps.length}

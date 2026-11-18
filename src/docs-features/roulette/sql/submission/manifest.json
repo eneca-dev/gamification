@@ -1,0 +1,33 @@
+{
+  "status": "SQL01 applied successfully as 20261118120600. SQL02 not submitted: stopped on settings service_role default ACL difference. See working-db-current-results.json.",
+  "transformation": "Remove only UTF-8 BOM EF BB BF at byte zero; preserve all remaining bytes.",
+  "files": [
+    {
+      "source": "01-roulette.review.sql",
+      "submission": "01-roulette.utf8.sql",
+      "removedLeadingBom": true,
+      "removedBytes": 3,
+      "sourceSha256": "c11a16c4a4c90c8400dc6d73ae7546990fddef12d069767e291bccb11b127aa0",
+      "submissionSha256": "ec02f81e3e1a32d93e20b684a075b83f3386c1db89d4be0929f5e7a5dfa6560b",
+      "equalsLocalLoaderInput": true
+    },
+    {
+      "source": "02-reporting.review.sql",
+      "submission": "02-reporting.utf8.sql",
+      "removedLeadingBom": true,
+      "removedBytes": 3,
+      "sourceSha256": "a9724cefc6d7c0681501bbd1682d28977c2f5694cd98e97e609956e2af5934d6",
+      "submissionSha256": "02614e090f290ac47cbad37594f51e936f24fce5a32c2808219975546fcec569",
+      "equalsLocalLoaderInput": true
+    },
+    {
+      "source": "05-restore-reporting.review.sql",
+      "submission": "05-restore-reporting.utf8.sql",
+      "removedLeadingBom": false,
+      "removedBytes": 0,
+      "sourceSha256": "c96e5282291a67963a7c9a0739d06c48aaf3d3afc110a0de48e12080a55dee71",
+      "submissionSha256": "c96e5282291a67963a7c9a0739d06c48aaf3d3afc110a0de48e12080a55dee71",
+      "equalsLocalLoaderInput": true
+    }
+  ]
+}

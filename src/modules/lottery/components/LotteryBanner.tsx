@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useEffect, useRef, useMemo } from 'react'
+import { useState, useTransition, useEffect, useMemo } from 'react'
 import { Ticket, Clock } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -27,52 +27,21 @@ export function LotteryBanner({ lottery, ticketInfo: initialTicketInfo, balance,
   const [currentBalance, setCurrentBalance] = useState(balance)
   const [isPending, startTransition] = useTransition()
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
-  const [countdown, setCountdown] = useState<CountdownState | null>(null)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
   const drawDate = useMemo(() => getDrawDate(lottery.month), [lottery.month])
-
-  // Разница между серверным и клиентским временем (вычисляется один раз)
-  // Если у юзера часы спешат на 2 часа, offset = -7200000
-  // Используем offset чтобы всегда считать по серверному (= реальному) времени
-  const timeOffsetRef = useRef(serverTime - Date.now())
+  const [clock, setClock] = useState({ serverTime, now: serverTime })
+  if (clock.serverTime !== serverTime) setClock({ serverTime, now: serverTime })
+  const countdown = getCountdown(drawDate.getTime() - clock.now)
 
   useEffect(() => {
-    function tick() {
-      const now = Date.now() + timeOffsetRef.current
-      const diff = drawDate.getTime() - now
-      if (diff <= 0) {
-        setCountdown({ hours: 0, minutes: 0, seconds: 0, isLast24h: true })
-        if (intervalRef.current) clearInterval(intervalRef.current)
-        return
-      }
-
-      const hoursLeft = diff / (1000 * 60 * 60)
-      const isLast24h = hoursLeft <= 24
-
-      if (isLast24h) {
-        const hours = Math.floor(diff / (1000 * 60 * 60))
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-        setCountdown({ hours, minutes, seconds, isLast24h: true })
-      } else {
-        setCountdown({ hours: 0, minutes: 0, seconds: 0, isLast24h: false })
-      }
-    }
-
-    tick()
-    // Обновляем каждую секунду только в последние 24ч, иначе — не нужно
-    intervalRef.current = setInterval(tick, 1000)
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
-  }, [drawDate])
-
-  // Останавливаем интервал когда не в режиме last24h
-  useEffect(() => {
-    if (countdown && !countdown.isLast24h && intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
-  }, [countdown?.isLast24h])
+    const offset = serverTime - Date.now()
+    if (!getCountdown(drawDate.getTime() - serverTime).isLast24h) return
+    const interval = setInterval(() => {
+      const now = Date.now() + offset
+      setClock({ serverTime, now })
+      if (now >= drawDate.getTime()) clearInterval(interval)
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [drawDate, serverTime])
 
   function handleBuyTicket() {
     setNotification(null)
@@ -279,4 +248,14 @@ function DrawCountdown({ countdown, drawDate }: { countdown: CountdownState | nu
       eneca-game: {formatted}
     </p>
   )
+}
+function getCountdown(diff: number): CountdownState {
+  if (diff <= 0) return { hours: 0, minutes: 0, seconds: 0, isLast24h: true }
+  if (diff > 86_400_000) return { hours: 0, minutes: 0, seconds: 0, isLast24h: false }
+  return {
+    hours: Math.floor(diff / 3_600_000),
+    minutes: Math.floor((diff % 3_600_000) / 60_000),
+    seconds: Math.floor((diff % 60_000) / 1000),
+    isLast24h: true,
+  }
 }

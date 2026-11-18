@@ -1,0 +1,258 @@
+{
+  "status": "sql01_applied_stopped_before_sql02_on_acl_difference",
+  "at": "2026-11-18T12:09:13.075Z",
+  "project": "yqezhfughtublpaitmij",
+  "sql01Applied": true,
+  "sql02Sent": false,
+  "sql05Applied": false,
+  "sql06Applied": false,
+  "migrations": [
+    {
+      "version": "20261118120600",
+      "name": "roulette_atomic_spins_disabled_v2"
+    }
+  ],
+  "preflight": {
+    "columns": true,
+    "constraints": true,
+    "triggers": true,
+    "functions": true,
+    "recovery": true
+  },
+  "byteComparison": "01/02 source bytes equal submitted bytes after removing only leading EF BB BF",
+  "backup": "test-results/roulette-working-db/20261118-approved-retry",
+  "post01": {
+    "enabled": false,
+    "functions": [
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "md5": "d5e774af1b1dac8695a36c87111b485a",
+        "anon": false,
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "service": true,
+        "signature": "get_roulette_result(uuid,text)",
+        "authenticated": false,
+        "security_definer": false
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "md5": "ed50d7573819c541d06178c44ed893b9",
+        "anon": false,
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "service": true,
+        "signature": "get_roulette_state(uuid)",
+        "authenticated": false,
+        "security_definer": false
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "md5": "7aec4b0f55ececc7e8da9f6aadfa84a6",
+        "anon": false,
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "service": true,
+        "signature": "get_roulette_stats(timestamp with time zone,timestamp with time zone)",
+        "authenticated": false,
+        "security_definer": false
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "md5": "b8d2eadbe0d38cb05431127a3fa52747",
+        "anon": false,
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "service": true,
+        "signature": "roulette_private.roulette_now()",
+        "authenticated": false,
+        "security_definer": false
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "md5": "5f3393598c9dc92c1cf928235d0377b5",
+        "anon": false,
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "service": true,
+        "signature": "roulette_private.roulette_sector()",
+        "authenticated": false,
+        "security_definer": false
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "md5": "26bd720b4522a2f80e6f1cfe32ce8899",
+        "anon": false,
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "service": true,
+        "signature": "spin_roulette(uuid,text,uuid,integer)",
+        "authenticated": false,
+        "security_definer": false
+      }
+    ],
+    "qa_schema": null,
+    "event_type": {
+      "key": "roulette_spin",
+      "coins": 0,
+      "active": true,
+      "dynamic": true,
+      "create_transaction": false
+    },
+    "settings_acl": "{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}",
+    "settings_rls": true,
+    "settings_rows": 1,
+    "roulette_events": 0
+  },
+  "final": {
+    "events": 0,
+    "enabled": false,
+    "functions": [
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "md5": "644753347eb6cf1d93b9c7eb1a697723",
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "prosecdef": false,
+        "signature": "get_adoption_monthly_summary_v3(date,date,text,text[])"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "md5": "5891d760b26adc7498b5ee764b73b5a1",
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "prosecdef": false,
+        "signature": "get_adoption_period_core_v2(date,date)"
+      },
+      {
+        "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+        "md5": "492b34929142b3b10b1789438250b807",
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=public"
+        ],
+        "prosecdef": false,
+        "signature": "get_economy_overview(timestamp with time zone,timestamp with time zone)"
+      },
+      {
+        "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+        "md5": "484fb4850424641a6da41a03a388ae76",
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=public"
+        ],
+        "prosecdef": false,
+        "signature": "get_economy_top(timestamp with time zone,timestamp with time zone,text,text)"
+      }
+    ],
+    "table_privileges": [
+      {
+        "role": "anon",
+        "delete": false,
+        "insert": false,
+        "select": false,
+        "update": false,
+        "truncate": false
+      },
+      {
+        "role": "authenticated",
+        "delete": false,
+        "insert": false,
+        "select": false,
+        "update": false,
+        "truncate": false
+      },
+      {
+        "role": "service_role",
+        "delete": true,
+        "insert": true,
+        "select": true,
+        "update": true,
+        "truncate": true
+      }
+    ],
+    "schema_privileges": [
+      {
+        "role": "anon",
+        "usage": false,
+        "create": false
+      },
+      {
+        "role": "authenticated",
+        "usage": false,
+        "create": false
+      },
+      {
+        "role": "service_role",
+        "usage": true,
+        "create": false
+      }
+    ]
+  },
+  "beforeReports": {
+    "top_md5": "39b837cb7067d9791154d05a3d0e1bc6",
+    "core_md5": "5ae3684d2dae48cb109dc5aa178222c2",
+    "monthly_md5": "1e81bef6d4ef32bf4674763798bcc2cf",
+    "overview_md5": "31590d31fe0104f26eacb0300dc88def",
+    "roulette_events": 0,
+    "duplicate_event_ids": false
+  },
+  "afterReports": {
+    "top_md5": "39b837cb7067d9791154d05a3d0e1bc6",
+    "core_md5": "5ae3684d2dae48cb109dc5aa178222c2",
+    "monthly_md5": "1e81bef6d4ef32bf4674763798bcc2cf",
+    "overview_md5": "31590d31fe0104f26eacb0300dc88def",
+    "roulette_events": 0,
+    "duplicate_event_ids": false
+  },
+  "reportsOutputsUnchanged": true,
+  "reportsDefinitionsAndMetadataUnchanged": true,
+  "stats": {
+    "bets": 0,
+    "delta": 0,
+    "spins": 0,
+    "players": 0,
+    "zeroShare": 0,
+    "balancesAfter": 0
+  },
+  "discrepancy": {
+    "object": "public.roulette_settings",
+    "role": "service_role",
+    "expected": "SELECT, UPDATE",
+    "actual": "INSERT, SELECT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER",
+    "cause": "Existing postgres DEFAULT PRIVILEGES grant ALL to service_role; SQL01 revoked PUBLIC/anon/authenticated, not service_role.",
+    "proposed": "sql/06-settings-acl.review.sql; NOT APPLIED"
+  },
+  "newSecurityAdvisories": [
+    {
+      "name": "rls_enabled_no_policy",
+      "level": "INFO",
+      "metadata": {
+        "name": "roulette_settings",
+        "type": "table",
+        "schema": "public"
+      },
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+    }
+  ],
+  "realSpinsPerformed": false,
+  "testBalancesChanged": false,
+  "rouletteDefinitionsMatchLocal": true,
+  "rouletteFunctionPermissionsMatch": true
+}

@@ -10,7 +10,7 @@ export function RouletteWheel({ result }: RouletteWheelProps) {
   const index = result ? SECTORS.indexOf(result.sector) : -1
   const angle = 360 / SECTORS.length
   return (
-    <div className="relative mx-auto w-full max-w-80" aria-label="Семь равновероятных секторов">
+    <div className="relative mx-auto w-full max-w-80 overflow-hidden" aria-label="Семь равновероятных секторов">
       <span className="absolute left-1/2 top-0 z-10 -translate-x-1/2 text-2xl text-[var(--apex-danger)]" aria-hidden>▼</span>
       <motion.svg viewBox="0 0 200 200" className="w-full" aria-hidden
         initial={false} animate={{ rotate: index < 0 ? 0 : 1440 - (index + 0.5) * angle }}

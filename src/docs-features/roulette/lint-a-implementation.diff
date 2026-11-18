@@ -1,0 +1,1156 @@
+diff --git a/src/components/LayoutShell.tsx b/src/components/LayoutShell.tsx
+index cf1b619..ebee784 100644
+--- a/src/components/LayoutShell.tsx
++++ b/src/components/LayoutShell.tsx
+@@ -1,6 +1,6 @@
+ 'use client'
+ 
+-import { useState, useEffect } from 'react'
++import { useState } from 'react'
+ import { usePathname } from 'next/navigation'
+ import { Menu } from 'lucide-react'
+ 
+@@ -24,9 +24,11 @@ export function LayoutShell({ user, balance, showDevSwitcher, dayOffResolved, si
+   const [isCollapsed, setIsCollapsed] = useState(sidebarCollapsed)
+   const pathname = usePathname()
+ 
+-  useEffect(() => {
++  const [previousPathname, setPreviousPathname] = useState(pathname)
++  if (previousPathname !== pathname) {
++    setPreviousPathname(pathname)
+     setSidebarOpen(false)
+-  }, [pathname])
++  }
+ 
+   function toggleCollapse() {
+     setIsCollapsed(prev => {
+diff --git a/src/components/Sidebar.tsx b/src/components/Sidebar.tsx
+index cf33697..b74026f 100644
+--- a/src/components/Sidebar.tsx
++++ b/src/components/Sidebar.tsx
+@@ -1,6 +1,6 @@
+ 'use client'
+ 
+-import { useEffect, useState } from 'react'
++import { useEffect, useSyncExternalStore } from 'react'
+ import Link from 'next/link'
+ import { usePathname } from 'next/navigation'
+ import { Home, ShoppingBag, Trophy, Users, Settings, LogOut, HelpCircle, Calendar, PawPrint } from 'lucide-react'
+@@ -12,6 +12,20 @@ import { CoinBalanceLive } from '@/components/CoinBalance'
+ import { BimoCompanion } from '@/modules/profile-appearance/components/BimoCompanion'
+ 
+ const LS_KEY = 'day_off_last_seen_at'
++const SEEN_EVENT = 'day-off-last-seen'
++function readLastSeen() {
++  try { return localStorage.getItem(LS_KEY) } catch { return null }
++}
++function subscribeLastSeen(notify: () => void) {
++  const onStorage = (event: StorageEvent) => { if (event.key === LS_KEY || event.key === null) notify() }
++  window.addEventListener('storage', onStorage)
++  window.addEventListener(SEEN_EVENT, notify)
++  return () => {
++    window.removeEventListener('storage', onStorage)
++    window.removeEventListener(SEEN_EVENT, notify)
++  }
++}
++const serverLastSeen = () => null
+ 
+ interface SidebarProps {
+   user: AuthUser | null
+@@ -55,29 +69,18 @@ function getInitials(fullName: string, email?: string): string {
+ 
+ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, dayOffResolved = [], isCollapsed = false, onToggleCollapse, showBimoGallery = false }: SidebarProps) {
+   const pathname = usePathname()
+-  const [dayOffBadge, setDayOffBadge] = useState(0)
+-
+-  useEffect(() => {
+-    const raw = localStorage.getItem(LS_KEY)
+-    const lastSeen = raw ? new Date(raw) : null
+-
+-    if (!lastSeen) {
+-      // Первый запуск — считаем всё просмотренным
+-      localStorage.setItem(LS_KEY, new Date().toISOString())
+-      setDayOffBadge(0)
+-      return
+-    }
+-
+-    const unseen = dayOffResolved.filter((ts) => new Date(ts) > lastSeen).length
+-    setDayOffBadge(unseen)
+-  }, [dayOffResolved])
++  const lastSeen = useSyncExternalStore(subscribeLastSeen, readLastSeen, serverLastSeen)
++  const viewingDayOff = pathname.startsWith('/day-off')
++  const dayOffBadge = !lastSeen || viewingDayOff ? 0
++    : dayOffResolved.filter(ts => new Date(ts) > new Date(lastSeen)).length
+ 
+   useEffect(() => {
+-    if (pathname.startsWith('/day-off')) {
++    if (readLastSeen() && !viewingDayOff) return
++    try {
+       localStorage.setItem(LS_KEY, new Date().toISOString())
+-      setDayOffBadge(0)
+-    }
+-  }, [pathname])
++      window.dispatchEvent(new Event(SEEN_EVENT))
++    } catch { /* Storage may be disabled; keep the badge empty. */ }
++  }, [pathname, viewingDayOff])
+ 
+   const collapsed = isCollapsed
+ 
+diff --git a/src/components/dashboard/AchievementProgress.tsx b/src/components/dashboard/AchievementProgress.tsx
+index 0c9a005..931d16f 100644
+--- a/src/components/dashboard/AchievementProgress.tsx
++++ b/src/components/dashboard/AchievementProgress.tsx
+@@ -1,5 +1,7 @@
+ 'use client'
+ 
++import { useUiClock } from '@/hooks/useUiClock'
++
+ import { useState } from 'react'
+ import { Trophy, Users, Building2, Zap, Star, Target, Award, Crown, Shield } from 'lucide-react'
+ import { CoinIcon } from '@/components/CoinIcon'
+@@ -214,10 +216,11 @@ interface AchievementProgressProps {
+ }
+ 
+ export function AchievementProgressPanel({ progress }: AchievementProgressProps) {
++  const now = useUiClock()
+   const monthName = getMonthName(progress.period_start)
+   const totalDays = new Date(progress.period_end).getDate()
+-  const daysElapsed = Math.min(
+-    Math.floor((Date.now() - new Date(progress.period_start).getTime()) / 86400000) + 1,
++  const daysElapsed = now === null ? 0 : Math.min(
++    Math.floor((now - new Date(progress.period_start).getTime()) / 86400000) + 1,
+     totalDays
+   )
+ 
+@@ -305,7 +308,7 @@ export function AchievementProgressPanel({ progress }: AchievementProgressProps)
+           />
+         </div>
+         <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+-          День {daysElapsed}/{totalDays}
++          День {now === null ? '—' : daysElapsed}/{totalDays}
+         </span>
+       </div>
+ 
+diff --git a/src/modules/achievements/components/GratitudeProgress.tsx b/src/modules/achievements/components/GratitudeProgress.tsx
+index 88b9b0a..8880494 100644
+--- a/src/modules/achievements/components/GratitudeProgress.tsx
++++ b/src/modules/achievements/components/GratitudeProgress.tsx
+@@ -101,7 +101,7 @@ function GratitudeAchItem({
+                 }
+                 <div className="font-bold mb-1">{item.achievement_name}</div>
+                 <div className="text-[10px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+-                  Получите {item.threshold} подарка в категории "{cfg.label}" за месяц. Считаются только подарки (с 💎), бесплатные благодарности не учитываются.
++                  Получите {item.threshold} подарка в категории &quot;{cfg.label}&quot; за месяц. Считаются только подарки (с 💎), бесплатные благодарности не учитываются.
+                 </div>
+                 <div className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
+                   Первое выполненное достижение среди трёх категорий приносит{' '}
+diff --git a/src/modules/admin/components/CalendarClient.tsx b/src/modules/admin/components/CalendarClient.tsx
+index 05593aa..6cebc6d 100644
+--- a/src/modules/admin/components/CalendarClient.tsx
++++ b/src/modules/admin/components/CalendarClient.tsx
+@@ -148,6 +148,7 @@ export function CalendarClient({ initialHolidays, initialWorkdays }: CalendarCli
+     if (state === 'workday') {
+       // Будний → делаем выходным
+       const optimistic: CalendarHolidayRow = {
++        // eslint-disable-next-line react-hooks/purity -- Event handler: timestamp is created only when sending.
+         id: -Date.now(),
+         date: dateStr,
+         name: 'Выходной',
+@@ -172,6 +173,7 @@ export function CalendarClient({ initialHolidays, initialWorkdays }: CalendarCli
+     if (state === 'weekend') {
+       // Выходной → делаем рабочим
+       const optimistic: CalendarWorkdayRow = {
++        // eslint-disable-next-line react-hooks/purity -- Event handler: timestamp is created only when sending.
+         id: -Date.now(),
+         date: dateStr,
+         name: 'Рабочий перенос',
+diff --git a/src/modules/admin/components/CrystalRateStats.tsx b/src/modules/admin/components/CrystalRateStats.tsx
+index cb1ff3e..a920935 100644
+--- a/src/modules/admin/components/CrystalRateStats.tsx
++++ b/src/modules/admin/components/CrystalRateStats.tsx
+@@ -1,5 +1,6 @@
+ 'use client'
+ 
++import { useUiClock } from '@/hooks/useUiClock'
+ import { CoinIcon } from '@/components/CoinIcon'
+ 
+ interface RateStats {
+@@ -37,8 +38,9 @@ interface Tile {
+ }
+ 
+ export function CrystalRateStats({ ratedAt, stats }: CrystalRateStatsProps) {
+-  const days = ratedAt
+-    ? Math.max(0, Math.floor((Date.now() - new Date(ratedAt).getTime()) / 86_400_000))
++  const now = useUiClock()
++  const days = ratedAt && now !== null
++    ? Math.max(0, Math.floor((now - new Date(ratedAt).getTime()) / 86_400_000))
+     : null
+ 
+   const tiles: Tile[] = [
+diff --git a/src/modules/admin/components/LotteryAdmin.tsx b/src/modules/admin/components/LotteryAdmin.tsx
+index 8a4a6e9..8aff0a2 100644
+--- a/src/modules/admin/components/LotteryAdmin.tsx
++++ b/src/modules/admin/components/LotteryAdmin.tsx
+@@ -35,6 +35,20 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
+   const [isDragging, setIsDragging] = useState(false)
+   const fileInputRef = useRef<HTMLInputElement>(null)
+ 
++  function processFile(file: File) {
++    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
++      setError('Формат: JPEG, PNG или WebP')
++      return
++    }
++    if (file.size > 2 * 1024 * 1024) {
++      setError('Максимум 2 МБ')
++      return
++    }
++    setImageFile(file)
++    setImagePreview(URL.createObjectURL(file))
++    setError(null)
++  }
++
+   useEffect(() => {
+     if (!showForm && !editingLottery) return
+     function handlePaste(e: ClipboardEvent) {
+@@ -59,20 +73,6 @@ export function LotteryAdmin({ lotteries: initialLotteries, rate }: LotteryAdmin
+     setTimeout(() => setNotification(null), 3000)
+   }
+ 
+-  function processFile(file: File) {
+-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+-      setError('Формат: JPEG, PNG или WebP')
+-      return
+-    }
+-    if (file.size > 2 * 1024 * 1024) {
+-      setError('Максимум 2 МБ')
+-      return
+-    }
+-    setImageFile(file)
+-    setImagePreview(URL.createObjectURL(file))
+-    setError(null)
+-  }
+-
+   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+     const file = e.target.files?.[0]
+     if (file) processFile(file)
+diff --git a/src/modules/admin/components/UserDetailModal.tsx b/src/modules/admin/components/UserDetailModal.tsx
+index 1b98c8a..650dce7 100644
+--- a/src/modules/admin/components/UserDetailModal.tsx
++++ b/src/modules/admin/components/UserDetailModal.tsx
+@@ -12,22 +12,27 @@ interface UserDetailModalProps {
+ }
+ 
+ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
++  return userId ? <UserDetailContent key={userId} userId={userId} onClose={onClose} /> : null
++}
++
++function UserDetailContent({ userId, onClose }: { userId: string; onClose: () => void }) {
+   const [detail, setDetail] = useState<UserDetail | null>(null)
+-  const [loading, setLoading] = useState(false)
++  const [loading, setLoading] = useState(true)
+ 
+   useEffect(() => {
+-    if (!userId) { setDetail(null); return }
+-
+-    setLoading(true)
+-    fetch(`/api/admin/user-detail?id=${userId}`)
+-      .then((r) => r.json())
+-      .then((data) => setDetail(data))
+-      .catch(() => setDetail(null))
+-      .finally(() => setLoading(false))
++    const controller = new AbortController()
++    let active = true
++    fetch(`/api/admin/user-detail?id=${encodeURIComponent(userId)}`, { signal: controller.signal })
++      .then((response) => {
++        if (!response.ok) throw new Error('User detail request failed')
++        return response.json() as Promise<UserDetail>
++      })
++      .then((data) => { if (active) setDetail(data) })
++      .catch(() => { if (active) setDetail(null) })
++      .finally(() => { if (active) setLoading(false) })
++    return () => { active = false; controller.abort() }
+   }, [userId])
+ 
+-  if (!userId) return null
+-
+   return (
+     <div
+       className="fixed inset-0 z-50 flex justify-end"
+diff --git a/src/modules/admin/components/UsersTable.tsx b/src/modules/admin/components/UsersTable.tsx
+index a7f1915..56ddfd6 100644
+--- a/src/modules/admin/components/UsersTable.tsx
++++ b/src/modules/admin/components/UsersTable.tsx
+@@ -283,9 +283,12 @@ function DeptSection({
+   defaultOpen: boolean
+   expandKey: number
+ }) {
+-  const [open, setOpen] = useState(true)
+-
+-  useEffect(() => { setOpen(defaultOpen) }, [expandKey, defaultOpen])
++  const [open, setOpen] = useState(defaultOpen)
++  const [previousExpansion, setPreviousExpansion] = useState({ expandKey, defaultOpen })
++  if (previousExpansion.expandKey !== expandKey || previousExpansion.defaultOpen !== defaultOpen) {
++    setPreviousExpansion({ expandKey, defaultOpen })
++    setOpen(defaultOpen)
++  }
+ 
+   const count = countDeptUsers(dept)
+   const hasMultipleTeams = dept.teams.length > 1 || (dept.teams.length === 1 && dept.teams[0].label !== 'Без команды')
+diff --git a/src/modules/admin/components/economy/KpiSummary.tsx b/src/modules/admin/components/economy/KpiSummary.tsx
+index 89d7684..d66b266 100644
+--- a/src/modules/admin/components/economy/KpiSummary.tsx
++++ b/src/modules/admin/components/economy/KpiSummary.tsx
+@@ -113,7 +113,7 @@ export function KpiSummary({ overview, rate }: KpiSummaryProps) {
+         Не хватило баланса на полный штраф в{' '}
+         <strong style={{ color: 'var(--apex-text)' }}>{overview.clamped_count}</strong> из{' '}
+         <strong style={{ color: 'var(--apex-text)' }}>{overview.total_revoked_count}</strong>{' '}
+-        отзывов ({clampedPct}%) — разницу компания "подарила" сотрудникам
++        отзывов ({clampedPct}%) — разницу компания &quot;подарила&quot; сотрудникам
+       </div>
+     </section>
+   )
+diff --git a/src/modules/chat/components/ChatWindow.tsx b/src/modules/chat/components/ChatWindow.tsx
+index d1c044b..605d7fd 100644
+--- a/src/modules/chat/components/ChatWindow.tsx
++++ b/src/modules/chat/components/ChatWindow.tsx
+@@ -88,6 +88,7 @@ export function ChatWindow({ initialMessages, userId, onHasMessages }: ChatWindo
+ 
+   async function handleSend(content: string) {
+     const optimistic: ChatMessage = {
++      // eslint-disable-next-line react-hooks/purity -- Event handler: timestamp is created only when sending.
+       id: `opt-${Date.now()}`,
+       user_id: userId,
+       role: 'user',
+diff --git a/src/modules/corrections/components/RedDayCalendar.tsx b/src/modules/corrections/components/RedDayCalendar.tsx
+index 65f2029..aee2fe7 100644
+--- a/src/modules/corrections/components/RedDayCalendar.tsx
++++ b/src/modules/corrections/components/RedDayCalendar.tsx
+@@ -1,6 +1,6 @@
+ 'use client'
+ 
+-import { useMemo, useState, useEffect } from 'react'
++import { useMemo, useState } from 'react'
+ import { ChevronLeft, ChevronRight, Shield } from 'lucide-react'
+ 
+ import type { CorrectionCalendarDay } from '../types'
+@@ -54,10 +54,7 @@ export function RedDayCalendar({ days, selected, onToggle }: RedDayCalendarProps
+   const defaultStart = Math.max(0, months.length - VISIBLE_MONTHS)
+   const [startIdx, setStartIdx] = useState(defaultStart)
+ 
+-  useEffect(() => {
+-    const maxStart = Math.max(0, months.length - VISIBLE_MONTHS)
+-    if (startIdx > maxStart) setStartIdx(maxStart)
+-  }, [months.length, startIdx])
++  if (startIdx > defaultStart) setStartIdx(defaultStart)
+ 
+   if (months.length === 0) {
+     return (
+diff --git a/src/modules/corrections/components/UserAppealsCard.tsx b/src/modules/corrections/components/UserAppealsCard.tsx
+index ef24fd6..169e8ca 100644
+--- a/src/modules/corrections/components/UserAppealsCard.tsx
++++ b/src/modules/corrections/components/UserAppealsCard.tsx
+@@ -65,13 +65,19 @@ export function UserAppealsCard({ appeals, highlightAppealId, onPrefillFromAppea
+   const [isPending, startTransition] = useTransition()
+   const highlightRef = useRef<HTMLDivElement | null>(null)
+ 
++  const [previousHighlight, setPreviousHighlight] = useState(highlightAppealId)
++  if (previousHighlight !== highlightAppealId) {
++    setPreviousHighlight(highlightAppealId)
++    if (highlightAppealId) setExpanded(true)
++  }
++
+   useEffect(() => {
+     if (highlightAppealId) {
+-      setExpanded(true)
+       // скролл отложенный, чтобы DOM успел раскрыться
+-      setTimeout(() => {
++      const timer = setTimeout(() => {
+         highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+       }, 100)
++      return () => clearTimeout(timer)
+     }
+   }, [highlightAppealId])
+ 
+diff --git a/src/modules/dev-tools/components/DevUserSwitcher.tsx b/src/modules/dev-tools/components/DevUserSwitcher.tsx
+index 8a67f6b..6775afb 100644
+--- a/src/modules/dev-tools/components/DevUserSwitcher.tsx
++++ b/src/modules/dev-tools/components/DevUserSwitcher.tsx
+@@ -21,7 +21,6 @@ export function DevUserSwitcher({ isImpersonating = false, impersonatedName = nu
+   const [isPending, startTransition] = useTransition()
+   const [isClearing, startClearTransition] = useTransition()
+   const inputRef = useRef<HTMLInputElement>(null)
+-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+ 
+   function handleClear() {
+     startClearTransition(async () => {
+@@ -29,52 +28,53 @@ export function DevUserSwitcher({ isImpersonating = false, impersonatedName = nu
+     })
+   }
+ 
+-  // Загрузить начальный список при открытии
++  function openModal() {
++    setSearch('')
++    setUsers([])
++    setIsLoading(true)
++    setIsOpen(true)
++  }
++
++  function closeModal() {
++    setIsOpen(false)
++    setSearch('')
++    setUsers([])
++  }
++
++  function changeSearch(value: string) {
++    setSearch(value)
++    setIsLoading(true)
++  }
++
+   useEffect(() => {
+-    if (isOpen) {
+-      setIsLoading(true)
+-      searchUsers('').then((data) => {
+-        setUsers(data)
+-        setIsLoading(false)
+-      })
+-      // Фокус на поле поиска
+-      setTimeout(() => inputRef.current?.focus(), 100)
+-    } else {
+-      setSearch('')
+-      setUsers([])
+-    }
++    if (!isOpen) return
++    const focusTimer = setTimeout(() => inputRef.current?.focus(), 100)
++    return () => clearTimeout(focusTimer)
+   }, [isOpen])
+ 
+-  // Debounced поиск
+   useEffect(() => {
+     if (!isOpen) return
+-
+-    if (debounceRef.current) clearTimeout(debounceRef.current)
+-
+-    debounceRef.current = setTimeout(() => {
+-      setIsLoading(true)
+-      searchUsers(search).then((data) => {
+-        setUsers(data)
+-        setIsLoading(false)
+-      })
+-    }, 300)
+-
+-    return () => {
+-      if (debounceRef.current) clearTimeout(debounceRef.current)
+-    }
++    let active = true
++    const timer = setTimeout(() => {
++      searchUsers(search)
++        .then(data => { if (active) setUsers(data) })
++        .catch(() => { if (active) setUsers([]) })
++        .finally(() => { if (active) setIsLoading(false) })
++    }, search ? 300 : 0)
++    return () => { active = false; clearTimeout(timer) }
+   }, [search, isOpen])
+ 
+   function handleSelect(email: string) {
+     startTransition(async () => {
+       await setImpersonation(email)
+-      setIsOpen(false)
++      closeModal()
+     })
+   }
+ 
+   const modal = isOpen ? (
+     <div
+       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40"
+-      onClick={() => setIsOpen(false)}
++      onClick={closeModal}
+     >
+       <div
+         className="w-[480px] max-h-[70vh] rounded-2xl shadow-xl flex flex-col"
+@@ -93,7 +93,7 @@ export function DevUserSwitcher({ isImpersonating = false, impersonatedName = nu
+             Сменить пользователя (DEV)
+           </h2>
+           <button
+-            onClick={() => setIsOpen(false)}
++            onClick={closeModal}
+             className="p-1 rounded-full hover:bg-black/5 transition-colors"
+             style={{ color: 'var(--apex-text-muted)' }}
+           >
+@@ -116,13 +116,13 @@ export function DevUserSwitcher({ isImpersonating = false, impersonatedName = nu
+               type="text"
+               placeholder="Поиск по имени или email..."
+               value={search}
+-              onChange={(e) => setSearch(e.target.value)}
++              onChange={(e) => changeSearch(e.target.value)}
+               className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-[var(--apex-text-muted)]"
+               style={{ color: 'var(--apex-text)' }}
+             />
+             {search && (
+               <button
+-                onClick={() => setSearch('')}
++                onClick={() => changeSearch('')}
+                 className="p-0.5 rounded hover:bg-black/5"
+                 style={{ color: 'var(--apex-text-muted)' }}
+               >
+@@ -189,7 +189,7 @@ export function DevUserSwitcher({ isImpersonating = false, impersonatedName = nu
+     <>
+       {/* Кнопка открытия */}
+       <button
+-        onClick={() => setIsOpen(true)}
++        onClick={openModal}
+         className="flex items-center gap-2 w-full px-4 py-2.5 rounded-full text-[13px] font-semibold transition-colors duration-150"
+         style={{
+           background: 'transparent',
+diff --git a/src/modules/lottery/components/LotteryBanner.tsx b/src/modules/lottery/components/LotteryBanner.tsx
+index eacf699..b5f3706 100644
+--- a/src/modules/lottery/components/LotteryBanner.tsx
++++ b/src/modules/lottery/components/LotteryBanner.tsx
+@@ -1,6 +1,6 @@
+ 'use client'
+ 
+-import { useState, useTransition, useEffect, useRef, useMemo } from 'react'
++import { useState, useTransition, useEffect, useMemo } from 'react'
+ import { Ticket, Clock } from 'lucide-react'
+ import { useQueryClient } from '@tanstack/react-query'
+ 
+@@ -27,52 +27,21 @@ export function LotteryBanner({ lottery, ticketInfo: initialTicketInfo, balance,
+   const [currentBalance, setCurrentBalance] = useState(balance)
+   const [isPending, startTransition] = useTransition()
+   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+-  const [countdown, setCountdown] = useState<CountdownState | null>(null)
+-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+-
+   const drawDate = useMemo(() => getDrawDate(lottery.month), [lottery.month])
+-
+-  // Разница между серверным и клиентским временем (вычисляется один раз)
+-  // Если у юзера часы спешат на 2 часа, offset = -7200000
+-  // Используем offset чтобы всегда считать по серверному (= реальному) времени
+-  const timeOffsetRef = useRef(serverTime - Date.now())
++  const [clock, setClock] = useState({ serverTime, now: serverTime })
++  if (clock.serverTime !== serverTime) setClock({ serverTime, now: serverTime })
++  const countdown = getCountdown(drawDate.getTime() - clock.now)
+ 
+   useEffect(() => {
+-    function tick() {
+-      const now = Date.now() + timeOffsetRef.current
+-      const diff = drawDate.getTime() - now
+-      if (diff <= 0) {
+-        setCountdown({ hours: 0, minutes: 0, seconds: 0, isLast24h: true })
+-        if (intervalRef.current) clearInterval(intervalRef.current)
+-        return
+-      }
+-
+-      const hoursLeft = diff / (1000 * 60 * 60)
+-      const isLast24h = hoursLeft <= 24
+-
+-      if (isLast24h) {
+-        const hours = Math.floor(diff / (1000 * 60 * 60))
+-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+-        const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+-        setCountdown({ hours, minutes, seconds, isLast24h: true })
+-      } else {
+-        setCountdown({ hours: 0, minutes: 0, seconds: 0, isLast24h: false })
+-      }
+-    }
+-
+-    tick()
+-    // Обновляем каждую секунду только в последние 24ч, иначе — не нужно
+-    intervalRef.current = setInterval(tick, 1000)
+-    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
+-  }, [drawDate])
+-
+-  // Останавливаем интервал когда не в режиме last24h
+-  useEffect(() => {
+-    if (countdown && !countdown.isLast24h && intervalRef.current) {
+-      clearInterval(intervalRef.current)
+-      intervalRef.current = null
+-    }
+-  }, [countdown?.isLast24h])
++    const offset = serverTime - Date.now()
++    if (!getCountdown(drawDate.getTime() - serverTime).isLast24h) return
++    const interval = setInterval(() => {
++      const now = Date.now() + offset
++      setClock({ serverTime, now })
++      if (now >= drawDate.getTime()) clearInterval(interval)
++    }, 1000)
++    return () => clearInterval(interval)
++  }, [drawDate, serverTime])
+ 
+   function handleBuyTicket() {
+     setNotification(null)
+@@ -279,4 +248,14 @@ function DrawCountdown({ countdown, drawDate }: { countdown: CountdownState | nu
+       eneca-game: {formatted}
+     </p>
+   )
+-}
+\ No newline at end of file
++}
++function getCountdown(diff: number): CountdownState {
++  if (diff <= 0) return { hours: 0, minutes: 0, seconds: 0, isLast24h: true }
++  if (diff > 86_400_000) return { hours: 0, minutes: 0, seconds: 0, isLast24h: false }
++  return {
++    hours: Math.floor(diff / 3_600_000),
++    minutes: Math.floor((diff % 3_600_000) / 60_000),
++    seconds: Math.floor((diff % 60_000) / 1000),
++    isLast24h: true,
++  }
++}
+diff --git a/src/modules/lottery/components/LotteryReveal.tsx b/src/modules/lottery/components/LotteryReveal.tsx
+index 9ed3c3f..619c55a 100644
+--- a/src/modules/lottery/components/LotteryReveal.tsx
++++ b/src/modules/lottery/components/LotteryReveal.tsx
+@@ -1,6 +1,6 @@
+ 'use client'
+ 
+-import { useState, useEffect } from 'react'
++import { useState, useEffect, useRef, useSyncExternalStore } from 'react'
+ import { motion, AnimatePresence } from 'framer-motion'
+ 
+ import { declineRaz } from '../utils'
+@@ -18,25 +18,31 @@ const LOCALSTORAGE_PREFIX = 'lottery_revealed_'
+  * Показывается на месте баннера, один раз для участников.
+  * После анимации записывает в localStorage что юзер уже видел.
+  */
+-export function LotteryReveal({ lottery, wasParticipant }: LotteryRevealProps) {
+-  const [phase, setPhase] = useState<'hidden' | 'envelope' | 'opening' | 'revealed'>('hidden')
+-  const [alreadySeen, setAlreadySeen] = useState(true)
+-
+-  useEffect(() => {
+-    if (!wasParticipant) return
+-    const key = LOCALSTORAGE_PREFIX + lottery.id
+-    const seen = localStorage.getItem(key)
+-    if (!seen) {
+-      setAlreadySeen(false)
+-      setPhase('envelope')
+-    }
+-  }, [lottery.id, wasParticipant])
++const subscribeHydration = () => () => {}
++const clientSnapshot = () => true
++const serverSnapshot = () => false
++
++export function LotteryReveal(props: LotteryRevealProps) {
++  const hydrated = useSyncExternalStore(subscribeHydration, clientSnapshot, serverSnapshot)
++  return hydrated && props.wasParticipant ? <LotteryRevealContent key={props.lottery.id} {...props} /> : null
++}
++
++function LotteryRevealContent({ lottery, wasParticipant }: LotteryRevealProps) {
++  const [phase, setPhase] = useState<'hidden' | 'envelope' | 'opening' | 'revealed'>('envelope')
++  const [alreadySeen] = useState(() => {
++    try { return Boolean(localStorage.getItem(LOCALSTORAGE_PREFIX + lottery.id)) }
++    catch { return false }
++  })
++  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
++  useEffect(() => () => { if (timer.current !== null) clearTimeout(timer.current) }, [])
+ 
+   function handleOpen() {
++    if (timer.current !== null) return
+     setPhase('opening')
+-    setTimeout(() => {
++    timer.current = setTimeout(() => {
+       setPhase('revealed')
+-      localStorage.setItem(LOCALSTORAGE_PREFIX + lottery.id, '1')
++      try { localStorage.setItem(LOCALSTORAGE_PREFIX + lottery.id, '1') }
++      catch { /* The result remains visible when storage is unavailable. */ }
+     }, 1500)
+   }
+ 
+diff --git a/src/modules/onboarding/components/OnboardingProvider.tsx b/src/modules/onboarding/components/OnboardingProvider.tsx
+index 942f8df..e65f0cd 100644
+--- a/src/modules/onboarding/components/OnboardingProvider.tsx
++++ b/src/modules/onboarding/components/OnboardingProvider.tsx
+@@ -199,6 +199,7 @@ export function OnboardingProvider({ userId, children }: OnboardingProviderProps
+       </Suspense>
+       {activeTour && currentStep && (
+         <OnboardingSpotlight
++          key={`${activeTour.pageSlug}:${currentStep.id}`}
+           step={currentStep}
+           stepIndex={currentStepIndex}
+           totalSteps={activeTour.steps.length}
+diff --git a/src/modules/onboarding/components/OnboardingSpotlight.tsx b/src/modules/onboarding/components/OnboardingSpotlight.tsx
+index 161e6ac..5b527f7 100644
+--- a/src/modules/onboarding/components/OnboardingSpotlight.tsx
++++ b/src/modules/onboarding/components/OnboardingSpotlight.tsx
+@@ -45,7 +45,7 @@ export function OnboardingSpotlight({
+   const [tooltipPos, setTooltipPos] = useState<TooltipPosition | null>(null)
+   const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
+   const [extraRects, setExtraRects] = useState<DOMRect[]>([])
+-  const [ready, setReady] = useState(false)
++  const [ready, setReady] = useState(step.target === null)
+ 
+   const isModal = step.target === null
+   const isLastStep = stepIndex === totalSteps - 1
+@@ -54,19 +54,10 @@ export function OnboardingSpotlight({
+ 
+   // Поиск target элемента в DOM с polling
+   useEffect(() => {
+-    setReady(false)
+-    setTargetEl(null)
+-    setTargetRect(null)
+-    setExtraRects([])
+-    setTooltipPos(null)
+-
+     // Подготовить DOM перед поиском target (переключить таб, перейти на страницу и т.п.)
+     step.onBeforeShow?.({ router })
+ 
+-    if (isModal) {
+-      setReady(true)
+-      return
+-    }
++    if (isModal) return
+ 
+     const startTime = Date.now()
+ 
+diff --git a/src/hooks/useUiClock.ts b/src/hooks/useUiClock.ts
+new file mode 100644
+--- /dev/null
++++ b/src/hooks/useUiClock.ts
+@@ -0,0 +1,28 @@
++'use client'
++
++import { useSyncExternalStore } from 'react'
++
++let now: number | null = null
++let timer: ReturnType<typeof setInterval> | undefined
++const listeners = new Set<() => void>()
++function subscribe(listener: () => void) {
++  listeners.add(listener)
++  if (timer === undefined) {
++    now = Date.now()
++    timer = setInterval(() => {
++      now = Date.now()
++      listeners.forEach(notify => notify())
++    }, 60_000)
++  }
++  return () => {
++    listeners.delete(listener)
++    if (!listeners.size) { clearInterval(timer); timer = undefined; now = null }
++  }
++}
++const getSnapshot = () => now
++const getServerSnapshot = () => null
++
++/** Только для UI: общий минутный таймер и стабильный пустой снимок при SSR/гидратации. */
++export function useUiClock() {
++  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
++}
+diff --git a/tests/unit/lint-async-ui.test.tsx b/tests/unit/lint-async-ui.test.tsx
+new file mode 100644
+--- /dev/null
++++ b/tests/unit/lint-async-ui.test.tsx
+@@ -0,0 +1,97 @@
++import { act, fireEvent, render, screen, cleanup } from '@testing-library/react'
++import { afterEach, beforeEach, expect, it, vi } from 'vitest'
++import { UserDetailModal } from '@/modules/admin/components/UserDetailModal'
++import { DevUserSwitcher } from '@/modules/dev-tools/components/DevUserSwitcher'
++import type { DevUser } from '@/modules/dev-tools/types'
++
++const { searchUsers } = vi.hoisted(() => ({ searchUsers: vi.fn() }))
++vi.mock('@/modules/dev-tools/actions', () => ({ searchUsers, setImpersonation: vi.fn(), clearImpersonation: vi.fn() }))
++
++function deferred<T>() {
++  let resolve!: (value: T) => void
++  const promise = new Promise<T>(r => { resolve = r })
++  return { promise, resolve }
++}
++const detail = (name: string) => ({ user: { first_name: name, last_name: 'User', total_coins: 20, email: name + '@example.invalid' }, transactions: [] })
++const response = (name: string) => ({ ok: true, json: async () => detail(name) }) as Response
++beforeEach(() => { vi.clearAllMocks() })
++afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals() })
++
++it('does not show A after switching to B, aborts on close and starts fresh on reopen', async () => {
++  const a = deferred<Response>(), b = deferred<Response>()
++  const fetcher = vi.fn().mockReturnValueOnce(a.promise).mockReturnValueOnce(b.promise).mockResolvedValue(response('Reopened'))
++  vi.stubGlobal('fetch', fetcher)
++  const view = render(<UserDetailModal userId="a" onClose={() => {}} />)
++  expect(screen.getByText('Загрузка...')).toBeTruthy()
++  view.rerender(<UserDetailModal userId="b" onClose={() => {}} />)
++  expect(fetcher.mock.calls[0][1].signal.aborted).toBe(true)
++  await act(async () => { b.resolve(response('B')) })
++  expect(screen.getByText('User B')).toBeTruthy()
++  await act(async () => { a.resolve(response('A')) })
++  expect(screen.queryByText('User A')).toBeNull()
++  view.rerender(<UserDetailModal userId={null} onClose={() => {}} />)
++  expect(fetcher.mock.calls[1][1].signal.aborted).toBe(true)
++  await act(async () => view.rerender(<UserDetailModal userId="b" onClose={() => {}} />))
++  expect(screen.getByText('User Reopened')).toBeTruthy()
++})
++
++it.each(['http', 'network'])('handles user-detail %s failure without showing stale data', async failure => {
++  vi.stubGlobal('fetch', failure === 'http' ? vi.fn().mockResolvedValue({ ok: false }) : vi.fn().mockRejectedValue(new Error('offline')))
++  await act(async () => render(<UserDetailModal userId="a" onClose={() => {}} />))
++  expect(screen.getByText('Не найден')).toBeTruthy()
++  expect(screen.queryByText('Загрузка...')).toBeNull()
++})
++
++it('ignores a delayed JSON body after the modal has closed', async () => {
++  const body = deferred<ReturnType<typeof detail>>()
++  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => body.promise }))
++  const view = render(<UserDetailModal userId="a" onClose={() => {}} />)
++  await act(async () => {})
++  view.rerender(<UserDetailModal userId={null} onClose={() => {}} />)
++  await act(async () => body.resolve(detail('Late')))
++  expect(view.container.textContent).toBe('')
++})
++
++const user = (name: string): DevUser => ({ id: name, email: name + '@example.invalid', firstName: name, lastName: '', fullName: name, department: null, departmentCode: null, team: null })
++
++it('loads once on opening, debounces search, ignores late responses and resets on reopening', async () => {
++  vi.useFakeTimers()
++  const initial = deferred<DevUser[]>(), oldSearch = deferred<DevUser[]>(), latest = deferred<DevUser[]>()
++  searchUsers.mockReturnValueOnce(initial.promise).mockReturnValueOnce(oldSearch.promise).mockReturnValueOnce(latest.promise).mockResolvedValue([])
++  render(<DevUserSwitcher />)
++  fireEvent.click(screen.getByRole('button', { name: /Сменить юзера/ }))
++  await act(async () => vi.advanceTimersByTime(300))
++  expect(searchUsers).toHaveBeenCalledTimes(1)
++  const input = screen.getByPlaceholderText('Поиск по имени или email...')
++  fireEvent.change(input, { target: { value: 'old' } })
++  await act(async () => vi.advanceTimersByTime(300))
++  fireEvent.change(input, { target: { value: 'new' } })
++  await act(async () => vi.advanceTimersByTime(300))
++  await act(async () => latest.resolve([user('Latest')]))
++  await act(async () => { oldSearch.resolve([user('Old')]); initial.resolve([user('Initial')]) })
++  expect(screen.getByText('Latest')).toBeTruthy()
++  expect(screen.queryByText('Old')).toBeNull()
++  expect(screen.queryByText('Initial')).toBeNull()
++  fireEvent.click(screen.getByText('Сменить пользователя (DEV)').parentElement!.querySelector('button')!)
++  fireEvent.click(screen.getByRole('button', { name: /Сменить юзера/ }))
++  expect((screen.getByPlaceholderText('Поиск по имени или email...') as HTMLInputElement).value).toBe('')
++  await act(async () => vi.advanceTimersByTime(300))
++  expect(searchUsers).toHaveBeenCalledTimes(4)
++})
++
++it('finishes loading after a search rejection and ignores a result after closing', async () => {
++  vi.useFakeTimers()
++  const pending = deferred<DevUser[]>()
++  searchUsers.mockRejectedValueOnce(new Error('offline')).mockReturnValueOnce(pending.promise)
++  const view = render(<DevUserSwitcher />)
++  fireEvent.click(screen.getByRole('button', { name: /Сменить юзера/ }))
++  await act(async () => vi.advanceTimersByTime(300))
++  expect(screen.getByText('Пользователи не найдены')).toBeTruthy()
++  fireEvent.change(screen.getByPlaceholderText('Поиск по имени или email...'), { target: { value: 'new' } })
++  await act(async () => vi.advanceTimersByTime(300))
++  fireEvent.click(screen.getByText('Сменить пользователя (DEV)').parentElement!.querySelector('button')!)
++  await act(async () => pending.resolve([user('Late')]))
++  expect(screen.queryByText('Late')).toBeNull()
++  view.unmount()
++  expect(vi.getTimerCount()).toBe(0)
++})
+diff --git a/tests/unit/lint-clock.test.tsx b/tests/unit/lint-clock.test.tsx
+new file mode 100644
+--- /dev/null
++++ b/tests/unit/lint-clock.test.tsx
+@@ -0,0 +1,49 @@
++import { act, renderHook, render, screen, cleanup } from '@testing-library/react'
++import { renderToString } from 'react-dom/server'
++import { afterEach, expect, it, vi } from 'vitest'
++import { useUiClock } from '@/hooks/useUiClock'
++import { CrystalRateStats } from '@/modules/admin/components/CrystalRateStats'
++import { StrictMode } from 'react'
++
++afterEach(() => { cleanup(); vi.useRealTimers() })
++
++it('shares one clock, advances without parent rendering and stops after the last subscriber', () => {
++  vi.useFakeTimers()
++  vi.setSystemTime(new Date('2026-11-18T12:00:00Z'))
++  const first = renderHook(useUiClock)
++  const second = renderHook(useUiClock)
++  expect(first.result.current).toBe(1795003200000)
++  expect(vi.getTimerCount()).toBe(1)
++  act(() => vi.advanceTimersByTime(60_000))
++  expect(second.result.current).toBe(1795003260000)
++  first.unmount()
++  expect(vi.getTimerCount()).toBe(1)
++  second.unmount()
++  expect(vi.getTimerCount()).toBe(0)
++})
++
++it('resubscribes correctly in StrictMode and reads fresh time on remount', () => {
++  vi.useFakeTimers()
++  vi.setSystemTime(new Date('2026-11-18T12:00:00Z'))
++  const first = renderHook(useUiClock, { wrapper: StrictMode })
++  expect(first.result.current).toBe(1795003200000)
++  expect(vi.getTimerCount()).toBe(1)
++  first.unmount()
++  vi.setSystemTime(new Date('2026-11-19T12:00:00Z'))
++  const second = renderHook(useUiClock, { wrapper: StrictMode })
++  expect(second.result.current).toBe(1795089600000)
++  expect(vi.getTimerCount()).toBe(1)
++})
++
++const stats = { total: 0, active: 0, comingSoon: 0, inactive: 0, categoriesTotal: 0, withDiscount: 0, outOfStock: 0, avgPrice: 0, maxPrice: 0 }
++
++it('renders no guessed age on the server and handles future dates and day rollover', () => {
++  vi.useFakeTimers()
++  vi.setSystemTime(new Date('2026-11-18T12:00:00Z'))
++  expect(renderToString(<CrystalRateStats stats={stats} ratedAt="2026-11-19T12:00:00Z" />)).not.toContain('без изменений курса')
++  const view = render(<CrystalRateStats stats={stats} ratedAt="2026-11-19T12:00:00Z" />)
++  expect(screen.getByText('дней без изменений курса').previousElementSibling?.textContent).toBe('0')
++  view.rerender(<CrystalRateStats stats={stats} ratedAt="2026-11-17T12:00:30Z" />)
++  act(() => vi.advanceTimersByTime(60_000))
++  expect(screen.getByText('день без изменений курса').previousElementSibling?.textContent).toBe('1')
++})
+diff --git a/tests/unit/lint-lottery.test.tsx b/tests/unit/lint-lottery.test.tsx
+new file mode 100644
+--- /dev/null
++++ b/tests/unit/lint-lottery.test.tsx
+@@ -0,0 +1,58 @@
++import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
++import { renderToString } from 'react-dom/server'
++import { afterEach, beforeEach, expect, it, vi } from 'vitest'
++import { LotteryBanner } from '@/modules/lottery/components/LotteryBanner'
++import { LotteryReveal } from '@/modules/lottery/components/LotteryReveal'
++import type { LotteryWithStats } from '@/modules/lottery/types'
++
++vi.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }))
++vi.mock('@/modules/shop/index.client', () => ({ purchaseProduct: vi.fn() }))
++vi.mock('@/components/CoinBalance', () => ({ CoinStatic: ({ amount }: { amount: number }) => <span>{amount}</span> }))
++const lottery: LotteryWithStats = { id: 'one', name: 'Prize', description: null, image_url: null, ticket_price: 10, product_id: 'p', status: 'active', month: '2026-11-01', winner_user_id: null, drawn_at: null, created_by: 'a', created_at: '2026-11-01', total_tickets: 0, total_participants: 0 }
++beforeEach(() => { localStorage.clear(); vi.useFakeTimers() })
++afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks() })
++
++it('renders server countdown despite incorrect client time, updates and stops at zero', () => {
++  vi.setSystemTime(new Date('2030-01-01T00:00:00Z'))
++  const serverTime = Date.parse('2026-12-01T08:59:58Z')
++  const html = renderToString(<LotteryBanner lottery={lottery} balance={0} ticketInfo={null} serverTime={serverTime} />)
++  expect(new DOMParser().parseFromString(html, 'text/html').body.textContent).toContain('00:00:02')
++  const view = render(<LotteryBanner lottery={lottery} balance={0} ticketInfo={null} serverTime={serverTime} />)
++  expect(screen.getByText(/00:00:02/)).toBeTruthy()
++  act(() => vi.advanceTimersByTime(1000))
++  expect(screen.getByText(/00:00:01/)).toBeTruthy()
++  act(() => vi.advanceTimersByTime(1000))
++  expect(screen.getByText(/00:00:00/)).toBeTruthy()
++  expect(vi.getTimerCount()).toBe(0)
++  view.rerender(<LotteryBanner lottery={lottery} balance={0} ticketInfo={null} serverTime={serverTime - 5000} />)
++  expect(screen.getByText(/00:00:07/)).toBeTruthy()
++  view.unmount()
++  expect(vi.getTimerCount()).toBe(0)
++})
++
++it('does not reveal seen results and initializes a new lottery without stale phase', () => {
++  localStorage.setItem('lottery_revealed_one', '1')
++  expect(renderToString(<LotteryReveal lottery={lottery} wasParticipant />)).toBe('')
++  const view = render(<LotteryReveal lottery={lottery} wasParticipant />)
++  expect(screen.queryByText('Открыть конверт')).toBeNull()
++  view.rerender(<LotteryReveal lottery={{ ...lottery, id: 'two' }} wasParticipant />)
++  fireEvent.click(screen.getByText('Открыть конверт'))
++  act(() => vi.advanceTimersByTime(1500))
++  expect(localStorage.getItem('lottery_revealed_two')).toBe('1')
++  view.rerender(<LotteryReveal lottery={{ ...lottery, id: 'three' }} wasParticipant />)
++  expect(screen.getByText('Открыть конверт')).toBeTruthy()
++  fireEvent.click(screen.getByText('Открыть конверт'))
++  view.unmount()
++  act(() => vi.advanceTimersByTime(2000))
++  expect(localStorage.getItem('lottery_revealed_three')).toBeNull()
++})
++
++it('handles disabled storage and excludes nonparticipants', () => {
++  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
++  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
++  const view = render(<LotteryReveal lottery={lottery} wasParticipant={false} />)
++  expect(screen.queryByText('Открыть конверт')).toBeNull()
++  view.rerender(<LotteryReveal lottery={lottery} wasParticipant />)
++  fireEvent.click(screen.getByText('Открыть конверт'))
++  expect(() => act(() => vi.advanceTimersByTime(1500))).not.toThrow()
++})
+diff --git a/tests/unit/lint-navigation.test.tsx b/tests/unit/lint-navigation.test.tsx
+new file mode 100644
+--- /dev/null
++++ b/tests/unit/lint-navigation.test.tsx
+@@ -0,0 +1,64 @@
++import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
++import { afterEach, beforeEach, expect, it, vi } from 'vitest'
++import { useState } from 'react'
++import { Sidebar } from '@/components/Sidebar'
++import { LayoutShell } from '@/components/LayoutShell'
++
++const navigation = vi.hoisted(() => ({ pathname: '/' }))
++vi.mock('next/navigation', () => ({ usePathname: () => navigation.pathname }))
++vi.mock('@/modules/auth/index.client', () => ({ signOut: vi.fn() }))
++vi.mock('@/modules/dev-tools/components/DevUserSwitcher', () => ({ DevUserSwitcher: () => null }))
++vi.mock('@/components/CoinBalance', () => ({ CoinBalanceLive: () => null }))
++vi.mock('@/modules/profile-appearance/components/BimoCompanion', () => ({ BimoCompanion: () => null }))
++vi.mock('@/modules/feedback/components/FeedbackButton', () => ({ FeedbackButton: () => null }))
++vi.mock('@/modules/chat/components/ChatWidget', () => ({ ChatWidget: () => null }))
++
++beforeEach(() => { navigation.pathname = '/'; localStorage.clear(); vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-18T12:00:00Z')) })
++afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers() })
++const key = 'day_off_last_seen_at'
++const resolved = ['2026-11-17T10:00:00Z', '2026-11-17T11:00:00Z']
++const link = () => screen.getByRole('link', { name: /Запросить выходной/ })
++
++it('initializes first visit without unread badge and survives unavailable storage', () => {
++  const view = render(<Sidebar user={null} balance={0} dayOffResolved={resolved} />)
++  expect(localStorage.getItem(key)).toBeTruthy()
++  expect(within(link()).queryByText('2')).toBeNull()
++  view.unmount()
++  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
++  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
++  expect(() => render(<Sidebar user={null} balance={0} dayOffResolved={resolved} />)).not.toThrow()
++  expect(within(link()).queryByText('2')).toBeNull()
++})
++
++it('refreshes unread badge across tabs and marks visits to day-off as read', () => {
++  localStorage.setItem(key, '2026-11-16T10:00:00Z')
++  const view = render(<Sidebar user={null} balance={0} dayOffResolved={resolved} />)
++  expect(within(link()).getByText('2')).toBeTruthy()
++  act(() => {
++    localStorage.setItem(key, '2026-11-17T10:30:00Z')
++    window.dispatchEvent(new StorageEvent('storage', { key }))
++  })
++  expect(within(link()).getByText('1')).toBeTruthy()
++  navigation.pathname = '/day-off'
++  view.rerender(<Sidebar user={null} balance={0} dayOffResolved={resolved} />)
++  expect(within(link()).queryByText('1')).toBeNull()
++  navigation.pathname = '/store'
++  view.rerender(<Sidebar user={null} balance={0} dayOffResolved={resolved} />)
++  expect(within(link()).queryByText('1')).toBeNull()
++})
++
++function Draft() {
++  const [text, setText] = useState('')
++  return <input aria-label="draft" value={text} onChange={event => setText(event.target.value)} />
++}
++it('closes only the mobile menu on navigation, preserving child state', () => {
++  const props = { user: null, balance: 0, showDevSwitcher: false, dayOffResolved: [], sidebarCollapsed: false }
++  const view = render(<LayoutShell {...props}><Draft /></LayoutShell>)
++  fireEvent.change(screen.getByLabelText('draft'), { target: { value: 'unsaved' } })
++  fireEvent.click(screen.getByRole('button', { name: 'Открыть меню' }))
++  expect(view.container.querySelector('aside')?.className).not.toContain('-translate-x-full')
++  navigation.pathname = '/store'
++  view.rerender(<LayoutShell {...props}><Draft /></LayoutShell>)
++  expect(view.container.querySelector('aside')?.className).toContain('-translate-x-full')
++  expect((screen.getByLabelText('draft') as HTMLInputElement).value).toBe('unsaved')
++})
+diff --git a/tests/unit/lint-onboarding.test.tsx b/tests/unit/lint-onboarding.test.tsx
+new file mode 100644
+--- /dev/null
++++ b/tests/unit/lint-onboarding.test.tsx
+@@ -0,0 +1,63 @@
++import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
++import { afterEach, beforeEach, expect, it, vi } from 'vitest'
++import { OnboardingProvider, useOnboardingContext } from '@/modules/onboarding/components/OnboardingProvider'
++
++const router = vi.hoisted(() => ({ push: vi.fn() }))
++const search = new URLSearchParams()
++vi.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/unknown', useSearchParams: () => search }))
++vi.mock('@/modules/onboarding/actions', () => ({ getOnboardingSeenSlugs: async () => [], markTourSeenInDb: vi.fn() }))
++vi.mock('@/modules/onboarding/components/OnboardingDevPanel', () => ({ OnboardingDevPanel: () => null }))
++vi.mock('@/modules/onboarding/tours/dashboard', () => ({ dashboardTour: { pageSlug: 'dashboard', steps: [
++  { id: 'same', target: null, title: 'Intro', description: '', placement: 'center' },
++  { id: 'target', target: 'fixture', title: 'Target', description: '', placement: 'bottom' },
++  { id: 'end', target: null, title: 'End', description: '', placement: 'center' },
++] } }))
++vi.mock('@/modules/onboarding/tours/store', () => ({ storeTour: { pageSlug: 'store', steps: [
++  { id: 'same', target: 'missing', title: 'Other tour', description: '', placement: 'bottom' },
++] } }))
++
++function Controls() {
++  const { startTour } = useOnboardingContext()
++  return <><button onClick={() => startTour('dashboard')}>Start</button><button onClick={() => startTour('dashboard', 1)}>Target step</button><button onClick={() => startTour('store')}>Other</button><div data-onboarding="fixture">Fixture</div></>
++}
++beforeEach(() => {
++  vi.useFakeTimers()
++  localStorage.clear()
++  document.body.style.overflow = 'auto'
++  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() })
++})
++afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); document.body.style.overflow = '' })
++
++it('resets between modal and target steps and on revisiting; restores body overflow', async () => {
++  const view = render(<OnboardingProvider userId="fixture"><Controls /></OnboardingProvider>)
++  await act(async () => {})
++  fireEvent.click(screen.getByText('Start'))
++  expect(screen.getByText('Intro')).toBeTruthy()
++  expect(document.body.style.overflow).toBe('hidden')
++  fireEvent.click(screen.getByText('Далее'))
++  expect(screen.queryByText('Intro')).toBeNull()
++  expect(screen.queryByText('Target')).toBeNull()
++  act(() => vi.advanceTimersByTime(200))
++  act(() => vi.advanceTimersByTime(600))
++  expect(screen.getByText('Target')).toBeTruthy()
++  fireEvent.click(screen.getByText('Далее'))
++  expect(screen.getByText('End')).toBeTruthy()
++  fireEvent.click(screen.getByText('Target step'))
++  expect(screen.queryByText('End')).toBeNull()
++  expect(screen.queryByText('Target')).toBeNull()
++  view.unmount()
++  act(() => vi.advanceTimersByTime(5000))
++  expect(document.body.style.overflow).toBe('auto')
++  expect(vi.getTimerCount()).toBe(0)
++})
++
++it('does not retain ready state for another tour with the same step id; skips missing target', async () => {
++  render(<OnboardingProvider userId="fixture"><Controls /></OnboardingProvider>)
++  await act(async () => {})
++  fireEvent.click(screen.getByText('Start'))
++  fireEvent.click(screen.getByText('Other'))
++  expect(screen.queryByText('Intro')).toBeNull()
++  expect(screen.queryByText('Other tour')).toBeNull()
++  act(() => vi.advanceTimersByTime(3400))
++  expect(document.body.style.overflow).toBe('auto')
++})
+diff --git a/tests/unit/lint-state-reset.test.tsx b/tests/unit/lint-state-reset.test.tsx
+new file mode 100644
+--- /dev/null
++++ b/tests/unit/lint-state-reset.test.tsx
+@@ -0,0 +1,60 @@
++import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
++import { afterEach, expect, it, vi } from 'vitest'
++import { RedDayCalendar } from '@/modules/corrections/components/RedDayCalendar'
++import { UserAppealsCard } from '@/modules/corrections/components/UserAppealsCard'
++import { UsersTable } from '@/modules/admin/components/UsersTable'
++import type { CorrectionCalendarDay, CorrectionUserAppeal } from '@/modules/corrections/types'
++
++vi.mock('@/modules/feedback/index.client', () => ({ updateAppealStatus: vi.fn(), appealStatusLabels: { new: 'New' } }))
++vi.mock('@/modules/admin/index.client', () => ({ toggleAdmin: vi.fn() }))
++vi.mock('@/components/CoinBalance', () => ({ CoinStatic: ({ amount }: { amount: number }) => <span>{amount}</span> }))
++afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks() })
++
++function days(months: number): CorrectionCalendarDay[] {
++  return Array.from({ length: months }, (_, i) => ({ date: `2026-${String(i + 1).padStart(2, '0')}-01`, status: 'red', label: '', coins: 0, absence_type: null, revit_launches: 0, has_shield: false }))
++}
++it('clamps calendar position permanently when its range shrinks then grows', () => {
++  const props = { selected: new Set<string>(), onToggle: vi.fn() }
++  const view = render(<RedDayCalendar {...props} days={days(8)} />)
++  expect((screen.getByLabelText('На месяц вперёд') as HTMLButtonElement).disabled).toBe(true)
++  view.rerender(<RedDayCalendar {...props} days={days(3)} />)
++  view.rerender(<RedDayCalendar {...props} days={days(8)} />)
++  expect((screen.getByLabelText('На месяц назад') as HTMLButtonElement).disabled).toBe(true)
++  expect((screen.getByLabelText('На месяц вперёд') as HTMLButtonElement).disabled).toBe(false)
++  view.rerender(<RedDayCalendar {...props} days={[]} />)
++  expect(screen.getByText('Нет данных по дням')).toBeTruthy()
++})
++
++const appeal = (id: string): CorrectionUserAppeal => ({ id, created_at: '2026-11-18', status: 'new', description: 'Appeal ' + id, task_url: null, dates: null, transactions: [], total_coins: null, image_urls: [], review_comment: null, reviewed_at: null })
++it('expands only on a new highlight, keeps review drafts, and cleans up scrolling', () => {
++  vi.useFakeTimers()
++  const scroll = vi.fn()
++  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scroll })
++  const appeals = [appeal('a'), appeal('b')]
++  const view = render(<UserAppealsCard appeals={appeals} highlightAppealId="a" />)
++  fireEvent.click(screen.getAllByRole('button', { name: 'Отклонить' })[0])
++  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'draft explanation' } })
++  view.rerender(<UserAppealsCard appeals={appeals} highlightAppealId="b" />)
++  expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('draft explanation')
++  fireEvent.click(screen.getByRole('button', { name: /Обжалования от пользователя/ }))
++  view.rerender(<UserAppealsCard appeals={[...appeals]} highlightAppealId="b" />)
++  expect(screen.queryByText('Appeal b')).toBeNull()
++  view.rerender(<UserAppealsCard appeals={appeals} highlightAppealId="a" />)
++  expect(screen.getByText('Appeal a')).toBeTruthy()
++  view.unmount()
++  act(() => vi.advanceTimersByTime(500))
++  expect(scroll).not.toHaveBeenCalled()
++})
++
++it('applies collapse/expand controls again after manual department toggles', () => {
++  render(<UsersTable users={[{ id: 'a', email: 'a@example.invalid', first_name: 'Alice', last_name: 'User', department: 'Department', team: null, is_admin: false, is_active: true, total_coins: 10 }]} />)
++  expect(screen.getByText('User Alice')).toBeTruthy()
++  fireEvent.click(screen.getByTitle('Свернуть все'))
++  expect(screen.queryByText('User Alice')).toBeNull()
++  fireEvent.click(screen.getByRole('button', { name: /Department.*1 сотр/ }))
++  expect(screen.getByText('User Alice')).toBeTruthy()
++  fireEvent.click(screen.getByTitle('Свернуть все'))
++  expect(screen.queryByText('User Alice')).toBeNull()
++  fireEvent.click(screen.getByTitle('Развернуть все'))
++  expect(screen.getByText('User Alice')).toBeTruthy()
++})

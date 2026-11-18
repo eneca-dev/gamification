@@ -283,9 +283,12 @@ function DeptSection({
   defaultOpen: boolean
   expandKey: number
 }) {
-  const [open, setOpen] = useState(true)
-
-  useEffect(() => { setOpen(defaultOpen) }, [expandKey, defaultOpen])
+  const [open, setOpen] = useState(defaultOpen)
+  const [previousExpansion, setPreviousExpansion] = useState({ expandKey, defaultOpen })
+  if (previousExpansion.expandKey !== expandKey || previousExpansion.defaultOpen !== defaultOpen) {
+    setPreviousExpansion({ expandKey, defaultOpen })
+    setOpen(defaultOpen)
+  }
 
   const count = countDeptUsers(dept)
   const hasMultipleTeams = dept.teams.length > 1 || (dept.teams.length === 1 && dept.teams[0].label !== 'Без команды')

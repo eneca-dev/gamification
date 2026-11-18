@@ -1,5 +1,5 @@
 {
-  "status": "review-only; no SQL applied; QA ref and safe baseline pending",
+  "status": "01/02 verified on isolated local PostgreSQL; working database application NOT authorized",
   "productionProjectDenied": "yqezhfughtublpaitmij",
   "hashAlgorithm": "SHA-256 raw file bytes",
   "files": [
@@ -22,6 +22,10 @@
     {
       "file": "04-restore-production-helpers.review.sql",
       "sha256": "c98d4b1d82ade203aaf4a2f50152f887cae527951ab876f987b1150125e0efa1"
+    },
+    {
+      "file": "05-restore-reporting.review.sql",
+      "sha256": "c96e5282291a67963a7c9a0739d06c48aaf3d3afc110a0de48e12080a55dee71"
     },
     {
       "file": "qa-rng-distribution.test.sql",

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, ShoppingBag, Trophy, Users, Settings, LogOut, HelpCircle, Calendar, PawPrint } from 'lucide-react'
@@ -12,6 +12,20 @@ import { CoinBalanceLive } from '@/components/CoinBalance'
 import { BimoCompanion } from '@/modules/profile-appearance/components/BimoCompanion'
 
 const LS_KEY = 'day_off_last_seen_at'
+const SEEN_EVENT = 'day-off-last-seen'
+function readLastSeen() {
+  try { return localStorage.getItem(LS_KEY) } catch { return null }
+}
+function subscribeLastSeen(notify: () => void) {
+  const onStorage = (event: StorageEvent) => { if (event.key === LS_KEY || event.key === null) notify() }
+  window.addEventListener('storage', onStorage)
+  window.addEventListener(SEEN_EVENT, notify)
+  return () => {
+    window.removeEventListener('storage', onStorage)
+    window.removeEventListener(SEEN_EVENT, notify)
+  }
+}
+const serverLastSeen = () => null
 
 interface SidebarProps {
   user: AuthUser | null
@@ -55,29 +69,18 @@ function getInitials(fullName: string, email?: string): string {
 
 export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, dayOffResolved = [], isCollapsed = false, onToggleCollapse, showBimoGallery = false }: SidebarProps) {
   const pathname = usePathname()
-  const [dayOffBadge, setDayOffBadge] = useState(0)
+  const lastSeen = useSyncExternalStore(subscribeLastSeen, readLastSeen, serverLastSeen)
+  const viewingDayOff = pathname.startsWith('/day-off')
+  const dayOffBadge = !lastSeen || viewingDayOff ? 0
+    : dayOffResolved.filter(ts => new Date(ts) > new Date(lastSeen)).length
 
   useEffect(() => {
-    const raw = localStorage.getItem(LS_KEY)
-    const lastSeen = raw ? new Date(raw) : null
-
-    if (!lastSeen) {
-      // Первый запуск — считаем всё просмотренным
+    if (readLastSeen() && !viewingDayOff) return
+    try {
       localStorage.setItem(LS_KEY, new Date().toISOString())
-      setDayOffBadge(0)
-      return
-    }
-
-    const unseen = dayOffResolved.filter((ts) => new Date(ts) > lastSeen).length
-    setDayOffBadge(unseen)
-  }, [dayOffResolved])
-
-  useEffect(() => {
-    if (pathname.startsWith('/day-off')) {
-      localStorage.setItem(LS_KEY, new Date().toISOString())
-      setDayOffBadge(0)
-    }
-  }, [pathname])
+      window.dispatchEvent(new Event(SEEN_EVENT))
+    } catch { /* Storage may be disabled; keep the badge empty. */ }
+  }, [pathname, viewingDayOff])
 
   const collapsed = isCollapsed
 

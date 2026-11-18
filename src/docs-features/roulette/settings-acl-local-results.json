@@ -1,0 +1,42 @@
+{
+  "status": "passed",
+  "database": "roulette_qa_exact",
+  "mode": "SQL06 body tested under outer rollback-only transaction",
+  "before": {
+    "acl": "{roulette_local_admin=arwdDxtm/roulette_local_admin,service_role=rw/roulette_local_admin}",
+    "can_select": true,
+    "can_update": true,
+    "can_insert": false,
+    "can_delete": false,
+    "can_truncate": false,
+    "can_maintain": false
+  },
+  "reproduced": {
+    "acl": "{roulette_local_admin=arwdDxtm/roulette_local_admin,service_role=arwdDxtm/roulette_local_admin}",
+    "can_select": true,
+    "can_update": true,
+    "can_insert": true,
+    "can_delete": true,
+    "can_truncate": true,
+    "can_maintain": true
+  },
+  "corrected": {
+    "acl": "{roulette_local_admin=arwdDxtm/roulette_local_admin,service_role=rw/roulette_local_admin}",
+    "can_select": true,
+    "can_update": true,
+    "can_insert": false,
+    "can_delete": false,
+    "can_truncate": false,
+    "can_maintain": false
+  },
+  "restored": {
+    "acl": "{roulette_local_admin=arwdDxtm/roulette_local_admin,service_role=rw/roulette_local_admin}",
+    "can_select": true,
+    "can_update": true,
+    "can_insert": false,
+    "can_delete": false,
+    "can_truncate": false,
+    "can_maintain": false
+  },
+  "sha256": "f45baf4207ead4e94d05dbf450e033e2e12701e8c5aa4636872d2c7d4049afaa"
+}

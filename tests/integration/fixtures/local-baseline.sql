@@ -4,9 +4,23 @@ create schema auth;
 create table auth.users(id uuid primary key);
 create schema extensions;
 create extension pgcrypto with schema extensions;
-create role anon nologin;
-create role authenticated nologin;
-create role service_role nologin bypassrls;
+-- Roles belong to the isolated cluster, not an individual fixture database.
+do $roles$
+declare role_name text; r record;
+begin
+  foreach role_name in array array['anon','authenticated','service_role'] loop
+    select * into r from pg_roles where rolname=role_name;
+    if found then
+      if r.rolcanlogin or r.rolsuper or r.rolcreatedb or r.rolcreaterole or r.rolreplication
+        or r.rolbypassrls is distinct from (role_name='service_role')
+        or exists(select 1 from pg_auth_members where roleid=r.oid or member=r.oid)
+      then raise exception 'Unexpected existing fixture role: %',role_name; end if;
+    else
+      execute format('create role %I nologin %s',role_name,
+        case when role_name='service_role' then 'bypassrls' else 'nobypassrls' end);
+    end if;
+  end loop;
+end $roles$;
 create sequence public.crystal_rates_id_seq;
 create table public."admin_department_groups" (
 "department" text not null,

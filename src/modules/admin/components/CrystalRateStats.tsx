@@ -1,5 +1,6 @@
 'use client'
 
+import { useUiClock } from '@/hooks/useUiClock'
 import { CoinIcon } from '@/components/CoinIcon'
 
 interface RateStats {
@@ -37,8 +38,9 @@ interface Tile {
 }
 
 export function CrystalRateStats({ ratedAt, stats }: CrystalRateStatsProps) {
-  const days = ratedAt
-    ? Math.max(0, Math.floor((Date.now() - new Date(ratedAt).getTime()) / 86_400_000))
+  const now = useUiClock()
+  const days = ratedAt && now !== null
+    ? Math.max(0, Math.floor((now - new Date(ratedAt).getTime()) / 86_400_000))
     : null
 
   const tiles: Tile[] = [

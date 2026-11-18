@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Menu } from 'lucide-react'
 
@@ -24,9 +24,11 @@ export function LayoutShell({ user, balance, showDevSwitcher, dayOffResolved, si
   const [isCollapsed, setIsCollapsed] = useState(sidebarCollapsed)
   const pathname = usePathname()
 
-  useEffect(() => {
+  const [previousPathname, setPreviousPathname] = useState(pathname)
+  if (previousPathname !== pathname) {
+    setPreviousPathname(pathname)
     setSidebarOpen(false)
-  }, [pathname])
+  }
 
   function toggleCollapse() {
     setIsCollapsed(prev => {
