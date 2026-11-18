@@ -67,7 +67,7 @@ export function BimoDetailsModal({ entry, rank, lookLabels, catalogArt, onClose 
         </div>
 
         <div className="mt-4 flex justify-center">
-          <BimoStage {...bimoLook(entry.equipment, catalogArt)} interactive />
+          <BimoStage {...bimoLook(entry.equipment, catalogArt)} interactive idPrefix={`bimo-details-${entry.userId}`} />
         </div>
 
         <div className="mt-4 flex items-center justify-between text-[12px]" style={{ color: 'var(--apex-text-secondary)' }}>

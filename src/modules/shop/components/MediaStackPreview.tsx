@@ -19,64 +19,40 @@ export function MediaStackPreview({ media, imageUrl, emoji, name, size }: MediaS
   const cover = imageUrl ?? (media[0] ? mediaPoster(media[0]) : null)
   const extraCount = Math.max(media.length - 1, 0)
   const videoInside = hasVideo(media)
-  const second = media[1] ? mediaPoster(media[1]) : null
-  const third = media[2] ? mediaPoster(media[2]) : null
   const playSize = size === 'lg' ? 14 : 10
 
-  // --- lg: fan-stack ---
+  // --- lg: обложка + метка видео и счётчик остальных медиа ---
+  // Веера из второго и третьего медиа нет: постеры видео и широкие скриншоты
+  // ложились поверх обложки и перекрывали метки карточки.
   if (size === 'lg') {
     return (
       <div className="relative w-full h-full flex items-center justify-center">
-        {third && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={third}
-            alt=""
-            aria-hidden
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-            style={{
-              transform: 'rotate(-5deg) translateX(-10px) scale(0.9)',
-              opacity: 0.45,
-              zIndex: 1,
-              filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08))',
-            }}
-          />
-        )}
-        {second && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={second}
-            alt=""
-            aria-hidden
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-            style={{
-              transform: 'rotate(4deg) translateX(8px) scale(0.93)',
-              opacity: 0.7,
-              zIndex: 2,
-              filter: 'drop-shadow(0 2px 6px rgba(0, 0, 0, 0.1))',
-            }}
-          />
-        )}
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={cover}
-            alt={name}
-            className="relative w-full h-full object-contain"
-            style={{ zIndex: 3 }}
-          />
+          <img src={cover} alt={name} className="w-full h-full object-contain" />
         ) : (
-          <span className="relative text-5xl" style={{ zIndex: 3 }}>
-            {emoji || <span style={{ color: '#ccc' }}>?</span>}
-          </span>
+          <span className="text-5xl">{emoji || <span style={{ color: '#ccc' }}>?</span>}</span>
         )}
-        {videoInside && (
-          <div
-            className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center"
-            style={{ background: 'rgba(0, 0, 0, 0.55)', zIndex: 10 }}
-            aria-label="Товар содержит видео"
-          >
-            <Play size={playSize} fill="white" color="white" />
+        {(videoInside || extraCount > 0) && (
+          <div className="absolute bottom-2 right-2 flex items-center gap-1">
+            {videoInside && (
+              <span
+                className="w-6 h-6 rounded-full flex items-center justify-center"
+                style={{ background: 'rgba(0, 0, 0, 0.55)' }}
+                aria-label="Товар содержит видео"
+              >
+                <Play size={playSize} fill="white" color="white" />
+              </span>
+            )}
+            {extraCount > 0 && (
+              <span
+                className="h-6 px-2 rounded-full flex items-center justify-center text-[11px] font-bold"
+                style={{ background: 'rgba(0, 0, 0, 0.55)', color: 'white' }}
+                aria-label={`Ещё ${extraCount} медиа`}
+              >
+                +{extraCount}
+              </span>
+            )}
           </div>
         )}
       </div>

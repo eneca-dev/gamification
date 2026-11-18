@@ -3,7 +3,6 @@ import { LayoutShell } from '@/components/LayoutShell'
 import { getCurrentUser } from '@/modules/auth'
 import { getUserBalance } from '@/modules/shop'
 import { getUserDayOffResolvedTimestamps } from '@/modules/day-off'
-import { bimoEnabled } from '@/modules/profile-appearance/queries'
 import { OnboardingProvider } from '@/modules/onboarding/index.client'
 
 const DEV_TOOLS_ENABLED =

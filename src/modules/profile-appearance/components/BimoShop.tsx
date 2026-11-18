@@ -122,7 +122,7 @@ export function BimoShop({ userId, initialState, balance }: BimoShopProps) {
             <div aria-hidden="true" className="bimo-band-shadow absolute inset-x-6 bottom-2 h-6 blur-[2px]" />
             {/* Выход за верх полосы только с планшета: в одну колонку Бимо
                 наехал бы на подзаголовок. */}
-            <BimoStage {...look} interactive className="relative w-[230px] sm:w-[280px] md:-mt-12 lg:-mt-16 lg:w-[320px]" />
+            <BimoStage {...look} interactive idPrefix="bimo-shop-hero" className="relative w-[230px] sm:w-[280px] md:-mt-12 lg:-mt-16 lg:w-[320px]" />
           </div>
 
           <div className="relative space-y-2 md:justify-self-end">
@@ -165,7 +165,7 @@ export function BimoShop({ userId, initialState, balance }: BimoShopProps) {
       <div className="grid animate-fade-in-up grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         <article className={CARD}>
           <div className="flex h-32 w-full items-center justify-center">
-            <BimoStill {...defaultLook} alt={defaults[slot]} className="h-full w-auto" />
+            <BimoStill {...defaultLook} alt={defaults[slot]} className="h-full w-auto" idPrefix={`bimo-shop-default-${slot}`} />
           </div>
           <div className="flex flex-1 flex-col p-4 pt-8">
             <span className="mb-1 text-[11px] font-semibold text-[var(--apex-text-muted)]">{labels[slot]}</span>
@@ -197,7 +197,7 @@ export function BimoShop({ userId, initialState, balance }: BimoShopProps) {
             <article key={item.assetKey} className={CARD}>
               <div className={`relative flex h-32 w-full items-center justify-center overflow-hidden ${preview ? '' : 'bg-[var(--apex-emoji-bg)]'}`}>
                 {preview
-                  ? <BimoStill {...preview} alt={title} className="h-full w-auto" />
+                  ? <BimoStill {...preview} alt={title} className="h-full w-auto" idPrefix={`bimo-shop-${item.assetKey}`} />
                   : <span aria-hidden="true" className="text-5xl">{item.emoji ?? '🦝'}</span>}
                 {state.preview && !item.released && (
                   <span className="absolute left-3 top-3 rounded-lg bg-[var(--apex-warning-text)] px-2.5 py-1 text-[10px] font-bold text-white">Черновик</span>

@@ -414,3 +414,21 @@ button, a[role="button"] { border-radius: 9999px; }
 @media (prefers-reduced-motion: reduce) {
   .bimo-decor { animation: none; }
 }
+
+/* ===== Рулетка =====
+   Игровая палитра: классические цвета колеса — красный, жёлтый, зелёный
+   и золото. Нигде больше не используются, поэтому вынесены отдельно. */
+:root {
+  --roulette-gold:        #F7C53A;
+  --roulette-gold-light:  #FFF0B4;
+  --roulette-gold-dark:   #B07D14;
+  --roulette-outline:     #8A5E0E;
+
+  --roulette-prize:       #157A3C;
+  --roulette-green:       #2FB457;
+  --roulette-green-mid:   #3FC46A;
+  --roulette-yellow:      #FFD23F;
+  --roulette-amber:       #FFA51F;
+  --roulette-red:         #E8402A;
+  --roulette-red-deep:    #C02113;
+}

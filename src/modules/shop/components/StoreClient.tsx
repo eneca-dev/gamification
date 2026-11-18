@@ -221,6 +221,17 @@ export function StoreClient({
             </button>
           )
         })}
+        {showRoulette && <button
+          type="button"
+          onClick={() => router.push('/store?tab=roulette')}
+          aria-pressed={activeTab === 'roulette'}
+          className="px-4 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"
+          style={{
+            background: activeTab === 'roulette' ? 'var(--apex-primary)' : 'var(--surface-elevated)',
+            color: activeTab === 'roulette' ? 'white' : 'var(--text-secondary)',
+            border: activeTab === 'roulette' ? '1px solid transparent' : '1px solid var(--border)',
+          }}
+        >Рулетка</button>}
         {showBimo && <button
           type="button"
           onClick={() => router.push('/store?tab=bimo')}
@@ -243,9 +254,6 @@ export function StoreClient({
           {bimoTabIcon && <span aria-hidden="true" className="relative -my-1 h-6 w-6 flex-shrink-0">{bimoTabIcon}</span>}
           <span className="relative">Енот-Бимо</span>
         </button>}
-        {showRoulette && <button type="button" onClick={() => router.push('/store?tab=roulette')}
-          aria-pressed={activeTab === 'roulette'}
-          className="rounded-xl border border-[var(--apex-border)] bg-[var(--apex-surface)] px-4 py-2 text-[13px] font-semibold text-[var(--apex-primary)] aria-pressed:bg-[var(--apex-primary)] aria-pressed:text-[var(--apex-surface)]">Рулетка</button>}
       </div>
 
       {/* Описание категории */}

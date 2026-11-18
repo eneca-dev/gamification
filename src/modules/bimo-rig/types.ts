@@ -21,6 +21,8 @@ export interface BimoStageProps extends Partial<BimoLook> {
   interactive?: boolean
   reaction?: { id: BimoReaction; key: number } | null
   frame?: number | null
+  /** Стабильный префикс идентификаторов масок: см. BimoModelFigure. */
+  idPrefix?: string
   onPlayingChange?: (playing: boolean) => void
   onFrameChange?: (time: number) => void
 }

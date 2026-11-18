@@ -69,6 +69,16 @@
 - `resolveEconomyPeriod(preset, customFrom?, customTo?)` — утилита: преобразует пресет периода (`7d/30d/90d/year/all/custom`) в ISO-границы `{from, to}`. `'all'` → `{null, null}`
 - `queries.adoption.ts` — метрики дашборда внедрения `/admin/adoption`: `getAdoptionCoverage`, `getAdoptionOverview` (входы + линии улучшений + Revit по дням), `getAdoptionWorksection` (дисциплина WS ДО/ПОСЛЕ, эффект вовлечения, нарушения, чекпойнты), `getAdoptionPlugins` (карточки Revit ДО/ПОСЛЕ), `getAdoptionSideEffects`. Все — по когорте проектировщиков через RPC-функции `get_adoption_*` и `adoption_designer_ids/emails`. Полная методика: `src/docs-features/admin/adoption-metrics-report.md`
 
+  `get_adoption_period_core_v2` — самая тяжёлая из четырёх RPC страницы. До миграций `20261118180222` и `20261118181413` давала от 3,8 до 8,6 с и падала по `statement_timeout = 8 с` у роли PostgREST; сейчас 0,7–1,4 с. Инстанс маленький (shared_buffers 224 МБ), запас по времени небольшой — новые секции выносить в отдельные RPC, а не наращивать эту.
+
+  Что держит скорость и что нельзя ломать:
+  - `work_mem = 32MB` задан на функции: при инстансовых 2 МБ сортировки сеток «день × сотрудник» уходили во временные файлы.
+  - Джойн с `gamification_event_logs` ограничен `source = 'roulette'` и идёт по `idx_gamification_event_logs_source`. Он нужен только чтобы исключить события рулетки из заработанного; полный джойн сканировал все 94 тыс. строк журнала.
+  - Показатели покрытия считаются одним проходом в `coverage_tx`. Раньше материализованный набор транзакций (61 тыс. строк) перечитывался четырьмя подзапросами.
+  - Сетка WS строится без `GROUP BY` — это опирается на уникальность `(user_id, date)` в `ws_daily_statuses` (PK) и `ws_daily_statuses_baseline` (unique key) и на то, что диапазоны таблиц не пересекаются (baseline по 30.06.2026, рабочая с 01.07.2026). Если это перестанет быть верным, агрегат надо вернуть.
+
+  Следующая по тяжести — `get_adoption_monthly_summary_v3` (1,5–2,3 с), она вызывается дважды: за выбранный и за предыдущий месяц.
+
 ## Компоненты
 
 - `AdminNav` — навигация по разделам админки (табы: Overview, Events, Users, Products, Orders, Calendar, Achievements, Shields, Lottery, Economy, Help)

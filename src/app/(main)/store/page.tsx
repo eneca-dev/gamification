@@ -1,4 +1,4 @@
-import { canUseRoulettePilot } from '@/config/roulette'
+import { canUseRoulette } from '@/config/roulette'
 import { redirect } from 'next/navigation'
 import { bimoEnabled, getBimoState } from '@/modules/profile-appearance/queries'
 import { BimoShop } from '@/modules/profile-appearance/components/BimoShop'
@@ -22,7 +22,7 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
   // в текущем образе, а тон плашки берётся из надетого фона.
   const [categories, showRoulette, products, balance, shieldQuota, shieldCredits, bimoState] = await Promise.all([
     getCategories(),
-    user.wsUserId && canUseRoulettePilot(user) ? getRouletteEnabled() : false,
+    user.wsUserId && canUseRoulette(user) ? getRouletteEnabled() : false,
     catalog ? getProducts() : [],
     tab !== 'roulette' && user.wsUserId ? getUserBalance(user.wsUserId) : 0,
     catalog && user.wsUserId ? getShieldQuota(user.wsUserId) : null,
@@ -41,7 +41,7 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
         showRoulette={showRoulette === true}
         initialCategory={selectedCategory}
         bimoContent={tab === 'bimo' && bimoState && user.wsUserId ? <BimoShop userId={user.wsUserId} initialState={bimoState} balance={balance} /> : null}
-        bimoTabIcon={bimoTabLook ? <BimoStill {...bimoTabLook} compact alt="" /> : null}
+        bimoTabIcon={bimoTabLook ? <BimoStill {...bimoTabLook} compact alt="" idPrefix="bimo-store-tab" /> : null}
         bimoTabTint={bimoTabLook?.backgroundSrc ?? null}
         rouletteContent={tab === 'roulette' && user.wsUserId ? <RoulettePanel userId={user.wsUserId} isImpersonating={Boolean(user.isImpersonating)} /> : null}
         products={products}

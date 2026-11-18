@@ -7,15 +7,17 @@ interface BimoStillProps extends Partial<BimoLook> {
   className?: string
   /** Без фона и с узкой рамкой — для мини-превью в плашках и списках. */
   compact?: boolean
+  /** Стабильный префикс идентификаторов: см. BimoModelFigure. */
+  idPrefix?: string
 }
 
-export function BimoStill({ garment = null, accessory = null, backgroundSrc = DEFAULT_LOOK.backgroundSrc, alt = 'Бимо', className = '', compact = false }: BimoStillProps) {
+export function BimoStill({ garment = null, accessory = null, backgroundSrc = DEFAULT_LOOK.backgroundSrc, alt = 'Бимо', className = '', compact = false, idPrefix }: BimoStillProps) {
   return <svg
     viewBox={compact ? '160 70 280 280' : '0 0 600 500'}
     role="img"
     aria-label={alt}
     className={`block h-auto w-full ${className}`}
   >
-    <BimoModelFigure look={{ garment, accessory, backgroundSrc }} background={!compact} />
+    <BimoModelFigure look={{ garment, accessory, backgroundSrc }} background={!compact} idPrefix={idPrefix} />
   </svg>
 }

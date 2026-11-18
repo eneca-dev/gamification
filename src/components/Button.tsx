@@ -2,7 +2,7 @@
 // в магазин, витрину Бимо и админский импортер, и расходились при правках.
 // Формы и размеры повторяют действующий магазин, цвета берутся из Apex-переменных.
 
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react'
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 export type ButtonSize = 'sm' | 'md'
@@ -11,6 +11,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
   size?: ButtonSize
   fullWidth?: boolean
+  /** В React 19 ссылка передаётся обычным свойством, forwardRef не нужен. */
+  ref?: Ref<HTMLButtonElement>
   children: ReactNode
 }
 

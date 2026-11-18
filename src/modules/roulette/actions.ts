@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
 import { createSupabaseAdminClient } from '@/config/supabase'
-import { canUseRoulettePilot } from '@/config/roulette'
+import { canUseRoulette } from '@/config/roulette'
 import { getCurrentUser } from '@/modules/auth'
 import { checkIsAdmin } from '@/modules/admin/checkIsAdmin'
 import { readUserBalance } from '@/modules/shop/balance'
@@ -27,7 +27,6 @@ const errors: Record<string, string> = {
   roulette_invalid_request: 'Неверное подтверждение хода',
 }
 const unavailable = { success: false as const, error: 'Не удалось загрузить рулетку', code: 'ROULETTE_UNAVAILABLE' }
-const pilotDenied = { success: false as const, error: 'Рулетка пока недоступна для этого аккаунта', code: 'ROULETTE_PILOT_DENIED' }
 const unknownOutcome = { success: false as const, error: 'Результат пока неизвестен. Восстановите прежний ход', code: 'ROULETTE_UNKNOWN' }
 
 
@@ -38,7 +37,7 @@ export async function getRouletteStateAction(): Promise<ActionResult<RouletteSta
   try {
     const { data, error } = await createSupabaseAdminClient().rpc('get_roulette_state', { p_user_id: user.wsUserId })
     const parsed = rouletteStateSchema.safeParse(data)
-    return error || !parsed.success ? unavailable : { success: true, data: { ...parsed.data, enabled: parsed.data.enabled && canUseRoulettePilot(user) } }
+    return error || !parsed.success ? unavailable : { success: true, data: { ...parsed.data, enabled: parsed.data.enabled && canUseRoulette(user) } }
   } catch { return unavailable }
 }
 
@@ -46,7 +45,6 @@ export async function prepareRouletteAction(): Promise<ActionResult<Confirmation
   const user = await getCurrentUser()
   if (!user?.wsUserId) return { success: false, error: 'Войдите в систему', code: 'UNAUTHORIZED' }
   if (user.isImpersonating) return { success: false, error: 'Ходы при подмене пользователя запрещены', code: 'IMPERSONATION' }
-  if (!canUseRoulettePilot(user)) return pilotDenied
   try {
     const state = await getRouletteStateAction()
     if (!state.success) return state
@@ -67,7 +65,6 @@ export async function spinRouletteAction(input: unknown): Promise<ActionResult<S
   const user = await getCurrentUser()
   if (!user?.wsUserId) return { success: false, error: 'Войдите в систему', code: 'UNAUTHORIZED' }
   if (user.isImpersonating) return { success: false, error: 'Ходы при подмене пользователя запрещены', code: 'IMPERSONATION' }
-  if (!canUseRoulettePilot(user)) return pilotDenied
   let confirmation
   try { confirmation = verifyConfirmation(parsed.data.token, user.wsUserId) }
   catch { return { success: false, error: 'Не удалось проверить подтверждение', code: 'CONFIRMATION_UNAVAILABLE' } }

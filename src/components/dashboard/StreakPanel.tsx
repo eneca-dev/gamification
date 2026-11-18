@@ -195,11 +195,17 @@ function getDayTooltipData(day: CalendarDay, appeal?: DayAppealInfo): DayTooltip
   };
 }
 
+type TooltipAlign = "left" | "center" | "right";
+
 // Кастомный тултип — визуально в стиле TrophyShelf
-function DayTooltip({ data }: { data: DayTooltipData }) {
+function DayTooltip({ data, align = "center" }: { data: DayTooltipData; align?: TooltipAlign }) {
+  // Календарь лежит в контейнере с overflow-x: auto, поэтому у краёв тултип
+  // прижимается к ячейке: центрирование увело бы его за границу и обрезало.
+  const alignClass =
+    align === "left" ? "left-0" : align === "right" ? "right-0" : "left-1/2 -translate-x-1/2";
   return (
     <div
-      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-xl text-[11px] z-50 pointer-events-none whitespace-nowrap"
+      className={`absolute bottom-full ${alignClass} mb-2 px-3 py-2 rounded-xl text-[11px] z-50 pointer-events-none whitespace-nowrap`}
       style={{
         background: "var(--apex-surface)",
         color: "var(--apex-text)",
@@ -709,7 +715,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], appeal
           )}
           {/* Months horizontal: each month = block with name, day labels, week rows */}
           <div className="flex items-start" style={{ gap: MONTH_SEP }}>
-            {monthGrids.map((month) => (
+            {monthGrids.map((month, monthIdx) => (
               <div key={month.key} className="flex flex-col">
                 <div
                   className="text-[9px] font-semibold uppercase tracking-wider mb-1.5"
@@ -763,6 +769,10 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], appeal
 
                           const tooltipData = getDayTooltipData(day, appeal);
                           const isHovered = hoveredDate === day.date;
+                          const columnsBefore = monthIdx * 7 + dayIdx;
+                          const columnsAfter = (monthGrids.length - 1 - monthIdx) * 7 + (6 - dayIdx);
+                          const tooltipAlign: TooltipAlign =
+                            columnsBefore < 6 ? "left" : columnsAfter < 6 ? "right" : "center";
 
                           if (showShield && !isFuture) {
                             const fillColor = isNoData ? "#C5CCCC" : (statusColors[day.status] as string);
@@ -804,7 +814,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], appeal
                                     }}
                                   />
                                 )}
-                                {isHovered && tooltipData && <DayTooltip data={tooltipData} />}
+                                {isHovered && tooltipData && <DayTooltip data={tooltipData} align={tooltipAlign} />}
                               </div>
                             );
                           }
@@ -831,7 +841,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], appeal
                               onMouseEnter={() => setHoveredDate(day.date)}
                               onMouseLeave={() => setHoveredDate((d) => d === day.date ? null : d)}
                             >
-                              {isHovered && tooltipData && <DayTooltip data={tooltipData} />}
+                              {isHovered && tooltipData && <DayTooltip data={tooltipData} align={tooltipAlign} />}
                               {showStar && (
                                 <span
                                   className="absolute inset-0 flex items-center justify-center font-bold leading-none"

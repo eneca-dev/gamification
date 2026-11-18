@@ -142,7 +142,7 @@ export function BimoAccessoryModal({ rate, onCreated, artworkProduct, onUpdated,
         <section className="order-1 space-y-3 md:order-2">
           <h3 className={SECTION}>Примерка на модели</h3>
           <div className="rounded-xl border border-[var(--apex-border)] bg-[var(--apex-bg)] p-3">
-            <BimoStage garment={kind === 'garment' ? art : CLASSIC_GARMENT} accessory={kind === 'accessory' || kind === 'necklace' ? art : null} backgroundSrc={kind === 'background' ? art?.image ?? target?.art?.image : undefined} paused={paused} speed={speed} reaction={reaction} frame={frame} onPlayingChange={setPlaying} onFrameChange={updateFrame} className="w-full" />
+            <BimoStage garment={kind === 'garment' ? art : CLASSIC_GARMENT} accessory={kind === 'accessory' || kind === 'necklace' ? art : null} backgroundSrc={kind === 'background' ? art?.image ?? target?.art?.image : undefined} paused={paused} speed={speed} reaction={reaction} frame={frame} onPlayingChange={setPlaying} onFrameChange={updateFrame} className="w-full" idPrefix={`bimo-import-${id}`} />
             <p className="mt-2 text-center text-xs text-[var(--apex-text-secondary)]">{prepared.checking ? 'Подготавливаем рисунок…' : prepared.art ? 'Так вещь будет выглядеть после сохранения' : art ? 'Сохранённый рисунок вещи' : 'Загрузите рисунок для примерки'}</p>
           </div>
 

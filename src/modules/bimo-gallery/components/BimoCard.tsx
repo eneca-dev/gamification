@@ -43,7 +43,7 @@ export function BimoCard({
         title="Показать Бимо крупнее"
         className="relative block rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--apex-focus)]"
       >
-        <BimoStill {...bimoLook(entry.equipment, catalogArt)} alt={`Бимо · ${name}`} className="rounded-xl" />
+        <BimoStill {...bimoLook(entry.equipment, catalogArt)} alt={`Бимо · ${name}`} className="rounded-xl" idPrefix={`bimo-card-${entry.userId}`} />
         {badge && (
           <span
             className="absolute left-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[13px] leading-none"

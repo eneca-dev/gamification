@@ -120,17 +120,18 @@ it('does not recover a result from a different period', async () => {
 })
 
 
-it.each(['', 'another@example.invalid'])('blocks preparation and direct spin before any financial RPC when pilot access is denied: %s', email => {
-  return (async () => {
-    vi.stubEnv('ROULETTE_PILOT_EMAIL', email)
-    const { prepareRouletteAction } = await import('@/modules/roulette/actions')
-    expect(await prepareRouletteAction()).toMatchObject({ success: false, code: 'ROULETTE_PILOT_DENIED' })
-    expect(await spinRouletteAction({ token: token() })).toMatchObject({ success: false, code: 'ROULETTE_PILOT_DENIED' })
-    expect(mocks.rpc).not.toHaveBeenCalled()
-  })()
+// Пилотный допуск по почте снят: доступ открывает переключатель админки.
+// Остаётся запрет хода из-под подмены пользователя — он проверяется до любого
+// финансового RPC, иначе администратор прокрутил бы чужой баланс.
+it('blocks preparation and direct spin before any financial RPC while impersonating', async () => {
+  mocks.user.mockResolvedValue({ email: 'pilot@example.invalid', wsUserId: userId, isImpersonating: true })
+  const { prepareRouletteAction } = await import('@/modules/roulette/actions')
+  expect(await prepareRouletteAction()).toMatchObject({ success: false, code: 'IMPERSONATION' })
+  expect(await spinRouletteAction({ token: token() })).toMatchObject({ success: false, code: 'IMPERSONATION' })
+  expect(mocks.rpc).not.toHaveBeenCalled()
 })
-it('masks the enabled flag for other accounts but retains recovery after access is revoked', async () => {
-  vi.stubEnv('ROULETTE_PILOT_EMAIL', '')
+it('masks the enabled flag while impersonating but retains recovery of an own past spin', async () => {
+  mocks.user.mockResolvedValue({ email: 'pilot@example.invalid', wsUserId: userId, isImpersonating: true })
   const { getRouletteStateAction } = await import('@/modules/roulette/actions')
   mocks.rpc.mockResolvedValue({ data: { enabled: true, period: '2026-11', result }, error: null })
   expect(await getRouletteStateAction()).toMatchObject({ success: true, data: { enabled: false, result } })

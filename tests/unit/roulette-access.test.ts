@@ -1,16 +1,15 @@
-﻿import { afterEach, expect, it, vi } from 'vitest'
-import { canUseRoulettePilot } from '@/config/roulette'
+﻿import { expect, it } from 'vitest'
+import { canUseRoulette } from '@/config/roulette'
 
-afterEach(() => vi.unstubAllEnvs())
-it.each(['', 'invalid', 'one@example.invalid,two@example.invalid', undefined])('fails closed for an absent or invalid account: %s', configured => {
-  vi.stubEnv('ROULETTE_PILOT_EMAIL', configured)
-  expect(canUseRoulettePilot({ email: 'one@example.invalid' })).toBe(false)
-})
-it('allows only the exact verified account, ignoring case and surrounding whitespace', () => {
-  vi.stubEnv('ROULETTE_PILOT_EMAIL', ' Pilot@Example.invalid ')
-  expect(canUseRoulettePilot({ email: 'pilot@example.invalid' })).toBe(true)
-  expect(canUseRoulettePilot({ email: 'other@example.invalid' })).toBe(false)
-  expect(canUseRoulettePilot({ email: 'pilot@example.invalid', isImpersonating: true })).toBe(false)
-  expect(canUseRoulettePilot(null)).toBe(false)
+// Пилотный доступ по адресу почты снят: рулетку включает переключатель админки.
+// Остаётся запрет хода из-под подмены пользователя — иначе администратор
+// прокрутил бы чужой баланс.
+it('allows a signed-in employee', () => {
+  expect(canUseRoulette({ isImpersonating: false })).toBe(true)
+  expect(canUseRoulette({})).toBe(true)
 })
 
+it('fails closed while impersonating or without a user', () => {
+  expect(canUseRoulette({ isImpersonating: true })).toBe(false)
+  expect(canUseRoulette(null)).toBe(false)
+})

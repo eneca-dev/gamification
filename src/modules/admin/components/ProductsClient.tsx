@@ -1487,9 +1487,9 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                           checked={selectedIds.has(product.id)}
                           onChange={() => toggleSelected(product.id)}
                           aria-label={`Выбрать товар ${product.name}`}
-                          className="absolute bottom-3 left-3 z-10 w-4 h-4 accent-[var(--apex-primary)]"
+                          className="absolute bottom-3 left-3 z-20 w-4 h-4 accent-[var(--apex-primary)]"
                         />
-                        {bimoPreview ? <BimoStill {...bimoPreview} alt={product.name} className="h-full w-auto max-w-full" /> : <MediaStackPreview
+                        {bimoPreview ? <BimoStill {...bimoPreview} alt={product.name} className="h-full w-auto max-w-full" idPrefix={`bimo-admin-row-${product.id}`} /> : <MediaStackPreview
                           media={product.media ?? []}
                           imageUrl={product.image_url}
                           emoji={product.emoji}
@@ -1498,13 +1498,13 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                         />}
                         {product.is_coming_soon && (
                           <span
-                            className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
+                            className="absolute top-3 left-3 z-20 text-[10px] font-bold px-2.5 py-1 rounded-lg"
                             style={{ background: 'var(--apex-warning-text)', color: 'white' }}
                           >
                             Скоро в продаже
                           </span>
                         )}
-                        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
                           {!product.is_coming_soon && product.category?.is_countable && product.stock != null && (
                             <span
                               className="text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-sm"
@@ -1757,7 +1757,7 @@ export function ProductsClient({ products: initialProducts, categories: initialC
                           borderRadius: '0.5rem',
                         }}
                       >
-                        {bimoPreview ? <BimoStill {...bimoPreview} alt={product.name} className="h-full w-full" /> : <MediaStackPreview
+                        {bimoPreview ? <BimoStill {...bimoPreview} alt={product.name} className="h-full w-full" idPrefix={`bimo-admin-card-${product.id}`} /> : <MediaStackPreview
                           media={product.media ?? []}
                           imageUrl={product.image_url}
                           emoji={product.emoji}

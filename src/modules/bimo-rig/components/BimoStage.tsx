@@ -7,7 +7,7 @@ import { DEFAULT_LOOK } from '../rig'
 import { BimoModelFigure } from './BimoModelFigure'
 import type { BimoLook, BimoStageProps } from '../types'
 
-export function BimoStage({ garment = null, accessory = null, backgroundSrc = DEFAULT_LOOK.backgroundSrc, paused = false, speed = 1, className = '', interactive = false, reaction = null, frame = null, onPlayingChange, onFrameChange }: BimoStageProps) {
+export function BimoStage({ garment = null, accessory = null, backgroundSrc = DEFAULT_LOOK.backgroundSrc, paused = false, speed = 1, className = '', interactive = false, reaction = null, frame = null, idPrefix, onPlayingChange, onFrameChange }: BimoStageProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const animator = useRef<ReturnType<typeof createMotionAnimator> | null>(null)
   const playingCallback = useRef(onPlayingChange)
@@ -64,7 +64,7 @@ export function BimoStage({ garment = null, accessory = null, backgroundSrc = DE
     if (animator.current?.play(REACTIONS[nextReaction].id)) setNextReaction(index => (index + 1) % REACTIONS.length)
   }
   const figure = <svg ref={svgRef} viewBox="0 0 600 500" role="img" aria-label="Бимо" className={`block h-auto w-full ${hasLook ? '' : 'invisible'}`}>
-      <BimoModelFigure look={loaded?.look ?? DEFAULT_LOOK} />
+      <BimoModelFigure look={loaded?.look ?? DEFAULT_LOOK} idPrefix={idPrefix} />
     </svg>
   // mx-auto обязателен: при ширине по умолчанию блок уже контейнера, и без
   // центрирования он прижимается к левому краю (так было в сайдбаре).

@@ -8,10 +8,17 @@ interface BimoModelFigureProps {
   modelScale?: number
   /** Фон можно не рисовать: для мини-превью нужен только персонаж. */
   background?: boolean
+  /**
+   * Префикс идентификаторов масок и градиентов. Нужен стабильный на сервере
+   * и в браузере: `useId` зависит от места в дереве, а оно у разных обёрток
+   * расходится и ломает гидратацию. Должен быть уникален в пределах страницы.
+   */
+  idPrefix?: string
 }
 
-export function BimoModelFigure({ look, pose = sampleMotion(0), modelScale = 0.85, background = true }: BimoModelFigureProps) {
-  const id = useId()
+export function BimoModelFigure({ look, pose = sampleMotion(0), modelScale = 0.85, background = true, idPrefix }: BimoModelFigureProps) {
+  const generated = useId()
+  const id = idPrefix ?? generated
   const eyes = eyeClosure(pose.blink)
   const part = (name: string, clipPath?: string) => <image href={`${MODEL_PATH}/${name}.webp`} width={512} height={512} clipPath={clipPath} />
   const item = (src?: string) => src ? <image href={src} width={512} height={512} /> : null

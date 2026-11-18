@@ -47,7 +47,7 @@ export function WinnerHero({ winners, entries, lookLabels, catalogArt }: WinnerH
 
       <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
         <div className="flex-shrink-0">
-          <BimoStage {...bimoLook(mainEquipment, catalogArt)} interactive />
+          <BimoStage {...bimoLook(mainEquipment, catalogArt)} interactive idPrefix={`bimo-winner-${main.userId}`} />
         </div>
 
         <div className="min-w-0 flex-1">
@@ -79,6 +79,7 @@ export function WinnerHero({ winners, entries, lookLabels, catalogArt }: WinnerH
               <div key={`${winner.contestMonth}-${winner.userId}`} className="w-[96px] flex-shrink-0">
                 <BimoStill
                   {...bimoLook(entries.get(winner.userId)?.equipment ?? DEFAULT_EQUIPMENT, catalogArt)}
+                  idPrefix={`bimo-fame-${winner.contestMonth}-${winner.userId}`}
                   alt={`Бимо · ${winner.fullName}`}
                   className="rounded-lg"
                 />
