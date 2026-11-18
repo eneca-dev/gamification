@@ -1,0 +1,41 @@
+{
+  "status": "passed",
+  "environment": "isolated local PostgreSQL only",
+  "tests": {
+    "passed": 15,
+    "total": 15
+  },
+  "final": {
+    "version": "PostgreSQL 18.7 on x86_64-windows, compiled by msvc-19.44.35229, 64-bit",
+    "timezone": "Europe/Minsk",
+    "qa_controls": null,
+    "enabled": false
+  },
+  "notices": [
+    "Seven outcomes, ledger, replay, disable, rollover and historical/current balance assertions passed",
+    "7-sector sample size 70000, chi-square=6.49000000000000000000 (df=6), threshold=50"
+  ],
+  "sql": [
+    {
+      "file": "01-roulette.review.sql",
+      "sha256": "c11a16c4a4c90c8400dc6d73ae7546990fddef12d069767e291bccb11b127aa0"
+    },
+    {
+      "file": "02-reporting.review.sql",
+      "sha256": "a9724cefc6d7c0681501bbd1682d28977c2f5694cd98e97e609956e2af5934d6"
+    },
+    {
+      "file": "03-qa-controls.review.sql",
+      "sha256": "f9ad83d32886384f437793e85ce0715bb5bfeded7e801a38cc632e0481936676"
+    },
+    {
+      "file": "04-restore-production-helpers.review.sql",
+      "sha256": "c98d4b1d82ade203aaf4a2f50152f887cae527951ab876f987b1150125e0efa1"
+    }
+  ],
+  "limitations": [
+    "PostgreSQL 18, not hosted PostgreSQL 17",
+    "No Supabase Auth/PostgREST or browser delivery acceptance",
+    "NULL source tested only with transactional local NOT NULL relaxation"
+  ]
+}

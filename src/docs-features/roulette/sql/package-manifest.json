@@ -1,0 +1,39 @@
+{
+  "status": "review-only; no SQL applied; QA ref and safe baseline pending",
+  "productionProjectDenied": "yqezhfughtublpaitmij",
+  "hashAlgorithm": "SHA-256 raw file bytes",
+  "files": [
+    {
+      "file": "00-qa-marker.review.sql",
+      "sha256": "f3d617320c49f2233040b2249f9c779e6616828a80f3c9d68a89f74cd1bb8969"
+    },
+    {
+      "file": "01-roulette.review.sql",
+      "sha256": "c11a16c4a4c90c8400dc6d73ae7546990fddef12d069767e291bccb11b127aa0"
+    },
+    {
+      "file": "02-reporting.review.sql",
+      "sha256": "a9724cefc6d7c0681501bbd1682d28977c2f5694cd98e97e609956e2af5934d6"
+    },
+    {
+      "file": "03-qa-controls.review.sql",
+      "sha256": "f9ad83d32886384f437793e85ce0715bb5bfeded7e801a38cc632e0481936676"
+    },
+    {
+      "file": "04-restore-production-helpers.review.sql",
+      "sha256": "c98d4b1d82ade203aaf4a2f50152f887cae527951ab876f987b1150125e0efa1"
+    },
+    {
+      "file": "qa-rng-distribution.test.sql",
+      "sha256": "fa30351bfa6fdfb6a6b1a311090f2da667e1a675f113159d7d3dfb9997285d38"
+    },
+    {
+      "file": "qa-seven-outcomes.test.sql",
+      "sha256": "4f61ff4413b3a2d3905510519f89062547099e04c9688b2d76f479c9eb54cef8"
+    },
+    {
+      "file": "reporting-before.sql",
+      "sha256": "993aaf309ee9e51805272d7877dc426d26b5b25071e794ca857ed3d30dbfee22"
+    }
+  ]
+}

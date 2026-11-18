@@ -1,10 +1,10 @@
 'use server'
 
 import { z } from 'zod'
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePath } from 'next/cache'
 import { getCurrentUser } from '@/modules/auth'
 import { createSupabaseAdminClient } from '@/config/supabase'
-import { balanceTag } from '@/modules/shop/queries'
+import { refreshBalanceAfterCommit } from '@/modules/shop/balance-cache'
 import { computePriceCrystals } from '@/modules/shop/types'
 import type { ActionResult } from '@/modules/cache'
 import { BIMO_SLOTS, parseRigArt } from '@/modules/bimo-rig'
@@ -73,8 +73,8 @@ export async function purchaseBimoItem(input: unknown): Promise<ActionResult<nul
     p_product_id: parsed.data.productId, p_user_id: user.wsUserId, p_user_comment: parsed.data.comment ?? null,
   })
   if (error) return { success: false, error: message(error.message) }
-  revalidateTag(balanceTag(user.wsUserId), 'max')
-  revalidatePath('/store'); revalidatePath('/store/orders'); revalidatePath('/'); revalidatePath('/activity')
+  // Галерея Бимо живёт вкладкой ленты, поэтому обновляется и она.
+  refreshBalanceAfterCommit(user.wsUserId, ['/store', '/store/orders', '/', '/activity'])
   return { success: true, data: null }
 }
 

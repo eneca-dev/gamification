@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { subscribeInvalidation } from '../client/cross-tab'
+import { refreshQueries } from '../utils/refresh-queries'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { createQueryClient } from '../client/query-client'
@@ -13,6 +15,9 @@ interface QueryProviderProps {
 
 export function QueryProvider({ children, disableRealtime = false }: QueryProviderProps) {
   const [queryClient] = useState(() => createQueryClient())
+  useEffect(() => subscribeInvalidation(keys => {
+    void refreshQueries(queryClient, keys, false).catch(() => {})
+  }), [queryClient])
 
   return (
     <QueryClientProvider client={queryClient}>

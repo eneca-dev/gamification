@@ -2,6 +2,7 @@
 
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import type { ActionResult } from '../types'
+import { ActionError } from '../utils/action-helpers'
 
 interface CreateCacheQueryOptions<TData, TFilters> {
   queryKey: (filters: TFilters) => readonly unknown[]
@@ -23,7 +24,7 @@ export function createCacheQuery<TData, TFilters = void>(
       queryKey: options.queryKey(filters),
       queryFn: async () => {
         const result = await options.queryFn(filters)
-        if (!result.success) throw new Error(result.error)
+        if (!result.success) throw new ActionError(result)
         return result.data
       },
       staleTime: options.staleTime,
@@ -49,7 +50,7 @@ export function createSimpleCacheQuery<TData>(
       queryKey: options.queryKey,
       queryFn: async () => {
         const result = await options.queryFn()
-        if (!result.success) throw new Error(result.error)
+        if (!result.success) throw new ActionError(result)
         return result.data
       },
       staleTime: options.staleTime,
@@ -80,7 +81,7 @@ export function createDetailCacheQuery<TData>(
       queryFn: async () => {
         if (!id) throw new Error('ID не указан')
         const result = await options.queryFn(id)
-        if (!result.success) throw new Error(result.error)
+        if (!result.success) throw new ActionError(result)
         return result.data
       },
       enabled: Boolean(id),

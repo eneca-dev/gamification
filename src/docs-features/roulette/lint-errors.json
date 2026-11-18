@@ -1,0 +1,107 @@
+[
+  {
+    "file": "\\src\\components\\dashboard\\AchievementProgress.tsx",
+    "line": 220,
+    "rule": "react-hooks/purity"
+  },
+  {
+    "file": "\\src\\components\\LayoutShell.tsx",
+    "line": 28,
+    "rule": "react-hooks/set-state-in-effect"
+  },
+  {
+    "file": "\\src\\components\\Sidebar.tsx",
+    "line": 67,
+    "rule": "react-hooks/set-state-in-effect"
+  },
+  {
+    "file": "\\src\\components\\Sidebar.tsx",
+    "line": 78,
+    "rule": "react-hooks/set-state-in-effect"
+  },
+  {
+    "file": "\\src\\modules\\achievements\\components\\GratitudeProgress.tsx",
+    "line": 104,
+    "rule": "react/no-unescaped-entities"
+  },
+  {
+    "file": "\\src\\modules\\achievements\\components\\GratitudeProgress.tsx",
+    "line": 104,
+    "rule": "react/no-unescaped-entities"
+  },
+  {
+    "file": "\\src\\modules\\admin\\components\\CalendarClient.tsx",
+    "line": 151,
+    "rule": "react-hooks/purity"
+  },
+  {
+    "file": "\\src\\modules\\admin\\components\\CalendarClient.tsx",
+    "line": 175,
+    "rule": "react-hooks/purity"
+  },
+  {
+    "file": "\\src\\modules\\admin\\components\\CrystalRateStats.tsx",
+    "line": 41,
+    "rule": "react-hooks/purity"
+  },
+  {
+    "file": "\\src\\modules\\admin\\components\\economy\\KpiSummary.tsx",
+    "line": 116,
+    "rule": "react/no-unescaped-entities"
+  },
+  {
+    "file": "\\src\\modules\\admin\\components\\economy\\KpiSummary.tsx",
+    "line": 116,
+    "rule": "react/no-unescaped-entities"
+  },
+  {
+    "file": "\\src\\modules\\admin\\components\\LotteryAdmin.tsx",
+    "line": 46,
+    "rule": "react-hooks/immutability"
+  },
+  {
+    "file": "\\src\\modules\\admin\\components\\UserDetailModal.tsx",
+    "line": 19,
+    "rule": "react-hooks/set-state-in-effect"
+  },
+  {
+    "file": "\\src\\modules\\admin\\components\\UsersTable.tsx",
+    "line": 288,
+    "rule": "react-hooks/set-state-in-effect"
+  },
+  {
+    "file": "\\src\\modules\\chat\\components\\ChatWindow.tsx",
+    "line": 91,
+    "rule": "react-hooks/purity"
+  },
+  {
+    "file": "\\src\\modules\\corrections\\components\\RedDayCalendar.tsx",
+    "line": 59,
+    "rule": "react-hooks/set-state-in-effect"
+  },
+  {
+    "file": "\\src\\modules\\corrections\\components\\UserAppealsCard.tsx",
+    "line": 70,
+    "rule": "react-hooks/set-state-in-effect"
+  },
+  {
+    "file": "\\src\\modules\\dev-tools\\components\\DevUserSwitcher.tsx",
+    "line": 35,
+    "rule": "react-hooks/set-state-in-effect"
+  },
+  {
+    "file": "\\src\\modules\\lottery\\components\\LotteryBanner.tsx",
+    "line": 38,
+    "rule": "react-hooks/purity"
+  },
+  {
+    "file": "\\src\\modules\\lottery\\components\\LotteryReveal.tsx",
+    "line": 30,
+    "rule": "react-hooks/set-state-in-effect"
+  },
+  {
+    "file": "\\src\\modules\\onboarding\\components\\OnboardingSpotlight.tsx",
+    "line": 57,
+    "rule": "react-hooks/set-state-in-effect"
+  }
+]

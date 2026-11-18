@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
+import { readUserBalance } from './balance'
 import { cached, CACHE_1H, CACHE_5M } from '@/lib/server-cache'
 
 import { computePriceCrystals } from './types'
@@ -6,20 +7,9 @@ import type { ShopCategory, ShopProductWithCategory, ShopOrderWithDetails, Produ
 
 export const balanceTag = (userId: string) => `balance:${userId}`
 
-async function _getUserBalance(wsUserId: string): Promise<number> {
-  const supabase = createSupabaseAdminClient()
-
-  const { data } = await supabase
-    .from('gamification_balances')
-    .select('total_coins')
-    .eq('user_id', wsUserId)
-    .single()
-
-  return data?.total_coins ?? 0
-}
 
 export const getUserBalance = (wsUserId: string) =>
-  cached(() => _getUserBalance(wsUserId), ['user-balance', wsUserId], {
+  cached(() => readUserBalance(wsUserId), ['user-balance', wsUserId], {
     tags: [balanceTag(wsUserId)],
     revalidate: CACHE_5M,
   })()

@@ -3,11 +3,12 @@
 import { useState, useTransition, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueryClient, queryKeys, refreshQueries } from '@/modules/cache'
+import { useBalance } from '../hooks/useBalance'
+import { storeCategoryUrl, type StoreTab } from '../navigation'
 import { ArrowRight } from 'lucide-react'
 
 import { purchaseProduct } from '../actions'
-import { queryKeys } from '@/modules/cache/keys/query-keys'
 import { purchaseStreakShieldCredit } from '@/modules/streak-shield/index.client'
 import { ProductCard } from './ProductCard'
 // [LOTTERY HIDDEN] import { LotteryBanner } from '@/modules/lottery/components/LotteryBanner'
@@ -18,7 +19,10 @@ import type { ShieldQuota, ShieldType } from '@/modules/streak-shield/index.clie
 
 interface StoreClientProps {
   showBimo?: boolean
-  bimoActive?: boolean
+  activeTab: StoreTab
+  userId: string | null
+  showRoulette: boolean
+  rouletteContent?: ReactNode
   bimoContent?: ReactNode
   /** Мини-Бимо для плашки категории. Готовый узел: модуль магазина не рендерит Бимо сам. */
   bimoTabIcon?: ReactNode
@@ -38,7 +42,10 @@ interface StoreClientProps {
 
 export function StoreClient({
   showBimo = false,
-  bimoActive = false,
+  activeTab,
+  userId,
+  showRoulette,
+  rouletteContent,
   bimoContent,
   bimoTabIcon = null,
   bimoTabTint = null,
@@ -54,7 +61,9 @@ export function StoreClient({
   // [LOTTERY HIDDEN] serverTime = Date.now(),
 }: StoreClientProps) {
   const router = useRouter()
-  const [activeFilter, setActiveFilter] = useState(bimoActive ? 'bimo' : initialCategory ?? 'all')
+  const activeFilter = activeTab === 'catalog' ? initialCategory ?? 'all' : activeTab
+  const balanceQuery = useBalance(userId ?? '', { enabled: activeTab === 'catalog' && Boolean(userId) })
+  const currentBalance = balanceQuery.data ?? balance
   const [purchasingId, setPurchasingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -71,14 +80,14 @@ export function StoreClient({
   const activeCategory = categories.find((c) => c.slug === activeFilter)
 
   function selectFilter(filter: string) {
-    if (bimoActive) {
-      router.push(filter === 'all' ? '/store' : `/store?category=${encodeURIComponent(filter)}`)
-    } else {
-      setActiveFilter(filter)
-    }
+    router.push(storeCategoryUrl(filter))
   }
 
   function handlePurchase(productId: string, _price: number, userComment?: string) {
+    if (balanceQuery.isError || balanceQuery.isFetching) {
+      setNotification({ type: 'error', message: 'Сначала дождитесь актуального баланса' })
+      return
+    }
     const product = products.find((p) => p.id === productId)
     const effect = product?.effect
 
@@ -94,7 +103,7 @@ export function StoreClient({
           setNotification({ type: 'error', message: result.error })
         } else {
           setNotification({ type: 'success', message: 'Защита куплена и доступна для применения' })
-          queryClient.invalidateQueries({ queryKey: queryKeys.balance.all })
+          void refreshQueries(queryClient, [queryKeys.balance.all]).catch(() => {})
           window.location.reload()
         }
         setTimeout(() => setNotification(null), 3000)
@@ -113,8 +122,8 @@ export function StoreClient({
         setNotification({ type: 'error', message: result.error })
       } else {
         setNotification({ type: 'success', message: 'Покупка совершена!' })
-        queryClient.invalidateQueries({ queryKey: queryKeys.balance.all })
-        queryClient.invalidateQueries({ queryKey: queryKeys.orders.all })
+        void refreshQueries(queryClient, [queryKeys.balance.all]).catch(() => {})
+        void refreshQueries(queryClient, [queryKeys.orders.all]).catch(() => {})
       }
 
       setTimeout(() => setNotification(null), 3000)
@@ -234,6 +243,9 @@ export function StoreClient({
           {bimoTabIcon && <span aria-hidden="true" className="relative -my-1 h-6 w-6 flex-shrink-0">{bimoTabIcon}</span>}
           <span className="relative">Енот-Бимо</span>
         </button>}
+        {showRoulette && <button type="button" onClick={() => router.push('/store?tab=roulette')}
+          aria-pressed={activeTab === 'roulette'}
+          className="rounded-xl border border-[var(--apex-border)] bg-[var(--apex-surface)] px-4 py-2 text-[13px] font-semibold text-[var(--apex-primary)] aria-pressed:bg-[var(--apex-primary)] aria-pressed:text-[var(--apex-surface)]">Рулетка</button>}
       </div>
 
       {/* Описание категории */}
@@ -252,13 +264,13 @@ export function StoreClient({
 
       {/* Контент категории */}
       {/* [LOTTERY HIDDEN] activeFilter === 'draw' branch (LotteryBanner, LotteryWinners) removed */}
-      {activeFilter === 'bimo' ? bimoContent : filtered.length > 0 ? (
+      {activeTab === 'roulette' ? rouletteContent : activeTab === 'bimo' ? bimoContent : filtered.length > 0 ? (
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 animate-fade-in-up stagger-3">
           {filtered.map((product, i) => (
             <ProductCard
               key={product.id}
               product={product}
-              balance={balance}
+              balance={currentBalance}
               index={i}
               onPurchase={handlePurchase}
               isPurchasing={isPending && purchasingId === product.id}
