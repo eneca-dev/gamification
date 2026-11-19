@@ -90,7 +90,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
       return (
         <div className="space-y-6">
           <Header hasDepartment={hasDepartment} hasTeam={hasTeam} tab={tab} {...bimoProps} />
-          <EmptyProfile message="Коллекция Бимо ещё не вышла" />
+          <EmptyProfile message="Коллекция Бимо ещё не вышла" hint="Вкладка откроется, когда вещи появятся в продаже" />
         </div>
       )
     }
@@ -119,7 +119,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
       return (
         <div className="space-y-6">
           <Header hasDepartment={false} hasTeam={hasTeam} tab={tab} {...bimoProps} />
-          <EmptyProfile message="Отдел не указан в вашем профиле" />
+          <EmptyProfile message="Отдел не указан в вашем профиле" hint="Обратитесь к администратору для настройки профиля" />
         </div>
       )
     }
@@ -172,7 +172,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
       return (
         <div className="space-y-6">
           <Header hasDepartment={hasDepartment} hasTeam={false} tab={tab} {...bimoProps} />
-          <EmptyProfile message="Отдел не указан в вашем профиле" />
+          <EmptyProfile message="Отдел не указан в вашем профиле" hint="Обратитесь к администратору для настройки профиля" />
         </div>
       )
     }
@@ -377,7 +377,7 @@ function Header({
   )
 }
 
-function EmptyProfile({ message }: { message: string }) {
+function EmptyProfile({ message, hint }: { message: string; hint?: string }) {
   return (
     <div
       className="rounded-2xl py-12 text-center"
@@ -387,9 +387,9 @@ function EmptyProfile({ message }: { message: string }) {
       <div className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>
         {message}
       </div>
-      <div className="text-[12px] font-medium mt-1" style={{ color: 'var(--text-muted)' }}>
-        Обратитесь к администратору для настройки профиля
-      </div>
+      {hint && <div className="text-[12px] font-medium mt-1" style={{ color: 'var(--text-muted)' }}>
+        {hint}
+      </div>}
     </div>
   )
 }
