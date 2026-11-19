@@ -1,4 +1,4 @@
-export { getGalleryPage, getBimoMonth, getBimoLikesLeft } from './queries'
+export { getGalleryPage, getBimoMonth } from './queries'
 export { likeBimo, unlikeBimo } from './actions'
 export {
   DEFAULT_GALLERY_VIEW,

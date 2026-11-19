@@ -59,22 +59,6 @@ async function getUsedLikes(voterId: string | null, month: string): Promise<numb
   return count ?? 0
 }
 
-/**
- * Остаток лайков для счётчика на вкладке ленты. Лёгкий запрос без самой галереи:
- * вкладка должна напоминать о голосовании на любой вкладке, а не только своей.
- */
-export async function getBimoLikesLeft(viewerId: string | null): Promise<number | null> {
-  if (!viewerId) return null
-  try {
-    const month = await getBimoMonth()
-    const [limit, used] = await Promise.all([getLikeLimit(), getUsedLikes(viewerId, month)])
-    return Math.max(0, limit - used)
-  } catch (error) {
-    console.error('[bimo-gallery] getBimoLikesLeft:', error instanceof Error ? error.message : error)
-    return null
-  }
-}
-
 function toEntry(row: GalleryRow): GalleryEntry {
   return {
     userId: row.user_id,

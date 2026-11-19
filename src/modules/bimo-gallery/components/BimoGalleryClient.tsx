@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useOptimistic, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ChevronDown, ChevronRight, Heart, Search } from 'lucide-react'
 
 import { likeBimo, unlikeBimo } from '../actions'
@@ -27,6 +27,7 @@ const fullName = (entry: GalleryEntry) =>
 export function BimoGalleryClient({ page, viewerId, initialView }: BimoGalleryClientProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [view, setView] = useState(initialView)
   const [query, setQuery] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -127,7 +128,10 @@ export function BimoGalleryClient({ page, viewerId, initialView }: BimoGalleryCl
   function updateView(patch: Partial<GalleryView>) {
     const next = { ...view, ...patch }
     setView(next)
-    const params = new URLSearchParams()
+    // Остальные параметры запроса сохраняются: без feed=bimo страница
+    // открылась бы как лента компании и выбросила бы из галереи.
+    const params = new URLSearchParams(searchParams.toString())
+    for (const key of ['group', 'sort', 'look'] as const) params.delete(key)
     if (next.group !== DEFAULT_GALLERY_VIEW.group) params.set('group', next.group)
     if (next.sort !== DEFAULT_GALLERY_VIEW.sort) params.set('sort', next.sort)
     if (next.look !== DEFAULT_GALLERY_VIEW.look) params.set('look', next.look)
@@ -186,14 +190,12 @@ export function BimoGalleryClient({ page, viewerId, initialView }: BimoGalleryCl
 
   return (
     <div className="space-y-6">
-      <section className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-[22px] font-bold" style={{ color: 'var(--apex-text)' }}>Бимо компании</h1>
-          <p className="text-[13px]" style={{ color: 'var(--apex-text-muted)' }}>
-            Рейтинг за {monthLabel(page.month)}
-            {daysLeft > 0 && ` · до конца ${daysLeft} дн.`}
-          </p>
-        </div>
+      {/* Заголовок не повторяется: его уже показывает шапка вкладки ленты. */}
+      <section className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[13px]" style={{ color: 'var(--apex-text-muted)' }}>
+          Рейтинг за {monthLabel(page.month)}
+          {daysLeft > 0 && ` · до конца ${daysLeft} дн.`}
+        </p>
 
         <div
           className="flex items-center gap-2 rounded-xl px-3 py-2"

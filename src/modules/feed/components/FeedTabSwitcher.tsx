@@ -11,8 +11,6 @@ interface FeedTabSwitcherProps {
   hasTeam: boolean
   /** Галерея Бимо доступна только при включённой коллекции и известном сотруднике. */
   hasBimo?: boolean
-  /** Остаток лайков месяца: напоминание о голосовании на любой вкладке. */
-  bimoLikesLeft?: number | null
 }
 
 const TABS: { id: FeedTab; label: string; Icon: typeof Building2 }[] = [
@@ -22,7 +20,7 @@ const TABS: { id: FeedTab; label: string; Icon: typeof Building2 }[] = [
   { id: 'bimo', label: 'Бимо', Icon: PawPrint },
 ]
 
-export function FeedTabSwitcher({ hasDepartment, hasTeam, hasBimo = false, bimoLikesLeft = null }: FeedTabSwitcherProps) {
+export function FeedTabSwitcher({ hasDepartment, hasTeam, hasBimo = false }: FeedTabSwitcherProps) {
   const searchParams = useSearchParams()
   const current = (searchParams.get('feed') ?? 'company') as FeedTab
 
@@ -57,18 +55,6 @@ export function FeedTabSwitcher({ hasDepartment, hasTeam, hasBimo = false, bimoL
           >
             <Icon size={12} />
             {label}
-            {/* Непотраченные лайки видно с любой вкладки — иначе про голосование забывают. */}
-            {id === 'bimo' && bimoLikesLeft !== null && bimoLikesLeft > 0 && (
-              <span
-                className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold"
-                style={isActive
-                  ? { background: 'var(--apex-surface)', color: 'var(--apex-primary)' }
-                  : { background: 'var(--apex-error-bg)', color: 'var(--apex-danger)' }}
-                title={`Непотраченных лайков: ${bimoLikesLeft}`}
-              >
-                {bimoLikesLeft}
-              </span>
-            )}
           </Link>
         )
       })}
