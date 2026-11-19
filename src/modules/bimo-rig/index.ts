@@ -1,0 +1,6 @@
+export { BimoStill } from './components/BimoStill'
+export { CLASSIC_GARMENT, DEFAULT_LOOK } from './rig'
+export { BIMO_SLOTS, DEFAULT_EQUIPMENT, bimoLook, bimoRenderable } from './look'
+export { ART_VERSION, ITEM_LAYERS, LAYER_LABELS, MAX_LAYER_BYTES, parseRigArt, validatePixels } from './validate'
+export type { BimoArtMap, BimoEquipment, BimoSlot } from './look'
+export type { BimoArt, BimoLook, BimoItemKind, BimoLayerName, BimoReaction } from './types'

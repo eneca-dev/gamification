@@ -113,7 +113,7 @@ export function KpiSummary({ overview, rate }: KpiSummaryProps) {
         Не хватило баланса на полный штраф в{' '}
         <strong style={{ color: 'var(--apex-text)' }}>{overview.clamped_count}</strong> из{' '}
         <strong style={{ color: 'var(--apex-text)' }}>{overview.total_revoked_count}</strong>{' '}
-        отзывов ({clampedPct}%) — разницу компания "подарила" сотрудникам
+        отзывов ({clampedPct}%) — разницу компания &quot;подарила&quot; сотрудникам
       </div>
     </section>
   )

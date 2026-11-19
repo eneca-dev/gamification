@@ -1,0 +1,51 @@
+{
+  "verifiedAt": "2026-11-18T10:39:43.245Z",
+  "unit": {
+    "passed": 123,
+    "failed": 0,
+    "files": 20
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 49,
+    "newWarnings": []
+  },
+  "typeCheck": {
+    "command": "npm run type-check",
+    "exitCode": 0
+  },
+  "build": {
+    "command": "npm run build",
+    "exitCode": 0
+  },
+  "changedComponents": [
+    "src/components/LayoutShell.tsx",
+    "src/components/Sidebar.tsx",
+    "src/components/dashboard/AchievementProgress.tsx",
+    "src/modules/achievements/components/GratitudeProgress.tsx",
+    "src/modules/admin/components/CalendarClient.tsx",
+    "src/modules/admin/components/CrystalRateStats.tsx",
+    "src/modules/admin/components/LotteryAdmin.tsx",
+    "src/modules/admin/components/UserDetailModal.tsx",
+    "src/modules/admin/components/UsersTable.tsx",
+    "src/modules/admin/components/economy/KpiSummary.tsx",
+    "src/modules/chat/components/ChatWindow.tsx",
+    "src/modules/corrections/components/RedDayCalendar.tsx",
+    "src/modules/corrections/components/UserAppealsCard.tsx",
+    "src/modules/dev-tools/components/DevUserSwitcher.tsx",
+    "src/modules/lottery/components/LotteryBanner.tsx",
+    "src/modules/lottery/components/LotteryReveal.tsx",
+    "src/modules/onboarding/components/OnboardingProvider.tsx",
+    "src/modules/onboarding/components/OnboardingSpotlight.tsx"
+  ],
+  "newFiles": [
+    "src/hooks/useUiClock.ts",
+    "tests/unit/lint-async-ui.test.tsx",
+    "tests/unit/lint-clock.test.tsx",
+    "tests/unit/lint-lottery.test.tsx",
+    "tests/unit/lint-navigation.test.tsx",
+    "tests/unit/lint-onboarding.test.tsx",
+    "tests/unit/lint-state-reset.test.tsx"
+  ],
+  "browserAcceptance": "not performed; RTL/jsdom behavior checks only"
+}

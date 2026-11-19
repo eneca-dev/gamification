@@ -51,9 +51,27 @@ certificates
 # claude code local settings
 .claude/settings.local.json
 
+# local agent instructions
+/AGENTS.md
+
 # mcp config
 .mcp.json
 .playwright-mcp
 
 # graphify generated output
 /graphify-out/
+
+# временные дампы данных вью при разработке модуля corrections
+/.corrections-backup/
+
+# Local character art sources, previews and backups (not served by the app)
+/.local-assets/
+
+# временные рендеры и проверки скриптов bimo-rig
+/tmp/
+
+# Local QA artifacts and authenticated browser sessions
+/test-results/
+/playwright-report/
+/coverage/
+/.playwright/

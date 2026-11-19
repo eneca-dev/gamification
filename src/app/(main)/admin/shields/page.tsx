@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 
 import { checkIsAdmin } from '@/modules/admin'
-import { getShieldLog } from '@/modules/streak-shield'
+import { getShieldLog, getStreakShieldAutoEnabled } from '@/modules/streak-shield'
+import { AutoShieldSetting } from '@/modules/streak-shield/components/AutoShieldSetting'
 import { Shield } from 'lucide-react'
 
 const typeLabels: Record<string, string> = {
@@ -13,9 +14,11 @@ export default async function AdminShieldsPage() {
   const isAdmin = await checkIsAdmin()
   if (!isAdmin) redirect('/')
 
-  const log = await getShieldLog()
+  const [log, autoEnabled] = await Promise.all([getShieldLog(), getStreakShieldAutoEnabled()])
 
   return (
+    <div className="space-y-5">
+    <AutoShieldSetting initialEnabled={autoEnabled} />
     <div
       className="rounded-2xl p-5"
       style={{ background: 'var(--apex-surface)', border: '1px solid var(--apex-border)' }}
@@ -97,6 +100,7 @@ export default async function AdminShieldsPage() {
           </table>
         </div>
       )}
+    </div>
     </div>
   )
 }

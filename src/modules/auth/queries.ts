@@ -7,9 +7,10 @@ import type { WorksectionTokenRow } from '@/lib/types'
 
 import type { AuthUser } from './types'
 
-const DEV_TOOLS_ENABLED =
-  process.env.NODE_ENV === 'development' ||
-  process.env.ENABLE_DEV_TOOLS === 'true'
+// Подмена пользователя отключена: переключатель больше не нужен ни в одном
+// окружении. Переменная ENABLE_DEV_TOOLS больше ни на что не влияет; чтобы
+// вернуть инструмент, восстановите прежнюю проверку окружения.
+const DEV_TOOLS_ENABLED: boolean = false
 const IMPERSONATE_COOKIE = 'dev_impersonate'
 
 export async function getWorksectionTokens(

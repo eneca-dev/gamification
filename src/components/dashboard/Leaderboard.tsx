@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Crown, Zap, Info } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
+import { TopSearch } from "./TopSearch";
 import type { AutomationLeaderboardEntry } from "@/modules/revit";
 
 // ─── Внутренний тип для рендеринга строки панели ──────────────────────────────
@@ -123,6 +124,8 @@ function LeaderboardPanel({
   const containerRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
   const [scrollAreaHeight, setScrollAreaHeight] = useState(264)
+  const [query, setQuery] = useState("")
+  const visibleEntries = entries.filter((entry) => entry.name.toLocaleLowerCase("ru-RU").includes(query.trim().toLocaleLowerCase("ru-RU")))
 
   useEffect(() => {
     const container = containerRef.current
@@ -147,18 +150,19 @@ function LeaderboardPanel({
         border: "1px solid var(--apex-border)",
       }}
     >
-      <div ref={headerRef} className="flex items-center justify-between mb-3 shrink-0">
+      <div ref={headerRef} className="flex flex-col items-start gap-2 mb-3 shrink-0 2xl:flex-row 2xl:items-center 2xl:justify-between">
         <div className="flex items-center gap-2">
           {icon}
           <div className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--apex-text-muted)" }}>
             {title}
           </div>
           {tooltip && <InfoTooltip text={tooltip} />}
+          <TopSearch label={title} query={query} onQueryChange={setQuery} />
         </div>
         {currentUserRank != null ? (
           <a
             href={rankHref}
-            className="text-[11px] font-bold px-2 py-0.5 rounded-full transition-opacity hover:opacity-70"
+            className="whitespace-nowrap text-[11px] font-bold px-2 py-0.5 rounded-full transition-opacity hover:opacity-70"
             style={{
               background: currentUserRank <= 10 ? "var(--apex-success-bg)" : "var(--surface)",
               color: currentUserRank <= 3 ? accentColor : "var(--apex-text-muted)",
@@ -172,7 +176,7 @@ function LeaderboardPanel({
         ) : (
           <a
             href={rankHref}
-            className="text-[11px] font-bold px-2 py-0.5 rounded-full transition-opacity hover:opacity-70"
+            className="whitespace-nowrap text-[11px] font-bold px-2 py-0.5 rounded-full transition-opacity hover:opacity-70"
             style={{ background: "var(--surface)", color: "var(--apex-text-muted)", border: `1px solid var(--apex-border)` }}
           >
             {emptyRankLabel}
@@ -180,20 +184,20 @@ function LeaderboardPanel({
         )}
       </div>
 
-      {entries.length === 0 ? (
+      {visibleEntries.length === 0 ? (
         <div
           className="flex flex-col items-center justify-center py-8 gap-2 rounded-xl"
           style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
         >
           <span className="text-lg">📅</span>
           <div className="text-[12px] font-medium text-center" style={{ color: 'var(--apex-text-muted)' }}>
-            {isFirstOfMonth ? "Топ сброшен в начале месяца." : "Топ сброшен."}<br />Данные появятся завтра.
+            {query.trim() ? "Ничего не найдено" : <>{isFirstOfMonth ? "Топ сброшен в начале месяца." : "Топ сброшен."}<br />Данные появятся завтра.</>}
           </div>
         </div>
       ) : null}
 
       <div className="space-y-1.5 overflow-y-auto scrollbar-hide" style={{ maxHeight: scrollAreaHeight }}>
-        {entries.map((entry) => (
+        {visibleEntries.map((entry) => (
           <div
             key={entry.name}
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
@@ -297,7 +301,7 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         unit={<CoinIcon size={14} />}
         currentUserRank={findRank(wsPanels)}
         tooltip="Топ формируется по максимальному количеству 💎 за Worksection, полученных за месяц. Сброс каждый месяц."
-        emptyRankLabel={<><span className="2xl:hidden">💎 ≤ 0</span><span className="hidden 2xl:inline">💎 за WS ≤ 0</span></>}
+        emptyRankLabel="💎 за WS ≤ 0"
         rankHref={`/transactions?source=ws&date_from=${dateFrom}&date_to=${dateTo}`}
       />
       <LeaderboardPanel
@@ -308,7 +312,7 @@ export function Leaderboard({ entries, automationEntries }: LeaderboardProps) {
         accentColor="var(--orange-500)"
         currentUserRank={findRank(revitPanels)}
         tooltip="Топ формируется по максимальному количеству 💎 за использование Revit-плагинов за месяц. Сброс каждый месяц."
-        emptyRankLabel={<><span className="2xl:hidden">Нет 💎</span><span className="hidden 2xl:inline">💎 за Revit ≤ 0 </span></>}
+        emptyRankLabel="💎 за Revit ≤ 0"
         rankHref={`/transactions?source=revit&date_from=${dateFrom}&date_to=${dateTo}`}
       />
     </div>

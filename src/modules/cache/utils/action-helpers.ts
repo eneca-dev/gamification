@@ -1,17 +1,20 @@
-import type { ActionResult } from '../types'
+import type { ActionResult, ActionFailure } from '../types'
 
-/**
- * Type guard — сужает тип до успешного результата.
- */
+export class ActionError extends Error {
+  readonly code?: string
+
+  constructor(failure: ActionFailure) {
+    super(failure.error)
+    this.name = 'ActionError'
+    this.code = failure.code
+  }
+}
+
 export function isSuccess<T>(result: ActionResult<T>): result is { success: true; data: T } {
   return result.success === true
 }
 
-/**
- * Извлекает данные или бросает ошибку.
- * Использовать там, где ошибка ActionResult — исключительная ситуация.
- */
 export function unwrapResult<T>(result: ActionResult<T>): T {
-  if (!result.success) throw new Error(result.error)
+  if (!result.success) throw new ActionError(result)
   return result.data
 }

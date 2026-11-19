@@ -33,7 +33,7 @@ export const realtimeSubscriptions: TableSubscription[] = [
   // Транзакции: RLS отдаёт только свои строки → событие приходит только владельцу
   {
     table: 'gamification_transactions',
-    invalidateKeys: [queryKeys.transactions.all, queryKeys.balance.all],
+    invalidateKeys: [queryKeys.transactions.all, queryKeys.balance.all, queryKeys.bimo.all],
     event: 'INSERT',
   },
 ]

@@ -1,0 +1,9 @@
+{
+  "status": "failed",
+  "database": "roulette_qa_exact",
+  "error": "Injected local failure after SQL02 COMMIT",
+  "recoveryVerified": false,
+  "cleanupVerified": true,
+  "expectedFailure": true,
+  "test": "Injected error after committed SQL02; verified recovery of original function definitions and metadata"
+}

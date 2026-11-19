@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, ShoppingBag, Trophy, Users, Settings, LogOut, HelpCircle, Calendar } from 'lucide-react'
@@ -9,8 +9,23 @@ import { signOut } from '@/modules/auth/index.client'
 import type { AuthUser } from '@/modules/auth/index.client'
 import { DevUserSwitcher } from '@/modules/dev-tools/components/DevUserSwitcher'
 import { CoinBalanceLive } from '@/components/CoinBalance'
+import { BimoCompanion } from '@/modules/profile-appearance/components/BimoCompanion'
 
 const LS_KEY = 'day_off_last_seen_at'
+const SEEN_EVENT = 'day-off-last-seen'
+function readLastSeen() {
+  try { return localStorage.getItem(LS_KEY) } catch { return null }
+}
+function subscribeLastSeen(notify: () => void) {
+  const onStorage = (event: StorageEvent) => { if (event.key === LS_KEY || event.key === null) notify() }
+  window.addEventListener('storage', onStorage)
+  window.addEventListener(SEEN_EVENT, notify)
+  return () => {
+    window.removeEventListener('storage', onStorage)
+    window.removeEventListener(SEEN_EVENT, notify)
+  }
+}
+const serverLastSeen = () => null
 
 interface SidebarProps {
   user: AuthUser | null
@@ -22,7 +37,7 @@ interface SidebarProps {
   onToggleCollapse?: () => void
 }
 
-const navItems = [
+const navItems: { href: string; label: string; icon: typeof Home }[] = [
   { href: '/',            label: 'Главная',       icon: Home },
   { href: '/store',       label: 'Магазин',       icon: ShoppingBag },
   { href: '/achievements',label: 'Достижения',    icon: Trophy },
@@ -52,29 +67,18 @@ function getInitials(fullName: string, email?: string): string {
 
 export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, dayOffResolved = [], isCollapsed = false, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname()
-  const [dayOffBadge, setDayOffBadge] = useState(0)
+  const lastSeen = useSyncExternalStore(subscribeLastSeen, readLastSeen, serverLastSeen)
+  const viewingDayOff = pathname.startsWith('/day-off')
+  const dayOffBadge = !lastSeen || viewingDayOff ? 0
+    : dayOffResolved.filter(ts => new Date(ts) > new Date(lastSeen)).length
 
   useEffect(() => {
-    const raw = localStorage.getItem(LS_KEY)
-    const lastSeen = raw ? new Date(raw) : null
-
-    if (!lastSeen) {
-      // Первый запуск — считаем всё просмотренным
+    if (readLastSeen() && !viewingDayOff) return
+    try {
       localStorage.setItem(LS_KEY, new Date().toISOString())
-      setDayOffBadge(0)
-      return
-    }
-
-    const unseen = dayOffResolved.filter((ts) => new Date(ts) > lastSeen).length
-    setDayOffBadge(unseen)
-  }, [dayOffResolved])
-
-  useEffect(() => {
-    if (pathname.startsWith('/day-off')) {
-      localStorage.setItem(LS_KEY, new Date().toISOString())
-      setDayOffBadge(0)
-    }
-  }, [pathname])
+      window.dispatchEvent(new Event(SEEN_EVENT))
+    } catch { /* Storage may be disabled; keep the badge empty. */ }
+  }, [pathname, viewingDayOff])
 
   const collapsed = isCollapsed
 
@@ -209,10 +213,18 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, 
         </div>
       </nav>
 
+      {/* Бимо. Отступы симметричные, в отличие от соседних блоков, иначе
+          рисунок смещается относительно центра меню. */}
+      {!collapsed && user?.wsUserId && (
+        <div className="px-4 pb-2">
+          <BimoCompanion key={user.wsUserId} userId={user.wsUserId} />
+        </div>
+      )}
+
       {/* Coin balance */}
       {collapsed ? (
         <div className="px-2 pb-3 flex justify-center" data-onboarding="sidebar-balance">
-          <CoinBalanceLive initialAmount={balance} size="sm" />
+          <CoinBalanceLive initialAmount={balance} userId={user?.wsUserId ?? null} size="sm" />
         </div>
       ) : (
         <div className="pl-3 pr-5 pb-3">
@@ -227,7 +239,7 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, 
             <div className="text-[11px] font-medium mb-1.5" style={{ color: 'var(--apex-text-muted)' }}>
               На вашем счету
             </div>
-            <CoinBalanceLive initialAmount={balance} size="md" />
+            <CoinBalanceLive initialAmount={balance} userId={user?.wsUserId ?? null} size="md" />
           </div>
         </div>
       )}

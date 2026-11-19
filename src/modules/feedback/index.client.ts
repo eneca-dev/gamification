@@ -1,3 +1,4 @@
-export { submitFeedback, deleteFeedbackItems } from './actions'
+export { submitFeedback, deleteFeedbackItems, updateAppealStatus } from './actions'
 export { uploadFeedbackImages } from './upload'
-export type { FeedbackRecord, FeedbackType, FeedbackInput } from './types'
+export { appealStatusLabels } from './types'
+export type { FeedbackRecord, FeedbackType, FeedbackInput, AppealStatus, AppealInput, AppealCalendarDay, AppealTransaction } from './types'

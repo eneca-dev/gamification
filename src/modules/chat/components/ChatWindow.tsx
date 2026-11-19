@@ -88,6 +88,7 @@ export function ChatWindow({ initialMessages, userId, onHasMessages }: ChatWindo
 
   async function handleSend(content: string) {
     const optimistic: ChatMessage = {
+      // eslint-disable-next-line react-hooks/purity -- Event handler: timestamp is created only when sending.
       id: `opt-${Date.now()}`,
       user_id: userId,
       role: 'user',

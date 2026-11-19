@@ -12,21 +12,26 @@ interface UserDetailModalProps {
 }
 
 export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
+  return userId ? <UserDetailContent key={userId} userId={userId} onClose={onClose} /> : null
+}
+
+function UserDetailContent({ userId, onClose }: { userId: string; onClose: () => void }) {
   const [detail, setDetail] = useState<UserDetail | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!userId) { setDetail(null); return }
-
-    setLoading(true)
-    fetch(`/api/admin/user-detail?id=${userId}`)
-      .then((r) => r.json())
-      .then((data) => setDetail(data))
-      .catch(() => setDetail(null))
-      .finally(() => setLoading(false))
+    const controller = new AbortController()
+    let active = true
+    fetch(`/api/admin/user-detail?id=${encodeURIComponent(userId)}`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error('User detail request failed')
+        return response.json() as Promise<UserDetail>
+      })
+      .then((data) => { if (active) setDetail(data) })
+      .catch(() => { if (active) setDetail(null) })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false; controller.abort() }
   }, [userId])
-
-  if (!userId) return null
 
   return (
     <div

@@ -118,7 +118,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 
           {/* Right: streak grid */}
           <div className="shrink-0 overflow-x-auto">
-            <StreakPanel streakData={streakPanelData} userBalance={user.total_coins} />
+            <StreakPanel streakData={streakPanelData} />
           </div>
         </div>
       </RoleProvider>

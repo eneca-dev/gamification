@@ -1,12 +1,15 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Play } from 'lucide-react'
 
 import { CoinIcon } from '@/components/CoinIcon'
-import { PurchaseButton } from './PurchaseButton'
+import { PurchaseButton } from '@/components/PurchaseButton'
+import { ProductMediaGallery } from './ProductMediaGallery'
+import { hasVideo, mediaPoster } from '../media'
 import { computeDisplayDiscount, computePriceWithoutDiscount } from '../types'
 import type { ShopProductWithCategory } from '../types'
-import type { PendingReset, ShieldQuota } from '@/modules/streak-shield/index.client'
+import type { ShieldQuota, ShieldType } from '@/modules/streak-shield/index.client'
 
 interface ProductCardProps {
   product: ShopProductWithCategory
@@ -15,23 +18,33 @@ interface ProductCardProps {
   onPurchase: (productId: string, price: number, userComment?: string) => void
   isPurchasing: boolean
   categoryDescription?: string | null
-  pendingResets?: PendingReset[]
   shieldQuota?: ShieldQuota | null
+  shieldCredits: Record<ShieldType, number>
 }
 
-export function ProductCard({ product, balance, index, onPurchase, isPurchasing, categoryDescription, pendingResets = [], shieldQuota = null }: ProductCardProps) {
+export function ProductCard({ product, balance, index, onPurchase, isPurchasing, categoryDescription, shieldQuota = null, shieldCredits }: ProductCardProps) {
   const outOfStock = !product.is_coming_soon && product.category.is_countable && product.stock !== null && product.stock === 0
 
-  // Для щитов: кнопка активна только при наличии соответствующего pending
+  // Карусель медиа на карточке: hover по точке снизу → активный элемент; клик по картинке → галерея
+  const media = product.media ?? []
+  const [activeIdx, setActiveIdx] = useState(0)
+  const safeIdx = Math.min(activeIdx, Math.max(media.length - 1, 0))
+  const activeItem = media[safeIdx] ?? null
+  const activePoster = activeItem ? mediaPoster(activeItem) : null
+  const previewSrc = activePoster ?? product.image_url ?? null
+  const activeIsVideo = activeItem?.kind === 'youtube' || activeItem?.kind === 'video'
+  const videoInside = hasVideo(media)
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false)
+  const closeGallery = useCallback(() => setIsGalleryOpen(false), [])
+
+  // Щит покупается заранее по обычной цене; бесплатные применения расходуются при угрозе.
   const shieldEffect = product.effect
   const isShield = shieldEffect === 'streak_shield_ws' || shieldEffect === 'streak_shield_revit'
   const shieldType = shieldEffect === 'streak_shield_ws' ? 'ws' : 'revit'
-  const hasActivePending = isShield && pendingResets.some((p) => p.type === shieldType)
   const freeLeft = isShield && shieldQuota ? shieldQuota[shieldType].freeLeft : null
-  const isFreeShield = isShield && freeLeft !== null && freeLeft > 0 && hasActivePending
 
-  const canAfford = isFreeShield || balance >= product.price
-  const deficit = isFreeShield ? 0 : product.price - balance
+  const canAfford = balance >= product.price
+  const deficit = product.price - balance
 
   // Раскрытие описания по клику. isTruncated нужен только для курсора
   const descRef = useRef<HTMLParagraphElement>(null)
@@ -61,18 +74,34 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
       }}
     >
       {/* Зона картинки / эмодзи */}
-      <div
-        className="h-36 flex items-center justify-center relative overflow-hidden"
-        style={{ background: product.image_url ? 'transparent' : 'var(--apex-emoji-bg)' }}
+      <button
+        type="button"
+        disabled={media.length === 0}
+        aria-label={`Открыть медиа товара ${product.name}`}
+        className="h-32 w-full flex items-center justify-center relative overflow-hidden group"
+        style={{
+          background: previewSrc ? 'transparent' : 'var(--apex-emoji-bg)',
+          cursor: media.length > 0 ? 'zoom-in' : 'default',
+        }}
+        onClick={() => { if (media.length > 0) setIsGalleryOpen(true) }}
+        onMouseLeave={() => setActiveIdx(0)}
       >
-        {product.image_url ? (
+        {previewSrc ? (
           <img
-            src={product.image_url}
+            src={previewSrc}
             alt={product.name}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-contain transition-opacity duration-150"
+            key={safeIdx}
           />
         ) : (
           <span className="text-5xl">{product.emoji || <span style={{ color: '#ccc' }}>?</span>}</span>
+        )}
+        {activeIsVideo && previewSrc && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(0, 0, 0, 0.55)' }}>
+              <Play size={16} fill="white" color="white" />
+            </div>
+          </div>
         )}
         {product.is_coming_soon && (
           <span
@@ -105,6 +134,33 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
           >
             −{computeDisplayDiscount(product.discount_percent)}%
           </span>
+        )}
+      </button>
+
+      {/* Ряд точек-пилюль под фото. Всегда резервирует высоту, чтобы карточка не прыгала. */}
+      <div className="h-4 flex items-center justify-center" style={{ background: 'var(--surface-elevated)' }}>
+        {media.length > 1 && (
+          <div className="flex items-center gap-1.5">
+            {media.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onMouseEnter={() => setActiveIdx(i)}
+                onFocus={() => setActiveIdx(i)}
+                onClick={(e) => { e.stopPropagation(); setActiveIdx(i); setIsGalleryOpen(true) }}
+                className="transition-all rounded-full"
+                style={{
+                  width: i === safeIdx ? 14 : 6,
+                  height: 6,
+                  background: i === safeIdx ? 'var(--apex-primary)' : 'var(--border)',
+                }}
+                aria-label={`Медиа ${i + 1}`}
+              />
+            ))}
+          </div>
+        )}
+        {media.length <= 1 && videoInside && (
+          <Play size={10} fill="currentColor" style={{ color: 'var(--text-muted)' }} />
         )}
       </div>
 
@@ -147,6 +203,11 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
 
 
         <div className="mt-auto pt-2">
+        {isShield && (
+          <p className="text-center text-[11px] mb-2" style={{ color: 'var(--apex-text-secondary)' }}>
+            Куплено: {shieldCredits[shieldType]} · Бесплатно в этом месяце: {freeLeft ?? 0}
+          </p>
+        )}
         {!product.is_coming_soon && product.discount_percent !== null && (
           <div className="flex items-center justify-center gap-1 mb-1.5">
             <span
@@ -159,15 +220,14 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
         )}
         <PurchaseButton
           productId={product.id}
+          productName={product.name}
           price={product.price}
           canAfford={canAfford}
           outOfStock={outOfStock}
           deficit={deficit}
           onPurchase={onPurchase}
           isPurchasing={isPurchasing}
-          shieldNoPending={isShield && !hasActivePending}
-          isFree={isFreeShield}
-          freeLeft={freeLeft}
+          isFree={false}
           comingSoon={product.is_coming_soon}
           hasDiscount={product.discount_percent !== null}
           commentRequired={product.comment_required}
@@ -176,6 +236,15 @@ export function ProductCard({ product, balance, index, onPurchase, isPurchasing,
         />
         </div>
       </div>
+
+      {isGalleryOpen && media.length > 0 && (
+        <ProductMediaGallery
+          media={media}
+          title={product.name}
+          initialIndex={safeIdx}
+          onClose={closeGallery}
+        />
+      )}
     </div>
   )
 }

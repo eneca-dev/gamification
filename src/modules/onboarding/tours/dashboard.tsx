@@ -70,8 +70,8 @@ export const dashboardTour: OnboardingTour = {
           </span>
 
           <span className="flex flex-col gap-0.5">
-            <span className="font-semibold" style={{ color: 'var(--orange-500)' }}>⭐ Автоматизации — запуски Revit-плагинов</span>
-            <span className="pl-2" style={{ color: 'var(--text-secondary)' }}>Каждый день, когда вы запустили хотя бы один из плагинов, продлевает стрик:</span>
+            <span className="font-semibold" style={{ color: 'var(--orange-500)' }}>⭐ Автоматизации — работа в Revit-плагинах</span>
+            <span className="pl-2" style={{ color: 'var(--text-secondary)' }}>Каждый день, когда вы выполнили действие хотя бы в одном из плагинов, продлевает стрик:</span>
             <span className="pl-2 text-[11px]" style={{ color: 'var(--text-secondary)' }}>
               {PLUGIN_NAMES.join(', ')}.
             </span>

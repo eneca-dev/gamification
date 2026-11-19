@@ -82,12 +82,22 @@
   --rank-bronze:           #A1887F;
 
   /* ── Semantic aliases (keep for compatibility) ──────────── */
-  --surface:               #EEF2F2;
-  --surface-elevated:      #FFFFFF;
-  --border:                #DDE3E3;
-  --text-primary:          #1C2437;
-  --text-secondary:        #6B7280;
-  --text-muted:            #9CA3AF;
+  --surface:               var(--apex-bg);
+  --surface-elevated:      var(--apex-surface);
+  --border:                var(--apex-border);
+  --text-primary:          var(--apex-text);
+  --text-secondary:        var(--apex-text-secondary);
+  --text-muted:            var(--apex-text-muted);
+
+  /* ── Светлые тона под фоны Бимо: подложка витрины гардероба ─ */
+  --bimo-tint-mint:            #E0F3EA;
+  --bimo-tint-peach:           #FCE8D9;
+  --bimo-tint-lavender:        #EAE3FA;
+  --bimo-tint-clouds:          #E0EDFC;
+  --bimo-tint-office:          #F2EADC;
+  --bimo-tint-green-courtyard: #E3F2D9;
+  --bimo-tint-beach:           #FBEDD2;
+  --bimo-tint-starry-evening:  #E2E6F6;
 
   /* ── Green → Teal aliases (backwards compat) ────────────── */
   --green-50:              #E6F4F1;
@@ -350,3 +360,118 @@ button, a[role="button"] { border-radius: 9999px; }
   border-top: 1px solid var(--border);
   margin: 16px 0;
 }
+
+/* ===== Полоса во всю ширину области контента =====
+   Витрина Бимо тянется от края сайдбара до края приложения, хотя лежит глубоко
+   внутри центрированного контейнера. Ширина считается от окна минус отступ
+   сайдбара (--app-inset) и минус полоса прокрутки (--scrollbar-w), которую
+   LayoutShell измеряет один раз. Отрицательный внешний отступ вытягивает блок
+   из паддингов и центрирующих зазоров. Переходы совпадают по длительности со
+   сворачиванием сайдбара, чтобы полоса ехала вместе с ним. */
+.app-content {
+  --app-inset: 0px;
+}
+@media (min-width: 768px) {
+  .app-content {
+    --app-inset: var(--sidebar-w, 260px);
+  }
+}
+.full-bleed {
+  --bleed-width: calc(100vw - var(--scrollbar-w, 0px) - var(--app-inset, 0px));
+  width: var(--bleed-width);
+  max-width: none;
+  margin-left: calc((100% - var(--bleed-width)) / 2);
+  margin-right: calc((100% - var(--bleed-width)) / 2);
+  transition: width 300ms ease-in-out, margin 300ms ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .full-bleed { transition: none; }
+}
+
+/* Вуаль поверх размытого фона Бимо: тон читается, текст остаётся контрастным. */
+.bimo-band-veil {
+  background: color-mix(in srgb, var(--apex-bg) 62%, transparent);
+}
+
+/* Верх и низ витрины Бимо растворяются вместо жёстких линий границы.
+   По горизонтали полоса остаётся сплошной: она тянется до краёв приложения. */
+.bimo-band-fade {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 14%, #000 86%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 14%, #000 86%, transparent 100%);
+}
+
+/* Мягкая тень-подставка под Бимо на витрине. */
+.bimo-band-shadow {
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--apex-text) 22%, transparent) 0%, transparent 70%);
+}
+
+/* Декор витрины Бимо: медленное покачивание. Задержки берутся из .stagger-*. */
+@keyframes bimoFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-9px); }
+}
+.bimo-decor { animation: bimoFloat 5.5s ease-in-out infinite both; }
+@media (prefers-reduced-motion: reduce) {
+  .bimo-decor { animation: none; }
+}
+
+/* ===== Рулетка =====
+   Игровая палитра: классические цвета колеса — красный, жёлтый, зелёный
+   и золото. Нигде больше не используются, поэтому вынесены отдельно. */
+:root {
+  --roulette-gold:        #E2B94E;
+  --roulette-gold-light:  #F5E6BC;
+  --roulette-gold-dark:   #A1761F;
+  --roulette-outline:     #7E590F;
+
+  --roulette-prize:       #1B6B3B;
+  --roulette-green:       #3FA35F;
+  --roulette-green-mid:   #4FB06E;
+  /* Указатель и разделители секторов: голубые, светлее синих секторов. */
+  --roulette-rim-light:   #CFE7F6;
+  --roulette-rim:         #74B4DC;
+  --roulette-rim-dark:    #2C6A92;
+
+  --roulette-blue:        #3E7FA8;
+  --roulette-blue-light:  #5392B8;
+  --roulette-jackpot:     #E8B33C;
+  --roulette-red:         #D45745;
+  --roulette-red-deep:    #B03D2E;
+}
+
+/* Conceal updated sidebar balances only while the visible roulette reveals a result.
+   Query data stays fresh; leaving the panel removes the presentation mask. */
+.live-balance-revealing { display: none; }
+/* Подложка колеса. Холодный градиент собран из токенов --apex-info-rgb и
+   --apex-primary-rgb, поэтому следует теме и не содержит отдельных цветов.
+   Кристаллы покачиваются тем же движением, что декор витрины Бимо, —
+   переиспользуем keyframes bimoFloat, а не заводим вторые. */
+.roulette-stage {
+  background:
+    radial-gradient(120% 150% at 10% 0%, rgba(var(--apex-info-rgb), 0.20) 0%, transparent 62%),
+    radial-gradient(110% 130% at 92% 8%, rgba(var(--apex-primary-rgb), 0.13) 0%, transparent 64%),
+    linear-gradient(180deg, var(--apex-info-bg) 0%, var(--apex-surface) 100%);
+}
+.roulette-crystal { animation: bimoFloat 5.5s ease-in-out infinite both; }
+@media (prefers-reduced-motion: reduce) {
+  .roulette-crystal { animation: none; }
+}
+
+/* Итог хода под колесом. Золотая заливка текста собрана из той же палитры,
+   что и обод, поэтому надпись читается как часть колеса. На нуле золота нет:
+   проигрыш не должен выглядеть наградой. */
+.roulette-outcome {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+.roulette-outcome-win {
+  background: linear-gradient(180deg, var(--roulette-gold-light) 0%, var(--roulette-gold) 45%, var(--roulette-gold-dark) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.roulette-outcome-zero { color: var(--apex-text-muted); }
+
+body:has([data-roulette-revealing="true"]) .live-balance-value { display: none; }
+body:has([data-roulette-revealing="true"]) .live-balance-revealing { display: inline; }

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Trophy, CheckCircle2, Info, Shield } from "lucide-react";
+import { Trophy, CheckCircle2, Info, Shield, ChevronLeft, ChevronRight } from "lucide-react";
 import { CoinIcon } from "@/components/CoinIcon";
 import { PLUGIN_NAMES } from "@/config/plugins";
 import { sourceColors } from "@/lib/data";
 import type { DailyTask } from "@/lib/data";
-import type { CalendarDayStatus, CalendarDay, RedReason, StreakMilestone, StreakPanelData } from "@/modules/streak-panel";
+import type { CalendarDayStatus, CalendarDay, DayAppealInfo, RedReason, StreakMilestone, StreakPanelData } from "@/modules/streak-panel";
 import { StreakShieldAlert } from "@/modules/streak-shield/components/StreakShieldAlert";
 import type { PendingReset } from "@/modules/streak-shield/types";
 
@@ -41,6 +41,7 @@ const absenceLabels: Record<string, string> = {
   sick_leave: "Больничный",
   sick_day:   "SickDay",
   day_off:    "Выходной",
+  business_trip: "Командировка",
 };
 
 interface MonthGrid {
@@ -135,32 +136,116 @@ function formatRedReason(reason: RedReason): string {
   return reason.type;
 }
 
-// Тултип для ячейки
-function getDayTooltip(day: CalendarDay): string | undefined {
-  if (day.status === "out") return undefined;
+const appealStatusLabels: Record<DayAppealInfo["status"], string> = {
+  new: "На рассмотрении",
+  approved: "Одобрено",
+  rejected: "Отклонено",
+};
+
+function truncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  return text.slice(0, max) + "...";
+}
+
+interface DayTooltipData {
+  dateLabel: string;
+  statusLabel: string;
+  redReasons: string[];
+  automation: boolean;
+  shield?: string;
+  appeal?: {
+    statusLabel: string;
+    descriptionShort: string | null;
+    review_comment: string | null;
+  };
+}
+
+// Собирает структурированные данные для кастомного тултипа
+function getDayTooltipData(day: CalendarDay, appeal?: DayAppealInfo): DayTooltipData | null {
+  if (day.status === "out") return null;
 
   const dateLabel = formatDate(day.date);
-  let text = `${dateLabel}: ${statusLabels[day.status]}`;
+  const statusLabel = day.status === "frozen" && day.absenceType
+    ? (absenceLabels[day.absenceType] ?? day.absenceType)
+    : statusLabels[day.status];
 
-  if (day.status === "frozen" && day.absenceType) {
-    text = `${dateLabel}: ${absenceLabels[day.absenceType] ?? day.absenceType}`;
-  }
+  const redReasons = day.status === "red" && day.redReasons?.length
+    ? day.redReasons.map(formatRedReason)
+    : [];
 
-  if (day.status === "red" && day.redReasons?.length) {
-    const reasons = day.redReasons.map(formatRedReason);
-    text += `\n${reasons.join("\n")}`;
-  }
+  const shield = day.shieldUsed
+    ? `Использована вторая жизнь ${day.shieldSource === "revit" ? "Revit" : "Worksection"}`
+    : undefined;
 
-  if (day.automation && day.status !== "frozen") {
-    text += " · Автоматизация ★";
-  }
+  const appealInfo = appeal
+    ? {
+        statusLabel: appealStatusLabels[appeal.status],
+        descriptionShort: appeal.description ? truncate(appeal.description, 20) : null,
+        review_comment: appeal.review_comment,
+      }
+    : undefined;
 
-  if (day.shieldUsed) {
-    const sourceName = day.shieldSource === "revit" ? "Revit" : "Worksection";
-    text += `\nИспользована вторая жизнь ${sourceName}`;
-  }
+  return {
+    dateLabel,
+    statusLabel,
+    redReasons,
+    automation: Boolean(day.automation && day.status !== "frozen"),
+    shield,
+    appeal: appealInfo,
+  };
+}
 
-  return text;
+type TooltipAlign = "left" | "center" | "right";
+
+// Кастомный тултип — визуально в стиле TrophyShelf
+function DayTooltip({ data, align = "center" }: { data: DayTooltipData; align?: TooltipAlign }) {
+  // Календарь лежит в контейнере с overflow-x: auto, поэтому у краёв тултип
+  // прижимается к ячейке: центрирование увело бы его за границу и обрезало.
+  const alignClass =
+    align === "left" ? "left-0" : align === "right" ? "right-0" : "left-1/2 -translate-x-1/2";
+  return (
+    <div
+      className={`absolute bottom-full ${alignClass} mb-2 px-3 py-2 rounded-xl text-[11px] z-50 pointer-events-none whitespace-nowrap`}
+      style={{
+        background: "var(--apex-surface)",
+        color: "var(--apex-text)",
+        border: "1px solid var(--apex-border)",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+        minWidth: 160,
+      }}
+    >
+      <div className="font-semibold">{data.dateLabel}: {data.statusLabel}</div>
+      {data.redReasons.length > 0 && (
+        <div className="mt-1 text-[10px] whitespace-normal" style={{ color: "var(--apex-text-secondary)" }}>
+          {data.redReasons.map((r, i) => (
+            <div key={i}>{r}</div>
+          ))}
+        </div>
+      )}
+      {data.automation && (
+        <div className="text-[10px] mt-0.5" style={{ color: "var(--orange-500)" }}>Автоматизация ★</div>
+      )}
+      {data.shield && (
+        <div className="text-[10px] mt-0.5" style={{ color: "var(--apex-text-muted)" }}>{data.shield}</div>
+      )}
+      {data.appeal && (
+        <div
+          className="mt-1.5 pt-1.5 text-[10px] whitespace-normal"
+          style={{ borderTop: "1px solid var(--apex-border)", color: "var(--apex-text-secondary)" }}
+        >
+          <div className="font-semibold" style={{ color: "var(--apex-text)" }}>
+            Статус обжалования: {data.appeal.statusLabel}
+          </div>
+          {data.appeal.descriptionShort && (
+            <div className="mt-0.5">«{data.appeal.descriptionShort}»</div>
+          )}
+          {data.appeal.review_comment && (
+            <div className="mt-0.5">Комментарий: {data.appeal.review_comment}</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Criteria tooltip icon (controlled) ─────────────────────────────────────
@@ -424,13 +509,25 @@ interface StreakPanelProps {
   streakData: StreakPanelData;
   tasks?: DailyTask[];
   pendingResets?: PendingReset[];
-  userBalance?: number;
+  appealsByDate?: Map<string, DayAppealInfo>;
 }
 
-export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBalance = 0 }: StreakPanelProps) {
+export function StreakPanel({ streakData, tasks = [], pendingResets = [], appealsByDate }: StreakPanelProps) {
   const { calendarDays, completedCycles, ws, revit } = streakData;
   const [showCriteriaTooltip, setShowCriteriaTooltip] = useState(false);
   const [showAutomationTooltip, setShowAutomationTooltip] = useState(false);
+  const [hoveredDate, setHoveredDate] = useState<string | null>(null);
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Minsk" });
+  const todayDate = new Date(today + "T00:00:00");
+  const monthGridsAll = buildMonthGrids(calendarDays);
+  const currentMonthKey = today.slice(0, 7);
+  const lastFirstMonthIndex = Math.max(0, monthGridsAll.length - 3);
+  const [firstMonthIndex, setFirstMonthIndex] = useState(() => {
+    const currentIndex = monthGridsAll.findIndex((month) => month.key === currentMonthKey);
+    return Math.min(Math.max(0, currentIndex - 1), lastFirstMonthIndex);
+  });
+  const visibleFirstMonthIndex = Math.min(firstMonthIndex, lastFirstMonthIndex);
+  const monthGrids = monthGridsAll.slice(visibleFirstMonthIndex, visibleFirstMonthIndex + 3);
 
   const greenCriteria = [
     "Внесён дневной отчёт в Worksection",
@@ -444,7 +541,9 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
   ];
   const automationPlugins = PLUGIN_NAMES;
 
-  const workingDays = calendarDays.filter((d) => d.status === "green" || d.status === "red");
+  const metricStartDate = new Date(todayDate.getFullYear(), todayDate.getMonth() - 1, 1);
+  const metricStart = `${metricStartDate.getFullYear()}-${String(metricStartDate.getMonth() + 1).padStart(2, "0")}-01`;
+  const workingDays = calendarDays.filter((d) => d.date >= metricStart && (d.status === "green" || d.status === "red"));
   const greenPct = workingDays.length > 0
     ? Math.round((workingDays.filter((d) => d.status === "green").length / workingDays.length) * 100)
     : 0;
@@ -452,13 +551,6 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
     ? Math.round((workingDays.filter((d) => d.automation).length / workingDays.length) * 100)
     : 0;
 
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Minsk" });
-  const todayDate = new Date(today + "T00:00:00");
-  const visibleMonthKeys = [-1, 0, 1].map((delta) => {
-    const d = new Date(todayDate.getFullYear(), todayDate.getMonth() + delta, 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  });
-  const monthGrids = buildMonthGrids(calendarDays).filter((m) => visibleMonthKeys.includes(m.key));
   const DAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
   return (
@@ -498,6 +590,30 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
           )}
         </div>
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="Показать предыдущий месяц"
+              title="Предыдущий месяц"
+              disabled={visibleFirstMonthIndex === 0}
+              onClick={() => setFirstMonthIndex((index) => Math.max(0, index - 1))}
+              className="w-6 h-6 rounded-lg flex items-center justify-center disabled:opacity-30"
+              style={{ color: "var(--apex-primary)", background: "var(--apex-success-bg)" }}
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <button
+              type="button"
+              aria-label="Показать следующий месяц"
+              title="Следующий месяц"
+              disabled={visibleFirstMonthIndex >= lastFirstMonthIndex}
+              onClick={() => setFirstMonthIndex((index) => Math.min(lastFirstMonthIndex, index + 1))}
+              className="w-6 h-6 rounded-lg flex items-center justify-center disabled:opacity-30"
+              style={{ color: "var(--apex-primary)", background: "var(--apex-success-bg)" }}
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
           <span
             className="text-lg font-bold leading-none cursor-default"
             style={{ color: "var(--apex-primary)" }}
@@ -519,7 +635,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
       {pendingResets.length > 0 && (
         <div className="flex flex-col gap-2 mb-4">
           {pendingResets.map((p) => (
-            <StreakShieldAlert key={p.type} pending={p} userBalance={userBalance} />
+            <StreakShieldAlert key={p.type} pending={p} />
           ))}
         </div>
       )}
@@ -599,7 +715,7 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
           )}
           {/* Months horizontal: each month = block with name, day labels, week rows */}
           <div className="flex items-start" style={{ gap: MONTH_SEP }}>
-            {monthGrids.map((month) => (
+            {monthGrids.map((month, monthIdx) => (
               <div key={month.key} className="flex flex-col">
                 <div
                   className="text-[9px] font-semibold uppercase tracking-wider mb-1.5"
@@ -642,28 +758,64 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
                             return <div key={day.date} style={{ width: CELL, height: CELL, flexShrink: 0 }} />;
                           }
 
+                          const appeal = appealsByDate?.get(day.date);
+                          const appealDotColor = appeal
+                            ? appeal.status === "approved"
+                              ? "var(--apex-primary)"
+                              : appeal.status === "rejected"
+                                ? "var(--apex-text-muted)"
+                                : "var(--orange-500)"
+                            : null;
+
+                          const tooltipData = getDayTooltipData(day, appeal);
+                          const isHovered = hoveredDate === day.date;
+                          const columnsBefore = monthIdx * 7 + dayIdx;
+                          const columnsAfter = (monthGrids.length - 1 - monthIdx) * 7 + (6 - dayIdx);
+                          const tooltipAlign: TooltipAlign =
+                            columnsBefore < 6 ? "left" : columnsAfter < 6 ? "right" : "center";
+
                           if (showShield && !isFuture) {
                             const fillColor = isNoData ? "#C5CCCC" : (statusColors[day.status] as string);
                             return (
-                              <svg
+                              <div
                                 key={day.date}
-                                width={CELL}
-                                height={CELL}
-                                viewBox="0 0 18 18"
-                                style={{ flexShrink: 0 }}
+                                className="relative"
+                                style={{ width: CELL, height: CELL, flexShrink: 0 }}
+                                onMouseEnter={() => setHoveredDate(day.date)}
+                                onMouseLeave={() => setHoveredDate((d) => d === day.date ? null : d)}
                               >
-                                <title>{getDayTooltip(day)}</title>
-                                <path
-                                  d="M 1 1 L 17 1 L 17 10 Q 17 16 9 18 Q 1 16 1 10 Z"
-                                  fill={fillColor}
-                                  fillOpacity={isNoData ? 0.5 : 1}
-                                  stroke={isToday ? "var(--apex-primary)" : "none"}
-                                  strokeWidth={isToday ? 1.5 : 0}
-                                />
-                                {showStar && (
-                                  <text x="9" y="12" textAnchor="middle" fontSize="10" fill="white" fontWeight="bold" opacity="0.9">★</text>
+                                <svg
+                                  width={CELL}
+                                  height={CELL}
+                                  viewBox="0 0 18 18"
+                                >
+                                  <path
+                                    d="M 1 1 L 17 1 L 17 10 Q 17 16 9 18 Q 1 16 1 10 Z"
+                                    fill={fillColor}
+                                    fillOpacity={isNoData ? 0.5 : 1}
+                                    stroke={isToday ? "var(--apex-primary)" : "none"}
+                                    strokeWidth={isToday ? 1.5 : 0}
+                                  />
+                                  {showStar && (
+                                    <text x="9" y="12" textAnchor="middle" fontSize="10" fill="white" fontWeight="bold" opacity="0.9">★</text>
+                                  )}
+                                </svg>
+                                {appealDotColor && (
+                                  <span
+                                    className="absolute pointer-events-none rounded-full"
+                                    style={{
+                                      top: -2,
+                                      right: -2,
+                                      width: 6,
+                                      height: 6,
+                                      background: appealDotColor,
+                                      border: "1px solid var(--apex-surface)",
+                                      boxSizing: "border-box",
+                                    }}
+                                  />
                                 )}
-                              </svg>
+                                {isHovered && tooltipData && <DayTooltip data={tooltipData} align={tooltipAlign} />}
+                              </div>
                             );
                           }
 
@@ -686,8 +838,10 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
                                       : undefined,
                                 boxSizing: "border-box",
                               }}
-                              title={getDayTooltip(day)}
+                              onMouseEnter={() => setHoveredDate(day.date)}
+                              onMouseLeave={() => setHoveredDate((d) => d === day.date ? null : d)}
                             >
+                              {isHovered && tooltipData && <DayTooltip data={tooltipData} align={tooltipAlign} />}
                               {showStar && (
                                 <span
                                   className="absolute inset-0 flex items-center justify-center font-bold leading-none"
@@ -700,6 +854,20 @@ export function StreakPanel({ streakData, tasks = [], pendingResets = [], userBa
                                 >
                                   ★
                                 </span>
+                              )}
+                              {appealDotColor && (
+                                <span
+                                  className="absolute pointer-events-none rounded-full"
+                                  style={{
+                                    top: -2,
+                                    right: -2,
+                                    width: 6,
+                                    height: 6,
+                                    background: appealDotColor,
+                                    border: "1px solid var(--apex-surface)",
+                                    boxSizing: "border-box",
+                                  }}
+                                />
                               )}
                             </div>
                           );

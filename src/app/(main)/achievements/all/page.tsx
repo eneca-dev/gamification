@@ -8,6 +8,7 @@ import { CoinIcon } from '@/components/CoinIcon'
 
 import type { AchievementEntityType, AchievementAward } from '@/modules/achievements/types'
 import { ACHIEVEMENT_BONUSES } from '@/modules/achievements/types'
+import { achievementImageUrl, awardImageName } from '@/modules/achievements/images'
 
 const AREA_CONFIG: Record<string, { label: string; icon: typeof Trophy; color: string; bg: string }> = {
   revit: { label: 'Revit', icon: Zap, color: 'var(--tag-orange-text)', bg: 'var(--tag-orange-bg)' },
@@ -107,7 +108,8 @@ export default async function AllPersonalAchievementsPage() {
                           style={{ background: areaCfg.bg, border: `1px solid ${areaCfg.color}33` }}
                           data-onboarding={index === 0 && awardIndex === 0 ? 'achievements-all-card' : undefined}
                         >
-                          <span className="text-3xl">{entityCfg.emoji}</span>
+                          <img src={achievementImageUrl(awardImageName(award.area, award.entity_type))}
+                            alt="" className="w-32 h-32 max-w-full object-contain rounded-lg ring-2 ring-amber-400" />
                           <span className="text-[12px] font-bold text-center" style={{ color: areaCfg.color }}>
                             {entityCfg.label}
                           </span>

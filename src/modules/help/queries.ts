@@ -9,7 +9,9 @@ export async function getHelpVariables(): Promise<Record<string, string>> {
 }
 
 export async function getHelpVariablesMeta(): Promise<HelpVariableMeta[]> {
-  const supabase = await createSupabaseServerClient()
+  // Справочные значения читаются сервисным ключом: они одинаковы для всех,
+  // а каталог товаров закрыт от чтения пользовательской ролью.
+  const supabase = createSupabaseAdminClient()
 
   const [eventTypes, gratitudeSettings, shieldProducts, crystalRate] = await Promise.all([
     supabase
@@ -45,7 +47,9 @@ export async function getHelpVariablesMeta(): Promise<HelpVariableMeta[]> {
 }
 
 async function buildVariablesMap(): Promise<Record<string, string>> {
-  const supabase = await createSupabaseServerClient()
+  // Та же причина, что и в getHelpVariablesMeta: справочные значения и цены
+  // щитов берутся сервисным ключом.
+  const supabase = createSupabaseAdminClient()
 
   const [eventTypes, gratitudeSettings, shieldProducts, crystalRate] = await Promise.all([
     supabase.from('gamification_event_types').select('key, coins'),

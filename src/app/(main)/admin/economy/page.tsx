@@ -1,4 +1,6 @@
 import { redirect } from 'next/navigation'
+import { getRouletteEnabled, getRouletteStats } from '@/modules/roulette'
+import { RouletteAdmin } from '@/modules/roulette/components/RouletteAdmin'
 
 import {
   checkIsAdmin,
@@ -71,6 +73,8 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
     deptGroups,
     allDepartments,
     crystalRates,
+    rouletteEnabled,
+    rouletteStats,
   ] = await Promise.all([
     getEconomyOverview(filters),
     getEconomyCategoryBreakdown(filters),
@@ -85,6 +89,8 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
     getDepartmentGroups(),
     getAllDepartments(),
     getCrystalRateHistory(),
+    getRouletteEnabled(),
+    getRouletteStats(from, to).catch(() => null),
   ])
 
   // Обогащаем пользователей группой отдела (RPC уже отсортировал по балансу ASC)
@@ -105,6 +111,7 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
   const highBalance = pool.slice(pool.length - edgeCount).reverse()
 
   return (
+    <>
     <EconomyDashboard
       period={period}
       customFrom={customFrom}
@@ -129,5 +136,7 @@ export default async function EconomyPage({ searchParams }: EconomyPageProps) {
       deptGroups={deptGroups}
       crystalRates={crystalRates}
     />
+    <RouletteAdmin enabled={rouletteEnabled} stats={rouletteStats} />
+    </>
   )
 }

@@ -1,26 +1,40 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, type ReactNode } from 'react'
 import Link from 'next/link'
-import { useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
+import { useQueryClient, queryKeys, refreshQueries } from '@/modules/cache'
+import { useBalance } from '../hooks/useBalance'
+import { storeCategoryUrl, type StoreTab } from '../navigation'
 import { ArrowRight } from 'lucide-react'
 
 import { purchaseProduct } from '../actions'
-import { queryKeys } from '@/modules/cache/keys/query-keys'
-import { buyStreakShield } from '@/modules/streak-shield/index.client'
+import { purchaseStreakShieldCredit } from '@/modules/streak-shield/index.client'
 import { ProductCard } from './ProductCard'
 // [LOTTERY HIDDEN] import { LotteryBanner } from '@/modules/lottery/components/LotteryBanner'
 // [LOTTERY HIDDEN] import { LotteryWinners } from '@/modules/lottery/components/LotteryWinners'
 import type { ShopProductWithCategory, ShopCategory } from '../types'
-import type { PendingReset, ShieldQuota } from '@/modules/streak-shield/index.client'
+import type { ShieldQuota, ShieldType } from '@/modules/streak-shield/index.client'
 // [LOTTERY HIDDEN] import type { LotteryWithStats, UserTicketInfo } from '@/modules/lottery/index.client'
 
 interface StoreClientProps {
+  showBimo?: boolean
+  /** Вкладка рулетки показывается только при включённом переключателе в админке. */
+  showRoulette?: boolean
+  activeTab: StoreTab
+  userId: string | null
+  rouletteContent?: ReactNode
+  bimoContent?: ReactNode
+  /** Мини-Бимо для плашки категории. Готовый узел: модуль магазина не рендерит Бимо сам. */
+  bimoTabIcon?: ReactNode
+  /** Фон текущего образа: им подкрашивается плашка категории. */
+  bimoTabTint?: string | null
+  initialCategory?: string
   products: ShopProductWithCategory[]
   categories: ShopCategory[]
   balance: number
-  pendingResets: PendingReset[]
   shieldQuota?: ShieldQuota | null
+  shieldCredits: Record<ShieldType, number>
   // [LOTTERY HIDDEN] activeLottery?: LotteryWithStats | null
   // [LOTTERY HIDDEN] ticketInfo?: UserTicketInfo | null
   // [LOTTERY HIDDEN] lotteryHistory?: LotteryWithStats[]
@@ -28,17 +42,29 @@ interface StoreClientProps {
 }
 
 export function StoreClient({
+  showBimo = false,
+  showRoulette = false,
+  activeTab,
+  userId,
+  rouletteContent,
+  bimoContent,
+  bimoTabIcon = null,
+  bimoTabTint = null,
+  initialCategory,
   products,
   categories,
   balance,
-  pendingResets,
   shieldQuota = null,
+  shieldCredits,
   // [LOTTERY HIDDEN] activeLottery = null,
   // [LOTTERY HIDDEN] ticketInfo = null,
   // [LOTTERY HIDDEN] lotteryHistory = [],
   // [LOTTERY HIDDEN] serverTime = Date.now(),
 }: StoreClientProps) {
-  const [activeFilter, setActiveFilter] = useState('all')
+  const router = useRouter()
+  const activeFilter = activeTab === 'catalog' ? initialCategory ?? 'all' : activeTab
+  const balanceQuery = useBalance(userId ?? '', { enabled: activeTab === 'catalog' && Boolean(userId) })
+  const currentBalance = balanceQuery.data ?? balance
   const [purchasingId, setPurchasingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -54,23 +80,32 @@ export function StoreClient({
 
   const activeCategory = categories.find((c) => c.slug === activeFilter)
 
+  function selectFilter(filter: string) {
+    router.push(storeCategoryUrl(filter))
+  }
+
   function handlePurchase(productId: string, _price: number, userComment?: string) {
+    if (balanceQuery.isError || balanceQuery.isFetching) {
+      setNotification({ type: 'error', message: 'Сначала дождитесь актуального баланса' })
+      return
+    }
     const product = products.find((p) => p.id === productId)
     const effect = product?.effect
 
-    // Щиты покупаются только через buyStreakShield — он очищает pending
+    // Предоплаченная защита сохраняется до появления угрозы стрику.
     if (effect === 'streak_shield_ws' || effect === 'streak_shield_revit') {
       const shieldType = effect === 'streak_shield_ws' ? 'ws' : 'revit'
       setPurchasingId(productId)
       setNotification(null)
       startTransition(async () => {
-        const result = await buyStreakShield(shieldType)
+        const result = await purchaseStreakShieldCredit(shieldType)
         setPurchasingId(null)
         if (!result.success) {
           setNotification({ type: 'error', message: result.error })
         } else {
-          setNotification({ type: 'success', message: 'Стрик спасён!' })
-          queryClient.invalidateQueries({ queryKey: queryKeys.balance.all })
+          setNotification({ type: 'success', message: 'Защита куплена и доступна для применения' })
+          void refreshQueries(queryClient, [queryKeys.balance.all]).catch(() => {})
+          window.location.reload()
         }
         setTimeout(() => setNotification(null), 3000)
       })
@@ -88,8 +123,8 @@ export function StoreClient({
         setNotification({ type: 'error', message: result.error })
       } else {
         setNotification({ type: 'success', message: 'Покупка совершена!' })
-        queryClient.invalidateQueries({ queryKey: queryKeys.balance.all })
-        queryClient.invalidateQueries({ queryKey: queryKeys.orders.all })
+        void refreshQueries(queryClient, [queryKeys.balance.all]).catch(() => {})
+        void refreshQueries(queryClient, [queryKeys.orders.all]).catch(() => {})
       }
 
       setTimeout(() => setNotification(null), 3000)
@@ -141,7 +176,7 @@ export function StoreClient({
       {/* Фильтры категорий */}
       <div className="animate-fade-in-up stagger-2 flex gap-2 flex-wrap" data-onboarding="store-category-filters">
         <button
-          onClick={() => setActiveFilter('all')}
+          onClick={() => selectFilter('all')}
           className="px-4 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"
           style={{
             background: activeFilter === 'all' ? 'var(--apex-primary)' : 'var(--surface-elevated)',
@@ -157,7 +192,7 @@ export function StoreClient({
           return (
             <button
               key={cat.id}
-              onClick={() => setActiveFilter(cat.slug)}
+              onClick={() => selectFilter(cat.slug)}
               data-onboarding-category={cat.slug}
               className={`py-2 rounded-xl text-[13px] font-semibold transition-all duration-200${isDraw ? ' relative overflow-hidden' : ' px-4'}`}
               style={isDraw ? {
@@ -187,6 +222,39 @@ export function StoreClient({
             </button>
           )
         })}
+        {showRoulette && <button
+          type="button"
+          onClick={() => router.push('/store?tab=roulette')}
+          aria-pressed={activeTab === 'roulette'}
+          className="px-4 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"
+          style={{
+            background: activeTab === 'roulette' ? 'var(--apex-primary)' : 'var(--surface-elevated)',
+            color: activeTab === 'roulette' ? 'white' : 'var(--text-secondary)',
+            border: activeTab === 'roulette' ? '1px solid transparent' : '1px solid var(--border)',
+          }}
+        >Рулетка</button>}
+        {showBimo && <button
+          type="button"
+          onClick={() => router.push('/store?tab=bimo')}
+          aria-pressed={activeFilter === 'bimo'}
+          // Плашка Бимо отличается от остальных: слева сам енот, а тон плашки —
+          // размытый фон его текущего образа, поэтому она меняется вместе с образом.
+          // Размер совпадает с остальными плашками: иконка вписана в строку,
+          // высоту не увеличивает. Активная отмечается цветом рамки, а не толщиной.
+          className={`relative flex items-center gap-1.5 overflow-hidden rounded-xl py-2 text-[13px] font-semibold transition-all duration-200 ${bimoTabIcon ? 'pl-2 pr-4' : 'px-4'}`}
+          style={{
+            background: bimoTabTint ? 'var(--surface-elevated)' : activeFilter === 'bimo' ? 'var(--apex-primary)' : 'var(--surface-elevated)',
+            color: !bimoTabTint && activeFilter === 'bimo' ? 'white' : 'var(--text-secondary)',
+            border: `1px solid ${activeFilter === 'bimo' ? 'var(--apex-primary)' : 'var(--border)'}`,
+          }}
+        >
+          {bimoTabTint && <>
+            <span aria-hidden="true" className="absolute inset-0 scale-150 bg-cover bg-center blur-md" style={{ backgroundImage: `url(${bimoTabTint})` }} />
+            <span aria-hidden="true" className="bimo-band-veil absolute inset-0" />
+          </>}
+          {bimoTabIcon && <span aria-hidden="true" className="relative -my-1 h-6 w-6 flex-shrink-0">{bimoTabIcon}</span>}
+          <span className="relative">Енот-Бимо</span>
+        </button>}
       </div>
 
       {/* Описание категории */}
@@ -205,19 +273,19 @@ export function StoreClient({
 
       {/* Контент категории */}
       {/* [LOTTERY HIDDEN] activeFilter === 'draw' branch (LotteryBanner, LotteryWinners) removed */}
-      {filtered.length > 0 ? (
+      {activeTab === 'roulette' ? rouletteContent : activeTab === 'bimo' ? bimoContent : filtered.length > 0 ? (
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 animate-fade-in-up stagger-3">
           {filtered.map((product, i) => (
             <ProductCard
               key={product.id}
               product={product}
-              balance={balance}
+              balance={currentBalance}
               index={i}
               onPurchase={handlePurchase}
               isPurchasing={isPending && purchasingId === product.id}
               categoryDescription={activeFilter === 'all' ? categories.find((c) => c.slug === product.category.slug)?.description : null}
-              pendingResets={pendingResets}
               shieldQuota={shieldQuota}
+              shieldCredits={shieldCredits}
             />
           ))}
         </div>

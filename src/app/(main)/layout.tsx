@@ -5,9 +5,10 @@ import { getUserBalance } from '@/modules/shop'
 import { getUserDayOffResolvedTimestamps } from '@/modules/day-off'
 import { OnboardingProvider } from '@/modules/onboarding/index.client'
 
-const DEV_TOOLS_ENABLED =
-  process.env.NODE_ENV === 'development' ||
-  process.env.ENABLE_DEV_TOOLS === 'true'
+// Подмена пользователя отключена: переключатель больше не нужен ни в одном
+// окружении. Переменная ENABLE_DEV_TOOLS больше ни на что не влияет; чтобы
+// вернуть инструмент, восстановите прежнюю проверку окружения.
+const DEV_TOOLS_ENABLED: boolean = false
 
 export default async function MainLayout({
   children,

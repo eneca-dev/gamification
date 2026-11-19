@@ -1,5 +1,6 @@
 export {
   getStreakDayStatuses,
+  getGridAbsences,
   getAutomationDays,
   getHolidays,
   getWorkdays,
@@ -18,4 +19,5 @@ export type {
   WsStreakData,
   RevitStreakData,
   StreakPanelData,
+  DayAppealInfo,
 } from './types'

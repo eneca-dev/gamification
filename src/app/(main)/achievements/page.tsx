@@ -5,29 +5,36 @@ import { getAchievementProgress, getGratitudeAchievementProgress } from '@/modul
 import { RankingBlock, GratitudeBlock } from '@/modules/achievements/components/AchievementBlock'
 import { GratitudeBlockLive } from '@/modules/achievements/components/GratitudeBlockLive'
 import { TrophyShelf } from '@/modules/achievements/components/TrophyShelf'
+import { getMinskMonth, getNormPersonalActivity } from '@/modules/ai-norm/queries'
+import { AiUsageCard } from '@/modules/ai-norm/components/AiUsageCard'
 
 function getMonthName(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+}
+
+function getDaysElapsed(periodStart: string, totalDays: number): number {
+  if (!periodStart) return 0
+  return Math.min(Math.floor((Date.now() - new Date(periodStart).getTime()) / 86400000) + 1, totalDays)
 }
 
 export default async function AchievementsPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const [progress, gratitudeProgress] = await Promise.all([
+  const normMonth = getMinskMonth()
+  const [progress, gratitudeProgress, normActivity] = await Promise.all([
     user.wsUserId ? getAchievementProgress(user.wsUserId) : null,
     user.wsUserId ? getGratitudeAchievementProgress(user.wsUserId) : [],
+    getNormPersonalActivity(user.email, normMonth).catch((error: unknown) => {
+      console.error('Failed to load personal norm activity', error)
+      return null
+    }),
   ])
 
   const periodStart = progress?.period_start ?? ''
   const periodEnd = progress?.period_end ?? ''
   const totalDays = periodEnd ? new Date(periodEnd).getDate() : 30
-  const daysElapsed = periodStart
-    ? Math.min(
-        Math.floor((Date.now() - new Date(periodStart).getTime()) / 86400000) + 1,
-        totalDays
-      )
-    : 0
+  const daysElapsed = getDaysElapsed(periodStart, totalDays)
 
   const deptName = progress?.department || null
   const teamName = progress?.team || (deptName ? `Вне команд - ${deptName}` : 'Вне команд')
@@ -77,6 +84,13 @@ export default async function AchievementsPage() {
             ? <GratitudeBlockLive userId={user.wsUserId} initialItems={gratitudeProgress} />
             : <GratitudeBlock items={gratitudeProgress} />}
         </div>
+      </div>
+
+      <div className="animate-fade-in-up stagger-2">
+        <AiUsageCard title="Нормоконтроль" month={normMonth}
+          events={normActivity?.checks ?? null} dates={normActivity?.dates ?? []}
+          eventLabel="Проверок по видам"
+          rule="Одна проверка документа за месяц выполняет условие достижения. Число проверок и дней использования показано отдельно." />
       </div>
 
       {/* Стенд кубков */}

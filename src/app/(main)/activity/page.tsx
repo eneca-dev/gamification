@@ -10,6 +10,16 @@ import { CompanyGratitudeList } from '@/modules/gratitudes/index.client'
 import { getCurrentUser } from '@/modules/auth/queries'
 import { getDepartmentFeedData, getTeamFeedData } from '@/modules/feed'
 import { DepartmentFeedTable, FeedTabSwitcher, TeamFeedTable } from '@/modules/feed/index.client'
+import { bimoEnabled } from '@/modules/profile-appearance/queries'
+import {
+  DEFAULT_GALLERY_VIEW,
+  GALLERY_GROUPINGS,
+  GALLERY_LOOK_FILTERS,
+  GALLERY_SORTS,
+  getBimoLikesLeft,
+  getGalleryPage,
+} from '@/modules/bimo-gallery'
+import { BimoGalleryClient } from '@/modules/bimo-gallery/components/BimoGalleryClient'
 
 async function resolveWsUserContext(
   wsUserId: string | null,
@@ -42,12 +52,17 @@ function getTwoWeeksAgoISO(): string {
 }
 
 interface ActivityPageProps {
-  searchParams: Promise<{ feed?: string }>
+  searchParams: Promise<{ feed?: string; group?: string; sort?: string; look?: string }>
 }
 
+/** Значение фильтра галереи из URL, с запасным вариантом по умолчанию. */
+const pickGalleryValue = <T extends string>(allowed: readonly T[], value: string | undefined, fallback: T): T =>
+  allowed.includes(value as T) ? (value as T) : fallback
+
 export default async function ActivityPage({ searchParams }: ActivityPageProps) {
-  const { feed } = await searchParams
-  const tab = feed === 'dept' || feed === 'team' ? feed : 'company'
+  const params = await searchParams
+  const feed = params.feed
+  const tab = feed === 'dept' || feed === 'team' || feed === 'bimo' ? feed : 'company'
 
   const monthRange = getCurrentMonthRange()
   const user = await getCurrentUser()
@@ -62,12 +77,48 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
   // Показываем вкладку команды всем, у кого есть отдел — даже без команды (покажем «Вне команд»)
   const hasTeam = Boolean(department)
 
+  // Галерея Бимо живёт вкладкой этой же ленты: это такой же взгляд на компанию,
+  // с теми же группировками по отделу и команде.
+  const hasBimo = bimoEnabled() && Boolean(user?.wsUserId)
+  const bimoProps = {
+    hasBimo,
+    bimoLikesLeft: hasBimo ? await getBimoLikesLeft(user?.wsUserId ?? null) : null,
+  }
+
+  if (tab === 'bimo') {
+    if (!hasBimo) {
+      return (
+        <div className="space-y-6">
+          <Header hasDepartment={hasDepartment} hasTeam={hasTeam} tab={tab} {...bimoProps} />
+          <EmptyProfile message="Коллекция Бимо ещё не вышла" />
+        </div>
+      )
+    }
+
+    const page = await getGalleryPage(user!.wsUserId)
+
+    return (
+      <div className="space-y-6">
+        <Header hasDepartment={hasDepartment} hasTeam={hasTeam} tab={tab} {...bimoProps} />
+        <BimoGalleryClient
+          page={page}
+          viewerId={user!.wsUserId}
+          initialView={{
+            group: pickGalleryValue(GALLERY_GROUPINGS, params.group, DEFAULT_GALLERY_VIEW.group),
+            sort: pickGalleryValue(GALLERY_SORTS, params.sort, DEFAULT_GALLERY_VIEW.sort),
+            look: pickGalleryValue(GALLERY_LOOK_FILTERS, params.look, DEFAULT_GALLERY_VIEW.look),
+          }}
+        />
+      </div>
+    )
+  }
+
   // ── Данные для вкладки отдела ────────────────────────────────────────────
   if (tab === 'dept') {
     if (!department) {
       return (
         <div className="space-y-6">
-          <Header hasDepartment={false} hasTeam={hasTeam} tab={tab} />
+          <Header hasDepartment={false} hasTeam={hasTeam} tab={tab} {...bimoProps} />
           <EmptyProfile message="Отдел не указан в вашем профиле" />
         </div>
       )
@@ -81,7 +132,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
 
     return (
       <div className="space-y-6">
-        <Header hasDepartment={hasDepartment} hasTeam={hasTeam} tab={tab} />
+        <Header hasDepartment={hasDepartment} hasTeam={hasTeam} tab={tab} {...bimoProps} />
         <div className="animate-fade-in-up stagger-1">
           <DepartmentFeedTable data={deptData} monthLabel={monthRange.label} />
         </div>
@@ -120,7 +171,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
     if (!department) {
       return (
         <div className="space-y-6">
-          <Header hasDepartment={hasDepartment} hasTeam={false} tab={tab} />
+          <Header hasDepartment={hasDepartment} hasTeam={false} tab={tab} {...bimoProps} />
           <EmptyProfile message="Отдел не указан в вашем профиле" />
         </div>
       )
@@ -135,7 +186,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
 
     return (
       <div className="space-y-6">
-        <Header hasDepartment={hasDepartment} hasTeam={hasTeam} tab={tab} />
+        <Header hasDepartment={hasDepartment} hasTeam={hasTeam} tab={tab} {...bimoProps} />
         <div className="animate-fade-in-up stagger-1">
           <TeamFeedTable data={teamData} monthLabel={monthRange.label} />
         </div>
@@ -177,7 +228,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
 
   return (
     <div className="space-y-6">
-      <Header hasDepartment={hasDepartment} hasTeam={hasTeam} tab={tab} />
+      <Header hasDepartment={hasDepartment} hasTeam={hasTeam} tab={tab} {...bimoProps} />
 
       {/* Статистика */}
       <div className="animate-fade-in-up stagger-1 grid grid-cols-2 gap-4">
@@ -293,15 +344,20 @@ const TAB_TITLES: Record<string, string> = {
   company: 'Лента компании',
   dept: 'Лента отдела',
   team: 'Лента команды',
+  bimo: 'Бимо компании',
 }
 
 function Header({
   hasDepartment,
   hasTeam,
+  hasBimo,
+  bimoLikesLeft,
   tab,
 }: {
   hasDepartment: boolean
   hasTeam: boolean
+  hasBimo: boolean
+  bimoLikesLeft: number | null
   tab: string
 }) {
   return (
@@ -311,7 +367,7 @@ function Header({
           {TAB_TITLES[tab] ?? 'Лента компании'}
         </h1>
         <Suspense fallback={null}>
-          <FeedTabSwitcher hasDepartment={hasDepartment} hasTeam={hasTeam} />
+          <FeedTabSwitcher hasDepartment={hasDepartment} hasTeam={hasTeam} hasBimo={hasBimo} bimoLikesLeft={bimoLikesLeft} />
         </Suspense>
       </div>
       <p className="text-sm font-medium mt-1" style={{ color: 'var(--text-secondary)' }}>

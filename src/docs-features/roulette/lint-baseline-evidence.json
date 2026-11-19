@@ -1,0 +1,430 @@
+{
+  "head": "97af4b5d4ffec3189c35eda09eb1abe10aa69713",
+  "method": "ESLint.lintFiles current; ESLint.lintText git show HEAD:file at same path/config/dependencies; no checkout or writes to Git",
+  "configUnchanged": true,
+  "dependencies": [
+    {
+      "name": "eslint",
+      "before": "9.39.3",
+      "after": "9.39.3"
+    },
+    {
+      "name": "eslint-config-next",
+      "before": "16.1.6",
+      "after": "16.1.6"
+    },
+    {
+      "name": "eslint-plugin-react",
+      "before": "7.37.5",
+      "after": "7.37.5"
+    },
+    {
+      "name": "eslint-plugin-react-hooks",
+      "before": "7.0.1",
+      "after": "7.0.1"
+    },
+    {
+      "name": "@typescript-eslint/parser",
+      "before": "8.56.1",
+      "after": "8.56.1"
+    }
+  ],
+  "currentErrors": 21,
+  "currentWarnings": 51,
+  "evidence": [
+    {
+      "file": "src/components/dashboard/AchievementProgress.tsx",
+      "identicalToHead": true,
+      "headBlob": "0c9a00504d9bb8375f81900e9c88cd2bc7de91c5",
+      "headErrors": [
+        {
+          "line": 220,
+          "column": 17,
+          "rule": "react-hooks/purity",
+          "message": "Error: Cannot call impure function during render\n\n`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).\n\nD:\\EnecaProjects\\Gamification\\src\\components\\dashboard\\AchievementProgress.tsx:220:17\n  218 |   const totalDays = new Date(progress.period_end).getDate()\n  219 |   const daysElapsed = Math.min(\n> 220 |     Math.floor((Date.now() - new Date(progress.period_start).getTime()) / 86400000) + 1,\n      |                 ^^^^^^^^^^ Cannot call impure function\n  221 |     totalDays\n  222 |   )\n  223 |"
+        }
+      ]
+    },
+    {
+      "file": "src/components/LayoutShell.tsx",
+      "identicalToHead": true,
+      "headBlob": "cf1b6193e037dcb85aa068d1ae14d95a9d3cffcf",
+      "headErrors": [
+        {
+          "line": 28,
+          "column": 5,
+          "rule": "react-hooks/set-state-in-effect",
+          "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\components\\LayoutShell.tsx:28:5\n  26 |\n  27 |   useEffect(() => {\n> 28 |     setSidebarOpen(false)\n     |     ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect\n  29 |   }, [pathname])\n  30 |\n  31 |   function toggleCollapse() {"
+        }
+      ]
+    },
+    {
+      "file": "src/components/Sidebar.tsx",
+      "identicalToHead": true,
+      "headBlob": "cf33697157b6feb2ce1c741823ae320277c96f1c",
+      "headErrors": [
+        {
+          "line": 67,
+          "column": 7,
+          "rule": "react-hooks/set-state-in-effect",
+          "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\components\\Sidebar.tsx:67:7\n  65 |       // Первый запуск — считаем всё просмотренным\n  66 |       localStorage.setItem(LS_KEY, new Date().toISOString())\n> 67 |       setDayOffBadge(0)\n     |       ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect\n  68 |       return\n  69 |     }\n  70 |"
+        },
+        {
+          "line": 78,
+          "column": 7,
+          "rule": "react-hooks/set-state-in-effect",
+          "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\components\\Sidebar.tsx:78:7\n  76 |     if (pathname.startsWith('/day-off')) {\n  77 |       localStorage.setItem(LS_KEY, new Date().toISOString())\n> 78 |       setDayOffBadge(0)\n     |       ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect\n  79 |     }\n  80 |   }, [pathname])\n  81 |"
+        }
+      ]
+    },
+    {
+      "file": "src/modules/achievements/components/GratitudeProgress.tsx",
+      "identicalToHead": true,
+      "headBlob": "88b9b0af99dbcfa3d6ca2fc00f61a847565baa79",
+      "headErrors": [
+        {
+          "line": 104,
+          "column": 65,
+          "rule": "react/no-unescaped-entities",
+          "message": "`\"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`."
+        },
+        {
+          "line": 104,
+          "column": 77,
+          "rule": "react/no-unescaped-entities",
+          "message": "`\"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`."
+        }
+      ]
+    },
+    {
+      "file": "src/modules/admin/components/CalendarClient.tsx",
+      "identicalToHead": true,
+      "headBlob": "05593aa0ebfb939ad6b3502a11d3aafa412f232d",
+      "headErrors": [
+        {
+          "line": 151,
+          "column": 14,
+          "rule": "react-hooks/purity",
+          "message": "Error: Cannot call impure function during render\n\n`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\admin\\components\\CalendarClient.tsx:151:14\n  149 |       // Будний → делаем выходным\n  150 |       const optimistic: CalendarHolidayRow = {\n> 151 |         id: -Date.now(),\n      |              ^^^^^^^^^^ Cannot call impure function\n  152 |         date: dateStr,\n  153 |         name: 'Выходной',\n  154 |         created_at: new Date().toISOString(),"
+        },
+        {
+          "line": 175,
+          "column": 14,
+          "rule": "react-hooks/purity",
+          "message": "Error: Cannot call impure function during render\n\n`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\admin\\components\\CalendarClient.tsx:175:14\n  173 |       // Выходной → делаем рабочим\n  174 |       const optimistic: CalendarWorkdayRow = {\n> 175 |         id: -Date.now(),\n      |              ^^^^^^^^^^ Cannot call impure function\n  176 |         date: dateStr,\n  177 |         name: 'Рабочий перенос',\n  178 |         created_at: new Date().toISOString(),"
+        }
+      ]
+    },
+    {
+      "file": "src/modules/admin/components/CrystalRateStats.tsx",
+      "identicalToHead": true,
+      "headBlob": "cb1ff3efb3d626b56db074448e4d168de55ef3e4",
+      "headErrors": [
+        {
+          "line": 41,
+          "column": 31,
+          "rule": "react-hooks/purity",
+          "message": "Error: Cannot call impure function during render\n\n`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\admin\\components\\CrystalRateStats.tsx:41:31\n  39 | export function CrystalRateStats({ ratedAt, stats }: CrystalRateStatsProps) {\n  40 |   const days = ratedAt\n> 41 |     ? Math.max(0, Math.floor((Date.now() - new Date(ratedAt).getTime()) / 86_400_000))\n     |                               ^^^^^^^^^^ Cannot call impure function\n  42 |     : null\n  43 |\n  44 |   const tiles: Tile[] = ["
+        }
+      ]
+    },
+    {
+      "file": "src/modules/admin/components/economy/KpiSummary.tsx",
+      "identicalToHead": true,
+      "headBlob": "89d768403b73724fcf74cd99701b4f28802d4dd4",
+      "headErrors": [
+        {
+          "line": 116,
+          "column": 52,
+          "rule": "react/no-unescaped-entities",
+          "message": "`\"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`."
+        },
+        {
+          "line": 116,
+          "column": 61,
+          "rule": "react/no-unescaped-entities",
+          "message": "`\"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`."
+        }
+      ]
+    },
+    {
+      "file": "src/modules/admin/components/LotteryAdmin.tsx",
+      "identicalToHead": true,
+      "headBlob": "8a4a6e99db1a141bedc0868a2d5718ac5fe4d58c",
+      "headErrors": [
+        {
+          "line": 46,
+          "column": 23,
+          "rule": "react-hooks/immutability",
+          "message": "Error: Cannot access variable before it is declared\n\n`processFile` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\admin\\components\\LotteryAdmin.tsx:46:23\n  44 |         if (item.type.startsWith('image/')) {\n  45 |           const file = item.getAsFile()\n> 46 |           if (file) { processFile(file); break }\n     |                       ^^^^^^^^^^^ `processFile` accessed before it is declared\n  47 |         }\n  48 |       }\n  49 |     }\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\admin\\components\\LotteryAdmin.tsx:62:3\n  60 |   }\n  61 |\n> 62 |   function processFile(file: File) {\n     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n> 63 |     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {\n     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n> 64 |       setError('Формат: JPEG, PNG или WebP')\n     …\n     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n> 73 |     setError(null)\n     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n> 74 |   }\n     | ^^^^ `processFile` is declared here\n  75 |\n  76 |   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {\n  77 |     const file = e.target.files?.[0]"
+        }
+      ]
+    },
+    {
+      "file": "src/modules/admin/components/UserDetailModal.tsx",
+      "identicalToHead": true,
+      "headBlob": "1b98c8a2430f459859e4f8a62b0d98c1e82d35be",
+      "headErrors": [
+        {
+          "line": 19,
+          "column": 20,
+          "rule": "react-hooks/set-state-in-effect",
+          "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\admin\\components\\UserDetailModal.tsx:19:20\n  17 |\n  18 |   useEffect(() => {\n> 19 |     if (!userId) { setDetail(null); return }\n     |                    ^^^^^^^^^ Avoid calling setState() directly within an effect\n  20 |\n  21 |     setLoading(true)\n  22 |     fetch(`/api/admin/user-detail?id=${userId}`)"
+        }
+      ]
+    },
+    {
+      "file": "src/modules/admin/components/UsersTable.tsx",
+      "identicalToHead": true,
+      "headBlob": "a7f1915f0149af79b4ca0257c9a0e0a5199f0f36",
+      "headErrors": [
+        {
+          "line": 288,
+          "column": 21,
+          "rule": "react-hooks/set-state-in-effect",
+          "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\admin\\components\\UsersTable.tsx:288:21\n  286 |   const [open, setOpen] = useState(true)\n  287 |\n> 288 |   useEffect(() => { setOpen(defaultOpen) }, [expandKey, defaultOpen])\n      |                     ^^^^^^^ Avoid calling setState() directly within an effect\n  289 |\n  290 |   const count = countDeptUsers(dept)\n  291 |   const hasMultipleTeams = dept.teams.length > 1 || (dept.teams.length === 1 && dept.teams[0].label !== 'Без команды')"
+        }
+      ]
+    },
+    {
+      "file": "src/modules/chat/components/ChatWindow.tsx",
+      "identicalToHead": true,
+      "headBlob": "d1c044bd7e3a094514afff6fc0df72cdf5adf55a",
+      "headErrors": [
+        {
+          "line": 91,
+          "column": 18,
+          "rule": "react-hooks/purity",
+          "message": "Error: Cannot call impure function during render\n\n`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\chat\\components\\ChatWindow.tsx:91:18\n  89 |   async function handleSend(content: string) {\n  90 |     const optimistic: ChatMessage = {\n> 91 |       id: `opt-${Date.now()}`,\n     |                  ^^^^^^^^^^ Cannot call impure function\n  92 |       user_id: userId,\n  93 |       role: 'user',\n  94 |       content,"
+        }
+      ]
+    },
+    {
+      "file": "src/modules/corrections/components/RedDayCalendar.tsx",
+      "identicalToHead": true,
+      "headBlob": "65f2029081a006d2dc4cf28739e55825742b5e63",
+      "headErrors": [
+        {
+          "line": 59,
+          "column": 30,
+          "rule": "react-hooks/set-state-in-effect",
+          "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\corrections\\components\\RedDayCalendar.tsx:59:30\n  57 |   useEffect(() => {\n  58 |     const maxStart = Math.max(0, months.length - VISIBLE_MONTHS)\n> 59 |     if (startIdx > maxStart) setStartIdx(maxStart)\n     |                              ^^^^^^^^^^^ Avoid calling setState() directly within an effect\n  60 |   }, [months.length, startIdx])\n  61 |\n  62 |   if (months.length === 0) {"
+        }
+      ]
+    },
+    {
+      "file": "src/modules/corrections/components/UserAppealsCard.tsx",
+      "identicalToHead": true,
+      "headBlob": "ef24fd6c8d95076c74e949f8edb790dd84d77942",
+      "headErrors": [
+        {
+          "line": 70,
+          "column": 7,
+          "rule": "react-hooks/set-state-in-effect",
+          "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\corrections\\components\\UserAppealsCard.tsx:70:7\n  68 |   useEffect(() => {\n  69 |     if (highlightAppealId) {\n> 70 |       setExpanded(true)\n     |       ^^^^^^^^^^^ Avoid calling setState() directly within an effect\n  71 |       // скролл отложенный, чтобы DOM успел раскрыться\n  72 |       setTimeout(() => {\n  73 |         highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })"
+        }
+      ]
+    },
+    {
+      "file": "src/modules/dev-tools/components/DevUserSwitcher.tsx",
+      "identicalToHead": true,
+      "headBlob": "8a67f6b8647801bc96ecc4b1e7f34a0815c765b1",
+      "headErrors": [
+        {
+          "line": 35,
+          "column": 7,
+          "rule": "react-hooks/set-state-in-effect",
+          "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\dev-tools\\components\\DevUserSwitcher.tsx:35:7\n  33 |   useEffect(() => {\n  34 |     if (isOpen) {\n> 35 |       setIsLoading(true)\n     |       ^^^^^^^^^^^^ Avoid calling setState() directly within an effect\n  36 |       searchUsers('').then((data) => {\n  37 |         setUsers(data)\n  38 |         setIsLoading(false)"
+        }
+      ]
+    },
+    {
+      "file": "src/modules/lottery/components/LotteryBanner.tsx",
+      "identicalToHead": true,
+      "headBlob": "eacf6990860cc601fc05f101b73f361e618cd535",
+      "headErrors": [
+        {
+          "line": 38,
+          "column": 45,
+          "rule": "react-hooks/purity",
+          "message": "Error: Cannot call impure function during render\n\n`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\lottery\\components\\LotteryBanner.tsx:38:45\n  36 |   // Если у юзера часы спешат на 2 часа, offset = -7200000\n  37 |   // Используем offset чтобы всегда считать по серверному (= реальному) времени\n> 38 |   const timeOffsetRef = useRef(serverTime - Date.now())\n     |                                             ^^^^^^^^^^ Cannot call impure function\n  39 |\n  40 |   useEffect(() => {\n  41 |     function tick() {"
+        }
+      ]
+    },
+    {
+      "file": "src/modules/lottery/components/LotteryReveal.tsx",
+      "identicalToHead": true,
+      "headBlob": "9ed3c3fd1f74809ad193e6ad06ff2d97c9fd7b93",
+      "headErrors": [
+        {
+          "line": 30,
+          "column": 7,
+          "rule": "react-hooks/set-state-in-effect",
+          "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\lottery\\components\\LotteryReveal.tsx:30:7\n  28 |     const seen = localStorage.getItem(key)\n  29 |     if (!seen) {\n> 30 |       setAlreadySeen(false)\n     |       ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect\n  31 |       setPhase('envelope')\n  32 |     }\n  33 |   }, [lottery.id, wasParticipant])"
+        }
+      ]
+    },
+    {
+      "file": "src/modules/onboarding/components/OnboardingSpotlight.tsx",
+      "identicalToHead": true,
+      "headBlob": "161e6ac79fa59fdc6b89c8ddadefd05eff2ef698",
+      "headErrors": [
+        {
+          "line": 57,
+          "column": 5,
+          "rule": "react-hooks/set-state-in-effect",
+          "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\onboarding\\components\\OnboardingSpotlight.tsx:57:5\n  55 |   // Поиск target элемента в DOM с polling\n  56 |   useEffect(() => {\n> 57 |     setReady(false)\n     |     ^^^^^^^^ Avoid calling setState() directly within an effect\n  58 |     setTargetEl(null)\n  59 |     setTargetRect(null)\n  60 |     setExtraRects([])"
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "file": "src/components/dashboard/AchievementProgress.tsx",
+      "line": 220,
+      "column": 17,
+      "rule": "react-hooks/purity",
+      "message": "Error: Cannot call impure function during render\n\n`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).\n\nD:\\EnecaProjects\\Gamification\\src\\components\\dashboard\\AchievementProgress.tsx:220:17\n  218 |   const totalDays = new Date(progress.period_end).getDate()\n  219 |   const daysElapsed = Math.min(\n> 220 |     Math.floor((Date.now() - new Date(progress.period_start).getTime()) / 86400000) + 1,\n      |                 ^^^^^^^^^^ Cannot call impure function\n  221 |     totalDays\n  222 |   )\n  223 |"
+    },
+    {
+      "file": "src/components/LayoutShell.tsx",
+      "line": 28,
+      "column": 5,
+      "rule": "react-hooks/set-state-in-effect",
+      "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\components\\LayoutShell.tsx:28:5\n  26 |\n  27 |   useEffect(() => {\n> 28 |     setSidebarOpen(false)\n     |     ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect\n  29 |   }, [pathname])\n  30 |\n  31 |   function toggleCollapse() {"
+    },
+    {
+      "file": "src/components/Sidebar.tsx",
+      "line": 67,
+      "column": 7,
+      "rule": "react-hooks/set-state-in-effect",
+      "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\components\\Sidebar.tsx:67:7\n  65 |       // Первый запуск — считаем всё просмотренным\n  66 |       localStorage.setItem(LS_KEY, new Date().toISOString())\n> 67 |       setDayOffBadge(0)\n     |       ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect\n  68 |       return\n  69 |     }\n  70 |"
+    },
+    {
+      "file": "src/components/Sidebar.tsx",
+      "line": 78,
+      "column": 7,
+      "rule": "react-hooks/set-state-in-effect",
+      "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\components\\Sidebar.tsx:78:7\n  76 |     if (pathname.startsWith('/day-off')) {\n  77 |       localStorage.setItem(LS_KEY, new Date().toISOString())\n> 78 |       setDayOffBadge(0)\n     |       ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect\n  79 |     }\n  80 |   }, [pathname])\n  81 |"
+    },
+    {
+      "file": "src/modules/achievements/components/GratitudeProgress.tsx",
+      "line": 104,
+      "column": 65,
+      "rule": "react/no-unescaped-entities",
+      "message": "`\"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`."
+    },
+    {
+      "file": "src/modules/achievements/components/GratitudeProgress.tsx",
+      "line": 104,
+      "column": 77,
+      "rule": "react/no-unescaped-entities",
+      "message": "`\"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`."
+    },
+    {
+      "file": "src/modules/admin/components/CalendarClient.tsx",
+      "line": 151,
+      "column": 14,
+      "rule": "react-hooks/purity",
+      "message": "Error: Cannot call impure function during render\n\n`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\admin\\components\\CalendarClient.tsx:151:14\n  149 |       // Будний → делаем выходным\n  150 |       const optimistic: CalendarHolidayRow = {\n> 151 |         id: -Date.now(),\n      |              ^^^^^^^^^^ Cannot call impure function\n  152 |         date: dateStr,\n  153 |         name: 'Выходной',\n  154 |         created_at: new Date().toISOString(),"
+    },
+    {
+      "file": "src/modules/admin/components/CalendarClient.tsx",
+      "line": 175,
+      "column": 14,
+      "rule": "react-hooks/purity",
+      "message": "Error: Cannot call impure function during render\n\n`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\admin\\components\\CalendarClient.tsx:175:14\n  173 |       // Выходной → делаем рабочим\n  174 |       const optimistic: CalendarWorkdayRow = {\n> 175 |         id: -Date.now(),\n      |              ^^^^^^^^^^ Cannot call impure function\n  176 |         date: dateStr,\n  177 |         name: 'Рабочий перенос',\n  178 |         created_at: new Date().toISOString(),"
+    },
+    {
+      "file": "src/modules/admin/components/CrystalRateStats.tsx",
+      "line": 41,
+      "column": 31,
+      "rule": "react-hooks/purity",
+      "message": "Error: Cannot call impure function during render\n\n`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\admin\\components\\CrystalRateStats.tsx:41:31\n  39 | export function CrystalRateStats({ ratedAt, stats }: CrystalRateStatsProps) {\n  40 |   const days = ratedAt\n> 41 |     ? Math.max(0, Math.floor((Date.now() - new Date(ratedAt).getTime()) / 86_400_000))\n     |                               ^^^^^^^^^^ Cannot call impure function\n  42 |     : null\n  43 |\n  44 |   const tiles: Tile[] = ["
+    },
+    {
+      "file": "src/modules/admin/components/economy/KpiSummary.tsx",
+      "line": 116,
+      "column": 52,
+      "rule": "react/no-unescaped-entities",
+      "message": "`\"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`."
+    },
+    {
+      "file": "src/modules/admin/components/economy/KpiSummary.tsx",
+      "line": 116,
+      "column": 61,
+      "rule": "react/no-unescaped-entities",
+      "message": "`\"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`."
+    },
+    {
+      "file": "src/modules/admin/components/LotteryAdmin.tsx",
+      "line": 46,
+      "column": 23,
+      "rule": "react-hooks/immutability",
+      "message": "Error: Cannot access variable before it is declared\n\n`processFile` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\admin\\components\\LotteryAdmin.tsx:46:23\n  44 |         if (item.type.startsWith('image/')) {\n  45 |           const file = item.getAsFile()\n> 46 |           if (file) { processFile(file); break }\n     |                       ^^^^^^^^^^^ `processFile` accessed before it is declared\n  47 |         }\n  48 |       }\n  49 |     }\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\admin\\components\\LotteryAdmin.tsx:62:3\n  60 |   }\n  61 |\n> 62 |   function processFile(file: File) {\n     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n> 63 |     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {\n     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n> 64 |       setError('Формат: JPEG, PNG или WebP')\n     …\n     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n> 73 |     setError(null)\n     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n> 74 |   }\n     | ^^^^ `processFile` is declared here\n  75 |\n  76 |   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {\n  77 |     const file = e.target.files?.[0]"
+    },
+    {
+      "file": "src/modules/admin/components/UserDetailModal.tsx",
+      "line": 19,
+      "column": 20,
+      "rule": "react-hooks/set-state-in-effect",
+      "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\admin\\components\\UserDetailModal.tsx:19:20\n  17 |\n  18 |   useEffect(() => {\n> 19 |     if (!userId) { setDetail(null); return }\n     |                    ^^^^^^^^^ Avoid calling setState() directly within an effect\n  20 |\n  21 |     setLoading(true)\n  22 |     fetch(`/api/admin/user-detail?id=${userId}`)"
+    },
+    {
+      "file": "src/modules/admin/components/UsersTable.tsx",
+      "line": 288,
+      "column": 21,
+      "rule": "react-hooks/set-state-in-effect",
+      "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\admin\\components\\UsersTable.tsx:288:21\n  286 |   const [open, setOpen] = useState(true)\n  287 |\n> 288 |   useEffect(() => { setOpen(defaultOpen) }, [expandKey, defaultOpen])\n      |                     ^^^^^^^ Avoid calling setState() directly within an effect\n  289 |\n  290 |   const count = countDeptUsers(dept)\n  291 |   const hasMultipleTeams = dept.teams.length > 1 || (dept.teams.length === 1 && dept.teams[0].label !== 'Без команды')"
+    },
+    {
+      "file": "src/modules/chat/components/ChatWindow.tsx",
+      "line": 91,
+      "column": 18,
+      "rule": "react-hooks/purity",
+      "message": "Error: Cannot call impure function during render\n\n`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\chat\\components\\ChatWindow.tsx:91:18\n  89 |   async function handleSend(content: string) {\n  90 |     const optimistic: ChatMessage = {\n> 91 |       id: `opt-${Date.now()}`,\n     |                  ^^^^^^^^^^ Cannot call impure function\n  92 |       user_id: userId,\n  93 |       role: 'user',\n  94 |       content,"
+    },
+    {
+      "file": "src/modules/corrections/components/RedDayCalendar.tsx",
+      "line": 59,
+      "column": 30,
+      "rule": "react-hooks/set-state-in-effect",
+      "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\corrections\\components\\RedDayCalendar.tsx:59:30\n  57 |   useEffect(() => {\n  58 |     const maxStart = Math.max(0, months.length - VISIBLE_MONTHS)\n> 59 |     if (startIdx > maxStart) setStartIdx(maxStart)\n     |                              ^^^^^^^^^^^ Avoid calling setState() directly within an effect\n  60 |   }, [months.length, startIdx])\n  61 |\n  62 |   if (months.length === 0) {"
+    },
+    {
+      "file": "src/modules/corrections/components/UserAppealsCard.tsx",
+      "line": 70,
+      "column": 7,
+      "rule": "react-hooks/set-state-in-effect",
+      "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\corrections\\components\\UserAppealsCard.tsx:70:7\n  68 |   useEffect(() => {\n  69 |     if (highlightAppealId) {\n> 70 |       setExpanded(true)\n     |       ^^^^^^^^^^^ Avoid calling setState() directly within an effect\n  71 |       // скролл отложенный, чтобы DOM успел раскрыться\n  72 |       setTimeout(() => {\n  73 |         highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })"
+    },
+    {
+      "file": "src/modules/dev-tools/components/DevUserSwitcher.tsx",
+      "line": 35,
+      "column": 7,
+      "rule": "react-hooks/set-state-in-effect",
+      "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\dev-tools\\components\\DevUserSwitcher.tsx:35:7\n  33 |   useEffect(() => {\n  34 |     if (isOpen) {\n> 35 |       setIsLoading(true)\n     |       ^^^^^^^^^^^^ Avoid calling setState() directly within an effect\n  36 |       searchUsers('').then((data) => {\n  37 |         setUsers(data)\n  38 |         setIsLoading(false)"
+    },
+    {
+      "file": "src/modules/lottery/components/LotteryBanner.tsx",
+      "line": 38,
+      "column": 45,
+      "rule": "react-hooks/purity",
+      "message": "Error: Cannot call impure function during render\n\n`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\lottery\\components\\LotteryBanner.tsx:38:45\n  36 |   // Если у юзера часы спешат на 2 часа, offset = -7200000\n  37 |   // Используем offset чтобы всегда считать по серверному (= реальному) времени\n> 38 |   const timeOffsetRef = useRef(serverTime - Date.now())\n     |                                             ^^^^^^^^^^ Cannot call impure function\n  39 |\n  40 |   useEffect(() => {\n  41 |     function tick() {"
+    },
+    {
+      "file": "src/modules/lottery/components/LotteryReveal.tsx",
+      "line": 30,
+      "column": 7,
+      "rule": "react-hooks/set-state-in-effect",
+      "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\lottery\\components\\LotteryReveal.tsx:30:7\n  28 |     const seen = localStorage.getItem(key)\n  29 |     if (!seen) {\n> 30 |       setAlreadySeen(false)\n     |       ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect\n  31 |       setPhase('envelope')\n  32 |     }\n  33 |   }, [lottery.id, wasParticipant])"
+    },
+    {
+      "file": "src/modules/onboarding/components/OnboardingSpotlight.tsx",
+      "line": 57,
+      "column": 5,
+      "rule": "react-hooks/set-state-in-effect",
+      "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nD:\\EnecaProjects\\Gamification\\src\\modules\\onboarding\\components\\OnboardingSpotlight.tsx:57:5\n  55 |   // Поиск target элемента в DOM с polling\n  56 |   useEffect(() => {\n> 57 |     setReady(false)\n     |     ^^^^^^^^ Avoid calling setState() directly within an effect\n  58 |     setTargetEl(null)\n  59 |     setTargetRect(null)\n  60 |     setExtraRects([])"
+    }
+  ]
+}

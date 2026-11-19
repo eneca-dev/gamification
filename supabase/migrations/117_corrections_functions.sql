@@ -1,0 +1,4 @@
+-- Устаревший файл — ранняя версия миграции admin corrections module.
+-- Актуальный snapshot: 117_admin_corrections_module.sql.
+-- Файл оставлен пустым, чтобы не создавать merge-конфликтов в истории.
+-- Можно удалить вручную: git rm supabase/migrations/117_corrections_functions.sql

@@ -341,3 +341,13 @@ return data;
 // ✅ Правильно
 return { success: true, data };
 ```
+
+## Обновление финансовых данных (v2.0)
+
+ActionResult failure сохраняет error:string и допускает code:string. unwrapResult и query/mutation фабрики бросают ActionError с сохранённым code.
+
+createCacheMutation не позволяет options.onSuccess заменить обязательную invalidation. Обязательные обновления, factory/hook/per-call callbacks выполняются независимо; их ошибка после commit не превращает успешную мутацию в failed. Ошибки обновления остаются видимыми в соответствующем query.
+
+refreshQueries сначала отменяет старые запросы (включая initial fetch), затем инвалидирует и перечитывает активные ключи. Не записывайте исторический balance_after в balance.current. Межвкладочная invalidation использует BroadcastChannel с sender ID; собственные сигналы игнорируются, полученные не пересылаются повторно. Недоступность канала не роняет provider. Настоящее состояние по-прежнему определяется Server Action, а не сообщением канала.
+
+Тесты: tests/unit/cache-mutation.test.tsx, bimo-cache.test.tsx, cross-tab.test.ts; фактический статус прогонов — src/docs-features/roulette/implementation-status.md.

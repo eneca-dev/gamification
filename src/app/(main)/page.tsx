@@ -1,4 +1,3 @@
-import { CoinIcon } from "@/components/CoinIcon";
 import { AlarmsBanner } from "@/modules/alarms/components/AlarmsBanner";
 import { StreakPanel } from "@/components/dashboard/StreakPanel";
 import { LiveTransactionFeed } from "@/modules/transactions/components/LiveTransactionFeed";
@@ -6,10 +5,6 @@ import { Leaderboard } from "@/components/dashboard/Leaderboard";
 import { DepartmentContest } from "@/components/dashboard/DepartmentContest";
 import type { DepartmentEntry } from "@/lib/data";
 import { getCurrentUser } from "@/modules/auth/queries";
-import {
-  getRevitWidgetData,
-  getRevitTransactions,
-} from "@/modules/revit";
 import { getDashboardTransactions } from "@/modules/transactions";
 import {
   getRevitPersonalRanking,
@@ -21,6 +16,7 @@ import {
 } from "@/modules/achievements";
 import {
   getStreakDayStatuses,
+  getGridAbsences,
   getAutomationDays,
   getHolidays,
   getWorkdays,
@@ -32,14 +28,16 @@ import {
 import { getActiveAlarms } from "@/modules/alarms";
 import { getMyGratitudesNew, getSenderQuota, getGratitudeRecipients } from "@/modules/gratitudes";
 import { getUserBalance } from "@/modules/shop";
-import { getUserOrders } from "@/modules/shop";
 import { getPendingResets, getShieldDatesInRange } from "@/modules/streak-shield";
+import { getUserAppeals } from "@/modules/feedback";
 import { getMasterPlannerPanel } from "@/modules/master-planner";
 import { MasterPlannerPanel } from "@/modules/master-planner/components/MasterPlannerPanel";
 import { TrackedProjectsInfo } from "@/modules/master-planner/components/TrackedProjectsInfo";
 import { getContestWinners } from "@/modules/contests";
 import { GratitudeWidget } from "@/modules/gratitudes/components/GratitudeWidget";
-import type { RedReason, StreakPanelData } from "@/modules/streak-panel";
+import { getNewsForDashboard } from "@/modules/news/queries";
+import { NewsPanel } from "@/modules/news/components/NewsPanel";
+import type { DayAppealInfo, RedReason, StreakPanelData } from "@/modules/streak-panel";
 
 const DEPT_COLORS = [
   "#e91e63", "#2196f3", "#ff9800", "#4caf50", "#9c27b0",
@@ -50,7 +48,6 @@ const DEPT_COLORS = [
 export default async function DashboardPage() {
   const currentUser = await getCurrentUser();
   const userEmail = currentUser?.email ?? "";
-  const userId = currentUser?.id ?? "";
 
   // Получаем ws_user данные (id, department_code, team) для сопоставления с рейтингами
   let wsUserId: string | null = null;
@@ -70,23 +67,24 @@ export default async function DashboardPage() {
     wsTeam = wsUser?.team ?? null;
   }
 
-  // Грид: 4 месяца (1 назад + текущий + 2 вперёд) — синхронный, вычисляем сразу
+  // Грид: текущий и пять предыдущих календарных месяцев
   const { rangeStart, rangeEnd } = getGridRange();
 
   // Все запросы параллельно в одном Promise.all (PERF-01)
   const [
-    wsStreak, revitStreak, revitData,
+    wsStreak, revitStreak,
     revitPersonalRanking, wsPersonalRanking,
     revitTeamRanking, wsTeamRanking,
     revitDeptRanking, wsDeptRanking,
-    revitTransactions,
     recentTransactions,
     activeAlarms,
-    senderQuota, gratitudeRecipients, userBalance, myGratitudesNew, userOrders,
-    dayStatuses, automationDates, holidays, workdays, pendingResets,
+    senderQuota, gratitudeRecipients, userBalance, myGratitudesNew,
+    dayStatuses, gridAbsences, automationDates, holidays, workdays, pendingResets,
     shieldDates,
     masterPlannerData,
     contestWinners,
+    news,
+    userAppeals,
   ] = await Promise.all([
       wsUserId ? getWsStreakData(wsUserId) : Promise.resolve({
         currentStreak: 0, longestStreak: 0, streakStartDate: null, completedCycles: 0,
@@ -103,16 +101,12 @@ export default async function DashboardPage() {
           { days: 30, reward: 100, reached: false },
         ],
       }),
-      userEmail
-        ? getRevitWidgetData(userEmail)
-        : Promise.resolve({ streak: null, activeDates: [], yesterdaySummary: { pluginCount: 0, coinsEarned: 0 } }),
       getRevitPersonalRanking(500),
       getWsPersonalRanking(500),
       getRevitTeamRanking(100),
       getWsTeamRanking(100),
       getRevitDepartmentRanking(50),
       getWsDepartmentRanking(50),
-      userEmail ? getRevitTransactions(userEmail, 10) : Promise.resolve([]),
       userEmail ? getDashboardTransactions(userEmail, 5) : Promise.resolve([]),
       wsUserId ? getActiveAlarms(wsUserId) : Promise.resolve([]),
       // Благодарности
@@ -120,9 +114,9 @@ export default async function DashboardPage() {
       wsUserId ? getGratitudeRecipients(wsUserId) : Promise.resolve([]),
       wsUserId ? getUserBalance(wsUserId) : Promise.resolve(0),
       userEmail ? getMyGratitudesNew(userEmail, 30) : Promise.resolve([]),
-      wsUserId ? getUserOrders(wsUserId) : Promise.resolve([]),
       // Календарь
       wsUserId ? getStreakDayStatuses(wsUserId, rangeStart, rangeEnd) : Promise.resolve([]),
+      wsUserId ? getGridAbsences(wsUserId, rangeStart, rangeEnd) : Promise.resolve(new Map<string, string>()),
       userEmail ? getAutomationDays(userEmail, rangeStart, rangeEnd) : Promise.resolve(new Set<string>()),
       getHolidays(rangeStart, rangeEnd),
       getWorkdays(rangeStart, rangeEnd),
@@ -130,7 +124,66 @@ export default async function DashboardPage() {
       wsUserId ? getShieldDatesInRange(wsUserId, rangeStart, rangeEnd) : Promise.resolve(new Map<string, 'ws' | 'revit'>()),
       wsUserId ? getMasterPlannerPanel(wsUserId) : Promise.resolve(null),
       getContestWinners(1),
+      getNewsForDashboard(wsDeptCode),
+      wsUserId ? getUserAppeals(wsUserId) : Promise.resolve([]),
     ]);
+
+  // Собираем все уникальные ID транзакций из обжалований пользователя
+  const allAppealTxIds = new Set<string>();
+  for (const appeal of userAppeals) {
+    if (!appeal.appeal_transaction_ids) continue;
+    for (const id of appeal.appeal_transaction_ids) allAppealTxIds.add(id);
+  }
+
+  // Один запрос — получаем event_date по всем ID разом
+  const txDateMap = new Map<string, string>();
+  if (allAppealTxIds.size > 0 && wsUserId) {
+    const { createSupabaseServerClient } = await import("@/config/supabase");
+    const supabase = await createSupabaseServerClient();
+    const { data: txRows } = await supabase
+      .from('gamification_transactions')
+      .select('id, event_date, event_type')
+      .in('id', Array.from(allAppealTxIds));
+    const DATE_MINUS_ONE = new Set(['red_day', 'wrong_status_report']);
+    for (const row of txRows ?? []) {
+      // Для ws-событий event_date сдвинут +1 — отображаем «пользовательский» день
+      const base = row.event_date as string;
+      if (DATE_MINUS_ONE.has(row.event_type as string)) {
+        const d = new Date(base + 'T00:00:00Z');
+        d.setUTCDate(d.getUTCDate() - 1);
+        txDateMap.set(row.id as string, d.toISOString().slice(0, 10));
+      } else {
+        txDateMap.set(row.id as string, base);
+      }
+    }
+  }
+
+  // Собираем Map обжалований по дате: берём самое новое, если на день несколько обжалований
+  const appealsByDate = new Map<string, DayAppealInfo>();
+  function putAppeal(date: string, appeal: typeof userAppeals[number]) {
+    const existing = appealsByDate.get(date);
+    if (!existing || existing.created_at < appeal.created_at) {
+      appealsByDate.set(date, {
+        status: appeal.status,
+        description: appeal.description,
+        review_comment: appeal.review_comment,
+        created_at: appeal.created_at,
+      });
+    }
+  }
+  for (const appeal of userAppeals) {
+    // Из явно выбранных дней
+    if (appeal.appeal_dates) {
+      for (const date of appeal.appeal_dates) putAppeal(date, appeal);
+    }
+    // Из транзакций (их «пользовательская» дата)
+    if (appeal.appeal_transaction_ids) {
+      for (const txId of appeal.appeal_transaction_ids) {
+        const d = txDateMap.get(txId);
+        if (d) putAppeal(d, appeal);
+      }
+    }
+  }
 
   // Собираем Map статусов для быстрого доступа
   const statusMap = new Map<string, { status: string; absence_type: string | null; red_reasons: RedReason[] | null }>();
@@ -138,7 +191,7 @@ export default async function DashboardPage() {
     statusMap.set(row.date, { status: row.status, absence_type: row.absence_type, red_reasons: row.red_reasons });
   }
 
-  const calendarDays = buildCalendarDays(rangeStart, rangeEnd, statusMap, automationDates, holidays, workdays, shieldDates);
+  const calendarDays = buildCalendarDays(rangeStart, rangeEnd, statusMap, automationDates, holidays, workdays, shieldDates, gridAbsences);
 
   const streakPanelData: StreakPanelData = {
     calendarDays,
@@ -190,13 +243,13 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="animate-fade-in-up">
-        <TrackedProjectsInfo />
-      </div>
+      {news.length > 0 ? <NewsPanel items={news} /> : (
+        <div className="animate-fade-in-up"><TrackedProjectsInfo /></div>
+      )}
 
       <div className="flex flex-col xl:flex-row gap-5 animate-fade-in-up">
         <div className="xl:shrink-0 overflow-x-auto">
-          <StreakPanel streakData={streakPanelData} pendingResets={pendingResets} userBalance={userBalance} />
+          <StreakPanel streakData={streakPanelData} pendingResets={pendingResets} appealsByDate={appealsByDate} />
         </div>
         {masterPlannerData && (
           <div className="flex-1 min-w-0 grid grid-cols-1 3xl:grid-cols-5 gap-5">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { declineRaz } from '../utils'
@@ -18,25 +18,31 @@ const LOCALSTORAGE_PREFIX = 'lottery_revealed_'
  * Показывается на месте баннера, один раз для участников.
  * После анимации записывает в localStorage что юзер уже видел.
  */
-export function LotteryReveal({ lottery, wasParticipant }: LotteryRevealProps) {
-  const [phase, setPhase] = useState<'hidden' | 'envelope' | 'opening' | 'revealed'>('hidden')
-  const [alreadySeen, setAlreadySeen] = useState(true)
+const subscribeHydration = () => () => {}
+const clientSnapshot = () => true
+const serverSnapshot = () => false
 
-  useEffect(() => {
-    if (!wasParticipant) return
-    const key = LOCALSTORAGE_PREFIX + lottery.id
-    const seen = localStorage.getItem(key)
-    if (!seen) {
-      setAlreadySeen(false)
-      setPhase('envelope')
-    }
-  }, [lottery.id, wasParticipant])
+export function LotteryReveal(props: LotteryRevealProps) {
+  const hydrated = useSyncExternalStore(subscribeHydration, clientSnapshot, serverSnapshot)
+  return hydrated && props.wasParticipant ? <LotteryRevealContent key={props.lottery.id} {...props} /> : null
+}
+
+function LotteryRevealContent({ lottery, wasParticipant }: LotteryRevealProps) {
+  const [phase, setPhase] = useState<'hidden' | 'envelope' | 'opening' | 'revealed'>('envelope')
+  const [alreadySeen] = useState(() => {
+    try { return Boolean(localStorage.getItem(LOCALSTORAGE_PREFIX + lottery.id)) }
+    catch { return false }
+  })
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (timer.current !== null) clearTimeout(timer.current) }, [])
 
   function handleOpen() {
+    if (timer.current !== null) return
     setPhase('opening')
-    setTimeout(() => {
+    timer.current = setTimeout(() => {
       setPhase('revealed')
-      localStorage.setItem(LOCALSTORAGE_PREFIX + lottery.id, '1')
+      try { localStorage.setItem(LOCALSTORAGE_PREFIX + lottery.id, '1') }
+      catch { /* The result remains visible when storage is unavailable. */ }
     }, 1500)
   }
 

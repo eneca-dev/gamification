@@ -1,5 +1,7 @@
 'use client'
 
+import { useUiClock } from '@/hooks/useUiClock'
+
 import { useState } from 'react'
 import { Trophy, Users, Building2, Zap, Star, Target, Award, Crown, Shield } from 'lucide-react'
 import { CoinIcon } from '@/components/CoinIcon'
@@ -214,10 +216,11 @@ interface AchievementProgressProps {
 }
 
 export function AchievementProgressPanel({ progress }: AchievementProgressProps) {
+  const now = useUiClock()
   const monthName = getMonthName(progress.period_start)
   const totalDays = new Date(progress.period_end).getDate()
-  const daysElapsed = Math.min(
-    Math.floor((Date.now() - new Date(progress.period_start).getTime()) / 86400000) + 1,
+  const daysElapsed = now === null ? 0 : Math.min(
+    Math.floor((now - new Date(progress.period_start).getTime()) / 86400000) + 1,
     totalDays
   )
 
@@ -305,7 +308,7 @@ export function AchievementProgressPanel({ progress }: AchievementProgressProps)
           />
         </div>
         <span className="text-[10px] font-medium flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
-          День {daysElapsed}/{totalDays}
+          День {now === null ? '—' : daysElapsed}/{totalDays}
         </span>
       </div>
 

@@ -1,0 +1,46 @@
+{
+  "mint-cap": {
+    "layer": "head",
+    "source": "mint-cap-source.png",
+    "prompt": "Use case: precise-object-edit. Redesign the small sideways baseball cap so it belongs to Bimo's own cartoon drawing. Image 1 is the PRIMARY reference for exact rendering language, green palette, warm white accents, diffuse lighting and confident ink contours. Image 2 is only a reference for the cap's sideways silhouette and right-pointing visor. Image 3 shows the current mismatched fit and scale on Bimo. Deliver a fresh coherent illustration of ONLY the cap, isolated on genuine transparency. Art direction: hand-drawn 2D character accessory with broad simple painted color areas and very restrained soft cel shading, matching the raccoon's face and blazer. Main fabric is a calm medium muted sage/forest green, distinct from the background's pale mint, with a deep pine-green short visor picking up the raccoon's green face patches. Use a small warm ivory leaf emblem, a single readable leaf shape with one subtle central vein, painted or appliqued in the same cartoon style. Rounded charcoal outlines should remain clearly readable and match the character's outline at small display size. One simple darker plane beneath the visor, at most two subdued panel seams, shallow softly slouched crown, tiny flat top button. The whole cap is worn slightly askew, visor points to the RIGHT of the image in a convincing three-quarter side view. Give the crown a gentle natural tilt. Keep the cap compact and low, wider than tall, naturally curved at the bottom to sit on the top of Bimo's head between his visible ears. Avoid the previous pale glossy toy appearance: eliminate shiny white highlights, photoreal fabric grain, fluffy embroidery, raised stitched outlines, bright dotted stitching, lime/cyan tones and double outlines. Clean matte finish, charming thoughtful shape, consistent medium-sized details. Square output with the whole standalone cap centered and generous truly transparent margins. No raccoon, face, ears, character body, background, mannequin, cast shadow, text, watermark or extra objects.",
+    "tool": "built-in image_gen",
+    "placement": {
+      "width": 208,
+      "left": 428,
+      "top": 70
+    }
+  },
+  "blue-headphones": {
+    "layer": "head",
+    "source": "blue-headphones-source.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent PNG accessory overlay for the Bimo cartoon raccoon. Image 1 is the exact character style and fit reference. Image 2 is the approved matte accessory rendering reference. Draw ONLY a compact pair of sky-blue over-ear headphones seen straight from the front, symmetric with a wide open transparent center. Fit intention: surround the raccoon's tall ears with a slim broad arch and place two small ear cushions at the lower outside edges of the ears near the temples, keeping the whole forehead, eyebrows, eyes, face and smile visible. The arch should be wide and gently rounded, slightly flattened at its top, with slender short side links joining the ear cups. Its interior remains completely empty and transparent. Each cup is a rounded vertical capsule, soft ivory cushion facing inward, calm muted powder blue outer shell, a single subtle darker-blue inset panel and small simple hinge. Charming modest proportions, no giant gaming ear cups. Confident dark charcoal rounded ink contours matching Bimo, matte broad painted colors and restrained soft cel shading, minimal detail readable at tiny sidebar size. Airy powder blue #86b8c9, muted deeper blue #56889e, warm ivory #f8f1df. No glossy highlights, realism, metallic parts, fabric grain, LEDs, neon, wire, microphone, text, logo, stars, music notes, character, raccoon, face, ears, body, hands, background or cast shadow. Center the whole standalone accessory on true transparency with generous clear margins, square output. Continuous simple rounded arch and both ear cups present, no floating disconnected parts.",
+    "tool": "built-in image_gen",
+    "placement": {
+      "width": 590,
+      "left": 217,
+      "top": 8
+    }
+  },
+  "sand-bucket-hat": {
+    "layer": "head",
+    "source": "sand-bucket-hat-source.png",
+    "prompt": "Use case: stylized-concept. Asset type: isolated transparent accessory for Bimo, the cartoon raccoon shown in image 1. Image 1 defines exact hand-painted 2D cartoon style, warm whites, rounded charcoal outlines and subtle soft cel shading. Image 2 defines restrained matte accessory finish. Draw ONLY a cute compact sand-colored bucket hat with a muted turquoise fabric band for the beach outfit. Gently tapered low soft crown, softly rounded corners, short downward sloping brim, modest small rounded brim tips, simple readable silhouette. Front view with a very slight natural tilt. This hat will sit small BETWEEN the raccoon's tall ears, so make it low and wide, with no enormous crown and no long brim obscuring the eyebrows. Warm pale sand beige main fabric, slightly deeper sand under brim, muted turquoise band echoing a calm sea. Two simple understated seams, no complex stitching or decorations. Consistent rounded dark charcoal outline matching character, matte clean broad painted colors, very gentle shadow planes only. No glossy surface, photographic fabric texture, woven grain, text, logo, character, face, ears, mannequin, scenery, cast shadow or other objects. Entire standalone hat centered on true transparent background with generous margins, square output. Open area beneath brim is transparent.",
+    "tool": "built-in image_gen",
+    "placement": {
+      "width": 270,
+      "left": 385,
+      "top": 45
+    }
+  },
+  "starry-scarf": {
+    "layer": "neck",
+    "source": "starry-scarf-source.png",
+    "prompt": "Use case: stylized-concept. Asset type: one transparent neck accessory overlay for Bimo, the hand-painted cartoon raccoon in image 1. Image 1 defines the exact character's drawing language, warm whites, confident rounded charcoal outlines and restrained soft cel shading. Image 2 defines the approved matte accessory finish. Draw ONLY a charming SHORT midnight-blue neckerchief tied in a small knot at the RIGHT side of the image. A shallow softly folded curved fabric band wraps across the front of a small neck, with a compact knot and TWO VERY SHORT gently pointed fabric tails falling a little below the band on image-right. The overall silhouette is horizontally elongated, about two and a half times as wide as high, with a central lower edge that stays high enough to leave a jacket badge visible. This is a flat illustrated overlay with no person or neck inside it. Its top contour should be gently concave so a cartoon head can overlap it. Muted deep navy #344a72, a slightly lighter soft blue fold plane and restrained golden-cream motifs. Place ONE little simple crescent moon on the left/front band and TWO tiny four-point stars widely spaced, with clear quiet negative space. The tiny stars must be legible marks, no dense pattern. Keep the dark outline smooth and moderately thick like the raccoon's outlines. Matte hand-painted broad color areas, only a few believable soft folds, friendly lightweight fabric. No realistic woven texture, shine, fringes, long dangling ends, neck holes, dark interior oval, metal pins, text, logo, glitter, character, face, neck, ears, body, hanger, background or cast shadow. Entire standalone scarf centered on genuinely transparent background with generous clear margins, square output.",
+    "tool": "built-in image_gen",
+    "placement": {
+      "width": 245,
+      "left": 395,
+      "top": 427
+    }
+  }
+}

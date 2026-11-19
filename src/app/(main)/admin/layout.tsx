@@ -1,10 +1,17 @@
+import { redirect } from 'next/navigation'
+
+import { checkIsAdmin } from '@/modules/admin'
 import { AdminNav } from '@/modules/admin/components/AdminNav'
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  // Вторая линия после middleware: закрывает все вложенные страницы разом,
+  // включая те, где своей проверки нет (/admin, /admin/norm-control).
+  if (!await checkIsAdmin()) redirect('/')
+
   return (
     <div className="space-y-5">
       <div className="animate-fade-in-up">

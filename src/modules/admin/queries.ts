@@ -1,4 +1,6 @@
 import { createSupabaseServerClient, createSupabaseAdminClient } from '@/config/supabase'
+import { bimoLook, DEFAULT_EQUIPMENT, parseRigArt } from '@/modules/bimo-rig'
+import type { BimoLook } from '@/modules/bimo-rig'
 
 import type {
   EventTypeRow, AdminUserRow, UserDetail, UserTransaction, AdminOrderRow,
@@ -7,6 +9,24 @@ import type {
   EconomyFilters, EconomyOverview, TopSource, TopLevel, TopRow, CategoryRow,
   EconomyPeriodPreset, DepartmentGroupRow, LowBalanceUser, CrystalRateRow,
 } from './types'
+
+export async function getBimoProductPreviews(): Promise<Record<string, BimoLook>> {
+  try {
+    const db = createSupabaseAdminClient()
+    const { data, error } = await db.from('bimo_catalog').select('product_id,asset_key,slot,art,art_version')
+    if (error) throw error
+    const previews: Record<string, BimoLook> = {}
+    for (const row of data ?? []) {
+      const art = parseRigArt(row.art, row.slot, row.art_version)
+      if (!art) continue
+      previews[row.product_id] = bimoLook({ ...DEFAULT_EQUIPMENT, [row.slot]: row.asset_key }, { [row.asset_key]: art })
+    }
+    return previews
+  } catch (error) {
+    console.error('[admin/bimo-previews] Failed to load artwork', error)
+    return {}
+  }
+}
 
 // gamification_balances — связь 1:1, но Supabase может вернуть объект или массив
 function extractCoins(balance: unknown): number {

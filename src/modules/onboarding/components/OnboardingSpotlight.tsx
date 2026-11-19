@@ -45,7 +45,7 @@ export function OnboardingSpotlight({
   const [tooltipPos, setTooltipPos] = useState<TooltipPosition | null>(null)
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
   const [extraRects, setExtraRects] = useState<DOMRect[]>([])
-  const [ready, setReady] = useState(false)
+  const [ready, setReady] = useState(step.target === null)
 
   const isModal = step.target === null
   const isLastStep = stepIndex === totalSteps - 1
@@ -54,19 +54,10 @@ export function OnboardingSpotlight({
 
   // Поиск target элемента в DOM с polling
   useEffect(() => {
-    setReady(false)
-    setTargetEl(null)
-    setTargetRect(null)
-    setExtraRects([])
-    setTooltipPos(null)
-
     // Подготовить DOM перед поиском target (переключить таб, перейти на страницу и т.п.)
     step.onBeforeShow?.({ router })
 
-    if (isModal) {
-      setReady(true)
-      return
-    }
+    if (isModal) return
 
     const startTime = Date.now()
 

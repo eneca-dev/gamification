@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Trophy, Clock, Info } from "lucide-react";
 import type { DepartmentEntry } from "@/lib/data";
+import { TopSearch } from "./TopSearch";
 
 interface DepartmentContestProps {
   departments: DepartmentEntry[];
@@ -108,16 +109,21 @@ function DisciplineColumn({
   showGapToLeader = true,
 }: DisciplineColumnProps) {
   const isFirstOfMonth = new Date().getDate() === 1;
+  const [query, setQuery] = useState("");
+  const visibleEntries = sorted.filter((entry) => entry.shortName.toLocaleLowerCase("ru-RU").includes(query.trim().toLocaleLowerCase("ru-RU")));
   const leader = sorted[0];
   const currentDept = sorted.find((d) => d.isCurrentDepartment);
   const currentRank = currentDept?.rank ?? null;
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-1.5">
-        <span className="text-[13px]">{icon}</span>
-        <span className="text-[12px] font-semibold" style={{ color: accentColor }}>{title}</span>
-        {tooltip && <InfoTooltip text={tooltip} formula={tooltipFormula} />}
+      <div className="flex items-center justify-between gap-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-[13px]">{icon}</span>
+          <span className="text-[12px] font-semibold" style={{ color: accentColor }}>{title}</span>
+          {tooltip && <InfoTooltip text={tooltip} formula={tooltipFormula} />}
+        </div>
+        <TopSearch label={title} query={query} onQueryChange={setQuery} />
       </div>
 
       {/* Победитель прошлого месяца */}
@@ -189,18 +195,18 @@ function DisciplineColumn({
 
       {/* Department rows — scrollable */}
       <div className="space-y-1.5 max-h-[340px] overflow-y-auto scrollbar-hide">
-        {sorted.length === 0 ? (
+        {visibleEntries.length === 0 ? (
           <div
             className="flex flex-col items-center justify-center py-8 gap-2 rounded-xl"
             style={{ background: 'var(--apex-bg)', border: '1px solid var(--apex-border)' }}
           >
             <span className="text-lg">📅</span>
             <div className="text-[12px] font-medium text-center" style={{ color: 'var(--apex-text-muted)' }}>
-              {isFirstOfMonth ? "Топ сброшен в начале месяца." : "Данные сброшены."}<br />Данные появятся завтра.
+              {query.trim() ? "Ничего не найдено" : <>{isFirstOfMonth ? "Топ сброшен в начале месяца." : "Данные сброшены."}<br />Данные появятся завтра.</>}
             </div>
           </div>
         ) : null}
-        {sorted.map((dept) => {
+        {visibleEntries.map((dept) => {
           const isFirst = dept.rank === 1;
           const isCurrent = dept.isCurrentDepartment;
           const metric = getMetric(dept);

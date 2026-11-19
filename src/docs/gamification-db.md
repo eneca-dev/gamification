@@ -382,6 +382,8 @@ UNIQUE(user_email, ws_task_id, cost_date).
 
 Справочник типов событий и их стоимость в 💎. Колонка `name` — человекочитаемое название для отображения в UI. Редактируется админами через `/admin/events`.
 
+ИИ-проекты: `ai_norm_check_monthly`, `ai_tender_advisor_monthly`, `ai_tender_digest_monthly` настроены на 200 💎, но остаются выключенными (`is_active=false`, `create_transaction=false`). Данные хранятся в `ai_norm_checks` (проверки) и `ai_tender_usage_daily` (дневные счётчики Tender, соответствия сотрудникам в `tender_email_aliases`); это не транзакции.
+
 **С начислением/списанием 💎:**
 
 | key                          | coins | description                                              |
@@ -657,6 +659,10 @@ VPS-скрипты, заменившие Edge Function `sync-plugin-launches`:
 | `sync-ws-absences.ts`      | `ws_user_absences`                                                                                                                                                                                                   | Синк отсутствий: vacation/sick_leave из `get_users_schedule` за вчера; sick_day — из `get_events&period=8d&id_project=130340` + `get_task` на каждую затронутую подзадачу под `4905680` |
 | `sync-task-events.ts`      | `ws_task_status_changes`                                                                                                                                                                                             | Синк смен статусов из WS API get_events (period=1d1h). Парсит теги «Система планирования»                                                                                       |
 | `compute-gamification.ts`  | `gamification_event_logs`, `gamification_transactions`, `gamification_balances`, `ws_user_streaks`, `ws_daily_statuses`, `budget_pending`, `deadline_pending`, `ws_task_budget_checkpoints`, `ws_daily_report_tasks` | Основной движок WS-геймификации: нарушения, статусы дней, стрики, бюджеты, дедлайны, транзакции. Пропускает Сб/Вс (кроме `calendar_workdays`) и праздники (`calendar_holidays`) |
+
+Ночной `catch-up-streak-milestones.ts` вызывает `fn_catch_up_streak_milestones()` после расчёта WS и Revit. Функция один раз читает каждый effective-стрик, идемпотентно выдаёт пропущенные бонусы 7/30/90 и закрывает циклы WS 90 / Revit 30. Для этой RPC установлен `statement_timeout = 30s`; запуск разрешён `service_role`. Для восстановления конкретной даты служебная роль может вызвать `fn_catch_up_streak_milestones_for_date(date)`. Она использует текущее состояние стриков, поэтому подходит для немедленного повтора пропущенного запуска; восстановление более старых дат требует отдельной сверки истории. Повторный вызов за ту же дату не должен создавать событий или транзакций. После восстановления прошлого дня необходимо обновить материализованные рейтинги и сверить сохранённый снимок рейтинга за `ranking_date`.
+
+`compute-achievements` вызывает `fn_ach_snapshot_rankings()` после обоих расчётов. Функция обновляет шесть материализованных рейтингов, записывает снимок за предыдущий день и выдаёт достижения; для неё отдельно установлен `statement_timeout = 30s`. VPS-скрипт один раз повторяет вызов при SQLSTATE `57014` (тайм-аут), а затем сообщает об ошибке. Проверка достижений за благодарности выполняется отдельно. Если снимок всё же пропущен, повторять RPC можно только в тот же минский день и после проверки, что в рейтинги ещё не попали данные за более поздний день (`ranking_date` для WS, `event_date` для Revit, `work_date` для запусков). Иначе снимок и награды восстанавливают по исходным данным на пропущенную дату.
 
 ### Библиотеки (`lib/`)
 

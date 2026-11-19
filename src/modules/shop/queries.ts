@@ -1,25 +1,15 @@
 import { createSupabaseAdminClient } from '@/config/supabase'
+import { readUserBalance } from './balance'
 import { cached, CACHE_1H, CACHE_5M } from '@/lib/server-cache'
 
 import { computePriceCrystals } from './types'
-import type { ShopCategory, ShopProductWithCategory, ShopOrderWithDetails } from './types'
+import type { ShopCategory, ShopProductWithCategory, ShopOrderWithDetails, ProductMediaItem } from './types'
 
 export const balanceTag = (userId: string) => `balance:${userId}`
 
-async function _getUserBalance(wsUserId: string): Promise<number> {
-  const supabase = createSupabaseAdminClient()
-
-  const { data } = await supabase
-    .from('gamification_balances')
-    .select('total_coins')
-    .eq('user_id', wsUserId)
-    .single()
-
-  return data?.total_coins ?? 0
-}
 
 export const getUserBalance = (wsUserId: string) =>
-  cached(() => _getUserBalance(wsUserId), ['user-balance', wsUserId], {
+  cached(() => readUserBalance(wsUserId), ['user-balance', wsUserId], {
     tags: [balanceTag(wsUserId)],
     revalidate: CACHE_5M,
   })()
@@ -69,23 +59,30 @@ export async function getAllCategories(): Promise<ShopCategory[]> {
   return data ?? []
 }
 
-function attachComputedPrice<T extends { cost_byn: number | string; coefficient: number | string }>(
+function attachComputedPrice<T extends { cost_byn: number | string; coefficient: number | string; price_adjustment_crystals?: number | null; media?: unknown }>(
   product: T,
   rate: number,
-): T & { cost_byn: number; coefficient: number; price: number } {
+): T & { cost_byn: number; coefficient: number; price: number; media: ProductMediaItem[] } {
   const costByn = Number(product.cost_byn)
   const coefficient = Number(product.coefficient)
+  const adjustment = Number(product.price_adjustment_crystals ?? 0)
+  const media = Array.isArray(product.media) ? (product.media as ProductMediaItem[]) : []
   return {
     ...product,
     cost_byn: costByn,
     coefficient,
-    price: computePriceCrystals(costByn, coefficient, rate),
+    price_adjustment_crystals: adjustment,
+    media,
+    price: computePriceCrystals(costByn, coefficient, rate, adjustment),
   }
 }
 
 async function _getProducts(categorySlug?: string): Promise<ShopProductWithCategory[]> {
   const supabase = createSupabaseAdminClient()
   const rate = await getCurrentRate()
+  const { data: bimoItems, error: bimoError } = await supabase.from('bimo_catalog').select('product_id')
+  if (bimoError) throw new Error(bimoError.message)
+  const bimoProductIds = new Set((bimoItems ?? []).map(item => item.product_id))
 
   let query = supabase
     .from('shop_products')
@@ -105,7 +102,7 @@ async function _getProducts(categorySlug?: string): Promise<ShopProductWithCateg
   if (error) throw new Error(error.message)
 
   return (data ?? [])
-    .filter((p) => p.category?.is_active)
+    .filter((p) => p.category?.is_active && !bimoProductIds.has(p.id) && !p.effect?.startsWith('bimo:'))
     .map((p) => attachComputedPrice(
       { ...p, category: Array.isArray(p.category) ? p.category[0] : p.category },
       rate,

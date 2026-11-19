@@ -13,9 +13,17 @@
  */
 
 export const queryKeys = {
+  roulette: {
+    all: ['roulette'] as const,
+    user: (userId: string) => [...queryKeys.roulette.all, userId] as const,
+  },
+  bimo: {
+    all: ['bimo'] as const,
+    user: (userId: string) => [...queryKeys.bimo.all, userId] as const,
+  },
   balance: {
     all: ['balance'] as const,
-    current: () => [...queryKeys.balance.all, 'current'] as const,
+    current: (userId: string) => [...queryKeys.balance.all, 'current', userId] as const,
   },
   gratitudes: {
     all: ['gratitudes'] as const,

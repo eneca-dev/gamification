@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Menu } from 'lucide-react'
 
@@ -23,9 +23,23 @@ export function LayoutShell({ user, balance, showDevSwitcher, dayOffResolved, si
   const [isCollapsed, setIsCollapsed] = useState(sidebarCollapsed)
   const pathname = usePathname()
 
-  useEffect(() => {
+  const [previousPathname, setPreviousPathname] = useState(pathname)
+  if (previousPathname !== pathname) {
+    setPreviousPathname(pathname)
     setSidebarOpen(false)
-  }, [pathname])
+  }
+
+  // Ширина полосы прокрутки нужна блокам во всю ширину: 100vw её включает,
+  // иначе такие блоки вылезают за экран и появляется горизонтальный скролл.
+  useEffect(() => {
+    function measure() {
+      const width = window.innerWidth - document.documentElement.clientWidth
+      document.documentElement.style.setProperty('--scrollbar-w', `${Math.max(0, width)}px`)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
 
   function toggleCollapse() {
     setIsCollapsed(prev => {
@@ -54,7 +68,10 @@ export function LayoutShell({ user, balance, showDevSwitcher, dayOffResolved, si
         onToggleCollapse={toggleCollapse}
       />
 
-      <div className={`flex-1 min-w-0 ml-0 transition-[margin] duration-300 ease-in-out ${isCollapsed ? 'md:ml-[68px]' : 'md:ml-[260px]'}`}>
+      <div
+        className={`app-content flex-1 min-w-0 ml-0 transition-[margin] duration-300 ease-in-out ${isCollapsed ? 'md:ml-[68px]' : 'md:ml-[260px]'}`}
+        style={{ '--sidebar-w': isCollapsed ? '68px' : '260px' } as React.CSSProperties}
+      >
         <header
           className="sticky top-0 z-20 flex items-center gap-3 px-4 h-14 md:hidden"
           style={{ background: 'var(--apex-surface)', borderBottom: '1px solid var(--apex-border)' }}

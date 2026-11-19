@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "mcp__Sequential_Thinking__sequentialthinking"
     ]
   }
 }

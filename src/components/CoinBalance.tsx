@@ -39,17 +39,19 @@ export function CoinStatic({ amount, size = "md", className = "" }: CoinBalanceP
 
 interface CoinBalanceLiveProps {
   initialAmount: number;
+  userId: string | null;
   size?: "sm" | "md" | "lg";
 }
 
-export function CoinBalanceLive({ initialAmount, size = "md" }: CoinBalanceLiveProps) {
-  const { data } = useBalance({ refetchInterval: BALANCE_POLL_INTERVAL })
+export function CoinBalanceLive({ initialAmount, userId, size = "md" }: CoinBalanceLiveProps) {
+  const { data, isError, isFetching } = useBalance(userId ?? '', { enabled: Boolean(userId), refetchInterval: BALANCE_POLL_INTERVAL })
   const amount = data ?? initialAmount
-  const formatted = amount.toLocaleString("ru-RU");
+  const formatted = isError ? "Не обновлён" : isFetching ? "Обновляем…" : amount.toLocaleString("ru-RU");
 
   return (
     <span className={`inline-flex items-center gap-1.5 font-bold ${sizeClasses[size]}`}>
-      <span style={{ color: "var(--apex-text)" }}>{formatted}</span>
+      <span className="live-balance-value" style={{ color: "var(--apex-text)" }}>{formatted}</span>
+      <span className="live-balance-revealing" role="status">Ожидаем результат…</span>
       <CoinIcon size={coinSizes[size]} className="flex-shrink-0" />
     </span>
   );

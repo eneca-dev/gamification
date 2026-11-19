@@ -1,0 +1,120 @@
+{
+  "project": "yqezhfughtublpaitmij",
+  "status": "stopped_after_sql01_parser_error",
+  "sql01Applied": false,
+  "sql02Sent": false,
+  "sql05Applied": false,
+  "error": "Supabase apply_migration rejected leading U+FEFF BOM (42601) before first statement",
+  "beforeReports": [
+    {
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "md5": "644753347eb6cf1d93b9c7eb1a697723",
+      "owner": "postgres",
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "prosecdef": false,
+      "signature": "get_adoption_monthly_summary_v3(date,date,text,text[])"
+    },
+    {
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "md5": "5891d760b26adc7498b5ee764b73b5a1",
+      "owner": "postgres",
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "prosecdef": false,
+      "signature": "get_adoption_period_core_v2(date,date)"
+    },
+    {
+      "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "md5": "492b34929142b3b10b1789438250b807",
+      "owner": "postgres",
+      "proconfig": [
+        "search_path=public"
+      ],
+      "prosecdef": false,
+      "signature": "get_economy_overview(timestamp with time zone,timestamp with time zone)"
+    },
+    {
+      "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "md5": "484fb4850424641a6da41a03a388ae76",
+      "owner": "postgres",
+      "proconfig": [
+        "search_path=public"
+      ],
+      "prosecdef": false,
+      "signature": "get_economy_top(timestamp with time zone,timestamp with time zone,text,text)"
+    }
+  ],
+  "after": {
+    "spin": null,
+    "state": null,
+    "stats": null,
+    "result": null,
+    "reports": [
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "md5": "644753347eb6cf1d93b9c7eb1a697723",
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "prosecdef": false,
+        "signature": "get_adoption_monthly_summary_v3(date,date,text,text[])"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "md5": "5891d760b26adc7498b5ee764b73b5a1",
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "prosecdef": false,
+        "signature": "get_adoption_period_core_v2(date,date)"
+      },
+      {
+        "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+        "md5": "492b34929142b3b10b1789438250b807",
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=public"
+        ],
+        "prosecdef": false,
+        "signature": "get_economy_overview(timestamp with time zone,timestamp with time zone)"
+      },
+      {
+        "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+        "md5": "484fb4850424641a6da41a03a388ae76",
+        "owner": "postgres",
+        "proconfig": [
+          "search_path=public"
+        ],
+        "prosecdef": false,
+        "signature": "get_economy_top(timestamp with time zone,timestamp with time zone,text,text)"
+      }
+    ],
+    "settings": null,
+    "event_type": false,
+    "private_schema": null,
+    "roulette_events": 0
+  },
+  "reportDefinitionsAndPrivilegesUnchanged": true,
+  "backupDirectory": "D:\\EnecaProjects\\Gamification\\test-results\\roulette-working-db\\20261118-before",
+  "schemaComparison": {
+    "tables": 22,
+    "columns": 177,
+    "constraints": 84,
+    "columnsMatch": true,
+    "constraintsMatch": true
+  },
+  "sql05MatchesLiveDefinitions": true,
+  "readOnlyReportsBefore": {
+    "top_md5": "39b837cb7067d9791154d05a3d0e1bc6",
+    "core_md5": "5ae3684d2dae48cb109dc5aa178222c2",
+    "monthly_md5": "1e81bef6d4ef32bf4674763798bcc2cf",
+    "overview_md5": "31590d31fe0104f26eacb0300dc88def",
+    "roulette_events": 0,
+    "duplicate_event_ids": false
+  }
+}

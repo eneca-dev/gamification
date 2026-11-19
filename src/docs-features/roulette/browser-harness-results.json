@@ -1,0 +1,83 @@
+{
+  "verifiedAt": "2026-11-18T11:36:07.458Z",
+  "browser": {
+    "startTime": "2026-11-18T11:33:40.062Z",
+    "duration": 47941.078,
+    "expected": 90,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "viewports": [
+    360,
+    768,
+    1280,
+    1920,
+    2560
+  ],
+  "isolation": "Synthetic client fixture only; no DB/Auth/external integrations",
+  "unit": {
+    "passed": 123,
+    "total": 123,
+    "command": "npm test -- --maxWorkers=2"
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 49
+  },
+  "review": "Read-only reviewer: findings resolved; no further findings",
+  "initialRuns": "Initial full browser 88/90 and unit122/123 under concurrent build load. Isolated reruns passed; test timeouts were not increased.",
+  "fixedDefect": "Roulette SVG horizontal overflow at360px; overflow-hidden on wrapper",
+  "files": [
+    {
+      "file": "scripts/roulette-browser-server.mjs",
+      "sha256": "ecda055d0e20440716424642990bf53b5374ab0470dcc760150e54244db5314c"
+    },
+    {
+      "file": "scripts/test-roulette-browser.mjs",
+      "sha256": "decd929a7894956c5803c85f567d6e7e69070b4d27add0dbf206048c18bf0dd3"
+    },
+    {
+      "file": "playwright.browser.config.ts",
+      "sha256": "228ce8bd6935ed24f68269abdedabc3a44b013d514b9902bacea41a77844edc7"
+    },
+    {
+      "file": "tests/browser/fixture-actions.ts",
+      "sha256": "3bdf32a7a09d33d200e505d2dc1fb9d3beb997cf2ffa217fe546253e0945db2c"
+    },
+    {
+      "file": "tests/browser/main.tsx",
+      "sha256": "8508f72f4f975053faf3d3aa72297aeb4d45f5f65bf9473907a053f6b789b8f8"
+    },
+    {
+      "file": "tests/browser/cache-entry.ts",
+      "sha256": "e484c8dd8da1583aff8863176ae97d7414a618c0d530363a7c2da6fe80b539e3"
+    },
+    {
+      "file": "tests/browser/roulette.spec.ts",
+      "sha256": "e317b47c30ca9ad78634e981717f07be63755715d60ad33beab5e1f1d7d6c038"
+    },
+    {
+      "file": "src/modules/roulette/components/RouletteWheel.tsx",
+      "sha256": "41063a690125fb96b1ed8a6cd2428c9ee4416626b707d059d29991d176adeb07"
+    }
+  ],
+  "limitations": [
+    "No real DB commit or Supabase Auth/PostgREST",
+    "No Next server cache runtime verification",
+    "No Store routing or complete v2.0 acceptance",
+    "No real external delivery"
+  ],
+  "typeScript": {
+    "exitCode": 0,
+    "command": "npm run type-check"
+  },
+  "build": {
+    "exitCode": 0,
+    "command": "npm run build",
+    "notes": [
+      "Next16 middleware deprecation",
+      "getCompanyAwards/getGratitudesFeedNew fetch failed during generation; all46 pages generated"
+    ]
+  }
+}
