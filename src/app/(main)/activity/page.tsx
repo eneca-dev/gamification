@@ -16,7 +16,6 @@ import {
   GALLERY_GROUPINGS,
   GALLERY_LOOK_FILTERS,
   GALLERY_SORTS,
-  getBimoLikesLeft,
   getGalleryPage,
 } from '@/modules/bimo-gallery'
 import { BimoGalleryClient } from '@/modules/bimo-gallery/components/BimoGalleryClient'
@@ -80,10 +79,7 @@ export default async function ActivityPage({ searchParams }: ActivityPageProps) 
   // Галерея Бимо живёт вкладкой этой же ленты: это такой же взгляд на компанию,
   // с теми же группировками по отделу и команде.
   const hasBimo = bimoEnabled() && Boolean(user?.wsUserId)
-  const bimoProps = {
-    hasBimo,
-    bimoLikesLeft: hasBimo ? await getBimoLikesLeft(user?.wsUserId ?? null) : null,
-  }
+  const bimoProps = { hasBimo }
 
   if (tab === 'bimo') {
     if (!hasBimo) {
@@ -351,13 +347,11 @@ function Header({
   hasDepartment,
   hasTeam,
   hasBimo,
-  bimoLikesLeft,
   tab,
 }: {
   hasDepartment: boolean
   hasTeam: boolean
   hasBimo: boolean
-  bimoLikesLeft: number | null
   tab: string
 }) {
   return (
@@ -367,7 +361,7 @@ function Header({
           {TAB_TITLES[tab] ?? 'Лента компании'}
         </h1>
         <Suspense fallback={null}>
-          <FeedTabSwitcher hasDepartment={hasDepartment} hasTeam={hasTeam} hasBimo={hasBimo} bimoLikesLeft={bimoLikesLeft} />
+          <FeedTabSwitcher hasDepartment={hasDepartment} hasTeam={hasTeam} hasBimo={hasBimo} />
         </Suspense>
       </div>
       <p className="text-sm font-medium mt-1" style={{ color: 'var(--text-secondary)' }}>
