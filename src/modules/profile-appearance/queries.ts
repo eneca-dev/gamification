@@ -6,7 +6,10 @@ import { DEFAULT_EQUIPMENT, bimoRenderable, parseRigArt } from '@/modules/bimo-r
 import type { BimoArtMap, BimoSlot } from '@/modules/bimo-rig'
 import type { BimoState } from './types'
 
-export const bimoEnabled = () => process.env.NODE_ENV === 'development' || process.env.BIMO_V2_ENABLED === 'true'
+// Коллекция открыта во всех окружениях: релизный флаг снят, переменная
+// BIMO_V2_ENABLED больше ни на что не влияет. Чтобы снова закрыть Бимо,
+// верните сюда проверку окружения.
+export const bimoEnabled = (): boolean => true
 
 export async function getBimoState(userId: string): Promise<BimoState> {
   const preview = process.env.NODE_ENV === 'development'
