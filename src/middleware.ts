@@ -57,7 +57,9 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Все пути кроме статики Next.js и медиафайлов
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Все пути кроме статики Next.js, медиафайлов и robots.txt:
+    // robots.txt должен отдаваться поисковику без сессии, иначе вместо правил
+    // индексации краулер получает редирект на /login
+    '/((?!_next/static|_next/image|favicon.ico|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

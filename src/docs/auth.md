@@ -11,7 +11,7 @@
 
 **Middleware (`src/middleware.ts`):**
 
-Выполняется на каждый запрос. Использует `createSupabaseMiddlewareClient(request)` из `src/config/supabase.ts` — возвращает `{ supabase, response }`, где `response` мутируется внутри `setAll` для передачи сессионных cookie (в middleware недоступен `next/headers`). Вызывает `getUser()` для валидации сессии. Публичные пути: `/login`, `/api/auth/*`, `/signin-worksection`. Без сессии на непубличном пути → редирект на `/login`. С сессией на `/login` → редирект на `/`. Для путей `/admin/*` декодирует JWT access_token и проверяет `is_admin` — не-админы редиректятся на `/`. Кнопка «Админ-панель» в сайдбаре скрыта для не-админов (`user.isAdmin`).
+Выполняется на каждый запрос. Использует `createSupabaseMiddlewareClient(request)` из `src/config/supabase.ts` — возвращает `{ supabase, response }`, где `response` мутируется внутри `setAll` для передачи сессионных cookie (в middleware недоступен `next/headers`). Вызывает `getUser()` для валидации сессии. Публичные пути: `/login`, `/api/auth/*`, `/signin-worksection`. Без сессии на непубличном пути → редирект на `/login`. С сессией на `/login` → редирект на `/`. Для путей `/admin/*` декодирует JWT access_token и проверяет `is_admin` — не-админы редиректятся на `/`. Кнопка «Админ-панель» в сайдбаре скрыта для не-админов (`user.isAdmin`). `robots.txt` исключён из matcher: файл обязан отдаваться без сессии, иначе краулер получает редирект на `/login` вместо правил индексации. Правила формирует `src/app/robots.ts` по домену запроса — индексация разрешена только боевому домену, дев и превью закрыты.
 
 **Модуль `src/modules/auth/`:**
 
