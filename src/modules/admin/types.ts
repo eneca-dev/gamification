@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { MAX_DECOR_SYMBOLS, MAX_DECOR_SYMBOL_LENGTH } from '@/modules/bimo-rig/index.client'
+
 // --- Event Types ---
 
 export interface EventTypeRow {
@@ -209,6 +211,19 @@ export const updateGratitudeSettingSchema = z.object({
 })
 
 export type UpdateGratitudeSettingInput = z.infer<typeof updateGratitudeSettingSchema>
+
+// --- Декор фона Бимо ---
+
+// Набор эмодзи вокруг Бимо. Лимиты общие с движком и маршрутом загрузки,
+// чтобы оба входа вели себя одинаково.
+export const updateBimoDecorSchema = z.object({
+  productId: z.string().uuid(),
+  decor: z.array(
+    z.string().trim().min(1, 'Эмодзи фона: пустой символ').max(MAX_DECOR_SYMBOL_LENGTH, 'Эмодзи фона: символ слишком длинный'),
+  ).max(MAX_DECOR_SYMBOLS, 'Эмодзи фона: не больше шести символов'),
+})
+
+export type UpdateBimoDecorInput = z.infer<typeof updateBimoDecorSchema>
 
 // --- Форма товара (используется в ProductFormModal → ProductsClient) ---
 

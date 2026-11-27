@@ -1,1 +1,1 @@
-export { prepareLayer, validatePreparedGarment } from './validate.server'
+export { prepareLayer } from './validate.server'

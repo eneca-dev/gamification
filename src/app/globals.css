@@ -89,15 +89,26 @@
   --text-secondary:        var(--apex-text-secondary);
   --text-muted:            var(--apex-text-muted);
 
-  /* ── Светлые тона под фоны Бимо: подложка витрины гардероба ─ */
-  --bimo-tint-mint:            #E0F3EA;
-  --bimo-tint-peach:           #FCE8D9;
-  --bimo-tint-lavender:        #EAE3FA;
-  --bimo-tint-clouds:          #E0EDFC;
-  --bimo-tint-office:          #F2EADC;
-  --bimo-tint-green-courtyard: #E3F2D9;
-  --bimo-tint-beach:           #FBEDD2;
-  --bimo-tint-starry-evening:  #E2E6F6;
+  /* ── Тона под фоны Бимо: подложка меню и полосы витрины ──
+     Имя токена совпадает с суффиксом asset_key фона в каталоге
+     (background.green_courtyard → --bimo-tint-green_courtyard): код
+     подставляет токен по ключу без таблицы соответствий, неизвестный
+     фон падает на мятный средствами CSS.
+     Значения взяты из самих рисунков: средний цвет фона, осветлённый
+     на 35% до белого. Поэтому тон меню и полоса витрины над ним дают
+     один цвет и не спорят друг с другом. */
+  --bimo-tint-mint:            #E3F3F1;
+  --bimo-tint-clouds:          #D7EDFA;
+  --bimo-tint-office:          #EDF0E6;
+  --bimo-tint-green_courtyard: #DBEFE8;
+  --bimo-tint-beach:           #D0EAE9;
+  --bimo-tint-starry_evening:  #B9C3E8;
+
+  /* Подписи на окрашенной подложке: --apex-text-secondary и
+     --apex-text-muted проседают ниже 4.5:1 уже на звёздном вечере,
+     самом тёмном из фонов. Оттенок один на все подписи меню: любой
+     светлее этого контраст не держит. */
+  --apex-text-on-tint:         #4B5563;
 
   /* ── Green → Teal aliases (backwards compat) ────────────── */
   --green-50:              #E6F4F1;
@@ -388,7 +399,9 @@ button, a[role="button"] { border-radius: 9999px; }
   .full-bleed { transition: none; }
 }
 
-/* Вуаль поверх размытого фона Бимо: тон читается, текст остаётся контрастным. */
+/* Вуаль поверх размытого фона Бимо: тон читается, текст остаётся контрастным.
+   Несмотря на префикс band, классом пользуются все подложки в цвет фона —
+   полоса витрины, боковое меню и плашка «Енот-Бимо» (BimoTintLayer). */
 .bimo-band-veil {
   background: color-mix(in srgb, var(--apex-bg) 62%, transparent);
 }

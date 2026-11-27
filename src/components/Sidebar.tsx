@@ -10,6 +10,7 @@ import type { AuthUser } from '@/modules/auth/index.client'
 import { DevUserSwitcher } from '@/modules/dev-tools/components/DevUserSwitcher'
 import { CoinBalanceLive } from '@/components/CoinBalance'
 import { BimoCompanion } from '@/modules/profile-appearance/components/BimoCompanion'
+import { BimoSidebarBackdrop } from '@/modules/profile-appearance/components/BimoSidebarBackdrop'
 
 const LS_KEY = 'day_off_last_seen_at'
 const SEEN_EVENT = 'day-off-last-seen'
@@ -93,6 +94,10 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, 
         borderRight: '1px solid var(--apex-border)',
       }}
     >
+      {/* Тон надетого фона Бимо и его эмодзи по всей высоте. Слой лежит под
+          содержимым меню, поэтому символы не перехватывают нажатия. */}
+      {user?.wsUserId && <BimoSidebarBackdrop userId={user.wsUserId} />}
+
       {/* Кликабельный правый бордер */}
       {onToggleCollapse && (
         <div
@@ -140,7 +145,7 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, 
                   ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'}`}
                 style={{
                   background: isActive ? 'var(--apex-success-bg)' : 'transparent',
-                  color: isActive ? 'var(--apex-primary)' : 'var(--apex-text-secondary)',
+                  color: isActive ? 'var(--apex-primary)' : 'var(--apex-text-on-tint)',
                   border: isActive
                     ? '1px solid rgba(var(--apex-primary-rgb), 0.2)'
                     : '1px solid transparent',
@@ -174,7 +179,7 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, 
                     ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'}`}
                   style={{
                     background: isActive ? 'var(--apex-disabled-bg)' : 'transparent',
-                    color: isActive ? 'var(--apex-text)' : 'var(--apex-text-muted)',
+                    color: isActive ? 'var(--apex-text)' : 'var(--apex-text-on-tint)',
                     border: '1px solid transparent',
                   }}
                 >
@@ -213,10 +218,11 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, 
         </div>
       </nav>
 
-      {/* Бимо. Отступы симметричные, в отличие от соседних блоков, иначе
-          рисунок смещается относительно центра меню. */}
+      {/* Бимо. Горизонтальные отступы симметричные и живут внутри компонента:
+          иначе рисунок смещается относительно центра меню, а полоса в цвет
+          фона не доходит до краёв. */}
       {!collapsed && user?.wsUserId && (
-        <div className="px-4 pb-2">
+        <div className="pb-2">
           <BimoCompanion key={user.wsUserId} userId={user.wsUserId} />
         </div>
       )}
@@ -232,7 +238,7 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, 
             className="pt-3 pb-3 pl-5 pr-3 rounded-xl"
             data-onboarding="sidebar-balance"
             style={{
-              background: 'var(--apex-success-bg)',
+              background: 'var(--apex-surface)',
               border: '1px solid var(--apex-border)',
             }}
           >
@@ -258,7 +264,7 @@ export function Sidebar({ user, balance, showDevSwitcher, isMobileOpen = false, 
           <div
             className="flex items-center gap-3 pt-3 pb-3 pl-5 pr-3 rounded-xl"
             style={{
-              background: 'var(--apex-bg)',
+              background: 'var(--apex-surface)',
               border: '1px solid var(--apex-border)',
             }}
           >

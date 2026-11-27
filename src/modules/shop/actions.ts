@@ -67,7 +67,7 @@ export async function purchaseProduct(
     .from('bimo_catalog').select('product_id').eq('product_id', parsed.data.product_id).maybeSingle()
   if (bimoError) return { success: false, error: 'Не удалось проверить товар' }
   if (bimoItem || product?.effect?.startsWith('bimo:')) {
-    return { success: false, error: 'Покупайте вещи Бимо в разделе «Бимо-енот»' }
+    return { success: false, error: 'Покупайте вещи Бимо в разделе «Бимо-шоп»' }
   }
 
   const { data, error } = await supabase.rpc('purchase_product', {

@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, Upload, Trash2, Loader2, ChevronDown, Check, MessageSquare, ArrowUp, ArrowDown, Youtube, Play } from 'lucide-react'
+import { X, Upload, Trash2, Loader2, Check, MessageSquare, ArrowUp, ArrowDown, Youtube, Play } from 'lucide-react'
 
 import { CoinStatic } from '@/components/CoinBalance'
+import { Select } from '@/components/Select'
 import {
   computePriceCrystals,
   computePriceWithoutDiscount,
@@ -395,7 +396,7 @@ export function ProductFormModal({ product, categories, rate, onSave, onClose, i
 
             {/* Категория */}
             <Field label="Категория" error={errors.category_id}>
-              <CustomSelect
+              <Select
                 value={categoryId}
                 onChange={setCategoryId}
                 options={activeCategories.map((c) => ({ value: c.id, label: c.name }))}
@@ -807,78 +808,3 @@ function EmojiInput({ value, onChange }: { value: string; onChange: (v: string) 
     </div>
   )
 }
-
-function CustomSelect({
-  value,
-  onChange,
-  options,
-  placeholder,
-  error,
-}: {
-  value: string
-  onChange: (v: string) => void
-  options: { value: string; label: string }[]
-  placeholder: string
-  error?: string
-}) {
-  const [isOpen, setIsOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  const selected = options.find((o) => o.value === value)
-
-  useEffect(() => {
-    if (!isOpen) return
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setIsOpen(false)
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [isOpen])
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] outline-none text-left"
-        style={inputStyle(error)}
-      >
-        <span style={{ color: selected ? 'var(--apex-text)' : 'var(--apex-text-muted)' }}>
-          {selected?.label ?? placeholder}
-        </span>
-        <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--apex-text-muted)' }} />
-      </button>
-
-      {isOpen && (
-        <div
-          className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl py-1.5 shadow-lg max-h-48 overflow-y-auto"
-          style={{
-            background: 'var(--apex-surface)',
-            border: '1px solid var(--apex-border)',
-          }}
-        >
-          {options.map((o) => {
-            const isSelected = o.value === value
-            return (
-              <button
-                type="button"
-                key={o.value}
-                onClick={() => { onChange(o.value); setIsOpen(false) }}
-                className="w-full text-left px-4 py-2 text-[12px] font-medium transition-colors flex items-center justify-between"
-                style={{
-                  color: isSelected ? 'var(--apex-primary)' : 'var(--apex-text)',
-                  background: isSelected ? 'var(--apex-success-bg)' : 'transparent',
-                }}
-                onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--apex-bg)' }}
-                onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = isSelected ? 'var(--apex-success-bg)' : 'transparent' }}
-              >
-                {o.label}
-                {isSelected && <Check size={14} />}
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-

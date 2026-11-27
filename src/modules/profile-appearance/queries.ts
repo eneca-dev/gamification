@@ -2,7 +2,7 @@ import 'server-only'
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { getCurrentRate } from '@/modules/shop/queries'
 import { computePriceCrystals } from '@/modules/shop/types'
-import { DEFAULT_EQUIPMENT, bimoRenderable, parseRigArt } from '@/modules/bimo-rig'
+import { DEFAULT_EQUIPMENT, bimoRenderable, parseDecor, parseRigArt } from '@/modules/bimo-rig'
 import type { BimoArtMap, BimoSlot } from '@/modules/bimo-rig'
 import type { BimoState } from './types'
 
@@ -11,12 +11,18 @@ import type { BimoState } from './types'
 // верните сюда проверку окружения.
 export const bimoEnabled = (): boolean => true
 
+// Черновики каталога видны всем, у кого есть вкладка «Бимо шоп»: гейтом служит
+// сам деплой — пока ветка не в main, вкладки в проде нет. Покупку это не
+// открывает, её по-прежнему держит is_released. Чтобы снова скрыть черновики,
+// верните сюда проверку окружения.
+const previewDrafts = (): boolean => true
+
 export async function getBimoState(userId: string): Promise<BimoState> {
-  const preview = process.env.NODE_ENV === 'development'
+  const preview = previewDrafts()
   if (!bimoEnabled()) return { enabled: false, preview: false, items: [], equipment: { ...DEFAULT_EQUIPMENT }, catalogArt: {} }
   const db = createSupabaseAdminClient()
   const [catalog, orders, equipped, rate] = await Promise.all([
-    db.from('bimo_catalog').select('asset_key,slot,product_id,is_released,art,art_version,product:shop_products!product_id(name,description,emoji,cost_byn,coefficient,price_adjustment_crystals,is_active,is_coming_soon,effect,comment_required,comment_label,comment_placeholder,category:shop_categories!category_id(slug,is_active,is_physical,is_countable))'),
+    db.from('bimo_catalog').select('asset_key,slot,product_id,is_released,art,art_version,decor,product:shop_products!product_id(name,description,emoji,cost_byn,coefficient,price_adjustment_crystals,is_active,is_coming_soon,effect,comment_required,comment_label,comment_placeholder,category:shop_categories!category_id(slug,is_active,is_physical,is_countable))'),
     db.from('shop_orders').select('id,product_id').eq('user_id', userId).eq('status', 'fulfilled').is('refund_transaction_id', null),
     db.from('bimo_equipment').select('slot,asset_key,source_order_id').eq('user_id', userId),
     getCurrentRate(),
@@ -53,6 +59,7 @@ export async function getBimoState(userId: string): Promise<BimoState> {
     items.push({
       assetKey: row.asset_key, slot, productId: row.product_id,
       name: product.name, description: product.description, emoji: product.emoji,
+      decor: parseDecor(row.decor),
       price: computePriceCrystals(Number(product.cost_byn), Number(product.coefficient), rate, Number(product.price_adjustment_crystals)),
       owned, purchasable: Boolean(purchasable), released, supported,
       commentRequired: product.comment_required === true,

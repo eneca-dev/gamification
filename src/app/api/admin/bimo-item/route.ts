@@ -6,8 +6,8 @@ import { z } from 'zod'
 import { createSupabaseAdminClient } from '@/config/supabase'
 import { assertCanUpload } from '@/lib/storage-quota'
 import { checkIsAdmin } from '@/modules/admin/checkIsAdmin'
-import { ART_VERSION, ITEM_LAYERS, MAX_LAYER_BYTES, parseRigArt } from '@/modules/bimo-rig'
-import { prepareLayer, validatePreparedGarment } from '@/modules/bimo-rig/index.server'
+import { ART_VERSION, ITEM_LAYERS, MAX_DECOR_SYMBOLS, MAX_DECOR_SYMBOL_LENGTH, MAX_LAYER_BYTES, OPTIONAL_LAYERS, parseDecor, parseRigArt, requiredLayers } from '@/modules/bimo-rig'
+import { prepareLayer } from '@/modules/bimo-rig/index.server'
 import type { BimoArt, BimoLayerName } from '@/modules/bimo-rig'
 
 export const runtime = 'nodejs'
@@ -21,6 +21,9 @@ const schema = z.object({
   kind: z.enum(['garment', 'accessory', 'necklace', 'background']),
   costByn: z.number().positive('Себестоимость должна быть больше нуля').finite(),
   coefficient: z.number().positive('Коэффициент должен быть больше нуля').finite(),
+  // Декор — только у фонов: массив приводится к шести коротким символам
+  // той же функцией, что читает его из каталога.
+  decor: z.array(z.string().trim().min(1, 'Эмодзи фона: пустой символ').max(MAX_DECOR_SYMBOL_LENGTH, 'Эмодзи фона: символ слишком длинный')).max(MAX_DECOR_SYMBOLS, 'Эмодзи фона: не больше шести символов').optional(),
 })
 const fail = (error: string, status = 400) => NextResponse.json({ success: false, error }, { status })
 const updateSchema = z.object({
@@ -35,7 +38,7 @@ function artworkRevision(row: { art: unknown; art_version: number; fit: unknown 
 
 async function loadDraftArtwork(db: ReturnType<typeof createSupabaseAdminClient>, productId: string) {
   const { data, error } = await db.from('bimo_catalog')
-    .select('asset_key,slot,product_id,art,art_version,fit,is_released,product:shop_products!product_id(id,effect,is_active,is_coming_soon,created_at,updated_at,category_id,sort_order)')
+    .select('asset_key,slot,product_id,art,art_version,fit,decor,is_released,product:shop_products!product_id(id,effect,emoji,is_active,is_coming_soon,created_at,updated_at,category_id,sort_order)')
     .eq('product_id', productId).maybeSingle()
   if (error) return { success: false as const, error: 'Не удалось загрузить выбранную вещь', status: 503 }
   if (!data) return { success: false as const, error: 'Вещь не найдена в каталоге Бимо', status: 404 }
@@ -57,7 +60,7 @@ export async function GET(request: NextRequest) {
   if (!productId.success) return fail('Неверный идентификатор товара')
   const draft = await loadDraftArtwork(createSupabaseAdminClient(), productId.data)
   if (!draft.success) return fail(draft.error, draft.status)
-  return NextResponse.json({ success: true, slot: draft.row.slot, revision: artworkRevision(draft.row), art: parseRigArt(draft.row.art, draft.row.slot, draft.row.art_version) })
+  return NextResponse.json({ success: true, slot: draft.row.slot, revision: artworkRevision(draft.row), art: parseRigArt(draft.row.art, draft.row.slot, draft.row.art_version), decor: parseDecor(draft.row.decor), emoji: draft.product.emoji ?? null })
 }
 
 async function readForm(request: NextRequest): Promise<FormData> {
@@ -94,7 +97,7 @@ export async function POST(request: NextRequest) {
   try { json = JSON.parse(raw) } catch { return fail('Неверные поля формы') }
   const parsed = schema.safeParse(json)
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? 'Неверные данные')
-  const { name, description, emoji, slug, kind, costByn, coefficient } = parsed.data
+  const { name, description, emoji, slug, kind, costByn, coefficient, decor } = parsed.data
   const slot = kind === 'garment' ? 'outfit' : kind === 'background' ? 'background' : 'accessory'
   const assetKey = `${slot}.${slug}`
   const layers = ITEM_LAYERS[kind]
@@ -102,14 +105,17 @@ export async function POST(request: NextRequest) {
   try {
     for (const layer of layers) {
       const incoming = form.getAll(layer)
-      if (incoming.length !== 1 || !(incoming[0] instanceof File)) return fail('Загрузите каждый обязательный слой ровно один раз')
+      // Необязательный слой можно не присылать: рукав нужен только образам,
+      // где он нарисован отдельно.
+      if (!incoming.length && OPTIONAL_LAYERS.includes(layer)) continue
+      if (incoming.length !== 1 || !(incoming[0] instanceof File)) return fail('Загрузите каждый слой не больше одного раза')
       const file = incoming[0]
       if (!['image/png', 'image/webp'].includes(file.type)) return fail('Поддерживаются PNG и WebP')
       if (!file.size || file.size > MAX_LAYER_BYTES) return fail('Каждый слой — максимум 2 МБ')
-      prepared.set(layer, await prepareLayer(new Uint8Array(await file.arrayBuffer()), layer))
+      prepared.set(layer, await prepareLayer(new Uint8Array(await file.arrayBuffer())))
     }
+    for (const layer of requiredLayers(kind)) if (!prepared.has(layer)) return fail('Загрузите основной рисунок вещи')
     for (const [key] of form) if (key !== 'fields' && !layers.some(layer => layer === key)) return fail('Для выбранного типа загружен лишний слой')
-    if (kind === 'garment') await validatePreparedGarment(prepared.get('outfit')!, prepared.get('sleeve')!)
     await assertCanUpload([...prepared.values()].reduce((sum, bytes) => sum + bytes.byteLength, 0))
   } catch (error) { return fail(error instanceof Error ? error.message : 'Не удалось проверить файлы') }
 
@@ -157,15 +163,18 @@ export async function POST(request: NextRequest) {
     if (created.error || !created.data) throw new Error('Не удалось создать черновик')
     product = created.data
     for (const layer of layers) {
+      const bytes = prepared.get(layer)
+      if (!bytes) continue
       const path = `${slot}/${attempt}/v${ART_VERSION}/${layer}.webp`
       attemptedPaths.push(path)
-      const result = await db.storage.from(BUCKET).upload(path, prepared.get(layer)!, { contentType: 'image/webp', upsert: false, cacheControl: '31536000' })
+      const result = await db.storage.from(BUCKET).upload(path, bytes, { contentType: 'image/webp', upsert: false, cacheControl: '31536000' })
       if (result.error) throw new Error('Не удалось загрузить слои вещи')
       art[layer] = db.storage.from(BUCKET).getPublicUrl(path).data.publicUrl
     }
     const catalog = await db.from('bimo_catalog').insert({
       asset_key: assetKey, slot, product_id: attempt, is_released: false,
       art, art_version: ART_VERSION, fit: { dx: 0, dy: 0, scale: 1 },
+      decor: slot === 'background' ? parseDecor(decor) : [],
     })
     if (catalog.error) throw new Error(catalog.error.code === '23505' ? 'Вещь с таким ключом уже создана' : 'Не удалось сохранить вещь в каталог')
   } catch (error) {
@@ -202,13 +211,14 @@ export async function PATCH(request: NextRequest) {
   try {
     for (const layer of layers) {
       const incoming = form.getAll(layer)
-      if (incoming.length !== 1 || !(incoming[0] instanceof File)) return fail('Загрузите каждый обязательный слой ровно один раз')
+      if (!incoming.length && OPTIONAL_LAYERS.includes(layer)) continue
+      if (incoming.length !== 1 || !(incoming[0] instanceof File)) return fail('Загрузите каждый слой не больше одного раза')
       const file = incoming[0]
       if (!['image/png', 'image/webp'].includes(file.type)) return fail('Поддерживаются PNG и WebP')
       if (!file.size || file.size > MAX_LAYER_BYTES) return fail('Каждый слой — максимум 2 МБ')
-      prepared.set(layer, await prepareLayer(new Uint8Array(await file.arrayBuffer()), layer))
+      prepared.set(layer, await prepareLayer(new Uint8Array(await file.arrayBuffer())))
     }
-    if (kind === 'garment') await validatePreparedGarment(prepared.get('outfit')!, prepared.get('sleeve')!)
+    for (const layer of requiredLayers(kind)) if (!prepared.has(layer)) return fail('Загрузите основной рисунок вещи')
     await assertCanUpload([...prepared.values()].reduce((sum, bytes) => sum + bytes.byteLength, 0))
   } catch (error) { return fail(error instanceof Error ? error.message : 'Не удалось проверить рисунок') }
 
@@ -225,9 +235,11 @@ export async function PATCH(request: NextRequest) {
   }
   try {
     for (const layer of layers) {
+      const bytes = prepared.get(layer)
+      if (!bytes) continue
       const objectPath = `${attemptRoot}/${layer}.webp`
       attemptedPaths.push(objectPath)
-      const upload = await db.storage.from(BUCKET).upload(objectPath, prepared.get(layer)!, { contentType: 'image/webp', upsert: false, cacheControl: '31536000' })
+      const upload = await db.storage.from(BUCKET).upload(objectPath, bytes, { contentType: 'image/webp', upsert: false, cacheControl: '31536000' })
       if (upload.error) throw new Error('Не удалось загрузить слои вещи')
       art[layer] = db.storage.from(BUCKET).getPublicUrl(objectPath).data.publicUrl
     }

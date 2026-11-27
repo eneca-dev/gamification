@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/Button'
-import { ITEM_LAYERS, LAYER_LABELS, validateGarmentPair } from '@/modules/bimo-rig/validate'
+import { ITEM_LAYERS, LAYER_LABELS, requiredLayers } from '@/modules/bimo-rig/validate'
 import { DEFAULT_PLACEMENT, loadImport, placementMatrix, prepareImport } from '@/modules/bimo-rig/import.client'
 import type { Placement } from '@/modules/bimo-rig/import.client'
 import type { BimoArt, BimoItemKind, BimoLayerName } from '@/modules/bimo-rig'
@@ -14,8 +14,23 @@ export interface PreparedBimoInput {
   checking: boolean
 }
 export const EMPTY_BIMO_INPUT: PreparedBimoInput = { files: {}, art: null, error: '', checking: false }
+
+/** Подсказка под полем: одна строка, подробности — в документации импорта. */
+const HINTS: Record<BimoItemKind, string> = {
+  background: 'PNG или WebP до 2 МБ, кадрируется по центру.',
+  garment: 'Основа обязательна, правый рукав — если он нарисован отдельно. PNG или WebP до 2 МБ.',
+  accessory: 'PNG или WebP до 2 МБ, прозрачный фон.',
+  necklace: 'PNG или WebP до 2 МБ, прозрачный фон.',
+}
+
+/** Имя файла подсказывает слой: художник отдаёт пару outfit/sleeve одним экспортом. */
+function layerFromFileName(name: string): BimoLayerName | null {
+  if (/sleeve|рукав/i.test(name)) return 'sleeve'
+  if (/outfit|основ/i.test(name)) return 'outfit'
+  return null
+}
 interface BimoImportEditorProps { kind: BimoItemKind; onChange: (value: PreparedBimoInput) => void }
-type ImportSource = Awaited<ReturnType<typeof loadImport>> & { filename: string }
+type ImportSource = Awaited<ReturnType<typeof loadImport>> & { filename: string; file: File }
 
 export function BimoImportEditor({ kind, onChange }: BimoImportEditorProps) {
   const [sources, setSources] = useState<Partial<Record<BimoLayerName, ImportSource>>>({})
@@ -23,29 +38,25 @@ export function BimoImportEditor({ kind, onChange }: BimoImportEditorProps) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const generation = useRef({ value: 0 })
-  const exampleRequest = useRef<{ controller: AbortController | null }>({ controller: null })
   const owned = useRef(new Set<string>())
   const previews = useRef<string[][]>([])
   const drag = useRef<{ x: number; y: number; fit: Placement } | null>(null)
   const layers = ITEM_LAYERS[kind]
 
   useEffect(() => {
-    const urls = owned.current, version = generation.current, pendingExample = exampleRequest.current
-    return () => { version.value++; pendingExample.controller?.abort(); for (const url of urls) URL.revokeObjectURL(url) }
+    const urls = owned.current, version = generation.current
+    return () => { version.value++; for (const url of urls) URL.revokeObjectURL(url) }
   }, [])
   useEffect(() => {
-    if (loading || !layers.every(layer => sources[layer])) return
+    // Готовится то, что выбрано: необязательные слои просто не попадают
+    // в набор. Рисунок не проверяется — как загрузили, так и сохранится.
+    const ready = layers.filter(layer => sources[layer])
+    if (loading || !requiredLayers(kind).every(layer => sources[layer])) return
     const request = generation.current.value
     let cancelled = false
-    const first = sources[layers[0]]!
-    const sameCanvas = layers.every(layer => sources[layer]!.image.naturalWidth === first.image.naturalWidth && sources[layer]!.image.naturalHeight === first.image.naturalHeight)
-    if (!sameCanvas) {
-      onChange({ ...EMPTY_BIMO_INPUT, error: 'Обе части должны иметь одинаковые размеры исходного холста. Экспортируйте их вместе, сохраняя прозрачные поля' })
-      return
-    }
     onChange({ ...EMPTY_BIMO_INPUT, checking: true })
     const timer = window.setTimeout(() => {
-      void Promise.all(layers.map(async layer => ({ layer, ...await prepareImport(sources[layer]!.image, kind, fit, layer) }))).then(results => {
+      void Promise.all(ready.map(async layer => ({ layer, ...await prepareImport(sources[layer]!.image, kind, fit, layer) }))).then(results => {
         if (cancelled || generation.current.value !== request) return
         const files: PreparedBimoInput['files'] = {}
         const art: BimoArt = { modelVersion: 4 }
@@ -57,12 +68,8 @@ export function BimoImportEditor({ kind, onChange }: BimoImportEditorProps) {
           art[result.layer] = url
           files[result.layer] = result.file
         }
-        let validationError = results.find(result => result.error)?.error ?? ''
-        if (!validationError && kind === 'garment') {
-          validationError = validateGarmentPair(results.find(result => result.layer === 'outfit')!.pixels, results.find(result => result.layer === 'sleeve')!.pixels) ?? ''
-        }
         previews.current.push(urls)
-        onChange({ files: validationError ? {} : files, art, error: validationError, checking: false })
+        onChange({ files, art, error: '', checking: false })
         while (previews.current.length > 2) {
           for (const old of previews.current.shift()!) { URL.revokeObjectURL(old); owned.current.delete(old) }
         }
@@ -88,7 +95,7 @@ export function BimoImportEditor({ kind, onChange }: BimoImportEditorProps) {
     try {
       for (const layer of layers) {
         const file = files[layer]
-        if (file) opened[layer] = { ...await loadImport(file, kind), filename: file.name }
+        if (file) opened[layer] = { ...await loadImport(file), filename: file.name, file }
       }
       if (generation.current.value !== request) {
         for (const source of Object.values(opened)) URL.revokeObjectURL(source.url)
@@ -111,48 +118,66 @@ export function BimoImportEditor({ kind, onChange }: BimoImportEditorProps) {
       }
     } finally { if (generation.current.value === request) setLoading(false) }
   }
-  async function example() {
-    const request = ++generation.current.value
-    const controller = new AbortController()
-    exampleRequest.current.controller = controller
-    setLoading(true)
-    setError('')
-    onChange({ ...EMPTY_BIMO_INPUT, checking: true })
-    try {
-      const files: Partial<Record<BimoLayerName, File>> = {}
-      for (const layer of layers) {
-        const response = await fetch(`/bimo/items/hoodie-v4/${layer}.png`, { signal: controller.signal })
-        if (!response.ok) throw new Error('Не удалось загрузить образец худи')
-        files[layer] = new File([await response.blob()], `${layer}.png`, { type: 'image/png' })
-      }
-      if (generation.current.value === request && !controller.signal.aborted) await choose(files, true)
-    } catch (reason) {
-      if (!controller.signal.aborted) {
-        const message = reason instanceof Error ? reason.message : 'Не удалось загрузить образец'
-        setError(message)
-        onChange({ ...EMPTY_BIMO_INPUT, error: message })
-      }
-    } finally { if (!controller.signal.aborted) setLoading(false) }
+  /**
+   * Части вещи выбираются одной кнопкой: имя файла решает, где рукав,
+   * а где основная часть. Если подсказки в имени нет, файлы ложатся по
+   * порядку выбора, и их всегда можно поменять местами.
+   */
+  function pick(chosen: File[]) {
+    if (!chosen.length) return
+    if (layers.length === 1) { void choose({ [layers[0]]: chosen[0] }); return }
+    const byName = new Map<BimoLayerName, File>()
+    const rest: File[] = []
+    for (const file of chosen) {
+      const named = layerFromFileName(file.name)
+      if (named && layers.includes(named) && !byName.has(named)) byName.set(named, file)
+      else rest.push(file)
+    }
+    const files: Partial<Record<BimoLayerName, File>> = Object.fromEntries(byName)
+    // Безымянные файлы сначала занимают пустые слоты и только потом заменяют
+    // уже выбранные: иначе второй файл вытеснял бы первый, и вещь оставалась
+    // бы без половины.
+    const free = layers.filter(layer => !files[layer] && !sources[layer])
+    const taken = layers.filter(layer => !files[layer] && sources[layer])
+    for (const layer of [...free, ...taken]) {
+      if (!rest.length) break
+      files[layer] = rest.shift()
+    }
+    void choose(files, true)
+  }
+  function swap() {
+    const [first, second] = layers
+    const left = sources[first]?.file, right = sources[second]?.file
+    if (!left || !right) return
+    void choose({ [first]: right, [second]: left })
   }
   const width = kind === 'background' ? 600 : 512, height = kind === 'background' ? 500 : 512
   const hasSource = Object.keys(sources).length > 0
+  const chosenNames = layers.map(layer => sources[layer]?.filename).filter(Boolean) as string[]
   return <div className="space-y-3">
-    {layers.map(layer => <label key={layer} className="block text-sm font-semibold">{LAYER_LABELS[layer]}
-      <input type="file" accept="image/png,image/webp" disabled={loading}
+    <label className="block text-sm font-semibold">{layers.length > 1 ? 'Части вещи' : LAYER_LABELS[layers[0]]}
+      <input type="file" accept="image/png,image/webp" multiple={layers.length > 1} disabled={loading}
         className="mt-1.5 block w-full cursor-pointer rounded-lg border border-[var(--apex-border)] bg-[var(--apex-bg)] text-xs font-normal text-[var(--apex-text-secondary)] file:mr-3 file:cursor-pointer file:rounded-l-lg file:border-0 file:bg-[var(--apex-surface)] file:px-3 file:py-2 file:text-xs file:font-semibold file:text-[var(--apex-text)] disabled:opacity-60"
         onChange={event => {
-          const file = event.target.files?.[0]
+          const files = Array.from(event.target.files ?? [])
           event.target.value = ''
-          if (file) void choose({ [layer]: file })
+          pick(files)
         }} />
-      {sources[layer] && <span className="mt-1 block break-all text-xs font-normal text-[var(--apex-text-secondary)]">{sources[layer]!.filename}</span>}
-    </label>)}
-    <p className="text-xs text-[var(--apex-text-secondary)]">{kind === 'background' ? 'PNG или WebP до 2 МБ. Фон кадрируется с сохранением пропорций.' : kind === 'garment' ? 'Два PNG или WebP до 2 МБ каждый на одинаковом прозрачном холсте. Основная часть включает левый рукав. Правый рукав подготовьте в положении опущенной лапы с запасом ткани у плеча.' : 'PNG или WebP до 2 МБ с прозрачным фоном. Только рисунок вещи.'}</p>
-    {kind === 'garment' && <Button size="sm" disabled={loading} onClick={() => void example()}>Примерить эталонное худи</Button>}
-    {loading && <p role="status" className="text-sm text-[var(--apex-text-secondary)]">Открываем рисунок…</p>}
+    </label>
+    <p className="text-xs text-[var(--apex-text-secondary)]">{HINTS[kind]}</p>
+    {chosenNames.length > 0 && (
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--apex-text-muted)]">
+        <span className="break-all">{chosenNames.join(' · ')}</span>
+        {layers.length > 1 && chosenNames.length === layers.length && (
+          <button type="button" disabled={loading} onClick={swap}
+            className="font-semibold text-[var(--apex-primary)] hover:underline disabled:opacity-60">поменять местами</button>
+        )}
+      </p>
+    )}
+    {loading &&<p role="status" className="text-sm text-[var(--apex-text-secondary)]">Открываем рисунок…</p>}
     {error && <p role="alert" className="rounded-xl border border-[var(--apex-danger-light)] bg-[var(--apex-error-bg)] px-3 py-2 text-sm font-medium text-[var(--apex-error-text)]">{error}</p>}
     {hasSource && <>
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Общая подгонка рисунка на Бимо" className="block w-full touch-none rounded-xl border border-[var(--apex-border)] bg-[var(--apex-bg)]"
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Общая подгонка рисунка на Бимо" className="mx-auto block w-full max-w-[300px] touch-none rounded-xl border border-[var(--apex-border)] bg-[var(--apex-bg)]"
         onPointerDown={event => { if (loading) return; event.currentTarget.setPointerCapture(event.pointerId); drag.current = { x: event.clientX, y: event.clientY, fit } }}
         onPointerMove={event => {
           if (loading || !drag.current) return
@@ -168,9 +193,10 @@ export function BimoImportEditor({ kind, onChange }: BimoImportEditorProps) {
           return <image key={layer} href={source.url} x={matrix.x} y={matrix.y} width={source.image.naturalWidth * matrix.scale} height={source.image.naturalHeight * matrix.scale} />
         })}
       </svg>
-      <p className="text-xs text-[var(--apex-text-secondary)]">{kind === 'garment' ? 'Посадка меняется сразу у обеих частей. Проверьте плечо и манжету в каждой реакции справа.' : 'Перетащите рисунок или используйте ползунки. Проверяйте посадку справа.'}</p>
-      <div className="space-y-2 rounded-xl border border-[var(--apex-border)] p-3">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--apex-text-muted)]">Посадка</p>
+      <div className="space-y-2 rounded-xl border border-[var(--apex-border)] px-3 py-2.5">
+        <p className="flex items-baseline justify-between gap-3 text-[11px] font-bold uppercase tracking-wider text-[var(--apex-text-muted)]">Посадка
+          <span className="font-medium normal-case tracking-normal">{kind === 'garment' ? 'обе части двигаются вместе' : 'тяните рисунок или ползунки'}</span>
+        </p>
         {([['scale', 'Размер', 0.1, 3, 0.01], ['dx', 'По горизонтали', -300, 300, 1], ['dy', 'По вертикали', -300, 300, 1]] as const).map(([key, label, min, max, step]) => (
           <label key={key} className="block text-xs text-[var(--apex-text-secondary)]">
             <span className="flex items-center justify-between">{label}<span className="tabular-nums">{fit[key]}</span></span>

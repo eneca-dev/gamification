@@ -1,29 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/Button'
 import { PurchaseButton } from '@/components/PurchaseButton'
 import { useBalance } from '@/modules/shop/hooks/useBalance'
-import { BimoStage, BimoStill, BIMO_SLOTS, DEFAULT_EQUIPMENT, bimoLook } from '@/modules/bimo-rig/index.client'
+import { BimoDecor, BimoStage, BimoStill, BimoTintLayer, BIMO_SLOTS, bimoDecor, bimoLook } from '@/modules/bimo-rig/index.client'
 import type { BimoEquipment, BimoSlot } from '@/modules/bimo-rig'
 import { useBimo, useBimoEquip, useBimoPurchase } from '../hooks'
+import { setBimoPreview, useBimoPreview } from '../preview'
 import type { BimoState } from '../types'
 
 const labels: Record<BimoSlot, string> = { outfit: 'Одежда', accessory: 'Аксессуары', background: 'Фоны' }
 const defaults: Record<BimoSlot, string> = { outfit: 'Классический Бимо', accessory: 'Без аксессуара', background: 'Мятный фон' }
 const CARD = 'card-hover flex flex-col overflow-hidden rounded-2xl border border-[var(--apex-border)] bg-[var(--apex-surface)]'
 const MUTED = 'text-[11px] text-[var(--apex-text-muted)]'
-// Лёгкий декор вокруг героя витрины: только на широких экранах, чтобы
-// не спорить с текстом. Положение, размер и задержка покачивания у каждого свои.
-const DECOR = [
-  { symbol: '🍃', spot: 'left-[27%] top-1 text-3xl' },
-  { symbol: '✨', spot: 'left-[21%] bottom-6 text-2xl' },
-  { symbol: '☁️', spot: 'left-[33%] bottom-1 text-xl' },
-  { symbol: '⭐', spot: 'right-[27%] top-2 text-2xl' },
-  { symbol: '🐚', spot: 'right-[20%] bottom-7 text-3xl' },
-  { symbol: '🌿', spot: 'right-[33%] bottom-1 text-xl' },
-] as const
 
 interface BimoShopProps {
   userId: string
@@ -34,14 +25,18 @@ interface BimoShopProps {
 
 export function BimoShop({ userId, initialState, balance }: BimoShopProps) {
   const router = useRouter()
-  const query = useBimo(userId, { initialData: initialState, refetchOnWindowFocus: true })
+  // initialData здесь не применяется: записью кэша владеет боковое меню, оно
+  // монтируется раньше страницы. Первым кадром остаётся серверный `initialState`
+  // ниже — через него же показывается образ, если запрос сорвался.
+  const query = useBimo(userId, { refetchOnWindowFocus: true })
   const balanceQuery = useBalance(userId, { initialData: balance })
   const purchase = useBimoPurchase()
   const equip = useBimoEquip()
   const [slot, setSlot] = useState<BimoSlot>('outfit')
   const [ownedOnly, setOwnedOnly] = useState(false)
   const [notice, setNotice] = useState('')
-  const [previewEquipment, setPreviewEquipment] = useState<BimoEquipment | null>(null)
+  // Примерка общая с боковым меню: там она красит подложку и декор.
+  const previewEquipment = useBimoPreview()
   const [pendingEquipment, setPendingEquipment] = useState<BimoEquipment | null>(null)
 
   const state = query.data ?? initialState
@@ -54,12 +49,22 @@ export function BimoShop({ userId, initialState, balance }: BimoShopProps) {
   const busy = purchase.isPending || equip.isPending
   const items = state.items.filter(item => item.slot === slot && (!ownedOnly || item.owned))
   const defaultLook = bimoLook({ ...equipment, [slot]: null }, state.catalogArt)
-  const look = bimoLook(query.isError ? DEFAULT_EQUIPMENT : equipment, state.catalogArt)
+  // Декор витрины следует за тем же фоном, что и образ, в том числе за примеркой.
+  // Сбойный refetch не сбрасывает образ в стандартный: как и в боковом меню,
+  // показываются последние известные данные, а не мятный дефолт.
+  const look = bimoLook(equipment, state.catalogArt)
+  const backgroundItem = equipment.background
+    ? state.items.find(item => item.assetKey === equipment.background)
+    : undefined
   const failure = purchase.error?.message || equip.error?.message || ''
+
+  // Уход со страницы снимает примерку: иначе меню осталось бы в цвете фона,
+  // который никто не надевал.
+  useEffect(() => () => setBimoPreview(null), [])
 
   function tryOn(assetKey: string | null) {
     if (!state.preview) return
-    setPreviewEquipment(previous => ({ ...(previous ?? equipment), [slot]: assetKey }))
+    setBimoPreview({ ...(previewEquipment ?? equipment), [slot]: assetKey })
   }
 
   async function apply(assetKey: string | null) {
@@ -67,7 +72,7 @@ export function BimoShop({ userId, initialState, balance }: BimoShopProps) {
     setPendingEquipment({ ...equipment, [slot]: assetKey })
     try {
       await equip.mutateAsync({ slot, assetKey })
-      setPreviewEquipment(null)
+      setBimoPreview(null)
       setNotice('Образ сохранён')
       router.refresh()
     } catch {
@@ -80,36 +85,23 @@ export function BimoShop({ userId, initialState, balance }: BimoShopProps) {
     setNotice('')
     try {
       await purchase.mutateAsync({ productId, expectedPrice: price, comment })
-      setPreviewEquipment(null)
+      setBimoPreview(null)
       setNotice('Вещь добавлена в гардероб')
       router.refresh()
     } catch { /* Ошибка мутации показывается ниже. */ }
   }
 
   return (
-    <section className="space-y-5" aria-label="Енот-Бимо">
-      {/* Витрина от края сайдбара до края приложения: тон полосы — размытый фон
-          надетого образа, поэтому полоса меняет цвет вместе с ним. Бимо выходит
-          за верх полосы, поэтому у секции есть запас сверху. */}
+    <section className="space-y-5" aria-label="Бимо-шоп">
+      {/* Витрина от края сайдбара до края приложения. Подложка собирается тем
+          же слоем, что и боковое меню, поэтому слева они дают один цвет и
+          переходят друг в друга без шва. Бимо выходит за верх полосы, поэтому
+          у секции есть запас сверху. */}
       <div className="full-bleed relative mt-10 sm:mt-14">
-        <div aria-hidden="true" className="absolute inset-0 overflow-hidden">
-          <div
-            className="bimo-band-fade absolute inset-0 scale-110 bg-cover bg-center blur-2xl"
-            style={{ backgroundImage: `url(${look.backgroundSrc})` }}
-          />
-          <div className="bimo-band-veil bimo-band-fade absolute inset-0" />
-        </div>
+        <BimoTintLayer backgroundKey={equipment.background} backgroundSrc={look.backgroundSrc} fade />
 
         <div className="relative mx-auto grid max-w-[1200px] items-center gap-4 px-4 pb-6 pt-2 md:grid-cols-[1fr_auto_1fr] md:px-8 2xl:max-w-[1600px] 2xl:px-10 3xl:max-w-[2280px] ultrawide:max-w-[3160px]">
-          {DECOR.map((item, index) => (
-            <span
-              key={item.symbol}
-              aria-hidden="true"
-              className={`bimo-decor stagger-${index + 1} pointer-events-none absolute hidden select-none opacity-70 lg:block ${item.spot}`}
-            >
-              {item.symbol}
-            </span>
-          ))}
+          <BimoDecor symbols={bimoDecor(backgroundItem?.decor, backgroundItem?.emoji)} variant="band" />
 
           <div className="relative space-y-2 py-2">
             <h2 className="text-[30px] font-extrabold uppercase leading-[0.95] tracking-tight text-[var(--apex-text)] sm:text-[40px] lg:text-[46px]">
