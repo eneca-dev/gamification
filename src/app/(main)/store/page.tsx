@@ -2,7 +2,8 @@ import { canUseRoulette } from '@/config/roulette'
 import { redirect } from 'next/navigation'
 import { bimoEnabled, getBimoState } from '@/modules/profile-appearance/queries'
 import { BimoShop } from '@/modules/profile-appearance/components/BimoShop'
-import { BimoStill, bimoLook } from '@/modules/bimo-rig'
+import { bimoLook } from '@/modules/bimo-rig'
+import { BimoTabIcon, BimoTabTint } from '@/modules/profile-appearance/components/BimoTabLook'
 import { getCurrentUser } from '@/modules/auth'
 import { getProducts, getCategories, getUserBalance } from '@/modules/shop'
 import { getShieldQuota, getShieldCredits } from '@/modules/streak-shield'
@@ -41,8 +42,8 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
         showRoulette={showRoulette === true}
         initialCategory={selectedCategory}
         bimoContent={tab === 'bimo' && bimoState && user.wsUserId ? <BimoShop userId={user.wsUserId} initialState={bimoState} balance={balance} /> : null}
-        bimoTabIcon={bimoTabLook ? <BimoStill {...bimoTabLook} compact alt="" idPrefix="bimo-store-tab" /> : null}
-        bimoTabTint={bimoTabLook?.backgroundSrc ?? null}
+        bimoTabIcon={bimoTabLook && user.wsUserId ? <BimoTabIcon userId={user.wsUserId} initialLook={bimoTabLook} initialBackground={bimoState?.equipment.background ?? null} /> : null}
+        bimoTabTint={bimoTabLook && user.wsUserId ? <BimoTabTint userId={user.wsUserId} initialLook={bimoTabLook} initialBackground={bimoState?.equipment.background ?? null} /> : null}
         rouletteContent={tab === 'roulette' && user.wsUserId ? <RoulettePanel userId={user.wsUserId} isImpersonating={Boolean(user.isImpersonating)} /> : null}
         products={products}
         categories={categories}

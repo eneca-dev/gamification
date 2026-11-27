@@ -7,6 +7,8 @@ import type { BimoArtMap, BimoEquipment, BimoSlot } from '@/modules/bimo-rig'
 export interface BimoItem {
   assetKey: string; slot: BimoSlot; productId: string; name: string
   description: string | null; emoji: string | null; price: number
+  /** Набор эмодзи фона от админа: пустой — декор собирается по `emoji`. */
+  decor: string[]
   owned: boolean; purchasable: boolean; released: boolean; supported: boolean
   /** Поля заказа с комментарием: без них вещь с обязательным комментарием не купить. */
   commentRequired: boolean; commentLabel: string | null; commentPlaceholder: string | null

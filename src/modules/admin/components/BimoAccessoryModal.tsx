@@ -7,7 +7,9 @@ import { CoinStatic } from '@/components/CoinBalance'
 import { computePriceCrystals } from '@/modules/shop/index.client'
 import { CLASSIC_GARMENT } from '@/modules/bimo-rig'
 import { createCacheMutation, queryKeys } from '@/modules/cache'
-import { BimoStage, ITEM_LAYERS, LAYER_LABELS, REACTIONS } from '@/modules/bimo-rig/index.client'
+import { BimoDecor, BimoStage, ITEM_LAYERS, LAYER_LABELS, MAX_DECOR_SYMBOLS, REACTIONS, bimoDecor, requiredLayers } from '@/modules/bimo-rig/index.client'
+import { Select } from '@/components/Select'
+import { updateBimoDecor } from '../actions'
 import { BimoImportEditor, EMPTY_BIMO_INPUT } from './BimoImportEditor'
 import type { PreparedBimoInput } from './BimoImportEditor'
 import type { BimoArt, BimoItemKind, BimoReaction } from '@/modules/bimo-rig'
@@ -27,7 +29,7 @@ interface BimoAccessoryModalProps {
 }
 type SavedBimoProduct = Pick<CreatedBimoProduct, 'id' | 'created_at' | 'updated_at' | 'sort_order' | 'category_id' | 'effect'>
 type ArtworkSlot = 'outfit' | 'background' | 'accessory'
-interface ArtworkTarget { revision: string; art: BimoArt | null; slot: ArtworkSlot }
+interface ArtworkTarget { revision: string; art: BimoArt | null; slot: ArtworkSlot; decor: string[]; emoji: string | null }
 const ARTWORK_KINDS: Record<ArtworkSlot, BimoItemKind> = { outfit: 'garment', background: 'background', accessory: 'accessory' }
 const ARTWORK_TITLES: Record<ArtworkSlot, string> = { outfit: 'Обновить одежду Бимо', background: 'Обновить фон Бимо', accessory: 'Обновить аксессуар Бимо' }
 const useSaveBimoArtwork = createCacheMutation({
@@ -40,6 +42,13 @@ const useSaveBimoArtwork = createCacheMutation({
   },
   invalidateKeys: [queryKeys.bimo.all],
 })
+// Набор эмодзи правится без перезагрузки рисунка, поэтому он идёт не через
+// маршрут с файлами, а отдельным действием.
+const useSaveBimoDecor = createCacheMutation({
+  mutationFn: updateBimoDecor,
+  invalidateKeys: [queryKeys.bimo.all],
+})
+const SPEEDS = [{ value: '1', label: '1×' }, { value: '0.25', label: '0.25×' }]
 const KINDS: ReadonlyArray<readonly [BimoItemKind, string]> = [
   ['garment', 'Одежда'], ['accessory', 'Аксессуар на голову'], ['necklace', 'Аксессуар на шею'], ['background', 'Фон'],
 ]
@@ -47,6 +56,10 @@ const INPUT = 'mt-1 w-full rounded-lg border border-[var(--apex-border)] bg-[var
 const SECTION = 'text-[11px] font-bold uppercase tracking-wider text-[var(--apex-text-muted)]'
 const ALERT = 'rounded-xl border border-[var(--apex-danger-light)] bg-[var(--apex-error-bg)] px-3 py-2 text-sm font-medium text-[var(--apex-error-text)]'
 const LETTERS: Record<string, string> = { а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'c',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya' }
+/** Админ вводит эмодзи через пробел: лишнее за последним символом отбрасывается. */
+function parseDecorInput(value: string): string[] {
+  return value.split(/\s+/).filter(Boolean).slice(0, MAX_DECOR_SYMBOLS)
+}
 function slugify(name: string): string {
   return name.toLowerCase().replace(/^бимо\s*·\s*/, '').split('').map(char => LETTERS[char] ?? char).join('')
     .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').replace(/^(\d)/, 'item_$1').slice(0, 40)
@@ -56,6 +69,7 @@ export function BimoAccessoryModal({ rate, onCreated, artworkProduct, onUpdated,
   const [kind, setKind] = useState<BimoItemKind>(artworkProduct ? ARTWORK_KINDS[artworkProduct.slot] : 'garment')
   const [name, setName] = useState(''), [slug, setSlug] = useState<string | null>(null)
   const [description, setDescription] = useState(''), [emoji, setEmoji] = useState('')
+  const [decor, setDecor] = useState(''), [decorNotice, setDecorNotice] = useState('')
   const [costByn, setCostByn] = useState('4.44'), [coefficient, setCoefficient] = useState('1')
   const [prepared, setPrepared] = useState<PreparedBimoInput>(EMPTY_BIMO_INPUT)
   const [error, setError] = useState('')
@@ -63,7 +77,8 @@ export function BimoAccessoryModal({ rate, onCreated, artworkProduct, onUpdated,
   const [targetError, setTargetError] = useState('')
   const [targetRetry, setTargetRetry] = useState(0)
   const save = useSaveBimoArtwork()
-  const pending = save.isPending
+  const saveDecor = useSaveBimoDecor()
+  const pending = save.isPending || saveDecor.isPending
   const productId = artworkProduct?.id
   const targetSlot = artworkProduct?.slot
   const [paused, setPaused] = useState(false), [speed, setSpeed] = useState(1)
@@ -79,9 +94,14 @@ export function BimoAccessoryModal({ rate, onCreated, artworkProduct, onUpdated,
   const effectiveSlug = slug ?? slugify(name)
   const layers = ITEM_LAYERS[kind]
   const availableKinds = artworkProduct ? KINDS.filter(([value]) => targetSlot === 'accessory' ? value === 'accessory' || value === 'necklace' : value === ARTWORK_KINDS[artworkProduct.slot]) : KINDS
-  const complete = layers.every(layer => prepared.files[layer]) && !prepared.error && !prepared.checking && (!artworkProduct || Boolean(target))
+  // Сохранение ждёт только обязательные слои: рукав у одежды добавляют
+  // по желанию, остальное на усмотрение администратора.
+  const complete = requiredLayers(kind).every(layer => prepared.files[layer]) && !prepared.error && !prepared.checking && (!artworkProduct || Boolean(target))
   const price = computePriceCrystals(Number(costByn) || 0, Number(coefficient) || 0, rate, 0)
   const art = prepared.art ?? (target?.art?.[layers[0]] ? target.art : null)
+  // Набор сохраняется своей кнопкой, поэтому расхождение с сохранённым видно
+  // в форме: иначе админ нажмёт «Обновить графику» и потеряет ввод.
+  const decorDirty = Boolean(target && parseDecorInput(decor).join(' ') !== target.decor.join(' '))
   const duration = REACTIONS.find(item => item.id === (reaction?.id ?? 'crystal'))!.duration
   useEffect(() => {
     const previous = document.activeElement, element = dialog.current
@@ -100,6 +120,10 @@ export function BimoAccessoryModal({ rate, onCreated, artworkProduct, onUpdated,
         if (!controller.signal.aborted) {
           setKind(result.slot === 'accessory' && result.art?.neck ? 'necklace' : ARTWORK_KINDS[result.slot])
           setTarget(result)
+          setDecor(result.decor.join(' '))
+          // Эмодзи товара нужно предпросмотру декора: пустой набор на примерке
+          // покажет то же, что увидит сотрудник.
+          setEmoji(result.emoji ?? '')
         }
       }).catch(reason => {
         if (!controller.signal.aborted) setTargetError(reason instanceof Error ? reason.message : 'Не удалось загрузить выбранную вещь')
@@ -114,17 +138,25 @@ export function BimoAccessoryModal({ rate, onCreated, artworkProduct, onUpdated,
     setError('')
     try {
       const body = new FormData()
-      body.append('fields', JSON.stringify(artworkProduct && target ? { productId: artworkProduct.id, revision: target.revision, kind } : { name: name.trim(), slug: effectiveSlug, description: description.trim() || null, emoji: emoji.trim() || null, costByn: Number(costByn), coefficient: Number(coefficient), kind }))
-      for (const layer of layers) body.append(layer, prepared.files[layer]!)
+      body.append('fields', JSON.stringify(artworkProduct && target ? { productId: artworkProduct.id, revision: target.revision, kind } : { name: name.trim(), slug: effectiveSlug, description: description.trim() || null, emoji: emoji.trim() || null, costByn: Number(costByn), coefficient: Number(coefficient), kind, decor: kind === 'background' ? parseDecorInput(decor) : undefined }))
+      for (const layer of layers) { const file = prepared.files[layer]; if (file) body.append(layer, file) }
       const result = await save.mutateAsync({ body, method: artworkProduct ? 'PATCH' : 'POST' })
       if (artworkProduct) { onUpdated?.(); return }
       onCreated({ id: result.id, name: name.trim(), description: description.trim() || null, emoji: emoji.trim() || null, cost_byn: Number(costByn), coefficient: Number(coefficient), category_id: result.category_id, sort_order: result.sort_order, created_at: result.created_at, updated_at: result.updated_at, effect: result.effect })
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить вещь. Проверьте соединение и повторите попытку') }
   }
+  async function submitDecor() {
+    if (!productId || pending) return
+    setDecorNotice('')
+    try {
+      await saveDecor.mutateAsync({ productId, decor: parseDecorInput(decor) })
+      setDecorNotice('Набор сохранён')
+    } catch (reason) { setDecorNotice(reason instanceof Error ? reason.message : 'Не удалось сохранить набор эмодзи') }
+  }
   return <dialog ref={dialog} aria-labelledby={`${id}-title`} aria-describedby={`${id}-help`}
     onCancel={event => { event.preventDefault(); if (!pending) onClose() }}
     onClick={event => { if (event.target === event.currentTarget && !pending) onClose() }}
-    className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-5xl overflow-y-auto overscroll-contain rounded-2xl border border-[var(--apex-border)] bg-[var(--apex-surface)] p-0 text-[var(--apex-text)] backdrop:bg-[var(--apex-overlay)]">
+    className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-4xl overflow-y-auto overscroll-contain rounded-2xl border border-[var(--apex-border)] bg-[var(--apex-surface)] p-0 text-[var(--apex-text)] backdrop:bg-[var(--apex-overlay)]">
     <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[var(--apex-border)] bg-[var(--apex-surface)] px-5 py-4 sm:px-6">
       <div>
         <h2 id={`${id}-title`} className="text-[18px] font-bold leading-tight">{artworkProduct ? ARTWORK_TITLES[artworkProduct.slot] : 'Новая вещь для Бимо'}</h2>
@@ -137,12 +169,17 @@ export function BimoAccessoryModal({ rate, onCreated, artworkProduct, onUpdated,
     </header>
 
     <form onSubmit={submit}>
-      <fieldset disabled={pending} className="grid gap-6 px-5 py-5 sm:px-6 md:grid-cols-2">
+      <fieldset disabled={pending} className="grid items-start gap-6 px-5 py-5 sm:px-6 md:grid-cols-2">
         {/* На узком экране примерка идёт первой: посадку подгоняют, глядя на результат. */}
         <section className="order-1 space-y-3 md:order-2">
           <h3 className={SECTION}>Примерка на модели</h3>
           <div className="rounded-xl border border-[var(--apex-border)] bg-[var(--apex-bg)] p-3">
-            <BimoStage garment={kind === 'garment' ? art : CLASSIC_GARMENT} accessory={kind === 'accessory' || kind === 'necklace' ? art : null} backgroundSrc={kind === 'background' ? art?.image ?? target?.art?.image : undefined} paused={paused} speed={speed} reaction={reaction} frame={frame} onPlayingChange={setPlaying} onFrameChange={updateFrame} className="w-full" idPrefix={`bimo-import-${id}`} />
+            {/* Декор показывается прямо на примерке: админ видит набор вокруг
+                фона так же, как его увидит сотрудник в меню и на витрине. */}
+            <div className="relative mx-auto w-full max-w-[300px]">
+              <BimoStage garment={kind === 'garment' ? art : CLASSIC_GARMENT} accessory={kind === 'accessory' || kind === 'necklace' ? art : null} backgroundSrc={kind === 'background' ? art?.image ?? target?.art?.image : undefined} paused={paused} speed={speed} reaction={reaction} frame={frame} onPlayingChange={setPlaying} onFrameChange={updateFrame} className="w-full" idPrefix={`bimo-import-${id}`} />
+              {kind === 'background' && <BimoDecor symbols={bimoDecor(parseDecorInput(decor), emoji.trim() || null)} variant="preview" />}
+            </div>
             <p className="mt-2 text-center text-xs text-[var(--apex-text-secondary)]">{prepared.checking ? 'Подготавливаем рисунок…' : prepared.art ? 'Так вещь будет выглядеть после сохранения' : art ? 'Сохранённый рисунок вещи' : 'Загрузите рисунок для примерки'}</p>
           </div>
 
@@ -158,12 +195,11 @@ export function BimoAccessoryModal({ rate, onCreated, artworkProduct, onUpdated,
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <Button size="sm" aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? 'Продолжить' : 'Пауза'}</Button>
-              <label className="flex items-center gap-2 text-xs text-[var(--apex-text-secondary)]">Скорость
-                <select className={`${INPUT} w-auto py-1`} value={speed} onChange={event => setSpeed(Number(event.target.value))}>
-                  <option value={1}>1×</option>
-                  <option value={0.25}>0.25×</option>
-                </select>
-              </label>
+              <div className="flex items-center gap-2 text-xs text-[var(--apex-text-secondary)]">Скорость
+                <div className="w-24">
+                  <Select ariaLabel="Скорость проверки движения" value={String(speed)} options={SPEEDS} onChange={value => setSpeed(Number(value))} />
+                </div>
+              </div>
             </div>
             <div>
               <label className="flex items-center justify-between text-xs text-[var(--apex-text-secondary)]">
@@ -181,11 +217,14 @@ export function BimoAccessoryModal({ rate, onCreated, artworkProduct, onUpdated,
         <section className={`order-2 space-y-4 md:order-1 ${pending ? 'pointer-events-none' : ''}`}>
           <h3 className={SECTION}>Рисунок и посадка</h3>
           {(!artworkProduct || target?.slot === 'accessory') && (
-            <label className="block space-y-1 text-sm font-semibold">Тип вещи
-              <select value={kind} className={INPUT} onChange={event => { setPrepared(EMPTY_BIMO_INPUT); setKind(event.target.value as BimoItemKind); setReaction(null); setFrame(null); setPaused(false); setError('') }}>
-                {availableKinds.map(([value, title]) => <option key={value} value={value}>{title}</option>)}
-              </select>
-            </label>
+            <div className="space-y-1.5 text-sm font-semibold">Тип вещи
+              <Select
+                ariaLabel="Тип вещи"
+                value={kind}
+                options={availableKinds.map(([value, title]) => ({ value, label: title }))}
+                onChange={value => { setPrepared(EMPTY_BIMO_INPUT); setKind(value as BimoItemKind); setReaction(null); setFrame(null); setPaused(false); setError('') }}
+              />
+            </div>
           )}
           {artworkProduct && !target && !targetError && <p role="status" className="text-sm text-[var(--apex-text-secondary)]">Загружаем выбранную вещь…</p>}
           {targetError && (
@@ -200,12 +239,41 @@ export function BimoAccessoryModal({ rate, onCreated, artworkProduct, onUpdated,
             </div>
             <BimoImportEditor key={kind} kind={kind} onChange={acceptPrepared} />
           </>}
+          {kind === 'background' && (!artworkProduct || target) && (
+            <div className="space-y-2 rounded-xl border border-[var(--apex-border)] p-3">
+              <p className={SECTION}>Эмодзи вокруг Бимо</p>
+              <input maxLength={60} className={INPUT} value={decor} placeholder="🏖️ 🐚 ☀️"
+                onChange={event => { setDecor(event.target.value); setDecorNotice('') }} />
+              <p className="text-xs text-[var(--apex-text-secondary)]">
+                До шести символов через пробел — они сразу видны на примерке справа. В меню и на витрине
+                эмодзи покачиваются, пока надет этот фон. Пустое поле — возьмётся эмодзи товара.
+                Win + Ю откроет панель эмодзи с поиском.
+              </p>
+              {artworkProduct && (
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Набор сохраняется отдельно от графики: рисунок для этого
+                      перезагружать не нужно. */}
+                  <Button size="sm" variant={decorDirty ? 'primary' : 'secondary'} disabled={pending} onClick={() => void submitDecor()}>
+                    {saveDecor.isPending ? 'Сохраняем…' : 'Сохранить эмодзи'}
+                  </Button>
+                  {decorNotice
+                    ? <span role="status" className="text-xs text-[var(--apex-text-secondary)]">{decorNotice}</span>
+                    : decorDirty && <span className="text-xs font-semibold text-[var(--apex-warning-text)]">Набор изменён и ещё не сохранён</span>}
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
         {!artworkProduct && (
-          <section className="order-3 space-y-4 border-t border-[var(--apex-border)] pt-5 md:col-span-2">
-            <h3 className={SECTION}>Товар в магазине</h3>
-            <div className="grid gap-4 md:grid-cols-2">
+          <section className="order-3 space-y-3 border-t border-[var(--apex-border)] pt-5 md:col-span-2">
+            {/* Цена стоит в заголовке секции: отдельной строкой внизу она
+                оставляла пустую полосу во всю ширину окна. */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className={SECTION}>Товар в магазине</h3>
+              <p className="flex items-center gap-2 text-sm font-semibold">Цена для покупателя: <CoinStatic amount={price} size="sm" /></p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
               <label className="block space-y-1 text-sm font-semibold">Название
                 <input required minLength={2} maxLength={200} className={INPUT} value={name} onChange={event => setName(event.target.value)} placeholder="Бимо · Кремовое худи" />
               </label>
@@ -213,15 +281,16 @@ export function BimoAccessoryModal({ rate, onCreated, artworkProduct, onUpdated,
                 <input required maxLength={40} pattern="[a-z][a-z0-9_]*" className={INPUT} value={effectiveSlug} onChange={event => setSlug(event.target.value)} />
               </label>
             </div>
-            <label className="block space-y-1 text-sm">Описание
-              <textarea maxLength={1000} rows={2} className={INPUT} value={description} onChange={event => setDescription(event.target.value)} />
-            </label>
             <div className="grid gap-3 sm:grid-cols-3">
-              <label className="space-y-1 text-sm">Эмодзи<input maxLength={10} className={INPUT} value={emoji} onChange={event => setEmoji(event.target.value)} /></label>
+              <label className="space-y-1 text-sm">Эмодзи
+                <input maxLength={10} className={INPUT} value={emoji} placeholder="Вставьте эмодзи" onChange={event => setEmoji(event.target.value)} />
+              </label>
               <label className="space-y-1 text-sm">Себестоимость, BYN<input required type="number" min="0.01" step="0.01" className={INPUT} value={costByn} onChange={event => setCostByn(event.target.value)} /></label>
               <label className="space-y-1 text-sm">Коэффициент<input required type="number" min="0.01" step="0.01" className={INPUT} value={coefficient} onChange={event => setCoefficient(event.target.value)} /></label>
             </div>
-            <p className="flex items-center gap-2 text-sm font-semibold">Цена для покупателя: <CoinStatic amount={price} size="sm" /></p>
+            <label className="block space-y-1 text-sm">Описание
+              <textarea maxLength={1000} rows={2} className={INPUT} value={description} onChange={event => setDescription(event.target.value)} />
+            </label>
           </section>
         )}
       </fieldset>

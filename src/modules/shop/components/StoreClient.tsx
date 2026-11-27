@@ -27,8 +27,9 @@ interface StoreClientProps {
   bimoContent?: ReactNode
   /** Мини-Бимо для плашки категории. Готовый узел: модуль магазина не рендерит Бимо сам. */
   bimoTabIcon?: ReactNode
-  /** Фон текущего образа: им подкрашивается плашка категории. */
-  bimoTabTint?: string | null
+  /** Подложка в цвет текущего фона Бимо. Готовый узел: тот же слой, что
+   *  у бокового меню и полосы витрины, поэтому плашка совпадает с ними. */
+  bimoTabTint?: ReactNode
   initialCategory?: string
   products: ShopProductWithCategory[]
   categories: ShopCategory[]
@@ -237,7 +238,7 @@ export function StoreClient({
           type="button"
           onClick={() => router.push('/store?tab=bimo')}
           aria-pressed={activeFilter === 'bimo'}
-          // Плашка Бимо отличается от остальных: слева сам енот, а тон плашки —
+          // Плашка Бимо отличается от остальных: слева сам Бимо, а тон плашки —
           // размытый фон его текущего образа, поэтому она меняется вместе с образом.
           // Размер совпадает с остальными плашками: иконка вписана в строку,
           // высоту не увеличивает. Активная отмечается цветом рамки, а не толщиной.
@@ -248,12 +249,11 @@ export function StoreClient({
             border: `1px solid ${activeFilter === 'bimo' ? 'var(--apex-primary)' : 'var(--border)'}`,
           }}
         >
-          {bimoTabTint && <>
-            <span aria-hidden="true" className="absolute inset-0 scale-150 bg-cover bg-center blur-md" style={{ backgroundImage: `url(${bimoTabTint})` }} />
-            <span aria-hidden="true" className="bimo-band-veil absolute inset-0" />
-          </>}
+          {/* Готовые узлы приходят пропсами со страницы, поэтому у каждого своя
+              обёртка: в общем массиве детей React требует от них ключ. */}
+          {bimoTabTint && <span aria-hidden="true" className="absolute inset-0">{bimoTabTint}</span>}
           {bimoTabIcon && <span aria-hidden="true" className="relative -my-1 h-6 w-6 flex-shrink-0">{bimoTabIcon}</span>}
-          <span className="relative">Енот-Бимо</span>
+          <span className="relative">Бимо-шоп</span>
         </button>}
       </div>
 

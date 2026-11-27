@@ -3,15 +3,20 @@
 import { revalidatePath } from 'next/cache'
 
 import { createSupabaseAdminClient } from '@/config/supabase'
+import { safeAction } from '@/modules/cache'
+import type { ActionResult } from '@/modules/cache'
 
 import { getCurrentUser } from '@/modules/auth'
+import { parseDecor } from '@/modules/bimo-rig'
 
 import { checkIsAdmin } from './checkIsAdmin'
 import {
   updateEventTypeSchema, updateOrderStatusSchema, cancelOrderSchema,
   addCalendarDateSchema, deleteCalendarDateSchema,
   updateRankingSettingSchema, updateGratitudeSettingSchema,
+  updateBimoDecorSchema,
 } from './types'
+import type { UpdateBimoDecorInput } from './types'
 import type { CancelResult } from '@/modules/shop'
 
 export async function updateEventType(
@@ -361,4 +366,34 @@ export async function updateDepartmentGroup(
 
   revalidatePath('/admin/economy')
   return { success: true }
+}
+
+// Результат в форме ActionResult: действие вызывается через фабрику
+// createCacheMutation, которая ждёт именно её. safeAction превращает сетевой
+// сбой клиента Supabase в типизированный отказ вместо необработанного throw.
+export async function updateBimoDecor(input: UpdateBimoDecorInput): Promise<ActionResult<null>> {
+  const isAdmin = await checkIsAdmin()
+  if (!isAdmin) return { success: false, error: 'Доступ запрещён' }
+
+  const parsed = updateBimoDecorSchema.safeParse(input)
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? 'Невалидные данные' }
+
+  return safeAction(async () => {
+    const supabase = createSupabaseAdminClient()
+    // Декор бывает только у фонов, поэтому слот проверяется самим запросом:
+    // по одежде или аксессуару обновление не найдёт строку и вернёт отказ.
+    const { data, error } = await supabase
+      .from('bimo_catalog')
+      .update({ decor: parseDecor(parsed.data.decor) })
+      .eq('product_id', parsed.data.productId)
+      .eq('slot', 'background')
+      .select('asset_key')
+
+    if (error) return { success: false, error: error.message }
+    if (!data || data.length === 0) return { success: false, error: 'Фон не найден в каталоге Бимо' }
+
+    // Единственный серверный потребитель набора — витрина гардероба.
+    revalidatePath('/store')
+    return { success: true, data: null }
+  })
 }
